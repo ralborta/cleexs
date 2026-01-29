@@ -1,0 +1,297 @@
+// Cleexs PRIA - Database Schema
+// Versión 1: Multi-tenant jerárquico + reventa
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TENANTS & PLANS (Multi-tenancy jerárquico)
+// ============================================
+
+enum TenantType {
+  ROOT
+  AGENCY
+  DIRECT_CLIENT
+  AGENCY_CLIENT
+}
+
+enum TenantStatus {
+  active
+  suspended
+  archived
+}
+
+model Tenant {
+  id              String        @id @default(uuid())
+  tenantCode      String        @unique @map("tenant_code")
+  tenantPath      String        @map("tenant_path") // ej: "000/001/014"
+  parentTenantId  String?       @map("parent_tenant_id")
+  tenantType      TenantType    @map("tenant_type")
+  planId          String        @map("plan_id")
+  status          TenantStatus  @default(active)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  parent          Tenant?       @relation("TenantHierarchy", fields: [parentTenantId], references: [id])
+  children        Tenant[]      @relation("TenantHierarchy")
+  plan            Plan          @relation(fields: [planId], references: [id])
+  users           User[]
+  brands          Brand[]
+  promptVersions  PromptVersion[]
+  promptCategories PromptCategory[]
+  runs            Run[]
+
+  @@index([parentTenantId])
+  @@index([tenantCode])
+  @@index([tenantPath])
+  @@index([tenantType])
+  @@map("tenants")
+}
+
+model Plan {
+  id                  String    @id @default(uuid())
+  name                String
+  runsPerMonth        Int       @default(10) @map("runs_per_month")
+  promptsActiveLimit  Int       @default(50) @map("prompts_active_limit")
+  brandsLimit         Int       @default(5) @map("brands_limit")
+  competitorsLimit    Int       @default(10) @map("competitors_limit")
+  retentionMonths     Int       @default(12) @map("retention_months")
+  automationEnabled   Boolean   @default(false) @map("automation_enabled")
+  priceMonthly        Float?    @map("price_monthly")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenants             Tenant[]
+
+  @@map("plans")
+}
+
+// ============================================
+// USERS & ROLES
+// ============================================
+
+enum UserRole {
+  owner
+  editor
+  viewer
+}
+
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  name        String?
+  tenantId    String    @map("tenant_id")
+  role        UserRole  @default(viewer)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================
+// BRANDS & COMPETITORS
+// ============================================
+
+model Brand {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  name        String
+  domain      String?
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  aliases     BrandAlias[]
+  competitors Competitor[]
+  runs        Run[]
+  priaReports PRIAReport[]
+
+  @@index([tenantId])
+  @@map("brands")
+}
+
+model BrandAlias {
+  id        String   @id @default(uuid())
+  brandId   String   @map("brand_id")
+  alias     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, alias])
+  @@index([brandId])
+  @@map("brand_aliases")
+}
+
+model Competitor {
+  id        String   @id @default(uuid())
+  brandId   String   @map("brand_id")
+  name      String
+  aliases   Json?    // Array de strings como JSON
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@map("competitors")
+}
+
+// ============================================
+// PROMPTS & VERSIONS
+// ============================================
+
+model PromptVersion {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String   // ej: "PROMPTS_v1", "PROMPTS_v2"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  prompts   Prompt[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, active])
+  @@map("prompt_versions")
+}
+
+model PromptCategory {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  prompts   Prompt[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("prompt_categories")
+}
+
+model Prompt {
+  id              String   @id @default(uuid())
+  promptVersionId String   @map("prompt_version_id")
+  categoryId      String?  @map("category_id")
+  promptText      String   @db.Text @map("prompt_text")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
+  category        PromptCategory? @relation(fields: [categoryId], references: [id])
+  promptResults   PromptResult[]
+
+  @@index([promptVersionId])
+  @@index([categoryId])
+  @@index([promptVersionId, active])
+  @@map("prompts")
+}
+
+// ============================================
+// RUNS & RESULTS
+// ============================================
+
+enum RunStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model Run {
+  id          String      @id @default(uuid())
+  tenantId    String      @map("tenant_id")
+  brandId     String      @map("brand_id")
+  periodStart DateTime    @map("period_start")
+  periodEnd   DateTime    @map("period_end")
+  runType     String      @default("monthly") @map("run_type")
+  status      RunStatus   @default(pending)
+  modelMeta   Json?       @map("model_meta") // { model, temperature, etc }
+  tokensUsed  Int?        @default(0) @map("tokens_used")
+  costUsd     Float?      @default(0) @map("cost_usd")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  brand       Brand       @relation(fields: [brandId], references: [id])
+  promptResults PromptResult[]
+  priaReports PRIAReport[]
+
+  @@index([tenantId])
+  @@index([brandId])
+  @@index([tenantId, periodStart, periodEnd])
+  @@index([status])
+  @@map("runs")
+}
+
+model PromptResult {
+  id              String   @id @default(uuid())
+  runId           String   @map("run_id")
+  promptId        String   @map("prompt_id")
+  responseText    String   @db.Text @map("response_text")
+  top3Json        Json     @map("top3_json") // [{ position: 1, name: "...", type: "brand|competitor" }]
+  score           Float    @default(0)
+  flags           Json     @default("{}") // { ambiguous_ranking, no_ranking, etc }
+  truncated       Boolean  @default(false)
+  manualOverride  Boolean  @default(false) @map("manual_override")
+  overrideTop3Json Json?   @map("override_top3_json") // Si hay override, guardar el original aquí
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  run             Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  prompt          Prompt   @relation(fields: [promptId], references: [id])
+
+  @@unique([runId, promptId])
+  @@index([runId])
+  @@index([promptId])
+  @@map("prompt_results")
+}
+
+// ============================================
+// REPORTS (PRIA agregado)
+// ============================================
+
+model PRIAReport {
+  id                    String   @id @default(uuid())
+  runId                 String   @map("run_id")
+  brandId               String   @map("brand_id")
+  priaTotal             Float    @map("pria_total") // 0-100
+  priaByCategoryJson    Json     @map("pria_by_category_json") // { categoryId: pria }
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  // Relations
+  run                   Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  brand                 Brand    @relation(fields: [brandId], references: [id])
+
+  @@unique([runId, brandId])
+  @@index([runId])
+  @@index([brandId])
+  @@map("pria_reports")
+}
