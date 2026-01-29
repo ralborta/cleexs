@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { PRIAReport } from '@/lib/api';
+import type { Top3Entry } from '@/lib/shared';
 
 interface TrendChartProps {
   data: PRIAReport[];

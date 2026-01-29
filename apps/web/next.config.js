@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@cleexs/shared'],
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
