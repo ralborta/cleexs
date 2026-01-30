@@ -5,7 +5,8 @@ import { ArrowRight } from 'lucide-react';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(1100px_circle_at_50%_-200px,hsl(var(--ring))_0%,transparent_55%)]" />
       <div className="max-w-4xl w-full">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -40,21 +41,22 @@ export default function Home() {
                 />
               </svg>
             </div>
-            <h1 className="text-5xl font-bold text-gray-900">Cleexs</h1>
+            <h1 className="text-5xl font-bold tracking-tight text-foreground">Cleexs</h1>
           </div>
-          <p className="text-xl text-gray-600 mb-2">PRIA Platform</p>
-          <p className="text-gray-500">AI Recommendation Index Platform</p>
+          <p className="text-xl text-muted-foreground mb-2">PRIA Platform</p>
+          <p className="text-muted-foreground">AI Recommendation Index Platform</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+          <Card className="group relative overflow-hidden border-border/60 bg-card/90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(var(--ring))_55%,transparent_100%)] opacity-[0.08]" />
             <CardHeader>
               <CardTitle className="text-xl">Dashboard</CardTitle>
               <CardDescription>Visualiza rankings, tendencias y análisis de PRIA</CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/dashboard">
-                <Button className="w-full group">
+                <Button className="w-full group shadow-sm">
                   Ir al Dashboard
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
@@ -62,14 +64,15 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+          <Card className="group relative overflow-hidden border-border/60 bg-card/90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--ring))_0%,hsl(var(--primary))_55%,transparent_100%)] opacity-[0.06]" />
             <CardHeader>
               <CardTitle className="text-xl">Runs</CardTitle>
               <CardDescription>Gestiona tus corridas de análisis y resultados</CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/runs">
-                <Button className="w-full" variant="outline" asChild>
+                <Button className="w-full" variant="secondary" asChild>
                   <span className="group">
                     Ver Runs
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform inline-block" />
