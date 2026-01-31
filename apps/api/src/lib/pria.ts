@@ -40,13 +40,13 @@ export async function calculatePRIAForRun(runId: string, brandId: string): Promi
   const allScores: number[] = [];
 
   for (const result of run.promptResults) {
-    const top3 = result.top3Json as unknown as Top3Entry[];
+    const top3 = result.top3Json as Top3Entry[];
     const position = findBrandPosition(top3, brandName, brandAliases);
 
     // Si hay override manual, usar ese
     let finalPosition = position;
     if (result.manualOverride && result.overrideTop3Json) {
-      const overrideTop3 = result.overrideTop3Json as unknown as Top3Entry[];
+      const overrideTop3 = result.overrideTop3Json as Top3Entry[];
       finalPosition = findBrandPosition(overrideTop3, brandName, brandAliases);
     }
 

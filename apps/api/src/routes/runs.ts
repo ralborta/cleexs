@@ -1,6 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { canCreateRun } from '../lib/tenant';
 import { parseTop3 } from '../lib/parsing';
@@ -166,9 +165,9 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
           runId: run.id,
           promptId,
           responseText: finalResponseText,
-          top3Json: top3 as unknown as Prisma.InputJsonValue,
+          top3Json: top3,
           score,
-          flags: flags as unknown as Prisma.InputJsonValue,
+          flags,
           truncated,
         },
         include: {
@@ -259,13 +258,13 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       const updated = await prisma.promptResult.update({
         where: { id: promptResultId },
         data: {
-          overrideTop3Json: overrideTop3 as unknown as Prisma.InputJsonValue,
+          overrideTop3Json: overrideTop3,
           manualOverride: true,
           score: newScore,
           flags: {
             ...(result.flags as any),
             manual_override: true,
-          } as unknown as Prisma.InputJsonValue,
+          },
         },
       });
 

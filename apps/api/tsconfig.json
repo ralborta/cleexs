@@ -4,11 +4,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "module": "commonjs",
-    "target": "ES2022",
-    "baseUrl": ".",
-    "paths": {
-      "@cleexs/shared": ["../../packages/shared/dist"]
-    }
+    "target": "ES2022"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
