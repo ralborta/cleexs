@@ -5,9 +5,9 @@ import { ArrowRight } from 'lucide-react';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="max-w-4xl w-full">
-        <div className="text-center mb-12">
+    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-gray-50 to-white px-6 py-16">
+      <div className="mx-auto max-w-5xl">
+        <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
               <svg
@@ -40,39 +40,43 @@ export default function Home() {
                 />
               </svg>
             </div>
-            <h1 className="text-5xl font-bold text-gray-900">Cleexs</h1>
+            <h1 className="text-5xl font-bold tracking-tight text-gray-900">Cleexs</h1>
           </div>
           <p className="text-xl text-gray-600 mb-2">PRIA Platform</p>
           <p className="text-gray-500">AI Recommendation Index Platform</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader>
+          <Card className="border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xl">Dashboard</CardTitle>
-              <CardDescription>Visualiza rankings, tendencias y análisis de PRIA</CardDescription>
+              <CardDescription>
+                Visualiza rankings, tendencias y análisis de PRIA
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Link href="/dashboard">
                 <Button className="w-full group">
                   Ir al Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader>
+          <Card className="border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xl">Runs</CardTitle>
-              <CardDescription>Gestiona tus corridas de análisis y resultados</CardDescription>
+              <CardDescription>
+                Gestiona tus corridas de análisis y resultados
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Link href="/runs">
                 <Button className="w-full" variant="outline" asChild>
-                  <span className="group">
+                  <span className="group inline-flex items-center justify-center">
                     Ver Runs
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform inline-block" />
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </span>
                 </Button>
               </Link>
