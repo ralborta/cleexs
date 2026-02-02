@@ -1,15 +1,19 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles, ShieldCheck, TrendingUp } from 'lucide-react';
 
 export default function Home() {
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-gray-50 to-white px-6 py-16">
-      <div className="mx-auto max-w-5xl">
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-slate-50 via-white to-purple-50 px-6 py-16">
+      <div className="mx-auto max-w-6xl">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 rounded-full border border-purple-100 bg-white px-4 py-2 text-sm text-purple-700 shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            Nuevo PRIA Platform
+          </div>
+          <div className="flex items-center justify-center gap-3 mt-6 mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg">
               <svg
                 width="32"
                 height="32"
@@ -42,44 +46,69 @@ export default function Home() {
             </div>
             <h1 className="text-5xl font-bold tracking-tight text-gray-900">Cleexs</h1>
           </div>
-          <p className="text-xl text-gray-600 mb-2">PRIA Platform</p>
-          <p className="text-gray-500">AI Recommendation Index Platform</p>
+          <p className="text-xl text-gray-700 mb-2">PRIA Platform</p>
+          <p className="text-gray-500 max-w-2xl mx-auto">
+            Medí qué tan recomendado aparece tu producto en ChatGPT, con evidencia auditable y
+            comparaciones consistentes.
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+          <Card className="border-transparent bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Dashboard</CardTitle>
+              <CardTitle className="text-xl flex items-center gap-2 text-gray-900">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Dashboard
+              </CardTitle>
               <CardDescription>
-                Visualiza rankings, tendencias y análisis de PRIA
+                Visualizá rankings, tendencias y análisis de PRIA con estilo ejecutivo.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <Link href="/dashboard">
-                <Button className="w-full group">
-                  Ir al Dashboard
+                <Button className="w-full group bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700">
+                  Ver Dashboard
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-gray-500">
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  Ranking vs competidores
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  Tendencia mensual
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+          <Card className="border-transparent bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Runs</CardTitle>
+              <CardTitle className="text-xl flex items-center gap-2 text-gray-900">
+                <ShieldCheck className="h-5 w-5 text-purple-600" />
+                Runs
+              </CardTitle>
               <CardDescription>
-                Gestiona tus corridas de análisis y resultados
+                Gestioná corridas, evidencia y overrides con trazabilidad completa.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <Link href="/runs">
-                <Button className="w-full" variant="outline" asChild>
+                <Button className="w-full border-purple-200 text-purple-700 hover:bg-purple-50" variant="outline" asChild>
                   <span className="group inline-flex items-center justify-center">
                     Ver Runs
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </span>
                 </Button>
               </Link>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-gray-500">
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  Evidencia completa
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  Overrides manuales
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
