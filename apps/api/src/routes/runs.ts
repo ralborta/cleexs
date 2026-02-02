@@ -166,9 +166,9 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
           runId: run.id,
           promptId,
           responseText: finalResponseText,
-          top3Json: top3 as Prisma.InputJsonValue,
+          top3Json: top3 as unknown as Prisma.InputJsonValue,
           score,
-          flags: flags as Prisma.InputJsonValue,
+          flags: flags as unknown as Prisma.InputJsonValue,
           truncated,
         },
         include: {
@@ -259,13 +259,13 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       const updated = await prisma.promptResult.update({
         where: { id: promptResultId },
         data: {
-          overrideTop3Json: overrideTop3 as Prisma.InputJsonValue,
+          overrideTop3Json: overrideTop3 as unknown as Prisma.InputJsonValue,
           manualOverride: true,
           score: newScore,
           flags: {
             ...(result.flags as any),
             manual_override: true,
-          } as Prisma.InputJsonValue,
+          } as unknown as Prisma.InputJsonValue,
         },
       });
 
