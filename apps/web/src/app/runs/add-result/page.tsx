@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { runsApi, promptsApi, Run, Prompt } from '@/lib/api';
+import { runsApi, promptsApi, tenantsApi, Run, Prompt, PromptVersion } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-
-const MOCK_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-const MOCK_VERSION_ID = '00000000-0000-0000-0000-000000000010';
 
 export default function AddResultPage() {
   const router = useRouter();
   const [runs, setRuns] = useState<Run[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
+  const [tenantId, setTenantId] = useState('');
+  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
   const [selectedRunId, setSelectedRunId] = useState<string>('');
   const [selectedPromptId, setSelectedPromptId] = useState<string>('');
   const [responseText, setResponseText] = useState<string>('');
@@ -23,12 +23,14 @@ export default function AddResultPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const [runsData, promptsData] = await Promise.all([
-          runsApi.list(MOCK_TENANT_ID),
-          promptsApi.getPrompts(MOCK_VERSION_ID),
+        const tenant = await tenantsApi.getByCode('000');
+        setTenantId(tenant.id);
+        const [runsData, versionsData] = await Promise.all([
+          runsApi.list(tenant.id),
+          promptsApi.getVersions(tenant.id),
         ]);
         setRuns(runsData);
-        setPrompts(promptsData.filter((p) => p.active));
+        setPromptVersions(versionsData);
       } catch (error) {
         console.error('Error cargando datos:', error);
       } finally {
@@ -38,6 +40,29 @@ export default function AddResultPage() {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!selectedVersionId && promptVersions.length > 0) {
+      setSelectedVersionId(promptVersions[0].id);
+    }
+  }, [promptVersions, selectedVersionId]);
+
+  useEffect(() => {
+    async function loadPrompts() {
+      if (!selectedVersionId) {
+        setPrompts([]);
+        return;
+      }
+      try {
+        const promptsData = await promptsApi.getPrompts(selectedVersionId);
+        setPrompts(promptsData.filter((p) => p.active));
+      } catch (error) {
+        console.error('Error cargando prompts:', error);
+      }
+    }
+
+    loadPrompts();
+  }, [selectedVersionId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +125,23 @@ export default function AddResultPage() {
                     {run.brand.name} -{' '}
                     {new Date(run.periodStart).toLocaleDateString('es-AR')} a{' '}
                     {new Date(run.periodEnd).toLocaleDateString('es-AR')}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Versión de prompts</label>
+              <select
+                value={selectedVersionId}
+                onChange={(e) => setSelectedVersionId(e.target.value)}
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                required
+              >
+                <option value="">Selecciona una versión</option>
+                {promptVersions.map((version) => (
+                  <option key={version.id} value={version.id}>
+                    {version.name}
                   </option>
                 ))}
               </select>
