@@ -102,6 +102,10 @@ export const tenantsApi = {
 export const brandsApi = {
   list: (tenantId: string) => api<Brand[]>(`/api/brands?tenantId=${tenantId}`),
   get: (id: string) => api<Brand>(`/api/brands/${id}`),
+  create: (data: { tenantId: string; name: string; domain?: string }) =>
+    api<Brand>('/api/brands', { method: 'POST', body: JSON.stringify(data) }),
+  addCompetitor: (brandId: string, data: { name: string; aliases?: string[] }) =>
+    api(`/api/brands/${brandId}/competitors`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const promptsApi = {
@@ -109,6 +113,13 @@ export const promptsApi = {
     api<PromptVersion[]>(`/api/prompts/prompt-versions?tenantId=${tenantId}`),
   getPrompts: (versionId: string) =>
     api<Prompt[]>(`/api/prompts/prompts?versionId=${versionId}`),
+  createVersion: (data: { tenantId: string; name: string }) =>
+    api<PromptVersion>('/api/prompts/prompt-versions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  createPrompt: (data: { promptVersionId: string; promptText: string; active?: boolean }) =>
+    api<Prompt>('/api/prompts/prompts', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const runsApi = {
