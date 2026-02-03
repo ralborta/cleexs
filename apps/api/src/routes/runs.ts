@@ -283,8 +283,6 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      const { default: OpenAI } = await import('openai');
-      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const competitors = run.brand.competitors.map((c) => ({
         name: c.name,
         aliases: (c.aliases as string[]) || [],
@@ -295,29 +293,41 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
 
       try {
         for (const prompt of prompts) {
-          const response = await client.chat.completions.create({
-            model: data.model,
-            temperature: data.temperature,
-            max_tokens: data.maxTokens,
-            messages: [
-              {
-                role: 'system',
-                content:
-                  'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
-                  'Incluí marcas y luego un breve motivo por cada una.',
-              },
-              {
-                role: 'user',
-                content:
-                  `${prompt.promptText}\n\n` +
-                  `Marca a medir: ${run.brand.name}.\n` +
-                  `Competidores: ${competitorList || 'no informados'}.`,
-              },
-            ],
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: data.model,
+              temperature: data.temperature,
+              max_tokens: data.maxTokens,
+              messages: [
+                {
+                  role: 'system',
+                  content:
+                    'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
+                    'Incluí marcas y luego un breve motivo por cada una.',
+                },
+                {
+                  role: 'user',
+                  content:
+                    `${prompt.promptText}\n\n` +
+                    `Marca a medir: ${run.brand.name}.\n` +
+                    `Competidores: ${competitorList || 'no informados'}.`,
+                },
+              ],
+            }),
           });
 
-          totalTokens += response.usage?.total_tokens || 0;
-          const responseText = response.choices?.[0]?.message?.content?.trim() || '';
+          const responseJson = await response.json();
+          if (!response.ok) {
+            throw new Error(responseJson?.error?.message || 'Error en OpenAI');
+          }
+
+          totalTokens += responseJson?.usage?.total_tokens || 0;
+          const responseText = responseJson?.choices?.[0]?.message?.content?.trim() || '';
 
           const { top3, flags } = parseTop3(responseText, run.brand.name, competitors);
           const brandPosition =

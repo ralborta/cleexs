@@ -20,8 +20,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.7.0",
-    "openai": "^6.17.0"
+    "@prisma/client": "^5.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
