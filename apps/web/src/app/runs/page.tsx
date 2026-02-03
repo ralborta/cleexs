@@ -134,7 +134,7 @@ export default function RunsPage() {
                 </TableRow>
               ) : (
                 runs.map((run) => (
-                  <TableRow key={run.id}>
+                  <TableRow key={run.id} className="hover:bg-slate-50/80">
                     <TableCell className="font-medium text-gray-900">{run.brand.name}</TableCell>
                     <TableCell>
                       {new Date(run.periodStart).toLocaleDateString('es-AR')} -{' '}

@@ -35,47 +35,53 @@ export function PromptDetail({ results }: PromptDetailProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
-    <Card>
+    <Card className="border-transparent bg-white shadow-md">
       <CardHeader>
-        <CardTitle>Detalle por Prompt</CardTitle>
-        <CardDescription>Resultados y evidencia por cada consulta</CardDescription>
+        <CardTitle className="text-xl text-gray-900">Detalle por Prompt</CardTitle>
+        <CardDescription className="text-gray-600">
+          Resultados y evidencia por cada consulta
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Prompt</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Top 3</TableHead>
-              <TableHead className="text-right">Score</TableHead>
-              <TableHead>Flags</TableHead>
-              <TableHead>Evidencia</TableHead>
+            <TableRow className="bg-slate-50/80">
+              <TableHead className="text-gray-600">Prompt</TableHead>
+              <TableHead className="text-gray-600">Categoría</TableHead>
+              <TableHead className="text-gray-600">Top 3</TableHead>
+              <TableHead className="text-right text-gray-600">Score</TableHead>
+              <TableHead className="text-gray-600">Flags</TableHead>
+              <TableHead className="text-gray-600">Evidencia</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-gray-500">
                   No hay resultados disponibles
                 </TableCell>
               </TableRow>
             ) : (
               results.map((result) => (
                 <>
-                  <TableRow key={result.id}>
-                    <TableCell className="max-w-xs truncate">{result.prompt.promptText}</TableCell>
-                    <TableCell>{result.prompt.category?.name || '-'}</TableCell>
+                  <TableRow key={result.id} className="hover:bg-slate-50/80">
+                    <TableCell className="max-w-xs truncate text-gray-900">
+                      {result.prompt.promptText}
+                    </TableCell>
+                    <TableCell className="text-gray-600">{result.prompt.category?.name || '-'}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         {result.top3Json.map((entry) => (
-                          <div key={entry.position} className="text-sm">
+                          <div key={entry.position} className="text-sm text-gray-700">
                             {entry.position}. {entry.name} ({entry.type})
                           </div>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="font-semibold">{(result.score * 100).toFixed(1)}</span>
+                      <span className="font-semibold text-gray-900">
+                        {(result.score * 100).toFixed(1)}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -84,7 +90,7 @@ export function PromptDetail({ results }: PromptDetailProps) {
                           .map(([key]) => (
                             <span
                               key={key}
-                              className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                              className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
                             >
                               {key}
                             </span>
@@ -100,6 +106,7 @@ export function PromptDetail({ results }: PromptDetailProps) {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="text-gray-700 hover:bg-slate-100"
                         onClick={() =>
                           setExpandedId(expandedId === result.id ? null : result.id)
                         }
@@ -110,18 +117,18 @@ export function PromptDetail({ results }: PromptDetailProps) {
                   </TableRow>
                   {expandedId === result.id && (
                     <TableRow>
-                      <TableCell colSpan={6} className="bg-muted/50">
+                      <TableCell colSpan={6} className="bg-slate-50/80">
                         <div className="space-y-2 p-4">
                           <div>
                             <strong>Prompt:</strong>
-                            <p className="text-sm text-muted-foreground">{result.prompt.promptText}</p>
+                            <p className="text-sm text-gray-600">{result.prompt.promptText}</p>
                           </div>
                           <div>
                             <strong>Respuesta:</strong>
-                            <pre className="mt-1 max-h-64 overflow-auto rounded bg-background p-2 text-xs">
+                            <pre className="mt-1 max-h-64 overflow-auto rounded bg-white p-2 text-xs text-gray-700">
                               {result.responseText}
                               {result.truncated && (
-                                <span className="text-muted-foreground">... (truncado)</span>
+                                <span className="text-gray-500">... (truncado)</span>
                               )}
                             </pre>
                           </div>
