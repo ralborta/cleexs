@@ -23,6 +23,10 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         tenant: {
           select: { id: true, tenantCode: true },
         },
+        priaReports: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
         _count: {
           select: {
             promptResults: true,
