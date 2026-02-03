@@ -135,6 +135,14 @@ export const runsApi = {
     periodStart: string;
     periodEnd: string;
   }) => api<Run>('/api/runs', { method: 'POST', body: JSON.stringify(data) }),
+  execute: (
+    runId: string,
+    data?: { promptVersionId?: string; model?: string; temperature?: number; maxTokens?: number; force?: boolean }
+  ) =>
+    api(`/api/runs/${runId}/execute`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
   addResult: (runId: string, promptId: string, responseText: string) =>
     api(`/api/runs/${runId}/results`, {
       method: 'POST',

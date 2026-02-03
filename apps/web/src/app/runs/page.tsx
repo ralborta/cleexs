@@ -12,20 +12,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { runsApi, Run } from '@/lib/api';
+import { runsApi, tenantsApi, Run } from '@/lib/api';
 import { PromptDetail } from '@/components/dashboard/prompt-detail';
-
-const MOCK_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function RunsPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<Run | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tenantId, setTenantId] = useState('');
+  const [executingRunId, setExecutingRunId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     async function loadRuns() {
       try {
-        const data = await runsApi.list(MOCK_TENANT_ID);
+        const tenant = await tenantsApi.getByCode('000');
+        setTenantId(tenant.id);
+        const data = await runsApi.list(tenant.id);
         setRuns(data);
       } catch (error) {
         console.error('Error cargando runs:', error);
@@ -43,6 +46,26 @@ export default function RunsPage() {
       setSelectedRun(fullRun as any);
     } catch (error) {
       console.error('Error cargando detalles:', error);
+    }
+  };
+
+  const handleExecuteRun = async (runId: string) => {
+    if (!tenantId) return;
+    setExecutingRunId(runId);
+    setNotice(null);
+    try {
+      await runsApi.execute(runId, { model: 'gpt-4o-mini' });
+      const data = await runsApi.list(tenantId);
+      setRuns(data);
+      if (selectedRun && selectedRun.id === runId) {
+        const refreshed = await runsApi.get(runId);
+        setSelectedRun(refreshed as any);
+      }
+      setNotice({ type: 'success', message: 'Run ejecutado y PRIA actualizado.' });
+    } catch (error: any) {
+      setNotice({ type: 'error', message: error?.message || 'No se pudo ejecutar el run.' });
+    } finally {
+      setExecutingRunId(null);
     }
   };
 
@@ -71,6 +94,18 @@ export default function RunsPage() {
           </Button>
         </Link>
       </div>
+
+      {notice && (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm ${
+            notice.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              : 'border-rose-200 bg-rose-50 text-rose-900'
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
 
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
@@ -128,14 +163,24 @@ export default function RunsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-gray-200 text-gray-700 hover:bg-gray-50"
-                        onClick={() => handleViewDetails(run)}
-                      >
-                        Ver Detalles
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                          onClick={() => handleViewDetails(run)}
+                        >
+                          Ver Detalles
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                          onClick={() => handleExecuteRun(run.id)}
+                          disabled={executingRunId === run.id}
+                        >
+                          {executingRunId === run.id ? 'Ejecutando…' : 'Ejecutar Run'}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

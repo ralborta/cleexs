@@ -6,6 +6,7 @@ import { canCreateRun } from '../lib/tenant';
 import { parseTop3 } from '../lib/parsing';
 import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from '../lib/pria';
+import OpenAI from 'openai';
 
 const runRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /runs?tenantId=...&brandId=...
@@ -198,6 +199,175 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       return reply.code(201).send(result);
+    }
+  );
+
+  // POST /runs/:id/execute
+  const executeSchema = z.object({
+    promptVersionId: z.string().uuid().optional(),
+    model: z.string().optional().default('gpt-4o-mini'),
+    temperature: z.number().min(0).max(1).optional().default(0.2),
+    maxTokens: z.number().min(128).max(4096).optional().default(800),
+    force: z.boolean().optional().default(false),
+  });
+
+  fastify.post<{ Params: { id: string }; Body: z.infer<typeof executeSchema> }>(
+    '/:id/execute',
+    async (request, reply) => {
+      const data = executeSchema.parse(request.body || {});
+
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(500).send({ error: 'OPENAI_API_KEY no configurada' });
+      }
+
+      const run = await prisma.run.findUnique({
+        where: { id: request.params.id },
+        include: {
+          brand: {
+            include: {
+              aliases: true,
+              competitors: true,
+            },
+          },
+          promptResults: {
+            select: { id: true },
+          },
+        },
+      });
+
+      if (!run) {
+        return reply.code(404).send({ error: 'Run no encontrado' });
+      }
+
+      if (run.promptResults.length > 0 && !data.force) {
+        return reply.code(409).send({
+          error: 'El run ya tiene resultados. Usá force=true para recalcular.',
+        });
+      }
+
+      const promptVersion = data.promptVersionId
+        ? await prisma.promptVersion.findUnique({ where: { id: data.promptVersionId } })
+        : await prisma.promptVersion.findFirst({
+            where: { tenantId: run.tenantId, active: true },
+            orderBy: { createdAt: 'desc' },
+          });
+
+      if (!promptVersion) {
+        return reply.code(400).send({ error: 'No hay versión de prompts activa' });
+      }
+
+      const prompts = await prisma.prompt.findMany({
+        where: {
+          promptVersionId: promptVersion.id,
+          active: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (prompts.length === 0) {
+        return reply.code(400).send({ error: 'No hay prompts activos en la versión seleccionada' });
+      }
+
+      if (data.force && run.promptResults.length > 0) {
+        await prisma.promptResult.deleteMany({ where: { runId: run.id } });
+      }
+
+      await prisma.run.update({
+        where: { id: run.id },
+        data: {
+          status: 'running',
+          modelMeta: {
+            model: data.model,
+            temperature: data.temperature,
+            maxTokens: data.maxTokens,
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const competitors = run.brand.competitors.map((c) => ({
+        name: c.name,
+        aliases: (c.aliases as string[]) || [],
+      }));
+      const competitorList = competitors.map((c) => c.name).join(', ');
+      const brandAliases = run.brand.aliases.map((a) => a.alias);
+      let totalTokens = 0;
+
+      try {
+        for (const prompt of prompts) {
+          const response = await client.chat.completions.create({
+            model: data.model,
+            temperature: data.temperature,
+            max_tokens: data.maxTokens,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
+                  'Incluí marcas y luego un breve motivo por cada una.',
+              },
+              {
+                role: 'user',
+                content:
+                  `${prompt.promptText}\n\n` +
+                  `Marca a medir: ${run.brand.name}.\n` +
+                  `Competidores: ${competitorList || 'no informados'}.`,
+              },
+            ],
+          });
+
+          totalTokens += response.usage?.total_tokens || 0;
+          const responseText = response.choices?.[0]?.message?.content?.trim() || '';
+
+          const { top3, flags } = parseTop3(responseText, run.brand.name, competitors);
+          const brandPosition =
+            top3.find(
+              (e) =>
+                e.name.toLowerCase() === run.brand.name.toLowerCase() ||
+                brandAliases.some((a) => a.toLowerCase() === e.name.toLowerCase())
+            )?.position || null;
+
+          const score = calculateScore(brandPosition);
+          const maxSize = 100 * 1024;
+          const truncated = responseText.length > maxSize;
+          const finalResponseText = truncated ? responseText.substring(0, maxSize) : responseText;
+
+          await prisma.promptResult.create({
+            data: {
+              runId: run.id,
+              promptId: prompt.id,
+              responseText: finalResponseText,
+              top3Json: top3 as unknown as Prisma.InputJsonValue,
+              score,
+              flags: flags as unknown as Prisma.InputJsonValue,
+              truncated,
+            },
+          });
+        }
+
+        await updatePRIAReport(run.id, run.brandId);
+
+        await prisma.run.update({
+          where: { id: run.id },
+          data: {
+            status: 'completed',
+            tokensUsed: totalTokens,
+          },
+        });
+
+        return reply.code(200).send({
+          runId: run.id,
+          promptVersionId: promptVersion.id,
+          promptsExecuted: prompts.length,
+          tokensUsed: totalTokens,
+        });
+      } catch (error: any) {
+        await prisma.run.update({
+          where: { id: run.id },
+          data: { status: 'failed' },
+        });
+        return reply.code(500).send({ error: error?.message || 'Error ejecutando prompts' });
+      }
     }
   );
 
