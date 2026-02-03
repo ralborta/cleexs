@@ -4,6 +4,22 @@ import { prisma } from '../lib/prisma';
 import { generateTenantPath, getTenantDescendants, canCreateRun } from '../lib/tenant';
 
 const tenantRoutes: FastifyPluginAsync = async (fastify) => {
+  // GET /tenants/by-code/:code
+  fastify.get<{ Params: { code: string } }>('/by-code/:code', async (request, reply) => {
+    const tenant = await prisma.tenant.findUnique({
+      where: { tenantCode: request.params.code },
+      include: {
+        plan: true,
+      },
+    });
+
+    if (!tenant) {
+      return reply.code(404).send({ error: 'Tenant no encontrado' });
+    }
+
+    return tenant;
+  });
+
   // GET /tenants/:id
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const tenant = await prisma.tenant.findUnique({

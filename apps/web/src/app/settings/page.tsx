@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { brandsApi, promptsApi, runsApi, Brand, PromptVersion } from '@/lib/api';
-
-const MOCK_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+import { brandsApi, promptsApi, runsApi, tenantsApi, Brand, PromptVersion } from '@/lib/api';
 
 export default function SettingsPage() {
+  const [tenantId, setTenantId] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,9 +37,11 @@ export default function SettingsPage() {
     async function load() {
       setLoading(true);
       try {
+        const tenant = await tenantsApi.getByCode('000');
+        setTenantId(tenant.id);
         const [brandsData, versionsData] = await Promise.all([
-          brandsApi.list(MOCK_TENANT_ID),
-          promptsApi.getVersions(MOCK_TENANT_ID),
+          brandsApi.list(tenant.id),
+          promptsApi.getVersions(tenant.id),
         ]);
         setBrands(brandsData);
         setPromptVersions(versionsData);
@@ -70,17 +71,21 @@ export default function SettingsPage() {
   }, [promptVersions, selectedVersionId]);
 
   const handleCreateBrand = async () => {
+    if (!tenantId) {
+      alert('Tenant no disponible. Reintentá en unos segundos.');
+      return;
+    }
     if (!brandName.trim()) {
       alert('Ingresá el nombre de la marca');
       return;
     }
     try {
       await brandsApi.create({
-        tenantId: MOCK_TENANT_ID,
+        tenantId,
         name: brandName.trim(),
         domain: brandDomain.trim() || undefined,
       });
-      const updated = await brandsApi.list(MOCK_TENANT_ID);
+      const updated = await brandsApi.list(tenantId);
       setBrands(updated);
       setBrandName('');
       setBrandDomain('');
@@ -101,7 +106,7 @@ export default function SettingsPage() {
     }
     try {
       await brandsApi.addCompetitor(selectedBrandId, { name: competitorName.trim() });
-      const updated = await brandsApi.list(MOCK_TENANT_ID);
+      const updated = await brandsApi.list(tenantId);
       setBrands(updated);
       setCompetitorName('');
       alert('Competidor agregado');
@@ -111,13 +116,17 @@ export default function SettingsPage() {
   };
 
   const handleCreateVersion = async () => {
+    if (!tenantId) {
+      alert('Tenant no disponible. Reintentá en unos segundos.');
+      return;
+    }
     if (!versionName.trim()) {
       alert('Ingresá el nombre de la versión');
       return;
     }
     try {
-      await promptsApi.createVersion({ tenantId: MOCK_TENANT_ID, name: versionName.trim() });
-      const updated = await promptsApi.getVersions(MOCK_TENANT_ID);
+      await promptsApi.createVersion({ tenantId, name: versionName.trim() });
+      const updated = await promptsApi.getVersions(tenantId);
       setPromptVersions(updated);
       setVersionName('');
       alert('Versión creada');
@@ -194,7 +203,7 @@ export default function SettingsPage() {
     }
     try {
       const version = await promptsApi.createVersion({
-        tenantId: MOCK_TENANT_ID,
+        tenantId,
         name: 'PROMPTS_v1',
       });
       await Promise.all(
@@ -202,7 +211,7 @@ export default function SettingsPage() {
           promptsApi.createPrompt({ promptVersionId: version.id, promptText: text, active: true })
         )
       );
-      const updated = await promptsApi.getVersions(MOCK_TENANT_ID);
+      const updated = await promptsApi.getVersions(tenantId);
       setPromptVersions(updated);
       setSelectedVersionId(version.id);
       alert('PROMPTS_v1 creado');
@@ -212,6 +221,10 @@ export default function SettingsPage() {
   };
 
   const handleCreateRun = async () => {
+    if (!tenantId) {
+      alert('Tenant no disponible. Reintentá en unos segundos.');
+      return;
+    }
     if (!runBrandId) {
       alert('Seleccioná una marca');
       return;
@@ -222,7 +235,7 @@ export default function SettingsPage() {
     }
     try {
       await runsApi.create({
-        tenantId: MOCK_TENANT_ID,
+        tenantId,
         brandId: runBrandId,
         periodStart: new Date(periodStart).toISOString(),
         periodEnd: new Date(periodEnd).toISOString(),

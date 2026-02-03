@@ -92,6 +92,7 @@ export interface RankingEntry {
 // API calls
 export const tenantsApi = {
   get: (id: string) => api<Tenant>(`/api/tenants/${id}`),
+  getByCode: (code: string) => api<Tenant>(`/api/tenants/by-code/${code}`),
   getChildren: (id: string) => api<Tenant[]>(`/api/tenants/${id}/children`),
   getUsage: (id: string, year?: number, month?: number) =>
     api<{
