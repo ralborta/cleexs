@@ -321,7 +321,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
             }),
           });
 
-          const responseJson = await response.json();
+          const responseJson = (await response.json()) as any;
           if (!response.ok) {
             throw new Error(responseJson?.error?.message || 'Error en OpenAI');
           }
