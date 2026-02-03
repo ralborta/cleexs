@@ -3,8 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "module": "commonjs",
+    "module": "Node16",
     "target": "ES2022",
+    "moduleResolution": "node16",
     "baseUrl": ".",
     "paths": {
       "@cleexs/shared": ["../../packages/shared/dist"]
