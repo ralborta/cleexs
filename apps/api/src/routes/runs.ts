@@ -6,7 +6,6 @@ import { canCreateRun } from '../lib/tenant';
 import { parseTop3 } from '../lib/parsing';
 import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from '../lib/pria';
-import OpenAI from 'openai';
 
 const runRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /runs?tenantId=...&brandId=...
@@ -284,6 +283,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
+      const { default: OpenAI } = await import('openai');
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const competitors = run.brand.competitors.map((c) => ({
         name: c.name,
