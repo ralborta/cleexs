@@ -134,7 +134,7 @@ const tenantRoutes: FastifyPluginAsync = async (fastify) => {
       const year = parseInt(request.query.year || String(now.getFullYear()));
       const month = parseInt(request.query.month || String(now.getMonth() + 1));
 
-      const { getMonthlyRunConsumption } = await import('../lib/tenant');
+      const { getMonthlyRunConsumption } = await import('../lib/tenant.js');
       const consumption = await getMonthlyRunConsumption(tenant.id, year, month);
 
       const canCreate = await canCreateRun(tenant.id);
