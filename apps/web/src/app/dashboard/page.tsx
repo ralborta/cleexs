@@ -62,9 +62,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Cargando...</p>
         </div>
       </div>
@@ -72,11 +72,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-6 py-8">
-        {/* Grid de widgets según el diseño */}
+    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50">
+      <div className="mx-auto max-w-6xl px-6 py-10 space-y-6">
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium text-purple-700">Vista general</p>
+          <h1 className="text-3xl font-bold text-gray-900">Panel</h1>
+          <p className="text-gray-600">
+            Visualizá el estado de tu PRIA con rankings, tendencias y percepción de marca.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Fila superior */}
           <div className="lg:col-span-1">
             <BrandRankingCard data={ranking} />
           </div>
@@ -86,8 +92,6 @@ export default function DashboardPage() {
           <div className="lg:col-span-1">
             <PromptRankingCard prompts={prompts} />
           </div>
-
-          {/* Fila inferior */}
           <div className="lg:col-span-1">
             <CompetitorComparisonCard />
           </div>

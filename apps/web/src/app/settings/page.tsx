@@ -20,6 +20,9 @@ export default function SettingsPage() {
   const [brandDomain, setBrandDomain] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [competitorName, setCompetitorName] = useState('');
+  const [suggestedCompetitors, setSuggestedCompetitors] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
 
   const [versionName, setVersionName] = useState('PROMPTS_v1');
   const [selectedVersionId, setSelectedVersionId] = useState('');
@@ -76,6 +79,11 @@ export default function SettingsPage() {
     }
   }, [promptVersions, selectedVersionId]);
 
+  const selectedBrand = useMemo(
+    () => brands.find((brand) => brand.id === selectedBrandId) || null,
+    [brands, selectedBrandId]
+  );
+
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 3200);
@@ -131,6 +139,24 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAddCompetitorByName = async (name: string) => {
+    if (!name.trim()) return;
+    if (!selectedBrandId) {
+      pushToast('info', 'Falta seleccionar marca', 'Elegí una marca primero.');
+      return;
+    }
+    try {
+      await brandsApi.addCompetitor(selectedBrandId, { name: name.trim() });
+      const updated = await brandsApi.list(tenantId);
+      setBrands(updated);
+      setCompetitorName('');
+      setSuggestedCompetitors((prev) => prev.filter((item) => item !== name));
+      pushToast('success', 'Competidor agregado', 'Listo para comparar.');
+    } catch (error: any) {
+      pushToast('error', 'No pudimos agregar el competidor', error?.message);
+    }
+  };
+
   const handleCreateVersion = async () => {
     if (!tenantId) {
       pushToast('error', 'Tenant no disponible', 'Reintentá en unos segundos.');
@@ -175,6 +201,33 @@ export default function SettingsPage() {
       .map((item) => item.trim())
       .filter(Boolean);
 
+  const handleSuggestCompetitors = async () => {
+    if (!selectedBrandId || !selectedBrand) {
+      pushToast('info', 'Falta seleccionar marca', 'Elegí una marca primero.');
+      return;
+    }
+    setSuggestionsLoading(true);
+    setSuggestionsError(null);
+    try {
+      const response = await brandsApi.suggestCompetitors(selectedBrandId, {
+        industry: wizardIndustry || undefined,
+        productType: wizardProductType || undefined,
+        country: wizardCountry || undefined,
+        objective: wizardObjective || undefined,
+        useCases: splitList(wizardUseCases),
+        factors: splitList(wizardFactors),
+      });
+      setSuggestedCompetitors(response.suggestions || []);
+      if (!response.suggestions?.length) {
+        setSuggestionsError('No encontramos sugerencias con los datos actuales.');
+      }
+    } catch (error: any) {
+      setSuggestionsError(error?.message || 'No se pudieron generar sugerencias.');
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
   const buildPrompts = () => {
     const competitors = splitList(wizardCompetitors);
     const useCases = splitList(wizardUseCases);
@@ -187,24 +240,22 @@ export default function SettingsPage() {
     const product = wizardProductType || 'tu producto';
     const country = wizardCountry || 'tu mercado';
     const objective = wizardObjective || 'consideración';
+    const brandName = selectedBrand?.name || 'tu marca';
 
-    const esPrompts = [
-      `¿Cuáles son las mejores opciones de ${product} en ${country} para ${objective}?`,
-      `Compará ${product} para ${industry}: ventajas, desventajas y para quién es mejor.`,
-      `¿Qué alternativas a ${product} recomiendas y por qué? (${competitorText})`,
-      `En ${country}, ¿qué ${product} es mejor para ${useCaseText}?`,
-      `¿Qué factores debo evaluar al elegir ${product}? (${factorText})`,
+    const prompts = [
+      `Compará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
+      `Si tuvieras que recomendar ${product} para ${useCaseText}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3.`,
+      `Para ${objective}, ¿qué ${product} elegirías entre ${brandName} y ${competitorText}? Hacé un Top 3 con justificación corta.`,
+      `Compará ${product} para ${industry}: ventajas y desventajas entre ${brandName} y ${competitorText}. Cerrá con ranking 1., 2., 3.`,
+      `Con tono ${tone}, devolvé el Top 3 de ${product} en ${country} incluyendo ${brandName} y ${competitorText}.`,
+      `En ${country}, rankeá Top 3 de ${product} para ${objective}. Incluí ${brandName} y ${competitorText}.`,
+      `¿Qué ${product} es mejor para ${useCaseText}? Respondé con Top 3 e incluí ${brandName} y ${competitorText}.`,
+      `Si tuvieras que elegir ${product} hoy, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText} y justificá brevemente.`,
+      `Compará ${product} en ${industry} y devolvé un Top 3. Marca medida: ${brandName}. Competidores: ${competitorText}.`,
+      `Entre ${brandName} y ${competitorText}, ¿cómo queda el Top 3 para ${objective}? Respondé 1., 2., 3. con motivo breve.`,
     ];
 
-    const ptPrompts = [
-      `Quais são as melhores opções de ${product} em ${country} para ${objective}?`,
-      `Compare ${product} para ${industry}: vantagens, desvantagens e para quem é melhor.`,
-      `Quais alternativas a ${product} você recomenda e por quê? (${competitorText})`,
-      `Em ${country}, qual ${product} é melhor para ${useCaseText}?`,
-      `Quais fatores devo avaliar ao escolher ${product}? (${factorText})`,
-    ];
-
-    return [...esPrompts, ...ptPrompts];
+    return prompts;
   };
 
   const handleGeneratePrompts = () => {
@@ -378,6 +429,44 @@ export default function SettingsPage() {
               <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={handleAddCompetitor}>
                 Agregar Competidor
               </Button>
+
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-gray-900">Sugerencias inteligentes</p>
+                    <Button
+                      variant="outline"
+                      className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                      onClick={handleSuggestCompetitors}
+                      disabled={suggestionsLoading}
+                    >
+                      {suggestionsLoading ? 'Generando...' : 'Sugerir competidores'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Usamos el nombre de la marca, el dominio y los datos del wizard (industria, producto,
+                    mercado, objetivos y casos de uso) para sugerir competidores relevantes antes de crear el run.
+                  </p>
+                  {suggestionsError && <p className="text-xs text-rose-600">{suggestionsError}</p>}
+                  {suggestedCompetitors.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedCompetitors.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => handleAddCompetitorByName(suggestion)}
+                          className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800 hover:bg-purple-200"
+                        >
+                          + {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    !suggestionsError &&
+                    !suggestionsLoading && <p className="text-xs text-gray-500">Todavía no hay sugerencias.</p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -435,9 +524,10 @@ export default function SettingsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Wizard de Prompts (ES + PT)</CardTitle>
+              <CardTitle className="text-xl text-gray-900">Wizard de Prompts (ES)</CardTitle>
               <CardDescription>
-                Respondé 8 preguntas y generamos 10 prompts para tu nueva versión.
+                Generamos 10 prompts de comparación directa. Cada prompt pide un Top 3 explícito e incluye la
+                marca medida y sus competidores para asegurar un ranking claro y comparable.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

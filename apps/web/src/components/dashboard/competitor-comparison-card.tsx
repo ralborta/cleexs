@@ -24,11 +24,11 @@ export function CompetitorComparisonCard({
   data = mockData,
 }: CompetitorComparisonCardProps) {
   return (
-    <Card className="bg-white shadow-sm">
+    <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-blue-700" />
-          <CardTitle className="text-lg font-semibold text-gray-900">Brand Ranking</CardTitle>
+          <CardTitle className="text-lg font-semibold text-gray-900">Comparación con competidores</CardTitle>
         </div>
         <CardDescription className="text-sm text-gray-600 mt-1">
           Compará tu PRIA con tus principales competidores.
@@ -44,7 +44,7 @@ export function CompetitorComparisonCard({
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div
-                  className="bg-blue-500 h-2.5 rounded-full transition-all"
+                  className="bg-blue-600 h-2.5 rounded-full transition-all"
                   style={{ width: `${item.percentage}%` }}
                 ></div>
               </div>

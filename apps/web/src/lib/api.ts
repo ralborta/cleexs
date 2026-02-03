@@ -42,6 +42,10 @@ export interface Brand {
   competitors: Array<{ id: string; name: string }>;
 }
 
+export interface CompetitorSuggestionResponse {
+  suggestions: string[];
+}
+
 export interface PromptVersion {
   id: string;
   name: string;
@@ -107,6 +111,21 @@ export const brandsApi = {
     api<Brand>('/api/brands', { method: 'POST', body: JSON.stringify(data) }),
   addCompetitor: (brandId: string, data: { name: string; aliases?: string[] }) =>
     api(`/api/brands/${brandId}/competitors`, { method: 'POST', body: JSON.stringify(data) }),
+  suggestCompetitors: (
+    brandId: string,
+    data: {
+      industry?: string;
+      productType?: string;
+      country?: string;
+      objective?: string;
+      useCases?: string[];
+      factors?: string[];
+    }
+  ) =>
+    api<CompetitorSuggestionResponse>(`/api/brands/${brandId}/competitor-suggestions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 export const promptsApi = {

@@ -30,16 +30,18 @@ export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card className="bg-white shadow-sm">
+    <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-gray-900">PRIA Trend</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-900">Tendencia PRIA</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {/* Métricas principales */}
           <div>
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-bold text-blue-700">PRIA actual: {currentPRIA.toFixed(0)}%</span>
+              <span className="text-3xl font-bold text-blue-700">
+                PRIA actual: {currentPRIA.toFixed(0)}%
+              </span>
             </div>
             {change !== 0 && (
               <div className="flex items-center gap-2">
@@ -82,9 +84,9 @@ export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
                 <Line
                   type="monotone"
                   dataKey="PRIA"
-                  stroke="#9333ea"
+                  stroke="#7c3aed"
                   strokeWidth={3}
-                  dot={{ fill: '#9333ea', r: 4 }}
+                  dot={{ fill: '#7c3aed', r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
@@ -98,7 +100,7 @@ export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option>Últimos 7 días</option>
                 <option>Últimos 30 días</option>

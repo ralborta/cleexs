@@ -20,11 +20,11 @@ interface BrandRankingCardProps {
 
 export function BrandRankingCard({
   data,
-  title = 'Brand Ranking',
+  title = 'Ranking de marcas',
   showCompetitors = false,
 }: BrandRankingCardProps) {
   return (
-    <Card className="bg-white shadow-sm">
+    <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-blue-700" />
@@ -39,7 +39,7 @@ export function BrandRankingCard({
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow className="border-b">
+            <TableRow className="border-b bg-gray-50/70">
               <TableHead className="w-[50px] text-gray-600 font-medium">#</TableHead>
               <TableHead className="text-gray-600 font-medium">Marca</TableHead>
               <TableHead className="text-right text-gray-600 font-medium">PRIA</TableHead>
@@ -60,7 +60,7 @@ export function BrandRankingCard({
                 const isPositive = change > 0;
 
                 return (
-                  <TableRow key={entry.brandId} className="hover:bg-gray-50">
+                  <TableRow key={entry.brandId} className="hover:bg-gray-50/70">
                     <TableCell className="font-medium text-gray-900">{index + 1}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export function BrandRankingCard({
         </Table>
 
         {!showCompetitors && (
-          <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm text-gray-600">
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 text-sm text-gray-600">
             <div className="h-5 w-5 rounded bg-gray-200 flex items-center justify-center">
               <span className="text-xs">O</span>
             </div>

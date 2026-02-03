@@ -12,12 +12,82 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { runsApi, tenantsApi, Run } from '@/lib/api';
+import { reportsApi, runsApi, tenantsApi, Run, RankingEntry } from '@/lib/api';
 import { PromptDetail } from '@/components/dashboard/prompt-detail';
+
+interface PromptResult {
+  id: string;
+  prompt: {
+    id: string;
+    promptText: string;
+    category?: { name: string };
+  };
+  responseText: string;
+  top3Json: Array<{ position: number; name: string; type: string }>;
+  score: number;
+  flags: Record<string, boolean>;
+  truncated: boolean;
+  manualOverride: boolean;
+}
+
+interface RunWithDetails extends Run {
+  brand: Run['brand'] & { competitors?: Array<{ id: string; name: string }> };
+  promptResults?: PromptResult[];
+}
+
+interface ComparisonRow {
+  name: string;
+  type: string;
+  appearances: number;
+  averagePosition: number;
+  share: number;
+}
+
+const normalizeName = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, '')
+    .trim();
+
+const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
+  const totals = new Map<string, { name: string; type: string; count: number; positionSum: number }>();
+  let totalEntries = 0;
+
+  results.forEach((result) => {
+    result.top3Json.forEach((entry) => {
+      totalEntries += 1;
+      const key = `${normalizeName(entry.name)}|${entry.type}`;
+      const current = totals.get(key) || {
+        name: entry.name,
+        type: entry.type,
+        count: 0,
+        positionSum: 0,
+      };
+      totals.set(key, {
+        ...current,
+        count: current.count + 1,
+        positionSum: current.positionSum + entry.position,
+      });
+    });
+  });
+
+  return Array.from(totals.values())
+    .map((row) => ({
+      name: row.name,
+      type: row.type,
+      appearances: row.count,
+      averagePosition: row.count ? row.positionSum / row.count : 0,
+      share: totalEntries ? (row.count / totalEntries) * 100 : 0,
+    }))
+    .sort((a, b) => b.appearances - a.appearances);
+};
 
 export default function RunsPage() {
   const [runs, setRuns] = useState<Run[]>([]);
-  const [selectedRun, setSelectedRun] = useState<Run | null>(null);
+  const [selectedRun, setSelectedRun] = useState<RunWithDetails | null>(null);
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenantId, setTenantId] = useState('');
   const [executingRunId, setExecutingRunId] = useState<string | null>(null);
@@ -28,8 +98,12 @@ export default function RunsPage() {
       try {
         const tenant = await tenantsApi.getByCode('000');
         setTenantId(tenant.id);
-        const data = await runsApi.list(tenant.id);
-        setRuns(data);
+        const [runsData, rankingData] = await Promise.all([
+          runsApi.list(tenant.id),
+          reportsApi.getRanking(tenant.id),
+        ]);
+        setRuns(runsData);
+        setRanking(rankingData);
       } catch (error) {
         console.error('Error cargando runs:', error);
       } finally {
@@ -43,7 +117,7 @@ export default function RunsPage() {
   const handleViewDetails = async (run: Run) => {
     try {
       const fullRun = await runsApi.get(run.id);
-      setSelectedRun(fullRun as any);
+      setSelectedRun(fullRun as RunWithDetails);
     } catch (error) {
       console.error('Error cargando detalles:', error);
     }
@@ -76,6 +150,20 @@ export default function RunsPage() {
       </div>
     );
   }
+
+  const comparisonSummary = selectedRun?.promptResults
+    ? buildComparisonSummary(selectedRun.promptResults)
+    : [];
+  const suggestedCompetitors = selectedRun
+    ? ranking
+        .filter((entry) => entry.brandId !== selectedRun.brand.id)
+        .filter((entry) => {
+          const competitors = selectedRun.brand.competitors || [];
+          const normalizedCompetitors = competitors.map((c) => normalizeName(c.name));
+          return !normalizedCompetitors.includes(normalizeName(entry.brandName));
+        })
+        .slice(0, 6)
+    : [];
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
@@ -202,9 +290,88 @@ export default function RunsPage() {
               </CardDescription>
             </CardHeader>
           </Card>
-          {(selectedRun as any).promptResults && (
-            <PromptDetail results={(selectedRun as any).promptResults} />
-          )}
+
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-gray-900">Comparaciones y sugerencias</CardTitle>
+              <CardDescription>
+                Se solicita un Top 3 por prompt con la marca a medir y la lista de competidores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Marca medida:</span> {selectedRun.brand.name}
+              </div>
+              <div className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Competidores usados:</span>{' '}
+                {selectedRun.brand.competitors && selectedRun.brand.competitors.length > 0
+                  ? selectedRun.brand.competitors.map((c) => c.name).join(', ')
+                  : 'No hay competidores cargados.'}
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-900 mb-2">Resumen de apariciones en Top 3</p>
+                {selectedRun.promptResults && selectedRun.promptResults.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50/70">
+                        <TableHead className="text-gray-600">Marca</TableHead>
+                        <TableHead className="text-gray-600">Tipo</TableHead>
+                        <TableHead className="text-right text-gray-600">Apariciones</TableHead>
+                        <TableHead className="text-right text-gray-600">Posición media</TableHead>
+                        <TableHead className="text-right text-gray-600">% del Top 3</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {comparisonSummary.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-gray-500 py-6">
+                            No hay Top 3 parseado para esta corrida.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        comparisonSummary.map((row) => (
+                          <TableRow key={`${row.name}-${row.type}`}>
+                            <TableCell className="font-medium text-gray-900">{row.name}</TableCell>
+                            <TableCell className="text-gray-600">{row.type}</TableCell>
+                            <TableCell className="text-right text-gray-700">{row.appearances}</TableCell>
+                            <TableCell className="text-right text-gray-700">
+                              {row.averagePosition.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right text-gray-700">{row.share.toFixed(1)}%</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-sm text-gray-500">Todavía no hay resultados de prompts para comparar.</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-900 mb-2">Sugerencias de competidores</p>
+                {ranking.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay ranking disponible para sugerir comparaciones.</p>
+                ) : suggestedCompetitors.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay marcas nuevas para sugerir.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedCompetitors.map((entry) => (
+                      <span
+                        key={entry.brandId}
+                        className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800"
+                      >
+                        {entry.brandName}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {selectedRun.promptResults && <PromptDetail results={selectedRun.promptResults} />}
         </div>
       )}
       </div>

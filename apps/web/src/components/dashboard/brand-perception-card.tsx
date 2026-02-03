@@ -23,11 +23,11 @@ const mockAttributes: Attribute[] = [
 
 export function BrandPerceptionCard({ attributes = mockAttributes }: BrandPerceptionCardProps) {
   return (
-    <Card className="bg-white shadow-sm">
+    <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
-          <CardTitle className="text-lg font-semibold text-gray-900">Brand Perception</CardTitle>
+          <Lightbulb className="h-5 w-5 text-amber-500" />
+        <CardTitle className="text-lg font-semibold text-gray-900">Percepción de marca</CardTitle>
         </div>
         <CardDescription className="text-sm text-gray-600 mt-1">
           Opcional: cómo describen a tu marca (atributos principales)
@@ -47,7 +47,7 @@ export function BrandPerceptionCard({ attributes = mockAttributes }: BrandPercep
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div
-                  className="bg-purple-500 h-2.5 rounded-full transition-all"
+                  className="bg-purple-600 h-2.5 rounded-full transition-all"
                   style={{ width: `${attr.percentage}%` }}
                 ></div>
               </div>

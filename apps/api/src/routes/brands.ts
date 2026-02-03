@@ -2,6 +2,36 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 
+const normalizeSuggestion = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, '')
+    .trim();
+
+const parseSuggestions = (text: string): string[] => {
+  const trimmed = text.trim();
+  const jsonStart = trimmed.indexOf('[');
+  const jsonEnd = trimmed.lastIndexOf(']');
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    try {
+      const jsonText = trimmed.slice(jsonStart, jsonEnd + 1);
+      const parsed = JSON.parse(jsonText);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => `${item}`.trim()).filter(Boolean);
+      }
+    } catch {
+      // fallback a parseo por líneas
+    }
+  }
+
+  return trimmed
+    .split('\n')
+    .map((line) => line.replace(/^[\s\-•*\d\.\)\]]+/, '').trim())
+    .filter(Boolean);
+};
+
 const brandRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /brands?tenantId=...
   fastify.get<{ Querystring: { tenantId: string } }>('/', async (request, reply) => {
@@ -124,6 +154,102 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       return reply.code(201).send(competitor);
+    }
+  );
+
+  // POST /brands/:id/competitor-suggestions
+  const suggestSchema = z.object({
+    industry: z.string().optional(),
+    productType: z.string().optional(),
+    country: z.string().optional(),
+    objective: z.string().optional(),
+    useCases: z.array(z.string()).optional(),
+    factors: z.array(z.string()).optional(),
+  });
+
+  fastify.post<{ Params: { id: string }; Body: z.infer<typeof suggestSchema> }>(
+    '/:id/competitor-suggestions',
+    async (request, reply) => {
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(500).send({ error: 'OPENAI_API_KEY no configurada' });
+      }
+
+      const context = suggestSchema.parse(request.body || {});
+      const brand = await prisma.brand.findUnique({
+        where: { id: request.params.id },
+        include: { aliases: true, competitors: true },
+      });
+
+      if (!brand) {
+        return reply.code(404).send({ error: 'Brand no encontrado' });
+      }
+
+      const existingNames = [
+        brand.name,
+        ...brand.aliases.map((a) => a.alias),
+        ...brand.competitors.map((c) => c.name),
+      ];
+
+      const prompt = [
+        `Marca: ${brand.name}`,
+        brand.domain ? `Dominio: ${brand.domain}` : null,
+        context.industry ? `Industria: ${context.industry}` : null,
+        context.productType ? `Producto/servicio: ${context.productType}` : null,
+        context.country ? `País/mercado: ${context.country}` : null,
+        context.objective ? `Objetivo: ${context.objective}` : null,
+        context.useCases?.length ? `Casos de uso: ${context.useCases.join(', ')}` : null,
+        context.factors?.length ? `Factores decisivos: ${context.factors.join(', ')}` : null,
+        existingNames.length ? `Marcas a excluir: ${existingNames.join(', ')}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            temperature: 0.4,
+            max_tokens: 180,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'Sos un analista de mercado. Devolvé SOLO un JSON array de strings con 5 a 8 marcas competidoras directas. No incluyas texto extra.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+          }),
+        });
+
+        const responseJson = (await response.json()) as any;
+        if (!response.ok) {
+          throw new Error(responseJson?.error?.message || 'Error en OpenAI');
+        }
+
+        const responseText = responseJson?.choices?.[0]?.message?.content?.trim() || '';
+        const rawSuggestions = parseSuggestions(responseText);
+        const normalizedExisting = new Set(existingNames.map(normalizeSuggestion));
+        const unique: string[] = [];
+        for (const suggestion of rawSuggestions) {
+          const normalized = normalizeSuggestion(suggestion);
+          if (!normalized || normalizedExisting.has(normalized)) continue;
+          if (!unique.find((item) => normalizeSuggestion(item) === normalized)) {
+            unique.push(suggestion);
+          }
+        }
+
+        return reply.send({ suggestions: unique.slice(0, 8) });
+      } catch (error: any) {
+        return reply.code(500).send({ error: error?.message || 'No se pudieron sugerir competidores' });
+      }
     }
   );
 
