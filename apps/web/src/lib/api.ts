@@ -42,8 +42,13 @@ export interface Brand {
   competitors: Array<{ id: string; name: string }>;
 }
 
+export interface CompetitorSuggestionItem {
+  name: string;
+  reason?: string;
+}
+
 export interface CompetitorSuggestionResponse {
-  suggestions: string[];
+  suggestions: CompetitorSuggestionItem[];
 }
 
 export interface PromptVersion {

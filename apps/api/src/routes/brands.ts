@@ -10,7 +10,9 @@ const normalizeSuggestion = (value: string) =>
     .replace(/[^\w\s]/g, '')
     .trim();
 
-const parseSuggestions = (text: string): string[] => {
+type SuggestionItem = { name: string; reason?: string };
+
+const parseSuggestions = (text: string): SuggestionItem[] => {
   const trimmed = text.trim();
   const jsonStart = trimmed.indexOf('[');
   const jsonEnd = trimmed.lastIndexOf(']');
@@ -19,7 +21,20 @@ const parseSuggestions = (text: string): string[] => {
       const jsonText = trimmed.slice(jsonStart, jsonEnd + 1);
       const parsed = JSON.parse(jsonText);
       if (Array.isArray(parsed)) {
-        return parsed.map((item) => `${item}`.trim()).filter(Boolean);
+        return parsed
+          .map((item) => {
+            if (typeof item === 'string') {
+              const name = item.trim();
+              return name ? { name } : null;
+            }
+            if (item && typeof item === 'object') {
+              const name = `${item.name || ''}`.trim();
+              const reason = item.reason ? `${item.reason}`.trim() : undefined;
+              return name ? { name, reason } : null;
+            }
+            return null;
+          })
+          .filter(Boolean) as SuggestionItem[];
       }
     } catch {
       // fallback a parseo por líneas
@@ -29,7 +44,8 @@ const parseSuggestions = (text: string): string[] => {
   return trimmed
     .split('\n')
     .map((line) => line.replace(/^[\s\-•*\d\.\)\]]+/, '').trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((name) => ({ name }));
 };
 
 const brandRoutes: FastifyPluginAsync = async (fastify) => {
@@ -219,7 +235,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
               {
                 role: 'system',
                 content:
-                  'Sos un analista de mercado. Devolvé SOLO un JSON array de strings con 5 a 8 marcas competidoras directas. No incluyas texto extra.',
+                  'Sos un analista de mercado. Devolvé SOLO un JSON array con 5 a 8 competidores directos, en formato: [{"name":"Marca","reason":"breve motivo"}]. No incluyas texto extra.',
               },
               {
                 role: 'user',
@@ -237,12 +253,12 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         const responseText = responseJson?.choices?.[0]?.message?.content?.trim() || '';
         const rawSuggestions = parseSuggestions(responseText);
         const normalizedExisting = new Set(existingNames.map(normalizeSuggestion));
-        const unique: string[] = [];
+        const unique: SuggestionItem[] = [];
         for (const suggestion of rawSuggestions) {
-          const normalized = normalizeSuggestion(suggestion);
+          const normalized = normalizeSuggestion(suggestion.name);
           if (!normalized || normalizedExisting.has(normalized)) continue;
-          if (!unique.find((item) => normalizeSuggestion(item) === normalized)) {
-            unique.push(suggestion);
+          if (!unique.find((item) => normalizeSuggestion(item.name) === normalized)) {
+            unique.push({ name: suggestion.name, reason: suggestion.reason });
           }
         }
 

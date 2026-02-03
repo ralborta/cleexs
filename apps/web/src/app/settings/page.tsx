@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { brandsApi, promptsApi, runsApi, tenantsApi, Brand, PromptVersion } from '@/lib/api';
+import {
+  brandsApi,
+  promptsApi,
+  runsApi,
+  tenantsApi,
+  Brand,
+  PromptVersion,
+  CompetitorSuggestionItem,
+} from '@/lib/api';
 
 export default function SettingsPage() {
   const [tenantId, setTenantId] = useState('');
@@ -20,7 +28,7 @@ export default function SettingsPage() {
   const [brandDomain, setBrandDomain] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [competitorName, setCompetitorName] = useState('');
-  const [suggestedCompetitors, setSuggestedCompetitors] = useState<string[]>([]);
+  const [suggestedCompetitors, setSuggestedCompetitors] = useState<CompetitorSuggestionItem[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
 
@@ -139,18 +147,18 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAddCompetitorByName = async (name: string) => {
-    if (!name.trim()) return;
+  const handleAddCompetitorByName = async (suggestion: CompetitorSuggestionItem) => {
+    if (!suggestion.name.trim()) return;
     if (!selectedBrandId) {
       pushToast('info', 'Falta seleccionar marca', 'Elegí una marca primero.');
       return;
     }
     try {
-      await brandsApi.addCompetitor(selectedBrandId, { name: name.trim() });
+      await brandsApi.addCompetitor(selectedBrandId, { name: suggestion.name.trim() });
       const updated = await brandsApi.list(tenantId);
       setBrands(updated);
       setCompetitorName('');
-      setSuggestedCompetitors((prev) => prev.filter((item) => item !== name));
+      setSuggestedCompetitors((prev) => prev.filter((item) => item.name !== suggestion.name));
       pushToast('success', 'Competidor agregado', 'Listo para comparar.');
     } catch (error: any) {
       pushToast('error', 'No pudimos agregar el competidor', error?.message);
@@ -242,20 +250,38 @@ export default function SettingsPage() {
     const objective = wizardObjective || 'consideración';
     const brandName = selectedBrand?.name || 'tu marca';
 
-    const prompts = [
+    const comparativePrompts = [
       `Compará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
-      `Si tuvieras que recomendar ${product} para ${useCaseText}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3.`,
       `Para ${objective}, ¿qué ${product} elegirías entre ${brandName} y ${competitorText}? Hacé un Top 3 con justificación corta.`,
-      `Compará ${product} para ${industry}: ventajas y desventajas entre ${brandName} y ${competitorText}. Cerrá con ranking 1., 2., 3.`,
-      `Con tono ${tone}, devolvé el Top 3 de ${product} en ${country} incluyendo ${brandName} y ${competitorText}.`,
+      `Compará ${product} para ${industry}: ventajas y desventajas entre ${brandName} y ${competitorText}. Considerá ${factorText}. Cerrá con ranking 1., 2., 3.`,
       `En ${country}, rankeá Top 3 de ${product} para ${objective}. Incluí ${brandName} y ${competitorText}.`,
-      `¿Qué ${product} es mejor para ${useCaseText}? Respondé con Top 3 e incluí ${brandName} y ${competitorText}.`,
-      `Si tuvieras que elegir ${product} hoy, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText} y justificá brevemente.`,
-      `Compará ${product} en ${industry} y devolvé un Top 3. Marca medida: ${brandName}. Competidores: ${competitorText}.`,
       `Entre ${brandName} y ${competitorText}, ¿cómo queda el Top 3 para ${objective}? Respondé 1., 2., 3. con motivo breve.`,
     ];
 
-    return prompts;
+    const recommendationPrompts = [
+      `Si tuvieras que recomendar ${product} para ${useCaseText}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3.`,
+      `¿Qué ${product} es mejor para ${useCaseText}? Respondé con Top 3 e incluí ${brandName} y ${competitorText}.`,
+      `Si tuvieras que elegir ${product} hoy, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText} y justificá brevemente en tono ${tone}.`,
+    ];
+
+    const defensibilityPrompts = [
+      `Estoy considerando ${brandName} para ${useCaseText}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}.`,
+      `Si ${brandName} no estuviera disponible, ¿qué ${product} recomendarías? Hacé un Top 3 con ${competitorText}.`,
+    ];
+
+    return [...comparativePrompts, ...recommendationPrompts, ...defensibilityPrompts];
+  };
+
+  const scorePromptQuality = (prompt: string) => {
+    let score = 0;
+    const normalized = prompt.toLowerCase();
+    if (normalized.includes('top 3') || normalized.includes('1., 2., 3.')) score += 40;
+    if (selectedBrand?.name && normalized.includes(selectedBrand.name.toLowerCase())) score += 30;
+    const competitors = splitList(wizardCompetitors);
+    const competitorHit = competitors.some((name) => normalized.includes(name.toLowerCase()));
+    if (competitorHit) score += 20;
+    if (prompt.length >= 80 && prompt.length <= 420) score += 10;
+    return score;
   };
 
   const handleGeneratePrompts = () => {
@@ -452,12 +478,13 @@ export default function SettingsPage() {
                     <div className="flex flex-wrap gap-2">
                       {suggestedCompetitors.map((suggestion) => (
                         <button
-                          key={suggestion}
+                          key={suggestion.name}
                           type="button"
                           onClick={() => handleAddCompetitorByName(suggestion)}
                           className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800 hover:bg-purple-200"
+                          title={suggestion.reason || 'Agregar competidor sugerido'}
                         >
-                          + {suggestion}
+                          + {suggestion.name}
                         </button>
                       ))}
                     </div>
@@ -526,8 +553,8 @@ export default function SettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-xl text-gray-900">Wizard de Prompts (ES)</CardTitle>
               <CardDescription>
-                Generamos 10 prompts de comparación directa. Cada prompt pide un Top 3 explícito e incluye la
-                marca medida y sus competidores para asegurar un ranking claro y comparable.
+                Generamos 10 prompts balanceados entre comparación, recomendación y defensibilidad. Todos piden
+                Top 3 explícito e incluyen marca medida + competidores para obtener rankings coherentes.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -630,18 +657,33 @@ export default function SettingsPage() {
               {generatedPrompts.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600">Prompts generados (editables):</p>
-                  {generatedPrompts.map((prompt, idx) => (
-                    <textarea
-                      key={idx}
-                      value={prompt}
-                      onChange={(e) => {
-                        const next = [...generatedPrompts];
-                        next[idx] = e.target.value;
-                        setGeneratedPrompts(next);
-                      }}
-                      className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  ))}
+                  {generatedPrompts.map((prompt, idx) => {
+                    const quality = scorePromptQuality(prompt);
+                    const qualityLabel = quality >= 80 ? 'Alta' : quality >= 60 ? 'Media' : 'Baja';
+                    const qualityClass =
+                      quality >= 80
+                        ? 'text-emerald-700'
+                        : quality >= 60
+                          ? 'text-amber-700'
+                          : 'text-rose-700';
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="text-xs text-gray-500 flex items-center gap-2">
+                          <span>Calidad estimada:</span>
+                          <span className={`font-medium ${qualityClass}`}>{qualityLabel} ({quality}/100)</span>
+                        </div>
+                        <textarea
+                          value={prompt}
+                          onChange={(e) => {
+                            const next = [...generatedPrompts];
+                            next[idx] = e.target.value;
+                            setGeneratedPrompts(next);
+                          }}
+                          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

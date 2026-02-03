@@ -31,7 +31,10 @@ interface PromptResult {
 }
 
 interface RunWithDetails extends Run {
-  brand: Run['brand'] & { competitors?: Array<{ id: string; name: string }> };
+  brand: Run['brand'] & {
+    competitors?: Array<{ id: string; name: string }>;
+    aliases?: Array<{ id: string; alias: string }>;
+  };
   promptResults?: PromptResult[];
 }
 
@@ -50,6 +53,21 @@ const normalizeName = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\w\s]/g, '')
     .trim();
+
+const includesNormalized = (text: string, needle: string) =>
+  normalizeName(text).includes(normalizeName(needle));
+
+const isBrandMentioned = (text: string, brandName: string, aliases: string[]) => {
+  if (!text) return false;
+  if (includesNormalized(text, brandName)) return true;
+  return aliases.some((alias) => includesNormalized(text, alias));
+};
+
+const isBrandEntry = (entryName: string, brandName: string, aliases: string[]) => {
+  const normalizedEntry = normalizeName(entryName);
+  if (normalizedEntry === normalizeName(brandName)) return true;
+  return aliases.some((alias) => normalizeName(alias) === normalizedEntry);
+};
 
 const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
   const totals = new Map<string, { name: string; type: string; count: number; positionSum: number }>();
@@ -164,6 +182,31 @@ export default function RunsPage() {
         })
         .slice(0, 6)
     : [];
+  const promptResults = selectedRun?.promptResults || [];
+  const brandAliases = selectedRun?.brand.aliases?.map((alias) => alias.alias) || [];
+  const totalPrompts = promptResults.length;
+  const parseableCount = promptResults.filter((result) => result.top3Json && result.top3Json.length > 0).length;
+  const mentionCount = selectedRun
+    ? promptResults.filter((result) =>
+        isBrandMentioned(result.responseText, selectedRun.brand.name, brandAliases)
+      ).length
+    : 0;
+  const top3Count = selectedRun
+    ? promptResults.filter((result) =>
+        result.top3Json?.some((entry) => isBrandEntry(entry.name, selectedRun.brand.name, brandAliases))
+      ).length
+    : 0;
+  const top1Count = selectedRun
+    ? promptResults.filter((result) =>
+        result.top3Json?.some(
+          (entry) => entry.position === 1 && isBrandEntry(entry.name, selectedRun.brand.name, brandAliases)
+        )
+      ).length
+    : 0;
+  const formatConfidence = totalPrompts ? Math.round((parseableCount / totalPrompts) * 100) : 0;
+  const mentionRate = totalPrompts ? Math.round((mentionCount / totalPrompts) * 100) : 0;
+  const top3Rate = totalPrompts ? Math.round((top3Count / totalPrompts) * 100) : 0;
+  const top1Rate = totalPrompts ? Math.round((top1Count / totalPrompts) * 100) : 0;
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
@@ -289,6 +332,39 @@ export default function RunsPage() {
                 {new Date(selectedRun.periodEnd).toLocaleDateString('es-AR')}
               </CardDescription>
             </CardHeader>
+          </Card>
+
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-gray-900">Métricas del análisis</CardTitle>
+              <CardDescription>
+                Indicadores simples para evaluar coherencia, visibilidad y ranking en esta corrida.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-gray-100 p-3">
+                  <p className="text-xs text-gray-500">Confianza de formato</p>
+                  <p className="text-2xl font-semibold text-gray-900">{formatConfidence}%</p>
+                  <p className="text-xs text-gray-500">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
+                </div>
+                <div className="rounded-lg border border-gray-100 p-3">
+                  <p className="text-xs text-gray-500">Mención de marca</p>
+                  <p className="text-2xl font-semibold text-gray-900">{mentionRate}%</p>
+                  <p className="text-xs text-gray-500">{mentionCount}/{totalPrompts} respuestas la mencionan</p>
+                </div>
+                <div className="rounded-lg border border-gray-100 p-3">
+                  <p className="text-xs text-gray-500">Aparición en Top 3</p>
+                  <p className="text-2xl font-semibold text-gray-900">{top3Rate}%</p>
+                  <p className="text-xs text-gray-500">{top3Count}/{totalPrompts} en Top 3</p>
+                </div>
+                <div className="rounded-lg border border-gray-100 p-3">
+                  <p className="text-xs text-gray-500">Posición #1</p>
+                  <p className="text-2xl font-semibold text-gray-900">{top1Rate}%</p>
+                  <p className="text-xs text-gray-500">{top1Count}/{totalPrompts} en primer lugar</p>
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
           <Card className="border-transparent bg-white shadow-md">
