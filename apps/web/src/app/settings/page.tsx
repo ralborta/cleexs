@@ -10,6 +10,11 @@ export default function SettingsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{
+    variant: 'success' | 'error' | 'info';
+    title: string;
+    message?: string;
+  } | null>(null);
 
   const [brandName, setBrandName] = useState('');
   const [brandDomain, setBrandDomain] = useState('');
@@ -28,6 +33,7 @@ export default function SettingsPage() {
   const [wizardFactors, setWizardFactors] = useState('');
   const [wizardTone, setWizardTone] = useState('');
   const [generatedPrompts, setGeneratedPrompts] = useState<string[]>([]);
+  const [wizardVersionName, setWizardVersionName] = useState('PROMPTS_v1');
 
   const [runBrandId, setRunBrandId] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -70,13 +76,23 @@ export default function SettingsPage() {
     }
   }, [promptVersions, selectedVersionId]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const pushToast = (variant: 'success' | 'error' | 'info', title: string, message?: string) => {
+    setToast({ variant, title, message });
+  };
+
   const handleCreateBrand = async () => {
     if (!tenantId) {
-      alert('Tenant no disponible. Reintentá en unos segundos.');
+      pushToast('error', 'Tenant no disponible', 'Reintentá en unos segundos.');
       return;
     }
     if (!brandName.trim()) {
-      alert('Ingresá el nombre de la marca');
+      pushToast('info', 'Falta el nombre', 'Ingresá el nombre de la marca.');
       return;
     }
     try {
@@ -89,19 +105,19 @@ export default function SettingsPage() {
       setBrands(updated);
       setBrandName('');
       setBrandDomain('');
-      alert('Marca creada');
+      pushToast('success', 'Marca creada', 'Ya podés agregar competidores y prompts.');
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      pushToast('error', 'No pudimos crear la marca', error?.message);
     }
   };
 
   const handleAddCompetitor = async () => {
     if (!selectedBrandId) {
-      alert('Seleccioná una marca');
+      pushToast('info', 'Falta seleccionar marca', 'Elegí una marca primero.');
       return;
     }
     if (!competitorName.trim()) {
-      alert('Ingresá un competidor');
+      pushToast('info', 'Falta el competidor', 'Ingresá el nombre del competidor.');
       return;
     }
     try {
@@ -109,19 +125,19 @@ export default function SettingsPage() {
       const updated = await brandsApi.list(tenantId);
       setBrands(updated);
       setCompetitorName('');
-      alert('Competidor agregado');
+      pushToast('success', 'Competidor agregado', 'Listo para comparar.');
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      pushToast('error', 'No pudimos agregar el competidor', error?.message);
     }
   };
 
   const handleCreateVersion = async () => {
     if (!tenantId) {
-      alert('Tenant no disponible. Reintentá en unos segundos.');
+      pushToast('error', 'Tenant no disponible', 'Reintentá en unos segundos.');
       return;
     }
     if (!versionName.trim()) {
-      alert('Ingresá el nombre de la versión');
+      pushToast('info', 'Falta el nombre', 'Ingresá el nombre de la versión.');
       return;
     }
     try {
@@ -129,27 +145,27 @@ export default function SettingsPage() {
       const updated = await promptsApi.getVersions(tenantId);
       setPromptVersions(updated);
       setVersionName('');
-      alert('Versión creada');
+      pushToast('success', 'Versión creada', 'Ya podés cargar prompts.');
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      pushToast('error', 'No pudimos crear la versión', error?.message);
     }
   };
 
   const handleCreatePrompt = async () => {
     if (!selectedVersionId) {
-      alert('Seleccioná una versión');
+      pushToast('info', 'Falta versión', 'Seleccioná una versión primero.');
       return;
     }
     if (!promptText.trim()) {
-      alert('Ingresá el prompt');
+      pushToast('info', 'Falta el prompt', 'Ingresá el texto del prompt.');
       return;
     }
     try {
       await promptsApi.createPrompt({ promptVersionId: selectedVersionId, promptText: promptText.trim() });
       setPromptText('');
-      alert('Prompt creado');
+      pushToast('success', 'Prompt creado', 'Guardado correctamente.');
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      pushToast('error', 'No pudimos crear el prompt', error?.message);
     }
   };
 
@@ -198,13 +214,17 @@ export default function SettingsPage() {
 
   const handleSaveGeneratedPrompts = async () => {
     if (!generatedPrompts.length) {
-      alert('Generá los prompts primero');
+      pushToast('info', 'Faltan prompts', 'Generá los prompts primero.');
+      return;
+    }
+    if (!wizardVersionName.trim()) {
+      pushToast('info', 'Falta nombre', 'Ingresá el nombre de la versión.');
       return;
     }
     try {
       const version = await promptsApi.createVersion({
         tenantId,
-        name: 'PROMPTS_v1',
+        name: wizardVersionName.trim(),
       });
       await Promise.all(
         generatedPrompts.map((text) =>
@@ -214,23 +234,23 @@ export default function SettingsPage() {
       const updated = await promptsApi.getVersions(tenantId);
       setPromptVersions(updated);
       setSelectedVersionId(version.id);
-      alert('PROMPTS_v1 creado');
+      pushToast('success', 'Versión creada', 'Ya podés correr tu primer run.');
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      pushToast('error', 'No pudimos crear la versión', error?.message);
     }
   };
 
   const handleCreateRun = async () => {
     if (!tenantId) {
-      alert('Tenant no disponible. Reintentá en unos segundos.');
+      pushToast('error', 'Tenant no disponible', 'Reintentá en unos segundos.');
       return;
     }
     if (!runBrandId) {
-      alert('Seleccioná una marca');
+      pushToast('info', 'Falta marca', 'Seleccioná una marca para el run.');
       return;
     }
     if (!periodStart || !periodEnd) {
-      alert('Seleccioná fechas de inicio y fin');
+      pushToast('info', 'Faltan fechas', 'Seleccioná inicio y fin del período.');
       return;
     }
     try {
@@ -240,9 +260,9 @@ export default function SettingsPage() {
         periodStart: new Date(periodStart).toISOString(),
         periodEnd: new Date(periodEnd).toISOString(),
       });
-      alert('Run creado');
+      pushToast('success', 'Run creado', 'Podés cargar resultados manuales.');
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      pushToast('error', 'No pudimos crear el run', error?.message);
     }
   };
 
@@ -256,6 +276,33 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
+      {toast && (
+        <div className="fixed right-6 top-6 z-50 w-full max-w-sm">
+          <div
+            className={`rounded-2xl border px-4 py-3 shadow-xl ${
+              toast.variant === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                : toast.variant === 'error'
+                  ? 'border-rose-200 bg-rose-50 text-rose-900'
+                  : 'border-indigo-200 bg-indigo-50 text-indigo-900'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">{toast.title}</p>
+                {toast.message && <p className="mt-1 text-sm opacity-90">{toast.message}</p>}
+              </div>
+              <button
+                onClick={() => setToast(null)}
+                className="text-sm font-medium opacity-70 transition hover:opacity-100"
+                aria-label="Cerrar notificación"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <p className="text-sm font-medium text-purple-700">Setup</p>
@@ -390,10 +437,19 @@ export default function SettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-xl text-gray-900">Wizard de Prompts (ES + PT)</CardTitle>
               <CardDescription>
-                Respondé 8 preguntas y generamos 10 prompts para PROMPTS_v1.
+                Respondé 8 preguntas y generamos 10 prompts para tu nueva versión.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Nombre de versión</label>
+                <input
+                  value={wizardVersionName}
+                  onChange={(e) => setWizardVersionName(e.target.value)}
+                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="PROMPTS_v1"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700">Industria</label>
                 <input
@@ -478,7 +534,7 @@ export default function SettingsPage() {
                   className="border-gray-200 text-gray-700 hover:bg-gray-50"
                   onClick={handleSaveGeneratedPrompts}
                 >
-                  Guardar PROMPTS_v1
+                  Guardar versión
                 </Button>
               </div>
               {generatedPrompts.length > 0 && (
