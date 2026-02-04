@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 interface PromptResult {
   id: string;
@@ -63,8 +63,8 @@ export function PromptDetail({ results }: PromptDetailProps) {
               </TableRow>
             ) : (
               results.map((result) => (
-                <>
-                  <TableRow key={result.id} className="hover:bg-primary-50/60">
+                <Fragment key={result.id}>
+                  <TableRow className="hover:bg-primary-50/60">
                     <TableCell className="max-w-xs truncate text-foreground">
                       {result.prompt.promptText}
                     </TableCell>
@@ -136,7 +136,7 @@ export function PromptDetail({ results }: PromptDetailProps) {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))
             )}
           </TableBody>

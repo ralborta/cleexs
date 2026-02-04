@@ -225,6 +225,20 @@ export default function RunsPage() {
   const top3Rate = totalPrompts ? Math.round((top3Count / totalPrompts) * 100) : 0;
   const top1Rate = totalPrompts ? Math.round((top1Count / totalPrompts) * 100) : 0;
 
+  const competitorsFromResults = Array.from(
+    new Set(
+      promptResults
+        .flatMap((result) => result.top3Json || [])
+        .filter((entry) => entry.type === 'competitor')
+        .map((entry) => entry.name)
+    )
+  );
+  const competitorsFromBrand =
+    selectedRun?.brand.competitors && selectedRun.brand.competitors.length > 0
+      ? selectedRun.brand.competitors.map((c) => c.name)
+      : [];
+  const competitorsUsed = competitorsFromResults.length > 0 ? competitorsFromResults : competitorsFromBrand;
+
   const intentionBuckets: Record<string, { scores: number[]; weight: number }> = {};
   promptResults.forEach((result) => {
     const promptText = result.prompt?.promptText || '';
@@ -511,9 +525,7 @@ export default function RunsPage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Competidores usados:</span>{' '}
-                {selectedRun.brand.competitors && selectedRun.brand.competitors.length > 0
-                  ? selectedRun.brand.competitors.map((c) => c.name).join(', ')
-                  : 'No hay competidores cargados.'}
+                {competitorsUsed.length > 0 ? competitorsUsed.join(', ') : 'No hay competidores cargados.'}
               </div>
 
               <div>
