@@ -367,14 +367,14 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-16">
-        <div className="mx-auto max-w-6xl text-center text-gray-600">Cargando...</div>
+      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
+        <div className="mx-auto max-w-6xl text-center text-muted-foreground">Cargando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
+    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
       {toast && (
         <div className="fixed right-6 top-6 z-50 w-full max-w-sm">
           <div
@@ -404,9 +404,9 @@ export default function SettingsPage() {
       )}
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <p className="text-sm font-medium text-purple-700">Setup</p>
-          <h1 className="text-3xl font-bold text-gray-900">Configuración Inicial</h1>
-          <p className="text-gray-600">
+          <p className="text-sm font-medium text-primary-700">Setup</p>
+          <h1 className="text-3xl font-bold text-foreground">Configuración Inicial</h1>
+          <p className="text-muted-foreground">
             Acá cargás tu marca, competidores, prompts y creás el primer run.
           </p>
         </div>
@@ -414,31 +414,31 @@ export default function SettingsPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Marca</CardTitle>
+              <CardTitle className="text-xl text-foreground">Marca</CardTitle>
               <CardDescription>Creá tu marca principal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Nombre</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Nombre</label>
                 <input
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: Cleexs"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Dominio (opcional)</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Dominio (opcional)</label>
                 <input
                   value={brandDomain}
                   onChange={(e) => setBrandDomain(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="cleexs.com"
                 />
               </div>
               <Button
                 onClick={handleCreateBrand}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                className="bg-primary-600 text-white hover:bg-primary-700"
               >
                 Crear Marca
               </Button>
@@ -447,16 +447,16 @@ export default function SettingsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Competidores</CardTitle>
+              <CardTitle className="text-xl text-foreground">Competidores</CardTitle>
               <CardDescription>Agregá competidores para comparar.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Marca</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Marca</label>
                 <select
                   value={selectedBrandId}
                   onChange={(e) => setSelectedBrandId(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 >
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
@@ -466,32 +466,32 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Competidor</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Competidor</label>
                 <input
                   value={competitorName}
                   onChange={(e) => setCompetitorName(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: Temso"
                 />
               </div>
-              <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={handleAddCompetitor}>
+              <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={handleAddCompetitor}>
                 Agregar Competidor
               </Button>
 
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-4">
+              <div className="rounded-lg border border-dashed border-border bg-primary-50/70 p-4">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900">Sugerencias inteligentes</p>
+                    <p className="text-sm font-medium text-foreground">Sugerencias inteligentes</p>
                     <Button
                       variant="outline"
-                      className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                      className="border-border text-foreground hover:bg-primary-50"
                       onClick={handleSuggestCompetitors}
                       disabled={suggestionsLoading}
                     >
                       {suggestionsLoading ? 'Generando...' : 'Sugerir competidores'}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     Usamos el nombre de la marca, el dominio y los datos del wizard (industria, producto,
                     mercado, objetivos y casos de uso) para sugerir competidores relevantes antes de crear el run.
                   </p>
@@ -503,7 +503,7 @@ export default function SettingsPage() {
                           key={suggestion.name}
                           type="button"
                           onClick={() => handleAddCompetitorByName(suggestion)}
-                          className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800 hover:bg-purple-200"
+                          className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
                           title={suggestion.reason || 'Agregar competidor sugerido'}
                         >
                           + {suggestion.name}
@@ -512,7 +512,7 @@ export default function SettingsPage() {
                     </div>
                   ) : (
                     !suggestionsError &&
-                    !suggestionsLoading && <p className="text-xs text-gray-500">Todavía no hay sugerencias.</p>
+                    !suggestionsLoading && <p className="text-xs text-muted-foreground">Todavía no hay sugerencias.</p>
                   )}
                 </div>
               </div>
@@ -521,21 +521,21 @@ export default function SettingsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Prompts</CardTitle>
+              <CardTitle className="text-xl text-foreground">Prompts</CardTitle>
               <CardDescription>Creá la versión de prompts y agregá consultas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Nueva versión</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Nueva versión</label>
                 <div className="flex gap-2">
                   <input
                     value={versionName}
                     onChange={(e) => setVersionName(e.target.value)}
-                    className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                     placeholder="PROMPTS_v1"
                   />
                   <Button
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                    className="bg-primary-600 text-white hover:bg-primary-700"
                     onClick={handleCreateVersion}
                   >
                     Crear
@@ -543,11 +543,11 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Versión activa</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Versión activa</label>
                 <select
                   value={selectedVersionId}
                   onChange={(e) => setSelectedVersionId(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 >
                   {promptVersions.map((version) => (
                     <option key={version.id} value={version.id}>
@@ -557,15 +557,15 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Nuevo prompt</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Nuevo prompt</label>
                 <textarea
                   value={promptText}
                   onChange={(e) => setPromptText(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[120px]"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600 min-h-[120px]"
                   placeholder="Ej: ¿Cuál es la mejor plataforma para..."
                 />
               </div>
-              <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={handleCreatePrompt}>
+              <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={handleCreatePrompt}>
                 Agregar Prompt
               </Button>
             </CardContent>
@@ -573,15 +573,15 @@ export default function SettingsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Wizard de Prompts (ES)</CardTitle>
+              <CardTitle className="text-xl text-foreground">Wizard de Prompts (ES)</CardTitle>
               <CardDescription>
                 Generamos 9 prompts (3 intenciones × 3 tipos). Todos piden Top 3 explícito e incluyen marca medida
                 + competidores para obtener rankings coherentes y comparables.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-4">
-                <p className="text-sm font-medium text-gray-900 mb-3">Intenciones y pesos</p>
+              <div className="rounded-lg border border-dashed border-border bg-primary-50/70 p-4">
+                <p className="text-sm font-medium text-foreground mb-3">Intenciones y pesos</p>
                 <div className="grid gap-4 md:grid-cols-3">
                   {([
                     { key: 'urgencia', label: 'Urgencia' },
@@ -589,7 +589,7 @@ export default function SettingsPage() {
                     { key: 'precio', label: 'Precio' },
                   ] as const).map((item) => (
                     <div key={item.key} className="space-y-2">
-                      <div className="flex items-center justify-between text-xs text-gray-600">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>{item.label}</span>
                         <span>{intentionWeights[item.key]}%</span>
                       </div>
@@ -604,106 +604,106 @@ export default function SettingsPage() {
                             [item.key]: Number(e.target.value),
                           }))
                         }
-                        className="w-full accent-purple-600"
+                        className="w-full accent-primary-600"
                       />
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-3">
+                <p className="text-xs text-muted-foreground mt-3">
                   La suma ideal es 100%. Se normaliza automáticamente al calcular el Cleexs Score.
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Nombre de versión</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Nombre de versión</label>
                 <input
                   value={wizardVersionName}
                   onChange={(e) => setWizardVersionName(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="PROMPTS_v1"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Industria</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Industria</label>
                 <input
                   value={wizardIndustry}
                   onChange={(e) => setWizardIndustry(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: SaaS, Fintech, Retail"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Tipo de producto</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Tipo de producto</label>
                 <input
                   value={wizardProductType}
                   onChange={(e) => setWizardProductType(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: plataforma de inversión"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">País/mercado</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">País/mercado</label>
                 <input
                   value={wizardCountry}
                   onChange={(e) => setWizardCountry(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: Brasil, España"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Objetivo</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Objetivo</label>
                 <input
                   value={wizardObjective}
                   onChange={(e) => setWizardObjective(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: consideración, conversión"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Competidores (coma)</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Competidores (coma)</label>
                 <input
                   value={wizardCompetitors}
                   onChange={(e) => setWizardCompetitors(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: Temso, Uber, Duolingo"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Casos de uso (coma)</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Casos de uso (coma)</label>
                 <input
                   value={wizardUseCases}
                   onChange={(e) => setWizardUseCases(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: inversión inicial, portafolio, ahorro"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Factores decisivos (coma)</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Factores decisivos (coma)</label>
                 <input
                   value={wizardFactors}
                   onChange={(e) => setWizardFactors(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: precio, soporte, facilidad de uso"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Tono/estilo</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Tono/estilo</label>
                 <input
                   value={wizardTone}
                   onChange={(e) => setWizardTone(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="Ej: claro y directo"
                 />
               </div>
               <div className="flex gap-2">
                 <Button
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                  className="bg-primary-600 text-white hover:bg-primary-700"
                   onClick={handleGeneratePrompts}
                 >
                   Generar 9 prompts
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                  className="border-border text-foreground hover:bg-primary-50"
                   onClick={handleSaveGeneratedPrompts}
                 >
                   Guardar versión
@@ -711,7 +711,7 @@ export default function SettingsPage() {
               </div>
               {generatedPrompts.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Prompts generados (editables):</p>
+                  <p className="text-sm text-muted-foreground">Prompts generados (editables):</p>
                   {generatedPrompts.map((prompt, idx) => {
                     const quality = scorePromptQuality(prompt);
                     const qualityLabel = quality >= 80 ? 'Alta' : quality >= 60 ? 'Media' : 'Baja';
@@ -719,11 +719,11 @@ export default function SettingsPage() {
                       quality >= 80
                         ? 'text-emerald-700'
                         : quality >= 60
-                          ? 'text-amber-700'
+                          ? 'text-accent-700'
                           : 'text-rose-700';
                     return (
                       <div key={idx} className="space-y-1">
-                        <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
                           <span>Calidad estimada:</span>
                           <span className={`font-medium ${qualityClass}`}>{qualityLabel} ({quality}/100)</span>
                         </div>
@@ -734,7 +734,7 @@ export default function SettingsPage() {
                             next[idx] = e.target.value;
                             setGeneratedPrompts(next);
                           }}
-                          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                         />
                       </div>
                     );
@@ -746,16 +746,16 @@ export default function SettingsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Crear Run</CardTitle>
+              <CardTitle className="text-xl text-foreground">Crear Run</CardTitle>
               <CardDescription>Definí el período para iniciar una corrida.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Marca</label>
+                <label className="block text-sm font-medium mb-2 text-foreground">Marca</label>
                 <select
                   value={runBrandId}
                   onChange={(e) => setRunBrandId(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 >
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
@@ -766,26 +766,26 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Inicio</label>
+                  <label className="block text-sm font-medium mb-2 text-foreground">Inicio</label>
                   <input
                     type="date"
                     value={periodStart}
                     onChange={(e) => setPeriodStart(e.target.value)}
-                    className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Fin</label>
+                  <label className="block text-sm font-medium mb-2 text-foreground">Fin</label>
                   <input
                     type="date"
                     value={periodEnd}
                     onChange={(e) => setPeriodEnd(e.target.value)}
-                    className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   />
                 </div>
               </div>
               <Button
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                className="bg-primary-600 text-white hover:bg-primary-700"
                 onClick={handleCreateRun}
               >
                 Crear Run

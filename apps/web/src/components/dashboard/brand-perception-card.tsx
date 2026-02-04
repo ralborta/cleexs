@@ -26,10 +26,10 @@ export function BrandPerceptionCard({ attributes = mockAttributes }: BrandPercep
     <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-amber-500" />
-        <CardTitle className="text-lg font-semibold text-gray-900">Percepción de marca</CardTitle>
+          <Lightbulb className="h-5 w-5 text-accent-600" />
+        <CardTitle className="text-lg font-semibold text-foreground">Percepción de marca</CardTitle>
         </div>
-        <CardDescription className="text-sm text-gray-600 mt-1">
+        <CardDescription className="text-sm text-muted-foreground mt-1">
           Opcional: cómo describen a tu marca (atributos principales)
         </CardDescription>
       </CardHeader>
@@ -38,16 +38,16 @@ export function BrandPerceptionCard({ attributes = mockAttributes }: BrandPercep
           {attributes.map((attr, index) => (
             <div key={index} className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-gray-900">{attr.name}</span>
+                <span className="font-medium text-foreground">{attr.name}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-600">{attr.count.toLocaleString()}</span>
-                  <span className="text-gray-500">-</span>
-                  <span className="font-semibold text-gray-700">{attr.percentage}%</span>
+                  <span className="text-muted-foreground">{attr.count.toLocaleString()}</span>
+                  <span className="text-muted-foreground">-</span>
+                  <span className="font-semibold text-foreground">{attr.percentage}%</span>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="w-full bg-primary-50 rounded-full h-2.5">
                 <div
-                  className="bg-purple-600 h-2.5 rounded-full transition-all"
+                  className="bg-primary-600 h-2.5 rounded-full transition-all"
                   style={{ width: `${attr.percentage}%` }}
                 ></div>
               </div>

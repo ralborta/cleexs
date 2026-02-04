@@ -27,10 +27,10 @@ export function CompetitorComparisonCard({
     <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-blue-700" />
-          <CardTitle className="text-lg font-semibold text-gray-900">Comparación con competidores</CardTitle>
+          <BarChart3 className="h-5 w-5 text-primary-700" />
+          <CardTitle className="text-lg font-semibold text-foreground">Comparación con competidores</CardTitle>
         </div>
-        <CardDescription className="text-sm text-gray-600 mt-1">
+        <CardDescription className="text-sm text-muted-foreground mt-1">
           Compará tu PRIA con tus principales competidores.
         </CardDescription>
       </CardHeader>
@@ -39,12 +39,12 @@ export function CompetitorComparisonCard({
           {data.map((item, index) => (
             <div key={index} className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-700">{item.category}</span>
-                <span className="font-semibold text-gray-900">{item.percentage}%</span>
+                <span className="text-muted-foreground">{item.category}</span>
+                <span className="font-semibold text-foreground">{item.percentage}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="w-full bg-primary-50 rounded-full h-2.5">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all"
+                  className="bg-primary-600 h-2.5 rounded-full transition-all"
                   style={{ width: `${item.percentage}%` }}
                 ></div>
               </div>

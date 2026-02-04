@@ -27,11 +27,11 @@ export function BrandRankingCard({
     <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-blue-700" />
-          <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
+          <BarChart3 className="h-5 w-5 text-primary-700" />
+          <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
         </div>
         {showCompetitors && (
-          <CardDescription className="text-sm text-gray-600 mt-1">
+          <CardDescription className="text-sm text-muted-foreground mt-1">
             Compará tu PRIA con tus principales competidores.
           </CardDescription>
         )}
@@ -39,17 +39,17 @@ export function BrandRankingCard({
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow className="border-b bg-gray-50/70">
-              <TableHead className="w-[50px] text-gray-600 font-medium">#</TableHead>
-              <TableHead className="text-gray-600 font-medium">Marca</TableHead>
-              <TableHead className="text-right text-gray-600 font-medium">PRIA</TableHead>
-              <TableHead className="text-right text-gray-600 font-medium">Ranking</TableHead>
+            <TableRow className="border-b border-border bg-primary-50/80">
+              <TableHead className="w-[50px] text-muted-foreground font-medium">#</TableHead>
+              <TableHead className="text-muted-foreground font-medium">Marca</TableHead>
+              <TableHead className="text-right text-muted-foreground font-medium">PRIA</TableHead>
+              <TableHead className="text-right text-muted-foreground font-medium">Ranking</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                   No hay datos disponibles
                 </TableCell>
               </TableRow>
@@ -60,23 +60,23 @@ export function BrandRankingCard({
                 const isPositive = change > 0;
 
                 return (
-                  <TableRow key={entry.brandId} className="hover:bg-gray-50/70">
-                    <TableCell className="font-medium text-gray-900">{index + 1}</TableCell>
+                  <TableRow key={entry.brandId} className="hover:bg-primary-50/60">
+                    <TableCell className="font-medium text-foreground">{index + 1}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-xs font-semibold">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white text-xs font-semibold">
                           {entry.brandName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-medium text-gray-900">{entry.brandName}</span>
+                        <span className="font-medium text-foreground">{entry.brandName}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <span className="font-semibold text-gray-900">
+                        <span className="font-semibold text-foreground">
                           {entry.pria.toFixed(0)}
                         </span>
                         {change !== 0 && (
-                          <div className={`flex items-center gap-1 text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className={`flex items-center gap-1 text-xs ${isPositive ? 'text-primary-700' : 'text-accent-700'}`}>
                             {isPositive ? (
                               <TrendingUp className="h-3 w-3" />
                             ) : (
@@ -89,9 +89,9 @@ export function BrandRankingCard({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <span className="font-medium text-gray-900">#{index + 1}</span>
+                        <span className="font-medium text-foreground">#{index + 1}</span>
                         {index < 3 && (
-                          <span className="h-2 w-2 rounded-full bg-gray-400"></span>
+                          <span className="h-2 w-2 rounded-full bg-accent-600"></span>
                         )}
                       </div>
                     </TableCell>
@@ -103,8 +103,8 @@ export function BrandRankingCard({
         </Table>
 
         {!showCompetitors && (
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 text-sm text-gray-600">
-            <div className="h-5 w-5 rounded bg-gray-200 flex items-center justify-center">
+        <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="h-5 w-5 rounded bg-primary-50 flex items-center justify-center">
               <span className="text-xs">O</span>
             </div>
             <span>OpenAI</span>

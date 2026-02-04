@@ -85,38 +85,38 @@ export default function AddResultPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-16">
-        <div className="mx-auto max-w-4xl text-center text-gray-600">Cargando...</div>
+      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
+        <div className="mx-auto max-w-4xl text-center text-muted-foreground">Cargando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
+    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <p className="text-sm font-medium text-purple-700">Carga manual</p>
-          <h1 className="text-3xl font-bold text-gray-900">Agregar Resultado Manual</h1>
-          <p className="text-gray-600">
+          <p className="text-sm font-medium text-primary-700">Carga manual</p>
+          <h1 className="text-3xl font-bold text-foreground">Agregar Resultado Manual</h1>
+          <p className="text-muted-foreground">
             Pegá la respuesta completa de ChatGPT para que el sistema detecte el Top 3 y calcule PRIA.
           </p>
         </div>
 
         <Card className="border-transparent bg-white shadow-md">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xl text-gray-900">Nuevo Resultado</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl text-foreground">Nuevo Resultado</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Seleccioná un Run y un Prompt, luego pega la respuesta completa de ChatGPT
             </CardDescription>
           </CardHeader>
           <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">Run</label>
+              <label className="block text-sm font-medium mb-2 text-foreground">Run</label>
               <select
                 value={selectedRunId}
                 onChange={(e) => setSelectedRunId(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 required
               >
                 <option value="">Selecciona un Run</option>
@@ -131,11 +131,11 @@ export default function AddResultPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">Versión de prompts</label>
+              <label className="block text-sm font-medium mb-2 text-foreground">Versión de prompts</label>
               <select
                 value={selectedVersionId}
                 onChange={(e) => setSelectedVersionId(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 required
               >
                 <option value="">Selecciona una versión</option>
@@ -148,11 +148,11 @@ export default function AddResultPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">Prompt</label>
+              <label className="block text-sm font-medium mb-2 text-foreground">Prompt</label>
               <select
                 value={selectedPromptId}
                 onChange={(e) => setSelectedPromptId(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 required
               >
                 <option value="">Selecciona un Prompt</option>
@@ -166,25 +166,25 @@ export default function AddResultPage() {
 
             {selectedPromptId && (
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Prompt completo:</label>
-                <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-foreground">Prompt completo:</label>
+                <div className="rounded-md border border-border bg-primary-50 p-3 text-sm text-muted-foreground">
                   {prompts.find((p) => p.id === selectedPromptId)?.promptText}
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">
+              <label className="block text-sm font-medium mb-2 text-foreground">
                 Respuesta de ChatGPT (completa)
               </label>
               <textarea
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 min-h-[300px] font-mono text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-md border border-border bg-white px-3 py-2 min-h-[300px] font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                 placeholder="Pega aquí la respuesta completa de ChatGPT..."
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {responseText.length} caracteres
                 {responseText.length > 100000 && ' (se truncará a 100KB)'}
               </p>
@@ -194,14 +194,14 @@ export default function AddResultPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                className="bg-primary-600 text-white hover:bg-primary-700"
               >
                 {submitting ? 'Guardando...' : 'Guardar Resultado'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                className="border-border text-foreground hover:bg-primary-50"
                 onClick={() => router.back()}
               >
                 Cancelar

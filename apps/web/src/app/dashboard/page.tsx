@@ -62,22 +62,22 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Cargando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50">
+    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50">
       <div className="mx-auto max-w-6xl px-6 py-10 space-y-6">
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-purple-700">Vista general</p>
-          <h1 className="text-3xl font-bold text-gray-900">Panel</h1>
-          <p className="text-gray-600">
+          <p className="text-sm font-medium text-primary-700">Vista general</p>
+          <h1 className="text-3xl font-bold text-foreground">Panel</h1>
+          <p className="text-muted-foreground">
             Visualizá el estado de tu PRIA con rankings, tendencias y percepción de marca.
           </p>
         </div>

@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 
 export function Header() {
   return (
-    <header className="border-b bg-white">
+    <header className="border-b border-border bg-card">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo y nombre */}
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-700">
               <svg
                 width="24"
                 height="24"
@@ -42,26 +42,26 @@ export function Header() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900">Cleexs</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Cleexs</h1>
           </div>
 
           {/* Navegación central */}
           <nav className="flex items-center gap-8">
             <Link
               href="/dashboard"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Proyectos
             </Link>
             <Link
               href="/reports"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Reportes
             </Link>
             <Link
               href="/settings"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Configuración
             </Link>
@@ -69,24 +69,24 @@ export function Header() {
 
           {/* Iconos de usuario */}
           <div className="flex items-center gap-4">
-            <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
               <Upload className="h-5 w-5" />
             </button>
-            <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors relative">
+            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent-600"></span>
             </button>
-            <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors relative">
+            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors relative">
               <Mail className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent-600"></span>
             </button>
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center">
               <User className="h-5 w-5 text-white" />
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="ml-2 bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200"
+              className="ml-2 bg-accent-50 text-accent-700 border-accent-100 hover:bg-accent-50"
             >
               Versión inicial
             </Button>

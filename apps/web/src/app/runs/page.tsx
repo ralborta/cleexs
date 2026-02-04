@@ -180,8 +180,8 @@ export default function RunsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-16">
-        <div className="mx-auto max-w-6xl text-center text-gray-600">Cargando...</div>
+      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
+        <div className="mx-auto max-w-6xl text-center text-muted-foreground">Cargando...</div>
       </div>
     );
   }
@@ -251,18 +251,18 @@ export default function RunsPage() {
   );
 
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
+    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
       <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm font-medium text-purple-700">Centro de control</p>
-          <h1 className="text-3xl font-bold text-gray-900">Runs</h1>
-          <p className="text-gray-600">
+          <p className="text-sm font-medium text-primary-700">Centro de control</p>
+          <h1 className="text-3xl font-bold text-foreground">Runs</h1>
+          <p className="text-muted-foreground">
             Gestiona, auditá y visualizá tus corridas de análisis con evidencia completa.
           </p>
         </div>
         <Link href="/runs/add-result">
-          <Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700">
+          <Button className="bg-primary-600 text-white hover:bg-primary-700">
             Agregar Resultado Manual
           </Button>
         </Link>
@@ -272,8 +272,8 @@ export default function RunsPage() {
         <div
           className={`rounded-2xl border px-4 py-3 text-sm ${
             notice.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-              : 'border-rose-200 bg-rose-50 text-rose-900'
+              ? 'border-primary-100 bg-primary-50 text-primary-900'
+              : 'border-destructive/20 bg-destructive/10 text-destructive'
           }`}
         >
           {notice.message}
@@ -282,33 +282,33 @@ export default function RunsPage() {
 
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl text-gray-900">Lista de Runs</CardTitle>
-          <CardDescription className="text-sm text-gray-600">
+          <CardTitle className="text-xl text-foreground">Lista de Runs</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
             Corridas de análisis por marca y período, con estado y PRIA agregado.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50/90 border-b border-slate-200">
-                <TableHead className="text-gray-700 font-semibold">Marca</TableHead>
-                <TableHead className="text-gray-700 font-semibold">Período</TableHead>
-                <TableHead className="text-gray-700 font-semibold">Estado</TableHead>
-                <TableHead className="text-right text-gray-700 font-semibold">PRIA</TableHead>
-                <TableHead className="text-gray-700 font-semibold">Acciones</TableHead>
+              <TableRow className="bg-primary-50/80 border-b border-border">
+                <TableHead className="text-muted-foreground font-semibold">Marca</TableHead>
+                <TableHead className="text-muted-foreground font-semibold">Período</TableHead>
+                <TableHead className="text-muted-foreground font-semibold">Estado</TableHead>
+                <TableHead className="text-right text-muted-foreground font-semibold">PRIA</TableHead>
+                <TableHead className="text-muted-foreground font-semibold">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {runs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-gray-500">
+                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
                     No hay runs disponibles todavía.
                   </TableCell>
                 </TableRow>
               ) : (
                 runs.map((run) => (
-                  <TableRow key={run.id} className="hover:bg-slate-50">
-                    <TableCell className="font-medium text-gray-900">{run.brand.name}</TableCell>
+                  <TableRow key={run.id} className="hover:bg-primary-50/60">
+                    <TableCell className="font-medium text-foreground">{run.brand.name}</TableCell>
                     <TableCell>
                       {new Date(run.periodStart).toLocaleDateString('es-AR')} -{' '}
                       {new Date(run.periodEnd).toLocaleDateString('es-AR')}
@@ -317,10 +317,10 @@ export default function RunsPage() {
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-medium ${
                           run.status === 'completed'
-                            ? 'bg-emerald-100 text-emerald-700'
+                            ? 'bg-primary-50 text-primary-700 border border-primary-100'
                             : run.status === 'failed'
-                              ? 'bg-rose-100 text-rose-700'
-                              : 'bg-amber-100 text-amber-700'
+                              ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                              : 'bg-accent-50 text-accent-700 border border-accent-100'
                         }`}
                       >
                         {run.status}
@@ -328,11 +328,11 @@ export default function RunsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {run.priaReports && run.priaReports[0] ? (
-                        <span className="font-semibold text-gray-900">
+                        <span className="font-semibold text-foreground">
                           {run.priaReports[0].priaTotal.toFixed(2)}
                         </span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -340,14 +340,14 @@ export default function RunsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                          className="border-border text-foreground hover:bg-primary-50"
                           onClick={() => handleViewDetails(run)}
                         >
                           Ver Detalles
                         </Button>
                         <Button
                           size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                          className="bg-primary-600 text-white hover:bg-primary-700"
                           onClick={() => handleExecuteRun(run.id)}
                           disabled={executingRunId === run.id}
                         >
@@ -367,8 +367,8 @@ export default function RunsPage() {
         <div className="space-y-4">
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader>
-              <CardTitle className="text-xl text-gray-900">Detalles del Run</CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+              <CardTitle className="text-xl text-foreground">Detalles del Run</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 {selectedRun.brand.name} -{' '}
                 {new Date(selectedRun.periodStart).toLocaleDateString('es-AR')} a{' '}
                 {new Date(selectedRun.periodEnd).toLocaleDateString('es-AR')}
@@ -378,28 +378,28 @@ export default function RunsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Cleexs Score</CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+              <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 Score ponderado por intención en base al desempeño por prompt.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-4">
-                <p className="text-xs font-medium text-purple-700">Cleexs Score</p>
-                <p className="text-4xl font-bold text-gray-900">{cleexsScore.toFixed(0)}</p>
-                <p className="text-xs text-gray-600">Ponderado por intención</p>
+              <div className="rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 to-accent-50 p-4">
+                <p className="text-xs font-medium text-primary-700">Cleexs Score</p>
+                <p className="text-4xl font-bold text-foreground">{cleexsScore.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">Ponderado por intención</p>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 {intentionScores.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     No hay intenciones detectadas en los prompts de esta corrida.
                   </p>
                 ) : (
                   intentionScores.map((item) => (
-                    <div key={item.key} className="rounded-lg border border-slate-200 bg-white p-3">
-                      <p className="text-xs font-medium text-gray-600 capitalize">{item.key}</p>
-                      <p className="text-2xl font-semibold text-gray-900">{item.score.toFixed(0)}</p>
-                      <p className="text-xs text-gray-500">Peso {item.weight}%</p>
+                    <div key={item.key} className="rounded-lg border border-border bg-white p-3">
+                      <p className="text-xs font-medium text-muted-foreground capitalize">{item.key}</p>
+                      <p className="text-2xl font-semibold text-foreground">{item.score.toFixed(0)}</p>
+                      <p className="text-xs text-muted-foreground">Peso {item.weight}%</p>
                     </div>
                   ))
                 )}
@@ -409,32 +409,32 @@ export default function RunsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Métricas del análisis</CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+              <CardTitle className="text-xl text-foreground">Métricas del análisis</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 Indicadores simples para evaluar coherencia, visibilidad y ranking en esta corrida.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-xs font-medium text-gray-600">Confianza de formato</p>
-                  <p className="text-2xl font-semibold text-gray-900">{formatConfidence}%</p>
-                  <p className="text-xs text-gray-500">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
+                <div className="rounded-lg border border-border bg-primary-50/80 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Confianza de formato</p>
+                  <p className="text-2xl font-semibold text-foreground">{formatConfidence}%</p>
+                  <p className="text-xs text-muted-foreground">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-xs font-medium text-gray-600">Mención de marca</p>
-                  <p className="text-2xl font-semibold text-gray-900">{mentionRate}%</p>
-                  <p className="text-xs text-gray-500">{mentionCount}/{totalPrompts} respuestas la mencionan</p>
+                <div className="rounded-lg border border-border bg-primary-50/80 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Mención de marca</p>
+                  <p className="text-2xl font-semibold text-foreground">{mentionRate}%</p>
+                  <p className="text-xs text-muted-foreground">{mentionCount}/{totalPrompts} respuestas la mencionan</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-xs font-medium text-gray-600">Aparición en Top 3</p>
-                  <p className="text-2xl font-semibold text-gray-900">{top3Rate}%</p>
-                  <p className="text-xs text-gray-500">{top3Count}/{totalPrompts} en Top 3</p>
+                <div className="rounded-lg border border-border bg-primary-50/80 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Aparición en Top 3</p>
+                  <p className="text-2xl font-semibold text-foreground">{top3Rate}%</p>
+                  <p className="text-xs text-muted-foreground">{top3Count}/{totalPrompts} en Top 3</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-xs font-medium text-gray-600">Posición #1</p>
-                  <p className="text-2xl font-semibold text-gray-900">{top1Rate}%</p>
-                  <p className="text-xs text-gray-500">{top1Count}/{totalPrompts} en primer lugar</p>
+                <div className="rounded-lg border border-border bg-primary-50/80 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Posición #1</p>
+                  <p className="text-2xl font-semibold text-foreground">{top1Rate}%</p>
+                  <p className="text-xs text-muted-foreground">{top1Count}/{totalPrompts} en primer lugar</p>
                 </div>
               </div>
             </CardContent>
@@ -442,74 +442,74 @@ export default function RunsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-gray-900">Comparaciones y sugerencias</CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+              <CardTitle className="text-xl text-foreground">Comparaciones y sugerencias</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 Se solicita un Top 3 por prompt con la marca a medir y la lista de competidores.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-sm text-gray-700">
-                <span className="font-medium text-gray-900">Marca medida:</span> {selectedRun.brand.name}
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Marca medida:</span> {selectedRun.brand.name}
               </div>
-              <div className="text-sm text-gray-700">
-                <span className="font-medium text-gray-900">Competidores usados:</span>{' '}
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Competidores usados:</span>{' '}
                 {selectedRun.brand.competitors && selectedRun.brand.competitors.length > 0
                   ? selectedRun.brand.competitors.map((c) => c.name).join(', ')
                   : 'No hay competidores cargados.'}
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-900 mb-2">Resumen de apariciones en Top 3</p>
+                <p className="text-sm font-medium text-foreground mb-2">Resumen de apariciones en Top 3</p>
                 {selectedRun.promptResults && selectedRun.promptResults.length > 0 ? (
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50/90 border-b border-slate-200">
-                        <TableHead className="text-gray-700 font-semibold">Marca</TableHead>
-                        <TableHead className="text-gray-700 font-semibold">Tipo</TableHead>
-                        <TableHead className="text-right text-gray-700 font-semibold">Apariciones</TableHead>
-                        <TableHead className="text-right text-gray-700 font-semibold">Posición media</TableHead>
-                        <TableHead className="text-right text-gray-700 font-semibold">% del Top 3</TableHead>
+                      <TableRow className="bg-primary-50/80 border-b border-border">
+                        <TableHead className="text-foreground font-semibold">Marca</TableHead>
+                        <TableHead className="text-foreground font-semibold">Tipo</TableHead>
+                        <TableHead className="text-right text-foreground font-semibold">Apariciones</TableHead>
+                        <TableHead className="text-right text-foreground font-semibold">Posición media</TableHead>
+                        <TableHead className="text-right text-foreground font-semibold">% del Top 3</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {comparisonSummary.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-gray-500 py-6">
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
                             No hay Top 3 parseado para esta corrida.
                           </TableCell>
                         </TableRow>
                       ) : (
                         comparisonSummary.map((row) => (
                           <TableRow key={`${row.name}-${row.type}`}>
-                            <TableCell className="font-medium text-gray-900">{row.name}</TableCell>
-                            <TableCell className="text-gray-600">{row.type}</TableCell>
-                            <TableCell className="text-right text-gray-700">{row.appearances}</TableCell>
-                            <TableCell className="text-right text-gray-700">
+                            <TableCell className="font-medium text-foreground">{row.name}</TableCell>
+                            <TableCell className="text-muted-foreground">{row.type}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{row.appearances}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">
                               {row.averagePosition.toFixed(2)}
                             </TableCell>
-                            <TableCell className="text-right text-gray-700">{row.share.toFixed(1)}%</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{row.share.toFixed(1)}%</TableCell>
                           </TableRow>
                         ))
                       )}
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-sm text-gray-500">Todavía no hay resultados de prompts para comparar.</p>
+                  <p className="text-sm text-muted-foreground">Todavía no hay resultados de prompts para comparar.</p>
                 )}
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-900 mb-2">Sugerencias de competidores</p>
+                <p className="text-sm font-medium text-foreground mb-2">Sugerencias de competidores</p>
                 {ranking.length === 0 ? (
-                  <p className="text-sm text-gray-500">No hay ranking disponible para sugerir comparaciones.</p>
+                  <p className="text-sm text-muted-foreground">No hay ranking disponible para sugerir comparaciones.</p>
                 ) : suggestedCompetitors.length === 0 ? (
-                  <p className="text-sm text-gray-500">No hay marcas nuevas para sugerir.</p>
+                  <p className="text-sm text-muted-foreground">No hay marcas nuevas para sugerir.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {suggestedCompetitors.map((entry) => (
                       <span
                         key={entry.brandId}
-                        className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800"
+                        className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700"
                       >
                         {entry.brandName}
                       </span>

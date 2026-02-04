@@ -37,49 +37,49 @@ export function PromptDetail({ results }: PromptDetailProps) {
   return (
     <Card className="border-transparent bg-white shadow-md">
       <CardHeader>
-        <CardTitle className="text-xl text-gray-900">Detalle por Prompt</CardTitle>
-        <CardDescription className="text-gray-600">
+        <CardTitle className="text-xl text-foreground">Detalle por Prompt</CardTitle>
+        <CardDescription className="text-muted-foreground">
           Resultados y evidencia por cada consulta
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/80">
-              <TableHead className="text-gray-600">Prompt</TableHead>
-              <TableHead className="text-gray-600">Categoría</TableHead>
-              <TableHead className="text-gray-600">Top 3</TableHead>
-              <TableHead className="text-right text-gray-600">Score</TableHead>
-              <TableHead className="text-gray-600">Flags</TableHead>
-              <TableHead className="text-gray-600">Evidencia</TableHead>
+            <TableRow className="bg-primary-50/80 border-b border-border">
+              <TableHead className="text-muted-foreground">Prompt</TableHead>
+              <TableHead className="text-muted-foreground">Categoría</TableHead>
+              <TableHead className="text-muted-foreground">Top 3</TableHead>
+              <TableHead className="text-right text-muted-foreground">Score</TableHead>
+              <TableHead className="text-muted-foreground">Flags</TableHead>
+              <TableHead className="text-muted-foreground">Evidencia</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-gray-500">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   No hay resultados disponibles
                 </TableCell>
               </TableRow>
             ) : (
               results.map((result) => (
                 <>
-                  <TableRow key={result.id} className="hover:bg-slate-50/80">
-                    <TableCell className="max-w-xs truncate text-gray-900">
+                  <TableRow key={result.id} className="hover:bg-primary-50/60">
+                    <TableCell className="max-w-xs truncate text-foreground">
                       {result.prompt.promptText}
                     </TableCell>
-                    <TableCell className="text-gray-600">{result.prompt.category?.name || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{result.prompt.category?.name || '-'}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         {result.top3Json.map((entry) => (
-                          <div key={entry.position} className="text-sm text-gray-700">
+                          <div key={entry.position} className="text-sm text-muted-foreground">
                             {entry.position}. {entry.name} ({entry.type})
                           </div>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-foreground">
                         {(result.score * 100).toFixed(1)}
                       </span>
                     </TableCell>
@@ -90,13 +90,13 @@ export function PromptDetail({ results }: PromptDetailProps) {
                           .map(([key]) => (
                             <span
                               key={key}
-                              className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                              className="rounded bg-primary-50 px-2 py-0.5 text-xs text-muted-foreground"
                             >
                               {key}
                             </span>
                           ))}
                         {result.manualOverride && (
-                          <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
+                          <span className="rounded bg-accent-50 px-2 py-0.5 text-xs text-accent-700">
                             override
                           </span>
                         )}
@@ -106,7 +106,7 @@ export function PromptDetail({ results }: PromptDetailProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-gray-700 hover:bg-slate-100"
+                        className="text-foreground hover:bg-primary-50"
                         onClick={() =>
                           setExpandedId(expandedId === result.id ? null : result.id)
                         }
@@ -117,18 +117,18 @@ export function PromptDetail({ results }: PromptDetailProps) {
                   </TableRow>
                   {expandedId === result.id && (
                     <TableRow>
-                      <TableCell colSpan={6} className="bg-slate-50/80">
+                      <TableCell colSpan={6} className="bg-primary-50/60">
                         <div className="space-y-2 p-4">
                           <div>
                             <strong>Prompt:</strong>
-                            <p className="text-sm text-gray-600">{result.prompt.promptText}</p>
+                            <p className="text-sm text-muted-foreground">{result.prompt.promptText}</p>
                           </div>
                           <div>
                             <strong>Respuesta:</strong>
-                            <pre className="mt-1 max-h-64 overflow-auto rounded bg-white p-2 text-xs text-gray-700">
+                            <pre className="mt-1 max-h-64 overflow-auto rounded bg-white p-2 text-xs text-muted-foreground">
                               {result.responseText}
                               {result.truncated && (
-                                <span className="text-gray-500">... (truncado)</span>
+                                <span className="text-muted-foreground">... (truncado)</span>
                               )}
                             </pre>
                           </div>
