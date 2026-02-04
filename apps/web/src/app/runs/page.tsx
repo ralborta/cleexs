@@ -69,6 +69,23 @@ const isBrandEntry = (entryName: string, brandName: string, aliases: string[]) =
   return aliases.some((alias) => normalizeName(alias) === normalizedEntry);
 };
 
+const extractIntention = (promptText: string) => {
+  const match = promptText.match(/Intención:\s*([^\(\n]+)\s*\((\d+)%\)/i);
+  if (!match) return null;
+  return {
+    name: match[1].trim().toLowerCase(),
+    weight: Number(match[2]),
+  };
+};
+
+const normalizeIntentionKey = (value: string) => {
+  const normalized = normalizeName(value);
+  if (normalized.includes('urgencia')) return 'urgencia';
+  if (normalized.includes('calidad')) return 'calidad';
+  if (normalized.includes('precio')) return 'precio';
+  return null;
+};
+
 const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
   const totals = new Map<string, { name: string; type: string; count: number; positionSum: number }>();
   let totalEntries = 0;
@@ -208,6 +225,31 @@ export default function RunsPage() {
   const top3Rate = totalPrompts ? Math.round((top3Count / totalPrompts) * 100) : 0;
   const top1Rate = totalPrompts ? Math.round((top1Count / totalPrompts) * 100) : 0;
 
+  const intentionBuckets: Record<string, { scores: number[]; weight: number }> = {};
+  promptResults.forEach((result) => {
+    const promptText = result.prompt?.promptText || '';
+    const extracted = extractIntention(promptText);
+    if (!extracted) return;
+    const key = normalizeIntentionKey(extracted.name);
+    if (!key) return;
+    if (!intentionBuckets[key]) {
+      intentionBuckets[key] = { scores: [], weight: extracted.weight };
+    }
+    intentionBuckets[key].scores.push((result.score || 0) * 100);
+  });
+
+  const intentionScores = Object.entries(intentionBuckets).map(([key, data]) => ({
+    key,
+    score: data.scores.length ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length : 0,
+    weight: data.weight,
+  }));
+
+  const weightSum = intentionScores.reduce((sum, item) => sum + item.weight, 0) || 1;
+  const cleexsScore = intentionScores.reduce(
+    (sum, item) => sum + item.score * (item.weight / weightSum),
+    0
+  );
+
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-slate-50 via-white to-purple-50 px-6 py-10">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -241,19 +283,19 @@ export default function RunsPage() {
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl text-gray-900">Lista de Runs</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm text-gray-600">
             Corridas de análisis por marca y período, con estado y PRIA agregado.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50/70">
-                <TableHead className="text-gray-600">Marca</TableHead>
-                <TableHead className="text-gray-600">Período</TableHead>
-                <TableHead className="text-gray-600">Estado</TableHead>
-                <TableHead className="text-right text-gray-600">PRIA</TableHead>
-                <TableHead className="text-gray-600">Acciones</TableHead>
+              <TableRow className="bg-slate-50/90 border-b border-slate-200">
+                <TableHead className="text-gray-700 font-semibold">Marca</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Período</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Estado</TableHead>
+                <TableHead className="text-right text-gray-700 font-semibold">PRIA</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -265,7 +307,7 @@ export default function RunsPage() {
                 </TableRow>
               ) : (
                 runs.map((run) => (
-                  <TableRow key={run.id} className="hover:bg-slate-50/80">
+                  <TableRow key={run.id} className="hover:bg-slate-50">
                     <TableCell className="font-medium text-gray-900">{run.brand.name}</TableCell>
                     <TableCell>
                       {new Date(run.periodStart).toLocaleDateString('es-AR')} -{' '}
@@ -326,7 +368,7 @@ export default function RunsPage() {
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader>
               <CardTitle className="text-xl text-gray-900">Detalles del Run</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm text-gray-600">
                 {selectedRun.brand.name} -{' '}
                 {new Date(selectedRun.periodStart).toLocaleDateString('es-AR')} a{' '}
                 {new Date(selectedRun.periodEnd).toLocaleDateString('es-AR')}
@@ -336,30 +378,61 @@ export default function RunsPage() {
 
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-gray-900">Cleexs Score</CardTitle>
+              <CardDescription className="text-sm text-gray-600">
+                Score ponderado por intención en base al desempeño por prompt.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-4">
+                <p className="text-xs font-medium text-purple-700">Cleexs Score</p>
+                <p className="text-4xl font-bold text-gray-900">{cleexsScore.toFixed(0)}</p>
+                <p className="text-xs text-gray-600">Ponderado por intención</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {intentionScores.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No hay intenciones detectadas en los prompts de esta corrida.
+                  </p>
+                ) : (
+                  intentionScores.map((item) => (
+                    <div key={item.key} className="rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-medium text-gray-600 capitalize">{item.key}</p>
+                      <p className="text-2xl font-semibold text-gray-900">{item.score.toFixed(0)}</p>
+                      <p className="text-xs text-gray-500">Peso {item.weight}%</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xl text-gray-900">Métricas del análisis</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm text-gray-600">
                 Indicadores simples para evaluar coherencia, visibilidad y ranking en esta corrida.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border border-gray-100 p-3">
-                  <p className="text-xs text-gray-500">Confianza de formato</p>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-medium text-gray-600">Confianza de formato</p>
                   <p className="text-2xl font-semibold text-gray-900">{formatConfidence}%</p>
                   <p className="text-xs text-gray-500">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
                 </div>
-                <div className="rounded-lg border border-gray-100 p-3">
-                  <p className="text-xs text-gray-500">Mención de marca</p>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-medium text-gray-600">Mención de marca</p>
                   <p className="text-2xl font-semibold text-gray-900">{mentionRate}%</p>
                   <p className="text-xs text-gray-500">{mentionCount}/{totalPrompts} respuestas la mencionan</p>
                 </div>
-                <div className="rounded-lg border border-gray-100 p-3">
-                  <p className="text-xs text-gray-500">Aparición en Top 3</p>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-medium text-gray-600">Aparición en Top 3</p>
                   <p className="text-2xl font-semibold text-gray-900">{top3Rate}%</p>
                   <p className="text-xs text-gray-500">{top3Count}/{totalPrompts} en Top 3</p>
                 </div>
-                <div className="rounded-lg border border-gray-100 p-3">
-                  <p className="text-xs text-gray-500">Posición #1</p>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-medium text-gray-600">Posición #1</p>
                   <p className="text-2xl font-semibold text-gray-900">{top1Rate}%</p>
                   <p className="text-xs text-gray-500">{top1Count}/{totalPrompts} en primer lugar</p>
                 </div>
@@ -370,7 +443,7 @@ export default function RunsPage() {
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
               <CardTitle className="text-xl text-gray-900">Comparaciones y sugerencias</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm text-gray-600">
                 Se solicita un Top 3 por prompt con la marca a medir y la lista de competidores.
               </CardDescription>
             </CardHeader>
@@ -390,12 +463,12 @@ export default function RunsPage() {
                 {selectedRun.promptResults && selectedRun.promptResults.length > 0 ? (
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/70">
-                        <TableHead className="text-gray-600">Marca</TableHead>
-                        <TableHead className="text-gray-600">Tipo</TableHead>
-                        <TableHead className="text-right text-gray-600">Apariciones</TableHead>
-                        <TableHead className="text-right text-gray-600">Posición media</TableHead>
-                        <TableHead className="text-right text-gray-600">% del Top 3</TableHead>
+                      <TableRow className="bg-slate-50/90 border-b border-slate-200">
+                        <TableHead className="text-gray-700 font-semibold">Marca</TableHead>
+                        <TableHead className="text-gray-700 font-semibold">Tipo</TableHead>
+                        <TableHead className="text-right text-gray-700 font-semibold">Apariciones</TableHead>
+                        <TableHead className="text-right text-gray-700 font-semibold">Posición media</TableHead>
+                        <TableHead className="text-right text-gray-700 font-semibold">% del Top 3</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

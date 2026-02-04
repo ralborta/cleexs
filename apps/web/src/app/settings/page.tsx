@@ -43,6 +43,11 @@ export default function SettingsPage() {
   const [wizardUseCases, setWizardUseCases] = useState('');
   const [wizardFactors, setWizardFactors] = useState('');
   const [wizardTone, setWizardTone] = useState('');
+  const [intentionWeights, setIntentionWeights] = useState({
+    urgencia: 30,
+    calidad: 40,
+    precio: 30,
+  });
   const [generatedPrompts, setGeneratedPrompts] = useState<string[]>([]);
   const [wizardVersionName, setWizardVersionName] = useState('PROMPTS_v1');
 
@@ -250,26 +255,43 @@ export default function SettingsPage() {
     const objective = wizardObjective || 'consideración';
     const brandName = selectedBrand?.name || 'tu marca';
 
-    const comparativePrompts = [
-      `Compará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
-      `Para ${objective}, ¿qué ${product} elegirías entre ${brandName} y ${competitorText}? Hacé un Top 3 con justificación corta.`,
-      `Compará ${product} para ${industry}: ventajas y desventajas entre ${brandName} y ${competitorText}. Considerá ${factorText}. Cerrá con ranking 1., 2., 3.`,
-      `En ${country}, rankeá Top 3 de ${product} para ${objective}. Incluí ${brandName} y ${competitorText}.`,
-      `Entre ${brandName} y ${competitorText}, ¿cómo queda el Top 3 para ${objective}? Respondé 1., 2., 3. con motivo breve.`,
+    const intentions = [
+      {
+        key: 'urgencia',
+        label: 'Urgencia',
+        weight: intentionWeights.urgencia,
+        context: `Necesito ${product} pronto para ${useCaseText}.`,
+      },
+      {
+        key: 'calidad',
+        label: 'Calidad',
+        weight: intentionWeights.calidad,
+        context: `Busco la mejor calidad en ${product} para ${industry}.`,
+      },
+      {
+        key: 'precio',
+        label: 'Precio',
+        weight: intentionWeights.precio,
+        context: `Busco ${product} con buen precio y valor por ${factorText}.`,
+      },
     ];
 
-    const recommendationPrompts = [
-      `Si tuvieras que recomendar ${product} para ${useCaseText}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3.`,
-      `¿Qué ${product} es mejor para ${useCaseText}? Respondé con Top 3 e incluí ${brandName} y ${competitorText}.`,
-      `Si tuvieras que elegir ${product} hoy, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText} y justificá brevemente en tono ${tone}.`,
-    ];
+    const prompts: string[] = [];
 
-    const defensibilityPrompts = [
-      `Estoy considerando ${brandName} para ${useCaseText}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}.`,
-      `Si ${brandName} no estuviera disponible, ¿qué ${product} recomendarías? Hacé un Top 3 con ${competitorText}.`,
-    ];
+    intentions.forEach((intention) => {
+      const prefix = `Intención: ${intention.label} (${intention.weight}%). Tipo:`;
+      prompts.push(
+        `${prefix} Comparativo.\n${intention.context}\nCompará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`
+      );
+      prompts.push(
+        `${prefix} Recomendación.\n${intention.context}\nSi tuvieras que recomendar ${product} para ${objective}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3.`
+      );
+      prompts.push(
+        `${prefix} Defensibilidad.\n${intention.context}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}.`
+      );
+    });
 
-    return [...comparativePrompts, ...recommendationPrompts, ...defensibilityPrompts];
+    return prompts;
   };
 
   const scorePromptQuality = (prompt: string) => {
@@ -553,11 +575,44 @@ export default function SettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-xl text-gray-900">Wizard de Prompts (ES)</CardTitle>
               <CardDescription>
-                Generamos 10 prompts balanceados entre comparación, recomendación y defensibilidad. Todos piden
-                Top 3 explícito e incluyen marca medida + competidores para obtener rankings coherentes.
+                Generamos 9 prompts (3 intenciones × 3 tipos). Todos piden Top 3 explícito e incluyen marca medida
+                + competidores para obtener rankings coherentes y comparables.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-4">
+                <p className="text-sm font-medium text-gray-900 mb-3">Intenciones y pesos</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {([
+                    { key: 'urgencia', label: 'Urgencia' },
+                    { key: 'calidad', label: 'Calidad' },
+                    { key: 'precio', label: 'Precio' },
+                  ] as const).map((item) => (
+                    <div key={item.key} className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-gray-600">
+                        <span>{item.label}</span>
+                        <span>{intentionWeights[item.key]}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={intentionWeights[item.key]}
+                        onChange={(e) =>
+                          setIntentionWeights((prev) => ({
+                            ...prev,
+                            [item.key]: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-purple-600"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  La suma ideal es 100%. Se normaliza automáticamente al calcular el Cleexs Score.
+                </p>
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700">Nombre de versión</label>
                 <input
@@ -644,7 +699,7 @@ export default function SettingsPage() {
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
                   onClick={handleGeneratePrompts}
                 >
-                  Generar 10 prompts
+                  Generar 9 prompts
                 </Button>
                 <Button
                   variant="outline"
