@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CheckCircle2 } from 'lucide-react';
 import {
   brandsApi,
   promptsApi,
@@ -373,6 +374,14 @@ export default function SettingsPage() {
     );
   }
 
+  const selectedCompetitors = selectedBrand?.competitors?.length || 0;
+  const promptsCount = generatedPrompts.length;
+  const hasBrand = Boolean(brandName.trim());
+  const hasCompetitors = selectedCompetitors > 0;
+  const hasPrompts = promptsCount > 0;
+  const hasRun = Boolean(periodStart && periodEnd);
+  const completedSteps = [hasBrand, hasCompetitors, hasPrompts, hasRun].filter(Boolean).length;
+
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
       {toast && (
@@ -403,16 +412,53 @@ export default function SettingsPage() {
         </div>
       )}
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <p className="text-sm font-medium text-primary-700">Setup</p>
-          <h1 className="text-3xl font-bold text-foreground">Configuración Inicial</h1>
-          <p className="text-muted-foreground">
-            Acá cargás tu marca, competidores, prompts y creás el primer run.
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-primary-700 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary-700" />
+              Centro de control
+            </p>
+            <h1 className="text-3xl font-bold text-foreground">Configuración inicial</h1>
+            <p className="text-muted-foreground">
+              Gestioná, auditá y compará tus corridas con evidencia y métricas claras.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button className="bg-primary-600 text-white hover:bg-primary-700">Ejecutar Run</Button>
+            <Button variant="outline" className="border-border text-foreground hover:bg-primary-50">
+              •••
+            </Button>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-transparent bg-white shadow-md">
+        <div className="rounded-2xl border border-border bg-white/80 p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-4">
+            {[
+              { label: 'Tu marca', active: hasBrand },
+              { label: 'Comparar con', active: hasCompetitors },
+              { label: 'Intenciones a medir', active: hasPrompts },
+              { label: 'Primer Run', active: hasRun },
+            ].map((step, index) => (
+              <div key={step.label} className="flex items-center gap-3">
+                <div
+                  className={`h-8 w-8 rounded-full border text-sm font-semibold flex items-center justify-center ${
+                    step.active
+                      ? 'border-primary-600 bg-primary-600 text-white'
+                      : 'border-border bg-white text-muted-foreground'
+                  }`}
+                >
+                  {index + 1}
+                </div>
+                <span className="text-sm text-foreground">{step.label}</span>
+                {index < 3 && <div className="h-px w-8 bg-border" />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <div className="space-y-6">
+            <Card className="border-transparent bg-white shadow-md">
             <CardHeader className="pb-3">
               <CardTitle className="text-xl text-foreground">Marca</CardTitle>
               <CardDescription>Creá tu marca principal.</CardDescription>
@@ -717,10 +763,10 @@ export default function SettingsPage() {
                     const qualityLabel = quality >= 80 ? 'Alta' : quality >= 60 ? 'Media' : 'Baja';
                     const qualityClass =
                       quality >= 80
-                        ? 'text-emerald-700'
+                        ? 'text-primary-700'
                         : quality >= 60
                           ? 'text-accent-700'
-                          : 'text-rose-700';
+                          : 'text-destructive';
                     return (
                       <div key={idx} className="space-y-1">
                         <div className="text-xs text-muted-foreground flex items-center gap-2">
@@ -792,6 +838,37 @@ export default function SettingsPage() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        <Card className="border-transparent bg-white shadow-md h-fit">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-foreground">Resultado</CardTitle>
+            <CardDescription>Seguimiento del setup</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border border-border bg-primary-50/70 p-3">
+              <p className="text-xs text-muted-foreground">Marca</p>
+              <p className="text-sm font-semibold text-foreground">
+                {brandName || 'Sin definir'} {brandDomain ? `(${brandDomain})` : ''}
+              </p>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Estado</span>
+              <span className="font-semibold text-foreground">
+                {completedSteps} / 4
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">En curso</span>
+              <span className="font-semibold text-foreground">{hasPrompts ? promptsCount : 0} / 9</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Bloqueado hasta completar</span>
+              <span className="text-muted-foreground">—</span>
+            </div>
+            <Button className="w-full bg-primary-600 text-white hover:bg-primary-700">Continuar</Button>
+          </CardContent>
+        </Card>
         </div>
       </div>
     </div>

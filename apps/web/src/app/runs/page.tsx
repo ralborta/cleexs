@@ -249,6 +249,12 @@ export default function RunsPage() {
     (sum, item) => sum + item.score * (item.weight / weightSum),
     0
   );
+  const totalRuns = runs.length;
+  const lastRun = runs[0];
+  const lastRunScore = lastRun?.priaReports?.[0]?.priaTotal ?? 0;
+  const lastRunDate = lastRun ? new Date(lastRun.periodEnd).toLocaleDateString('es-AR') : '-';
+  const runningCount = runs.filter((run) => run.status === 'running').length;
+  const failedCount = runs.filter((run) => run.status === 'failed').length;
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
@@ -266,6 +272,40 @@ export default function RunsPage() {
             Agregar Resultado Manual
           </Button>
         </Link>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Runs Totales</p>
+            <p className="text-2xl font-semibold text-foreground">{totalRuns}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Último Run</p>
+            <p className="text-2xl font-semibold text-foreground">
+              {lastRunScore.toFixed(0)} / 100
+            </p>
+            <p className="text-xs text-muted-foreground">{lastRunDate}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">En curso / Fallidos</p>
+            <p className="text-2xl font-semibold text-foreground">
+              {runningCount} <span className="text-muted-foreground">en curso</span>
+            </p>
+            <p className="text-xs text-muted-foreground">{failedCount} fallidos</p>
+          </CardContent>
+        </Card>
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Más reciente</p>
+            <p className="text-sm font-medium text-foreground">Últimos 90 días</p>
+            <p className="text-xs text-muted-foreground">Filtro rápido</p>
+          </CardContent>
+        </Card>
       </div>
 
       {notice && (
@@ -288,6 +328,24 @@ export default function RunsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-wrap items-center gap-2 pb-4">
+            <select className="rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground">
+              <option>Marca</option>
+            </select>
+            <select className="rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground">
+              <option>Estado</option>
+            </select>
+            <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-primary-50">
+              + Filtrar 90 días
+            </Button>
+            <input
+              className="w-full max-w-xs rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+              placeholder="Buscar Runs..."
+            />
+            <select className="rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground">
+              <option>Más reciente</option>
+            </select>
+          </div>
           <Table>
             <TableHeader>
               <TableRow className="bg-primary-50/80 border-b border-border">
