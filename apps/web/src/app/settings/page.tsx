@@ -380,10 +380,10 @@ export default function SettingsPage() {
           <div
             className={`rounded-2xl border px-4 py-3 shadow-xl ${
               toast.variant === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                ? 'border-primary-100 bg-primary-50 text-primary-900'
                 : toast.variant === 'error'
-                  ? 'border-rose-200 bg-rose-50 text-rose-900'
-                  : 'border-indigo-200 bg-indigo-50 text-indigo-900'
+                  ? 'border-destructive/20 bg-destructive/10 text-destructive'
+                  : 'border-accent-100 bg-accent-50 text-accent-700'
             }`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -495,7 +495,7 @@ export default function SettingsPage() {
                     Usamos el nombre de la marca, el dominio y los datos del wizard (industria, producto,
                     mercado, objetivos y casos de uso) para sugerir competidores relevantes antes de crear el run.
                   </p>
-                  {suggestionsError && <p className="text-xs text-rose-600">{suggestionsError}</p>}
+                  {suggestionsError && <p className="text-xs text-destructive">{suggestionsError}</p>}
                   {suggestedCompetitors.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {suggestedCompetitors.map((suggestion) => (
