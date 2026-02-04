@@ -38,6 +38,10 @@ export interface Brand {
   id: string;
   name: string;
   domain?: string;
+  industry?: string;
+  productType?: string;
+  country?: string;
+  objective?: string;
   aliases: Array<{ id: string; alias: string }>;
   competitors: Array<{ id: string; name: string }>;
 }
@@ -112,7 +116,16 @@ export const tenantsApi = {
 export const brandsApi = {
   list: (tenantId: string) => api<Brand[]>(`/api/brands?tenantId=${tenantId}`),
   get: (id: string) => api<Brand>(`/api/brands/${id}`),
-  create: (data: { tenantId: string; name: string; domain?: string }) =>
+  create: (data: {
+    tenantId: string;
+    name: string;
+    domain?: string;
+    industry?: string;
+    productType?: string;
+    country?: string;
+    objective?: string;
+    description?: string;
+  }) =>
     api<Brand>('/api/brands', { method: 'POST', body: JSON.stringify(data) }),
   addCompetitor: (brandId: string, data: { name: string; aliases?: string[] }) =>
     api(`/api/brands/${brandId}/competitors`, { method: 'POST', body: JSON.stringify(data) }),

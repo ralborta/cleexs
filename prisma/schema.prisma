@@ -110,6 +110,10 @@ model Brand {
   tenantId    String    @map("tenant_id")
   name        String
   domain      String?
+  industry    String?
+  productType String?   @map("product_type")
+  country     String?
+  objective   String?
   description String?   @db.Text
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

@@ -27,6 +27,10 @@ export default function SettingsPage() {
 
   const [brandName, setBrandName] = useState('');
   const [brandDomain, setBrandDomain] = useState('');
+  const [brandIndustry, setBrandIndustry] = useState('');
+  const [brandProductType, setBrandProductType] = useState('');
+  const [brandCountry, setBrandCountry] = useState('');
+  const [brandObjective, setBrandObjective] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [competitorName, setCompetitorName] = useState('');
   const [suggestedCompetitors, setSuggestedCompetitors] = useState<CompetitorSuggestionItem[]>([]);
@@ -122,11 +126,19 @@ export default function SettingsPage() {
         tenantId,
         name: brandName.trim(),
         domain: brandDomain.trim() || undefined,
+        industry: brandIndustry.trim() || undefined,
+        productType: brandProductType.trim() || undefined,
+        country: brandCountry.trim() || undefined,
+        objective: brandObjective.trim() || undefined,
       });
       const updated = await brandsApi.list(tenantId);
       setBrands(updated);
       setBrandName('');
       setBrandDomain('');
+      setBrandIndustry('');
+      setBrandProductType('');
+      setBrandCountry('');
+      setBrandObjective('');
       pushToast('success', 'Marca creada', 'Ya podés agregar competidores y prompts.');
     } catch (error: any) {
       pushToast('error', 'No pudimos crear la marca', error?.message);
@@ -480,6 +492,42 @@ export default function SettingsPage() {
                   onChange={(e) => setBrandDomain(e.target.value)}
                   className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
                   placeholder="cleexs.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-foreground">Industria (opcional)</label>
+                <input
+                  value={brandIndustry}
+                  onChange={(e) => setBrandIndustry(e.target.value)}
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  placeholder="Ej: SaaS, Retail, Fintech"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-foreground">Tipo de producto (opcional)</label>
+                <input
+                  value={brandProductType}
+                  onChange={(e) => setBrandProductType(e.target.value)}
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  placeholder="Ej: plataforma de inversión"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-foreground">País/mercado (opcional)</label>
+                <input
+                  value={brandCountry}
+                  onChange={(e) => setBrandCountry(e.target.value)}
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  placeholder="Ej: Argentina, México"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-foreground">Objetivo (opcional)</label>
+                <input
+                  value={brandObjective}
+                  onChange={(e) => setBrandObjective(e.target.value)}
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  placeholder="Ej: consideración, conversión"
                 />
               </div>
               <Button

@@ -92,6 +92,10 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
     tenantId: z.string().uuid(),
     name: z.string().min(1),
     domain: z.string().optional(),
+    industry: z.string().optional(),
+    productType: z.string().optional(),
+    country: z.string().optional(),
+    objective: z.string().optional(),
     description: z.string().optional(),
     aliases: z.array(z.string()).optional(),
   });
@@ -104,6 +108,10 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         tenantId: data.tenantId,
         name: data.name,
         domain: data.domain,
+        industry: data.industry,
+        productType: data.productType,
+        country: data.country,
+        objective: data.objective,
         description: data.description,
         aliases: {
           create: (data.aliases || []).map((alias) => ({ alias })),

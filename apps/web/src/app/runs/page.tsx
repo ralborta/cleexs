@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { reportsApi, runsApi, tenantsApi, Run, RankingEntry } from '@/lib/api';
+import { brandsApi, reportsApi, runsApi, tenantsApi, Run, RankingEntry, Brand } from '@/lib/api';
 import { PromptDetail } from '@/components/dashboard/prompt-detail';
 
 interface PromptResult {
@@ -34,6 +34,8 @@ interface RunWithDetails extends Run {
   brand: Run['brand'] & {
     competitors?: Array<{ id: string; name: string }>;
     aliases?: Array<{ id: string; alias: string }>;
+    industry?: string;
+    productType?: string;
   };
   promptResults?: PromptResult[];
 }
@@ -123,6 +125,7 @@ export default function RunsPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<RunWithDetails | null>(null);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenantId, setTenantId] = useState('');
   const [executingRunId, setExecutingRunId] = useState<string | null>(null);
@@ -133,12 +136,14 @@ export default function RunsPage() {
       try {
         const tenant = await tenantsApi.getByCode('000');
         setTenantId(tenant.id);
-        const [runsData, rankingData] = await Promise.all([
+        const [runsData, rankingData, brandsData] = await Promise.all([
           runsApi.list(tenant.id),
           reportsApi.getRanking(tenant.id),
+          brandsApi.list(tenant.id),
         ]);
         setRuns(runsData);
         setRanking(rankingData);
+        setBrands(brandsData);
       } catch (error) {
         console.error('Error cargando runs:', error);
       } finally {
@@ -190,18 +195,47 @@ export default function RunsPage() {
     ? buildComparisonSummary(selectedRun.promptResults)
     : [];
   const suggestedCompetitors = selectedRun
-    ? ranking
-        .filter((entry) => entry.brandId !== selectedRun.brand.id)
-        .filter((entry) => {
-          const competitors = selectedRun.brand.competitors || [];
-          const normalizedCompetitors = competitors.map((c) => normalizeName(c.name));
-          return !normalizedCompetitors.includes(normalizeName(entry.brandName));
-        })
-        .slice(0, 6)
+    ? Array.from(
+        ranking
+          .filter((entry) => entry.brandId !== selectedRun.brand.id)
+          .filter((entry) => {
+            const competitors = selectedRun.brand.competitors || [];
+            const normalizedCompetitors = competitors.map((c) => normalizeName(c.name));
+            const entryBrand = brands.find((brand) => brand.id === entry.brandId);
+            const selectedIndustry = selectedRun.brand.industry?.trim();
+            const selectedProductType = selectedRun.brand.productType?.trim();
+            const entryIndustry = entryBrand?.industry?.trim();
+            const entryProductType = entryBrand?.productType?.trim();
+            const industryMatch =
+              selectedIndustry &&
+              entryIndustry &&
+              normalizeName(entryIndustry) === normalizeName(selectedIndustry);
+            const productMatch =
+              selectedProductType &&
+              entryProductType &&
+              normalizeName(entryProductType) === normalizeName(selectedProductType);
+            const hasMatch = Boolean(industryMatch || productMatch);
+            return (
+              Boolean(entry.brandName && entry.brandName.trim()) &&
+              !normalizedCompetitors.includes(normalizeName(entry.brandName)) &&
+              hasMatch
+            );
+          })
+          .reduce((map, entry) => {
+            if (!map.has(entry.brandId)) {
+              map.set(entry.brandId, entry);
+            }
+            return map;
+          }, new Map<string, RankingEntry>())
+          .values()
+      ).slice(0, 6)
     : [];
   const promptResults = selectedRun?.promptResults || [];
   const brandAliases = selectedRun?.brand.aliases?.map((alias) => alias.alias) || [];
   const totalPrompts = promptResults.length;
+  const hasIndustryContext = Boolean(
+    selectedRun?.brand.industry?.trim() || selectedRun?.brand.productType?.trim()
+  );
   const parseableCount = promptResults.filter((result) => result.top3Json && result.top3Json.length > 0).length;
   const mentionCount = selectedRun
     ? promptResults.filter((result) =>
@@ -570,7 +604,11 @@ export default function RunsPage() {
 
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">Sugerencias de competidores</p>
-                {ranking.length === 0 ? (
+                {!hasIndustryContext ? (
+                  <p className="text-sm text-muted-foreground">
+                    Definí industria o tipo de producto en la marca para sugerencias relevantes.
+                  </p>
+                ) : ranking.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No hay ranking disponible para sugerir comparaciones.</p>
                 ) : suggestedCompetitors.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No hay marcas nuevas para sugerir.</p>
