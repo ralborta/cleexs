@@ -62,7 +62,13 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
 
     let allPromptsInVersion: { id: string; promptTextPreview: string; createdAt: string }[] = [];
     const versionId = promptsUsed[0]?.promptVersionId;
+    let versionName: string | null = null;
     if (versionId) {
+      const versionRow = await prisma.promptVersion.findUnique({
+        where: { id: versionId },
+        select: { name: true },
+      });
+      versionName = versionRow?.name ?? null;
       const allInVersion = await prisma.prompt.findMany({
         where: { promptVersionId: versionId, active: true },
         orderBy: { createdAt: 'asc' },
@@ -77,6 +83,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
 
     return {
       runId,
+      promptVersionUsed: versionId ? { id: versionId, name: versionName } : null,
       resultsCount: results.length,
       distinctPromptIdsInResults: promptIds,
       results: results.map((r) => ({

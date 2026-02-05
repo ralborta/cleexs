@@ -126,6 +126,11 @@ const promptRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    fastify.log.info(
+      { promptId: prompt.id, promptVersionId: prompt.promptVersionId, preview: prompt.promptText.slice(0, 50) },
+      'Prompt creado y guardado en DB'
+    );
+
     return reply.code(201).send(prompt);
   });
 

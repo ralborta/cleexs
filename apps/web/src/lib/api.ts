@@ -150,7 +150,7 @@ export const promptsApi = {
   getVersions: (tenantId: string) =>
     api<PromptVersion[]>(`/api/prompts/prompt-versions?tenantId=${tenantId}`),
   getPrompts: (versionId: string) =>
-    api<Prompt[]>(`/api/prompts/prompts?versionId=${versionId}`),
+    api<Prompt[]>(`/api/prompts/prompts?versionId=${versionId}`, { cache: 'no-store' }),
   createVersion: (data: { tenantId: string; name: string }) =>
     api<PromptVersion>('/api/prompts/prompt-versions', {
       method: 'POST',
@@ -169,6 +169,7 @@ export const runsApi = {
   getDebug: (runId: string) =>
     api<{
       runId: string;
+      promptVersionUsed: { id: string; name: string | null } | null;
       resultsCount: number;
       distinctPromptIdsInResults: string[];
       results: { resultId: string; promptId: string; createdAt: string }[];

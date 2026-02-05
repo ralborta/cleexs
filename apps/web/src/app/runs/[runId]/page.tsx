@@ -134,6 +134,7 @@ export default function RunDetailPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [reExecuting, setReExecuting] = useState(false);
   const [debugRun, setDebugRun] = useState<{
+    promptVersionUsed: { id: string; name: string | null } | null;
     distinctPromptIdsInResults: string[];
     resultsCount: number;
     allPromptsInVersionCount: number;
@@ -181,6 +182,7 @@ export default function RunDetailPage() {
       .then((d) => {
         if (!cancelled)
           setDebugRun({
+            promptVersionUsed: d.promptVersionUsed ?? null,
             distinctPromptIdsInResults: d.distinctPromptIdsInResults,
             resultsCount: d.resultsCount,
             allPromptsInVersionCount: d.allPromptsInVersionCount,
@@ -348,8 +350,9 @@ export default function RunDetailPage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-lg text-foreground">Diagnóstico de prompts</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Este run tiene {debugRun.resultsCount} resultado(s) y usa {debugRun.distinctPromptIdsInResults.length} prompt(s) distinto(s).
-                La versión de prompts tiene {debugRun.allPromptsInVersionCount} prompt(s) en total.
+                Esta corrida usó la versión de prompts: <strong>{debugRun.promptVersionUsed?.name ?? '—'}</strong> (todos esos prompts están guardados en la DB).
+                El run tiene {debugRun.resultsCount} resultado(s) y usa {debugRun.distinctPromptIdsInResults.length} prompt(s) distinto(s).
+                La versión tiene {debugRun.allPromptsInVersionCount} prompt(s) en total.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
