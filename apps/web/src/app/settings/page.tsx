@@ -14,6 +14,29 @@ import {
   CompetitorSuggestionItem,
 } from '@/lib/api';
 
+function normalizeSuggestions(items: CompetitorSuggestionItem[]): CompetitorSuggestionItem[] {
+  const out: CompetitorSuggestionItem[] = [];
+  for (const item of items) {
+    const name = (item?.name ?? '').trim();
+    if (!name) continue;
+    if (name.startsWith('[') || name.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(name);
+        const arr = Array.isArray(parsed) ? parsed : [parsed];
+        for (const x of arr) {
+          const n = (x?.name ?? (typeof x === 'string' ? x : '')).toString().trim();
+          if (n) out.push({ name: n, reason: x?.reason?.toString?.()?.trim() });
+        }
+      } catch {
+        out.push(item);
+      }
+    } else {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
 export default function SettingsPage() {
   const [tenantId, setTenantId] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -257,8 +280,10 @@ export default function SettingsPage() {
         useCases: splitList(wizardUseCases),
         factors: splitList(wizardFactors),
       });
-      setSuggestedCompetitors(response.suggestions || []);
-      if (!response.suggestions?.length) {
+      const raw = response.suggestions || [];
+      const normalized = normalizeSuggestions(raw);
+      setSuggestedCompetitors(normalized);
+      if (!normalized.length) {
         setSuggestionsError('No encontramos sugerencias con los datos actuales.');
       }
     } catch (error: any) {

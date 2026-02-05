@@ -13,12 +13,17 @@ const normalizeSuggestion = (value: string) =>
 type SuggestionItem = { name: string; reason?: string };
 
 const parseSuggestions = (text: string): SuggestionItem[] => {
-  const trimmed = text.trim();
+  let trimmed = text.trim();
+  // Quitar posible markdown ```json ... ```
+  const codeBlock = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock) trimmed = codeBlock[1].trim();
   const jsonStart = trimmed.indexOf('[');
   const jsonEnd = trimmed.lastIndexOf(']');
   if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
     try {
-      const jsonText = trimmed.slice(jsonStart, jsonEnd + 1);
+      let jsonText = trimmed.slice(jsonStart, jsonEnd + 1);
+      // Quitar coma final antes de ] (JSON inválido pero común en LLMs)
+      jsonText = jsonText.replace(/,(\s*])/g, '$1');
       const parsed = JSON.parse(jsonText);
       if (Array.isArray(parsed)) {
         return parsed
