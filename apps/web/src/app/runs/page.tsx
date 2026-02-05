@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -136,29 +137,37 @@ export default function RunsPage() {
   const [tenantId, setTenantId] = useState('');
   const [executingRunId, setExecutingRunId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname !== '/runs') return;
+    let cancelled = false;
     async function loadRuns() {
       try {
         const tenant = await tenantsApi.getByCode('000');
+        if (cancelled) return;
         setTenantId(tenant.id);
         const [runsData, rankingData, brandsData] = await Promise.all([
           runsApi.list(tenant.id),
           reportsApi.getRanking(tenant.id),
           brandsApi.list(tenant.id),
         ]);
+        if (cancelled) return;
         setRuns(runsData);
         setRanking(rankingData);
         setBrands(brandsData);
       } catch (error) {
-        console.error('Error cargando runs:', error);
+        if (!cancelled) console.error('Error cargando runs:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadRuns();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   const handleViewDetails = async (run: Run) => {
     const requestedId = run.id;

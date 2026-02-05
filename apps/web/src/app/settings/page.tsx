@@ -441,7 +441,10 @@ export default function SettingsPage() {
         periodStart: new Date(periodStart).toISOString(),
         periodEnd: new Date(periodEnd).toISOString(),
       });
-      await runsApi.execute(run.id, { model: 'gpt-4o-mini' });
+      await runsApi.execute(run.id, {
+        model: 'gpt-4o-mini',
+        ...(selectedVersionId ? { promptVersionId: selectedVersionId } : {}),
+      });
       pushToast('success', 'Run ejecutado', 'La corrida se está procesando. Redirigiendo a Corridas.');
       router.push('/runs');
     } catch (error: any) {

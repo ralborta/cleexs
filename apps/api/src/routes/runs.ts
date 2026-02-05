@@ -51,6 +51,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         promptResults: {
+          orderBy: { createdAt: 'asc' },
           include: {
             prompt: {
               include: {
