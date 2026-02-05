@@ -243,7 +243,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
               {
                 role: 'system',
                 content:
-                  'Sos un analista de mercado. Devolvé SOLO un JSON array con 5 a 8 competidores directos, en formato: [{"name":"Marca","reason":"breve motivo"}]. No incluyas texto extra.',
+                  'Sos un analista de mercado. Devolvé SOLO un JSON array con 5 a 8 competidores DIRECTOS de la misma industria y tipo de producto que se indican. No sugieras marcas de otros rubros. Formato: [{"name":"Marca","reason":"breve motivo"}]. No incluyas texto extra.',
               },
               {
                 role: 'user',

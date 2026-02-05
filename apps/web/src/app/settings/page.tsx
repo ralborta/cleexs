@@ -232,14 +232,20 @@ export default function SettingsPage() {
       pushToast('info', 'Falta seleccionar marca', 'Elegí una marca primero.');
       return;
     }
+    const industry = selectedBrand?.industry?.trim();
+    const productType = selectedBrand?.productType?.trim();
+    if (!industry || !productType) {
+      pushToast('info', 'Faltan datos de la marca', 'La marca debe tener Industria y Tipo de producto (se definen al crear la marca) para sugerir competidores.');
+      return;
+    }
     setSuggestionsLoading(true);
     setSuggestionsError(null);
     try {
       const response = await brandsApi.suggestCompetitors(selectedBrandId, {
-        industry: wizardIndustry || undefined,
-        productType: wizardProductType || undefined,
-        country: wizardCountry || undefined,
-        objective: wizardObjective || undefined,
+        industry,
+        productType,
+        country: selectedBrand?.country?.trim() || undefined,
+        objective: selectedBrand?.objective?.trim() || undefined,
         useCases: splitList(wizardUseCases),
         factors: splitList(wizardFactors),
       });
