@@ -981,8 +981,9 @@ export default function SettingsPage() {
             <div className="rounded-lg border border-border bg-primary-50/70 p-3">
               <p className="text-xs text-muted-foreground">Marca</p>
               <p className="text-sm font-semibold text-foreground">
-                {selectedBrand?.name || brandName || 'Sin definir'}{' '}
-                {selectedBrand?.domain ? `(${selectedBrand.domain})` : brandDomain ? `(${brandDomain})` : ''}
+                {configStep === 1
+                  ? (brandName.trim() || 'Sin definir') + (brandDomain.trim() ? ` (${brandDomain.trim()})` : '')
+                  : (selectedBrand?.name || 'Sin definir') + (selectedBrand?.domain ? ` (${selectedBrand.domain})` : '')}
               </p>
             </div>
             <div className="flex items-center justify-between text-sm">
