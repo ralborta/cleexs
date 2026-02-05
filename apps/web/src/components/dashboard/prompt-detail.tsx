@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -10,7 +11,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Fragment, useState } from 'react';
 
 interface PromptResult {
   id: string;
@@ -29,17 +29,16 @@ interface PromptResult {
 
 interface PromptDetailProps {
   results: PromptResult[];
+  runId?: string;
 }
 
-export function PromptDetail({ results }: PromptDetailProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
+export function PromptDetail({ results, runId }: PromptDetailProps) {
   return (
     <Card className="border-transparent bg-white shadow-md">
       <CardHeader>
         <CardTitle className="text-xl text-foreground">Detalle por Prompt</CardTitle>
         <CardDescription className="text-muted-foreground">
-          Resultados y evidencia por cada consulta
+          Resultados y evidencia por cada consulta. Clic en Ver abre la pantalla de detalle.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -63,85 +62,67 @@ export function PromptDetail({ results }: PromptDetailProps) {
               </TableRow>
             ) : (
               results.map((result) => (
-                <Fragment key={result.id}>
-                  <TableRow className="hover:bg-primary-50/60">
-                    <TableCell className="max-w-xs truncate text-foreground">
-                      {result.prompt.promptText}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{result.prompt.category?.name || '-'}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {result.top3Json.map((entry) => (
-                          <div key={entry.position} className="text-sm text-muted-foreground">
-                            {entry.position}. {entry.name} ({entry.type})
-                            {entry.reason && (
-                              <span className="block pl-4 text-xs text-muted-foreground/90">
-                                — {entry.reason}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-semibold text-foreground">
-                        {(result.score * 100).toFixed(1)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(result.flags)
-                          .filter(([, value]) => value)
-                          .map(([key]) => (
-                            <span
-                              key={key}
-                              className="rounded bg-primary-50 px-2 py-0.5 text-xs text-muted-foreground"
-                            >
-                              {key}
+                <TableRow key={result.id} className="hover:bg-primary-50/60">
+                  <TableCell className="max-w-xs truncate text-foreground" title={result.prompt.promptText}>
+                    {result.prompt.promptText}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{result.prompt.category?.name || '-'}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {result.top3Json.map((entry) => (
+                        <div key={entry.position} className="text-sm text-muted-foreground">
+                          {entry.position}. {entry.name} ({entry.type})
+                          {entry.reason && (
+                            <span className="block pl-4 text-xs text-muted-foreground/90">
+                              — {entry.reason}
                             </span>
-                          ))}
-                        {result.manualOverride && (
-                          <span className="rounded bg-accent-50 px-2 py-0.5 text-xs text-accent-700">
-                            override
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-foreground hover:bg-primary-50"
-                        onClick={() =>
-                          setExpandedId(expandedId === result.id ? null : result.id)
-                        }
-                      >
-                        {expandedId === result.id ? 'Ocultar' : 'Ver'}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {expandedId === result.id && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="bg-primary-50/60">
-                        <div className="space-y-2 p-4">
-                          <div>
-                            <strong>Prompt:</strong>
-                            <p className="text-sm text-muted-foreground">{result.prompt.promptText}</p>
-                          </div>
-                          <div>
-                            <strong>Respuesta:</strong>
-                            <pre className="mt-1 max-h-64 overflow-auto rounded bg-white p-2 text-xs text-muted-foreground">
-                              {result.responseText}
-                              {result.truncated && (
-                                <span className="text-muted-foreground">... (truncado)</span>
-                              )}
-                            </pre>
-                          </div>
+                          )}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </Fragment>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-semibold text-foreground">
+                      {(result.score * 100).toFixed(1)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(result.flags)
+                        .filter(([, value]) => value)
+                        .map(([key]) => (
+                          <span
+                            key={key}
+                            className="rounded bg-primary-50 px-2 py-0.5 text-xs text-muted-foreground"
+                          >
+                            {key}
+                          </span>
+                        ))}
+                      {result.manualOverride && (
+                        <span className="rounded bg-accent-50 px-2 py-0.5 text-xs text-accent-700">
+                          override
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {runId ? (
+                      <Link href={`/runs/${runId}/result/${result.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-foreground hover:bg-primary-50"
+                        >
+                          Ver
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="text-muted-foreground" disabled>
+                        Ver
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
               ))
             )}
           </TableBody>

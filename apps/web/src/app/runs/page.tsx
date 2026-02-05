@@ -660,7 +660,11 @@ export default function RunsPage() {
           </Card>
 
           {selectedRun.promptResults && (
-            <PromptDetail key={`prompt-detail-${selectedRun.id}`} results={selectedRun.promptResults} />
+            <PromptDetail
+              key={`prompt-detail-${selectedRun.id}`}
+              results={selectedRun.promptResults}
+              runId={selectedRun.id}
+            />
           )}
         </div>
       )}

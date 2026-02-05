@@ -111,12 +111,14 @@ export function parseTop3(
  * Extrae el motivo/razón de la línea: lo que viene después del nombre de la marca.
  * Ej: "Timothea - mejor calidad" -> "mejor calidad"
  */
+const MAX_REASON_LENGTH = 500;
+
 function extractReasonFromLine(line: string, brandName: string): string | undefined {
   const idx = line.toLowerCase().indexOf(brandName.toLowerCase());
   if (idx === -1) return undefined;
   const after = line.slice(idx + brandName.length).replace(/^[\s\-:–—•]+/, '').trim();
-  if (!after || after.length > 200) return undefined;
-  return after;
+  if (!after) return undefined;
+  return after.length > MAX_REASON_LENGTH ? after.slice(0, MAX_REASON_LENGTH).trim() : after;
 }
 
 /**
