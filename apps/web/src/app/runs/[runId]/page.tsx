@@ -132,12 +132,20 @@ export default function RunDetailPage() {
   const [run, setRun] = useState<RunWithDetails | null>(null);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [reExecuting, setReExecuting] = useState(false);
+  const [debugRun, setDebugRun] = useState<{
+    distinctPromptIdsInResults: string[];
+    resultsCount: number;
+    allPromptsInVersionCount: number;
+    allPromptsInVersion: { id: string; promptTextPreview: string }[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!runId) return;
     setRun(null);
+    setDebugRun(null);
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -164,6 +172,26 @@ export default function RunDetailPage() {
       cancelled = true;
     };
   }, [runId]);
+
+  useEffect(() => {
+    if (!runId || !run) return;
+    let cancelled = false;
+    runsApi
+      .getDebug(runId)
+      .then((d) => {
+        if (!cancelled)
+          setDebugRun({
+            distinctPromptIdsInResults: d.distinctPromptIdsInResults,
+            resultsCount: d.resultsCount,
+            allPromptsInVersionCount: d.allPromptsInVersionCount,
+            allPromptsInVersion: d.allPromptsInVersion,
+          });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, run]);
 
   if (loading) {
     return (
@@ -277,12 +305,31 @@ export default function RunDetailPage() {
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <Link href="/runs">
             <Button variant="outline" className="border-border text-foreground hover:bg-primary-50">
               ← Volver a Corridas
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            className="border-primary-600 text-primary-700 hover:bg-primary-50"
+            disabled={reExecuting}
+            onClick={async () => {
+              if (!confirm('¿Volver a ejecutar esta corrida? Se borrarán los resultados actuales y se generarán de nuevo (un resultado por cada prompt de la versión).')) return;
+              setReExecuting(true);
+              try {
+                await runsApi.execute(runId, { force: true });
+                window.location.reload();
+              } catch (e: any) {
+                alert(e?.message ?? 'Error al ejecutar');
+              } finally {
+                setReExecuting(false);
+              }
+            }}
+          >
+            {reExecuting ? 'Ejecutando…' : 'Volver a ejecutar esta corrida'}
+          </Button>
         </div>
 
         <Card className="border-transparent bg-white shadow-md">
@@ -295,6 +342,59 @@ export default function RunDetailPage() {
             </CardDescription>
           </CardHeader>
         </Card>
+
+        {debugRun && (
+          <Card className="border-amber-200 bg-amber-50/50 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-foreground">Diagnóstico de prompts</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Este run tiene {debugRun.resultsCount} resultado(s) y usa {debugRun.distinctPromptIdsInResults.length} prompt(s) distinto(s).
+                La versión de prompts tiene {debugRun.allPromptsInVersionCount} prompt(s) en total.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {debugRun.distinctPromptIdsInResults.length === 1 && debugRun.allPromptsInVersionCount > 1 && (
+                <div className="space-y-3 rounded-md border border-amber-300 bg-amber-100 p-3 text-sm text-amber-900">
+                  <p>
+                    <strong>Problema detectado:</strong> todos los resultados están guardados con el mismo prompt (id {debugRun.distinctPromptIdsInResults[0].slice(0, 8)}…).
+                    En la versión hay {debugRun.allPromptsInVersionCount} prompts; deberían usarse distintos.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-600 text-amber-800 hover:bg-amber-200"
+                    disabled={reExecuting}
+                    onClick={async () => {
+                      setReExecuting(true);
+                      try {
+                        await runsApi.execute(runId, { force: true });
+                        window.location.reload();
+                      } catch (e: any) {
+                        alert(e?.message ?? 'Error al re-ejecutar');
+                      } finally {
+                        setReExecuting(false);
+                      }
+                    }}
+                  >
+                    {reExecuting ? 'Ejecutando…' : 'Re-ejecutar con forzar recálculo'}
+                  </Button>
+                </div>
+              )}
+              {debugRun.allPromptsInVersion.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-medium text-muted-foreground">Prompts en la versión (los que deberían usarse):</p>
+                  <ul className="list-inside list-disc space-y-0.5 text-xs text-muted-foreground">
+                    {debugRun.allPromptsInVersion.map((p) => (
+                      <li key={p.id}>
+                        <span className="font-mono">{p.id.slice(0, 8)}</span> — {p.promptTextPreview}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-transparent bg-white shadow-md">
           <CardHeader className="pb-3">

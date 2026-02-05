@@ -39,6 +39,60 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
     return runs;
   });
 
+  // GET /runs/:runId/debug — qué hay en DB para este run y qué prompts tiene la versión
+  fastify.get<{ Params: { runId: string } }>('/:runId/debug', async (request, reply) => {
+    const runId = request.params.runId;
+    const run = await prisma.run.findUnique({
+      where: { id: runId },
+      select: { id: true, brandId: true },
+    });
+    if (!run) return reply.code(404).send({ error: 'Run no encontrado' });
+
+    const results = await prisma.promptResult.findMany({
+      where: { runId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, promptId: true, createdAt: true },
+    });
+
+    const promptIds = [...new Set(results.map((r) => r.promptId))];
+    const promptsUsed = await prisma.prompt.findMany({
+      where: { id: { in: promptIds } },
+      select: { id: true, promptText: true, promptVersionId: true, createdAt: true },
+    });
+
+    let allPromptsInVersion: { id: string; promptTextPreview: string; createdAt: string }[] = [];
+    const versionId = promptsUsed[0]?.promptVersionId;
+    if (versionId) {
+      const allInVersion = await prisma.prompt.findMany({
+        where: { promptVersionId: versionId, active: true },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, promptText: true, createdAt: true },
+      });
+      allPromptsInVersion = allInVersion.map((p) => ({
+        id: p.id,
+        promptTextPreview: p.promptText.slice(0, 80) + (p.promptText.length > 80 ? '…' : ''),
+        createdAt: String(p.createdAt),
+      }));
+    }
+
+    return {
+      runId,
+      resultsCount: results.length,
+      distinctPromptIdsInResults: promptIds,
+      results: results.map((r) => ({
+        resultId: r.id,
+        promptId: r.promptId,
+        createdAt: String(r.createdAt),
+      })),
+      promptsUsedInRun: promptsUsed.map((p) => ({
+        id: p.id,
+        promptTextPreview: p.promptText.slice(0, 80) + (p.promptText.length > 80 ? '…' : ''),
+      })),
+      allPromptsInVersionCount: allPromptsInVersion.length,
+      allPromptsInVersion,
+    };
+  });
+
   // GET /runs/:runId/results/:resultId — diagnóstico: devuelve el resultado con su promptId y prompt (lo que está en DB)
   fastify.get<{ Params: { runId: string; resultId: string } }>('/:runId/results/:resultId', async (request, reply) => {
     const { runId, resultId } = request.params;
@@ -336,6 +390,11 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       if (prompts.length === 0) {
         return reply.code(400).send({ error: 'No hay prompts activos en la versión seleccionada' });
       }
+
+      fastify.log.info(
+        { runId: run.id, promptVersionId: promptVersion.id, promptIds: prompts.map((p) => p.id), count: prompts.length },
+        'Ejecutando run: prompts a usar'
+      );
 
       if (data.force && run.promptResults.length > 0) {
         await prisma.promptResult.deleteMany({ where: { runId: run.id } });

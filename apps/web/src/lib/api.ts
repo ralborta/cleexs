@@ -166,6 +166,16 @@ export const runsApi = {
       `/api/runs${tenantId || brandId ? `?${tenantId ? `tenantId=${tenantId}` : ''}${brandId ? `&brandId=${brandId}` : ''}` : ''}`
     ),
   get: (id: string) => api<Run>(`/api/runs/${id}`, { cache: 'no-store' }),
+  getDebug: (runId: string) =>
+    api<{
+      runId: string;
+      resultsCount: number;
+      distinctPromptIdsInResults: string[];
+      results: { resultId: string; promptId: string; createdAt: string }[];
+      promptsUsedInRun: { id: string; promptTextPreview: string }[];
+      allPromptsInVersionCount: number;
+      allPromptsInVersion: { id: string; promptTextPreview: string; createdAt: string }[];
+    }>(`/api/runs/${runId}/debug`, { cache: 'no-store' }),
   create: (data: {
     tenantId: string;
     brandId: string;
