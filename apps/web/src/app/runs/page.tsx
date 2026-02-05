@@ -161,9 +161,13 @@ export default function RunsPage() {
   }, []);
 
   const handleViewDetails = async (run: Run) => {
+    const requestedId = run.id;
+    setSelectedRun(null);
     try {
-      const fullRun = await runsApi.get(run.id);
-      setSelectedRun(fullRun as RunWithDetails);
+      const fullRun = await runsApi.get(requestedId);
+      if ((fullRun as RunWithDetails).id === requestedId) {
+        setSelectedRun(fullRun as RunWithDetails);
+      }
     } catch (error) {
       console.error('Error cargando detalles:', error);
     }
@@ -482,14 +486,14 @@ export default function RunsPage() {
       </Card>
 
       {selectedRun && (
-        <div className="space-y-4">
+        <div key={selectedRun.id} className="space-y-4">
           <Card className="border-transparent bg-white shadow-md">
             <CardHeader>
               <CardTitle className="text-xl text-foreground">Detalles del Run</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                {selectedRun.brand.name} -{' '}
-                {new Date(selectedRun.periodStart).toLocaleDateString('es-AR')} a{' '}
+                {selectedRun.brand.name} — {new Date(selectedRun.periodStart).toLocaleDateString('es-AR')} a{' '}
                 {new Date(selectedRun.periodEnd).toLocaleDateString('es-AR')}
+                <span className="ml-2 text-muted-foreground/80">(run {selectedRun.id.slice(0, 8)}…)</span>
               </CardDescription>
             </CardHeader>
           </Card>
@@ -646,7 +650,9 @@ export default function RunsPage() {
             </CardContent>
           </Card>
 
-          {selectedRun.promptResults && <PromptDetail results={selectedRun.promptResults} />}
+          {selectedRun.promptResults && (
+            <PromptDetail key={`prompt-detail-${selectedRun.id}`} results={selectedRun.promptResults} />
+          )}
         </div>
       )}
       </div>

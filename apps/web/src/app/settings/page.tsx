@@ -60,6 +60,14 @@ export default function SettingsPage() {
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
 
+  const [configStep, setConfigStep] = useState<1 | 2 | 3 | 4>(1);
+  const STEPS = [
+    { id: 1 as const, label: 'Tu marca' },
+    { id: 2 as const, label: 'Comparar con' },
+    { id: 3 as const, label: 'Intenciones a medir' },
+    { id: 4 as const, label: 'Primer Run' },
+  ];
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -450,235 +458,283 @@ export default function SettingsPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-white/80 p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-4">
-            {[
-              { label: 'Tu marca', active: hasBrand },
-              { label: 'Comparar con', active: hasCompetitors },
-              { label: 'Intenciones a medir', active: hasPrompts },
-              { label: 'Primer Run', active: hasRun },
-            ].map((step, index) => (
-              <div key={step.label} className="flex items-center gap-3">
-                <div
-                  className={`h-8 w-8 rounded-full border text-sm font-semibold flex items-center justify-center ${
-                    step.active
-                      ? 'border-primary-600 bg-primary-600 text-white'
-                      : 'border-border bg-white text-muted-foreground'
-                  }`}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            {STEPS.map((step, index) => {
+              const active = configStep === step.id;
+              const completed =
+                (step.id === 1 && hasBrand) ||
+                (step.id === 2 && hasCompetitors) ||
+                (step.id === 3 && hasPrompts) ||
+                (step.id === 4 && hasRun);
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => setConfigStep(step.id)}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-primary-50/80 sm:gap-3"
                 >
-                  {index + 1}
-                </div>
-                <span className="text-sm text-foreground">{step.label}</span>
-                {index < 3 && <div className="h-px w-8 bg-border" />}
-              </div>
-            ))}
+                  <div
+                    className={`h-8 w-8 shrink-0 rounded-full border text-sm font-semibold flex items-center justify-center ${
+                      active
+                        ? 'border-primary-600 bg-primary-600 text-white'
+                        : completed
+                          ? 'border-primary-500 bg-primary-50 text-primary-700'
+                          : 'border-border bg-white text-muted-foreground'
+                    }`}
+                  >
+                    {index + 1}
+                  </div>
+                  <span className={`text-sm ${active ? 'font-semibold text-foreground' : 'text-foreground'}`}>
+                    {step.label}
+                  </span>
+                  {index < 3 && <div className="h-px w-6 bg-border shrink-0" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
           <div className="space-y-6">
-            <Card className="border-transparent bg-white shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-foreground">Marca</CardTitle>
-              <CardDescription>Creá tu marca principal.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Nombre</label>
-                <input
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="Ej: Cleexs"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Dominio (opcional)</label>
-                <input
-                  value={brandDomain}
-                  onChange={(e) => setBrandDomain(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="cleexs.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Industria (opcional)</label>
-                <input
-                  value={brandIndustry}
-                  onChange={(e) => setBrandIndustry(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="Ej: SaaS, Retail, Fintech"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Tipo de producto (opcional)</label>
-                <input
-                  value={brandProductType}
-                  onChange={(e) => setBrandProductType(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="Ej: plataforma de inversión"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">País/mercado (opcional)</label>
-                <input
-                  value={brandCountry}
-                  onChange={(e) => setBrandCountry(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="Ej: Argentina, México"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Objetivo (opcional)</label>
-                <input
-                  value={brandObjective}
-                  onChange={(e) => setBrandObjective(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="Ej: consideración, conversión"
-                />
-              </div>
-              <Button
-                onClick={handleCreateBrand}
-                className="bg-primary-600 text-white hover:bg-primary-700"
-              >
-                Crear Marca
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-transparent bg-white shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-foreground">Competidores</CardTitle>
-              <CardDescription>Agregá competidores para comparar.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Marca</label>
-                <select
-                  value={selectedBrandId}
-                  onChange={(e) => setSelectedBrandId(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                >
-                  {brands.map((brand) => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Competidor</label>
-                <input
-                  value={competitorName}
-                  onChange={(e) => setCompetitorName(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  placeholder="Ej: Temso"
-                />
-              </div>
-              <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={handleAddCompetitor}>
-                Agregar Competidor
-              </Button>
-
-              <div className="rounded-lg border border-dashed border-border bg-primary-50/70 p-4">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">Sugerencias inteligentes</p>
+            {/* Paso 1: Marca */}
+            {configStep === 1 && (
+              <Card className="border-transparent bg-white shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-foreground">Tu marca</CardTitle>
+                  <CardDescription>Creá tu marca principal. Industria y tipo de producto se usan para sugerir competidores.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Nombre</label>
+                    <input
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: Cleexs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Dominio (opcional)</label>
+                    <input
+                      value={brandDomain}
+                      onChange={(e) => setBrandDomain(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="cleexs.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Industria (opcional)</label>
+                    <p className="text-xs text-muted-foreground mb-1">Se usa para sugerir competidores de la misma industria.</p>
+                    <input
+                      value={brandIndustry}
+                      onChange={(e) => setBrandIndustry(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: SaaS, Retail, Zapatos"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Tipo de producto (opcional)</label>
+                    <p className="text-xs text-muted-foreground mb-1">Refina las sugerencias de competidores.</p>
+                    <input
+                      value={brandProductType}
+                      onChange={(e) => setBrandProductType(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: plataforma de inversión, calzado"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">País/mercado (opcional)</label>
+                    <input
+                      value={brandCountry}
+                      onChange={(e) => setBrandCountry(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: Argentina, México"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Objetivo (opcional)</label>
+                    <input
+                      value={brandObjective}
+                      onChange={(e) => setBrandObjective(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: consideración, conversión"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <Button
+                      onClick={handleCreateBrand}
+                      className="bg-primary-600 text-white hover:bg-primary-700"
+                    >
+                      Crear Marca
+                    </Button>
                     <Button
                       variant="outline"
                       className="border-border text-foreground hover:bg-primary-50"
-                      onClick={handleSuggestCompetitors}
-                      disabled={suggestionsLoading}
+                      onClick={() => setConfigStep(2)}
                     >
-                      {suggestionsLoading ? 'Generando...' : 'Sugerir competidores'}
+                      Omitir y seguir
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Usamos el nombre de la marca, el dominio y los datos del wizard (industria, producto,
-                    mercado, objetivos y casos de uso) para sugerir competidores relevantes antes de crear el run.
-                  </p>
-                  {suggestionsError && <p className="text-xs text-destructive">{suggestionsError}</p>}
-                  {suggestedCompetitors.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {suggestedCompetitors.map((suggestion) => (
-                        <button
-                          key={suggestion.name}
-                          type="button"
-                          onClick={() => handleAddCompetitorByName(suggestion)}
-                          className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
-                          title={suggestion.reason || 'Agregar competidor sugerido'}
-                        >
-                          + {suggestion.name}
-                        </button>
+                  <div className="flex justify-end pt-2 border-t border-border">
+                    <Button className="bg-primary-600 text-white hover:bg-primary-700" onClick={() => setConfigStep(2)}>
+                      Siguiente →
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Paso 2: Competidores */}
+            {configStep === 2 && (
+              <Card className="border-transparent bg-white shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-foreground">Comparar con</CardTitle>
+                  <CardDescription>Agregá competidores para comparar. La sugerencia usa industria y tipo de producto de la marca.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Marca</label>
+                    <p className="text-xs text-muted-foreground mb-1">Elegí la marca a la que sumar competidores.</p>
+                    <select
+                      value={selectedBrandId}
+                      onChange={(e) => setSelectedBrandId(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    >
+                      {brands.map((brand) => (
+                        <option key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </option>
                       ))}
-                    </div>
-                  ) : (
-                    !suggestionsError &&
-                    !suggestionsLoading && <p className="text-xs text-muted-foreground">Todavía no hay sugerencias.</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-transparent bg-white shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-foreground">Prompts</CardTitle>
-              <CardDescription>Creá la versión de prompts y agregá consultas.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Nueva versión</label>
-                <div className="flex gap-2">
-                  <input
-                    value={versionName}
-                    onChange={(e) => setVersionName(e.target.value)}
-                    className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                    placeholder="PROMPTS_v1"
-                  />
-                  <Button
-                    className="bg-primary-600 text-white hover:bg-primary-700"
-                    onClick={handleCreateVersion}
-                  >
-                    Crear
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Competidor</label>
+                    <input
+                      value={competitorName}
+                      onChange={(e) => setCompetitorName(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: Temso"
+                    />
+                  </div>
+                  <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={handleAddCompetitor}>
+                    Agregar Competidor
                   </Button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Versión activa</label>
-                <select
-                  value={selectedVersionId}
-                  onChange={(e) => setSelectedVersionId(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                >
-                  {promptVersions.map((version) => (
-                    <option key={version.id} value={version.id}>
-                      {version.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Nuevo prompt</label>
-                <textarea
-                  value={promptText}
-                  onChange={(e) => setPromptText(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600 min-h-[120px]"
-                  placeholder="Ej: ¿Cuál es la mejor plataforma para..."
-                />
-              </div>
-              <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={handleCreatePrompt}>
-                Agregar Prompt
-              </Button>
-            </CardContent>
-          </Card>
 
-          <Card className="border-transparent bg-white shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-foreground">Wizard de Prompts (ES)</CardTitle>
-              <CardDescription>
-                Generamos 9 prompts (3 intenciones × 3 tipos). Todos piden Top 3 explícito e incluyen marca medida
-                + competidores para obtener rankings coherentes y comparables.
-              </CardDescription>
-            </CardHeader>
+                  <div className="rounded-lg border border-dashed border-border bg-primary-50/70 p-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-foreground">Sugerencias inteligentes</p>
+                        <Button
+                          variant="outline"
+                          className="border-border text-foreground hover:bg-primary-50"
+                          onClick={handleSuggestCompetitors}
+                          disabled={suggestionsLoading}
+                        >
+                          {suggestionsLoading ? 'Generando...' : 'Sugerir competidores'}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Usamos industria y tipo de producto de la marca para sugerir competidores del mismo rubro.
+                      </p>
+                      {suggestionsError && <p className="text-xs text-destructive">{suggestionsError}</p>}
+                      {suggestedCompetitors.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {suggestedCompetitors.map((suggestion) => (
+                            <button
+                              key={suggestion.name}
+                              type="button"
+                              onClick={() => handleAddCompetitorByName(suggestion)}
+                              className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
+                              title={suggestion.reason || 'Agregar competidor sugerido'}
+                            >
+                              + {suggestion.name}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        !suggestionsError &&
+                        !suggestionsLoading && <p className="text-xs text-muted-foreground">Todavía no hay sugerencias.</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3 pt-2 border-t border-border">
+                    <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(1)}>
+                      ← Anterior
+                    </Button>
+                    <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(3)}>
+                      Omitir y seguir
+                    </Button>
+                    <Button className="bg-primary-600 text-white hover:bg-primary-700" onClick={() => setConfigStep(3)}>
+                      Siguiente →
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Paso 3: Intenciones a medir (Prompts + Wizard) */}
+            {configStep === 3 && (
+              <>
+              <Card className="border-transparent bg-white shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-foreground">Intenciones a medir</CardTitle>
+                  <CardDescription>Creá versiones de prompts y generá 9 consultas con el wizard.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Nueva versión</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={versionName}
+                        onChange={(e) => setVersionName(e.target.value)}
+                        className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                        placeholder="PROMPTS_v1"
+                      />
+                      <Button
+                        className="bg-primary-600 text-white hover:bg-primary-700"
+                        onClick={handleCreateVersion}
+                      >
+                        Crear
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Versión activa</label>
+                    <p className="text-xs text-muted-foreground mb-1">La que se usará en el próximo run.</p>
+                    <select
+                      value={selectedVersionId}
+                      onChange={(e) => setSelectedVersionId(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    >
+                      {promptVersions.map((version) => (
+                        <option key={version.id} value={version.id}>
+                          {version.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Nuevo prompt (manual)</label>
+                    <textarea
+                      value={promptText}
+                      onChange={(e) => setPromptText(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600 min-h-[120px]"
+                      placeholder="Ej: ¿Cuál es la mejor plataforma para..."
+                    />
+                  </div>
+                  <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={handleCreatePrompt}>
+                    Agregar Prompt
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-transparent bg-white shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-foreground">Wizard de Prompts (ES)</CardTitle>
+                  <CardDescription>
+                    Generamos 9 prompts (3 intenciones × 3 tipos). Todos piden Top 3 con motivo breve.
+                  </CardDescription>
+                </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-dashed border-border bg-primary-50/70 p-4">
                 <p className="text-sm font-medium text-foreground mb-3">Intenciones y pesos</p>
@@ -841,69 +897,92 @@ export default function SettingsPage() {
                   })}
                 </div>
               )}
+              <div className="flex flex-wrap gap-3 pt-2 border-t border-border">
+                <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(2)}>
+                  ← Anterior
+                </Button>
+                <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(4)}>
+                  Omitir y seguir
+                </Button>
+                <Button className="bg-primary-600 text-white hover:bg-primary-700" onClick={() => setConfigStep(4)}>
+                  Siguiente →
+                </Button>
+              </div>
             </CardContent>
           </Card>
+              </>
+            )}
 
-          <Card className="border-transparent bg-white shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl text-foreground">Crear Run</CardTitle>
-              <CardDescription>Definí el período para iniciar una corrida.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground">Marca</label>
-                <select
-                  value={runBrandId}
-                  onChange={(e) => setRunBrandId(e.target.value)}
-                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                >
-                  {brands.map((brand) => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-foreground">Inicio</label>
-                  <input
-                    type="date"
-                    value={periodStart}
-                    onChange={(e) => setPeriodStart(e.target.value)}
-                    className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-foreground">Fin</label>
-                  <input
-                    type="date"
-                    value={periodEnd}
-                    onChange={(e) => setPeriodEnd(e.target.value)}
-                    className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                  />
-                </div>
-              </div>
-              <Button
-                className="bg-primary-600 text-white hover:bg-primary-700"
-                onClick={handleCreateRun}
-              >
-                Crear Run
-              </Button>
-            </CardContent>
-          </Card>
+            {/* Paso 4: Primer Run */}
+            {configStep === 4 && (
+              <Card className="border-transparent bg-white shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-foreground">Primer Run</CardTitle>
+                  <CardDescription>Definí el período para iniciar una corrida.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Marca</label>
+                    <p className="text-xs text-muted-foreground mb-1">La marca que se analizará en este run.</p>
+                    <select
+                      value={runBrandId}
+                      onChange={(e) => setRunBrandId(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    >
+                      {brands.map((brand) => (
+                        <option key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">Inicio</label>
+                      <input
+                        type="date"
+                        value={periodStart}
+                        onChange={(e) => setPeriodStart(e.target.value)}
+                        className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">Fin</label>
+                      <input
+                        type="date"
+                        value={periodEnd}
+                        onChange={(e) => setPeriodEnd(e.target.value)}
+                        className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3 pt-2 border-t border-border">
+                    <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(3)}>
+                      ← Anterior
+                    </Button>
+                    <Button
+                      className="bg-primary-600 text-white hover:bg-primary-700"
+                      onClick={handleCreateRun}
+                    >
+                      Crear Run
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
         </div>
 
         <Card className="border-transparent bg-white shadow-md h-fit">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg text-foreground">Resultado</CardTitle>
-            <CardDescription>Seguimiento del setup</CardDescription>
+            <CardDescription>Paso {configStep} de 4 — {STEPS[configStep - 1].label}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-border bg-primary-50/70 p-3">
               <p className="text-xs text-muted-foreground">Marca</p>
               <p className="text-sm font-semibold text-foreground">
-                {brandName || 'Sin definir'} {brandDomain ? `(${brandDomain})` : ''}
+                {selectedBrand?.name || brandName || 'Sin definir'}{' '}
+                {selectedBrand?.domain ? `(${selectedBrand.domain})` : brandDomain ? `(${brandDomain})` : ''}
               </p>
             </div>
             <div className="flex items-center justify-between text-sm">
