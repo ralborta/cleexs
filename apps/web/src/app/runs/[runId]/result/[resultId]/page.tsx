@@ -110,16 +110,18 @@ export default function RunResultDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <p className="mb-2 text-sm font-semibold text-foreground">Prompt</p>
-              <div className="rounded-lg border border-border bg-primary-50/60 p-4 text-sm text-foreground">
+            <div className="rounded-lg border-l-4 border-primary bg-primary-50/40 p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-primary-700">
+                Consulta enviada (prompt)
+              </p>
+              <div className="rounded border border-primary-100 bg-white p-3 text-sm text-foreground">
                 {result.prompt.promptText}
               </div>
             </div>
 
             {result.top3Json.length > 0 && (
               <div>
-                <p className="mb-2 text-sm font-semibold text-foreground">Top 3</p>
+                <p className="mb-2 text-sm font-semibold text-foreground">Top 3 (extraído)</p>
                 <ul className="space-y-2 rounded-lg border border-border bg-white p-4">
                   {result.top3Json.map((entry) => (
                     <li key={entry.position} className="text-sm text-muted-foreground">
@@ -138,14 +140,33 @@ export default function RunResultDetailPage() {
               <p className="text-2xl font-bold text-foreground">{(result.score * 100).toFixed(1)}</p>
             </div>
 
-            <div>
-              <p className="mb-2 text-sm font-semibold text-foreground">Respuesta completa</p>
-              <pre className="max-h-[50vh] overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-white p-4 text-xs text-muted-foreground">
-                {result.responseText}
-                {result.truncated && (
-                  <span className="text-muted-foreground"> … (respuesta recortada al guardar)</span>
-                )}
-              </pre>
+            <div className="rounded-lg border-l-4 border-muted-foreground/40 bg-muted/20 p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Respuesta del modelo (texto completo)
+              </p>
+              {(() => {
+                const text = result.responseText;
+                const firstLineEnd = text.indexOf('\n');
+                const hasFirstLine = firstLineEnd > 0;
+                const responseTitle = hasFirstLine ? text.slice(0, firstLineEnd).trim() : null;
+                const responseBody = hasFirstLine ? text.slice(firstLineEnd).trim() : text;
+                const showBody = responseBody || (!responseTitle ? text : null);
+                return (
+                  <>
+                    {responseTitle && (
+                      <p className="mb-2 text-xs italic text-muted-foreground" aria-hidden="true">
+                        Encabezado en la respuesta: {responseTitle}
+                      </p>
+                    )}
+                    <pre className="max-h-[50vh] overflow-auto whitespace-pre-wrap rounded border border-border bg-white p-4 text-xs text-foreground">
+                      {showBody ?? '—'}
+                      {result.truncated && (
+                        <span className="text-muted-foreground"> … (respuesta recortada al guardar)</span>
+                      )}
+                    </pre>
+                  </>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
