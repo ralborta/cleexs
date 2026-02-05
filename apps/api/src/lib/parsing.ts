@@ -37,10 +37,12 @@ export function parseTop3(
       const foundBrand = findBrandInText(text, allBrands);
 
       if (foundBrand) {
+        const reason = extractReasonFromLine(text, foundBrand.name);
         top3.push({
           position,
           name: foundBrand.name,
           type: foundBrand.type,
+          ...(reason && { reason }),
         });
       }
     }
@@ -61,10 +63,12 @@ export function parseTop3(
       const foundBrand = findBrandInText(text, allBrands);
 
       if (foundBrand) {
+        const reason = extractReasonFromLine(text, foundBrand.name);
         top3.push({
           position,
           name: foundBrand.name,
           type: foundBrand.type,
+          ...(reason && { reason }),
         });
         position++;
       }
@@ -81,10 +85,12 @@ export function parseTop3(
   for (const para of paragraphs.slice(0, 3)) {
     const foundBrand = findBrandInText(para, allBrands);
     if (foundBrand && !top3.find((e) => e.name === foundBrand.name)) {
+      const reason = extractReasonFromLine(para, foundBrand.name);
       top3.push({
         position,
         name: foundBrand.name,
         type: foundBrand.type,
+        ...(reason && { reason }),
       });
       position++;
     }
@@ -99,6 +105,18 @@ export function parseTop3(
   flags.no_ranking = true;
 
   return { top3, flags };
+}
+
+/**
+ * Extrae el motivo/razón de la línea: lo que viene después del nombre de la marca.
+ * Ej: "Timothea - mejor calidad" -> "mejor calidad"
+ */
+function extractReasonFromLine(line: string, brandName: string): string | undefined {
+  const idx = line.toLowerCase().indexOf(brandName.toLowerCase());
+  if (idx === -1) return undefined;
+  const after = line.slice(idx + brandName.length).replace(/^[\s\-:–—•]+/, '').trim();
+  if (!after || after.length > 200) return undefined;
+  return after;
 }
 
 /**

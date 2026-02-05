@@ -20,7 +20,7 @@ interface PromptResult {
     category?: { name: string };
   };
   responseText: string;
-  top3Json: Array<{ position: number; name: string; type: string }>;
+  top3Json: Array<{ position: number; name: string; type: string; reason?: string }>;
   score: number;
   flags: Record<string, boolean>;
   truncated: boolean;
@@ -74,6 +74,11 @@ export function PromptDetail({ results }: PromptDetailProps) {
                         {result.top3Json.map((entry) => (
                           <div key={entry.position} className="text-sm text-muted-foreground">
                             {entry.position}. {entry.name} ({entry.type})
+                            {entry.reason && (
+                              <span className="block pl-4 text-xs text-muted-foreground/90">
+                                — {entry.reason}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>

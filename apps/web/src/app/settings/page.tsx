@@ -297,10 +297,10 @@ export default function SettingsPage() {
         `${prefix} Comparativo.\n${intention.context}\nCompará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`
       );
       prompts.push(
-        `${prefix} Recomendación.\n${intention.context}\nSi tuvieras que recomendar ${product} para ${objective}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3.`
+        `${prefix} Recomendación.\n${intention.context}\nSi tuvieras que recomendar ${product} para ${objective}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3. con motivo breve por cada uno.`
       );
       prompts.push(
-        `${prefix} Defensibilidad.\n${intention.context}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}.`
+        `${prefix} Defensibilidad.\n${intention.context}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. Indicá 1., 2., 3. con motivo breve.`
       );
     });
 

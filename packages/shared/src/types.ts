@@ -30,6 +30,7 @@ export interface Top3Entry {
   position: number; // 1, 2, 3
   name: string;
   type: 'brand' | 'competitor';
+  reason?: string; // motivo breve por el que la IA lo puso en ese puesto
 }
 
 export interface PromptResultFlags {

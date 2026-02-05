@@ -23,7 +23,7 @@ interface PromptResult {
     category?: { name: string };
   };
   responseText: string;
-  top3Json: Array<{ position: number; name: string; type: string }>;
+  top3Json: Array<{ position: number; name: string; type: string; reason?: string }>;
   score: number;
   flags: Record<string, boolean>;
   truncated: boolean;
@@ -46,6 +46,7 @@ interface ComparisonRow {
   appearances: number;
   averagePosition: number;
   share: number;
+  sampleReason?: string;
 }
 
 const normalizeName = (value: string) =>
@@ -89,7 +90,10 @@ const normalizeIntentionKey = (value: string) => {
 };
 
 const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
-  const totals = new Map<string, { name: string; type: string; count: number; positionSum: number }>();
+  const totals = new Map<
+    string,
+    { name: string; type: string; count: number; positionSum: number; sampleReason?: string }
+  >();
   let totalEntries = 0;
 
   results.forEach((result) => {
@@ -106,6 +110,7 @@ const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
         ...current,
         count: current.count + 1,
         positionSum: current.positionSum + entry.position,
+        sampleReason: current.sampleReason || entry.reason,
       });
     });
   });
@@ -117,6 +122,7 @@ const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
       appearances: row.count,
       averagePosition: row.count ? row.positionSum / row.count : 0,
       share: totalEntries ? (row.count / totalEntries) * 100 : 0,
+      sampleReason: row.sampleReason,
     }))
     .sort((a, b) => b.appearances - a.appearances);
 };
@@ -293,10 +299,16 @@ export default function RunsPage() {
   }));
 
   const weightSum = intentionScores.reduce((sum, item) => sum + item.weight, 0) || 1;
-  const cleexsScore = intentionScores.reduce(
+  const cleexsScoreByIntention = intentionScores.reduce(
     (sum, item) => sum + item.score * (item.weight / weightSum),
     0
   );
+  const fallbackScore =
+    promptResults.length > 0
+      ? promptResults.reduce((sum, r) => sum + (r.score || 0) * 100, 0) / promptResults.length
+      : 0;
+  const cleexsScore =
+    intentionScores.length > 0 ? cleexsScoreByIntention : fallbackScore;
   const totalRuns = runs.length;
   const lastRun = runs[0];
   const lastRunScore = lastRun?.priaReports?.[0]?.priaTotal ?? 0;
@@ -493,12 +505,14 @@ export default function RunsPage() {
               <div className="rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 to-accent-50 p-4">
                 <p className="text-xs font-medium text-primary-700">Cleexs Score</p>
                 <p className="text-4xl font-bold text-foreground">{cleexsScore.toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground">Ponderado por intención</p>
+                <p className="text-xs text-muted-foreground">
+                  {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
+                </p>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 {intentionScores.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No hay intenciones detectadas en los prompts de esta corrida.
+                    Sin intenciones en los prompts; se muestra el promedio de scores de esta corrida.
                   </p>
                 ) : (
                   intentionScores.map((item) => (
@@ -573,12 +587,13 @@ export default function RunsPage() {
                         <TableHead className="text-right text-foreground font-semibold">Apariciones</TableHead>
                         <TableHead className="text-right text-foreground font-semibold">Posición media</TableHead>
                         <TableHead className="text-right text-foreground font-semibold">% del Top 3</TableHead>
+                        <TableHead className="text-foreground font-semibold max-w-[200px]">Motivo (ejemplo)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {comparisonSummary.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
                             No hay Top 3 parseado para esta corrida.
                           </TableCell>
                         </TableRow>
@@ -592,6 +607,9 @@ export default function RunsPage() {
                               {row.averagePosition.toFixed(2)}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">{row.share.toFixed(1)}%</TableCell>
+                            <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={row.sampleReason}>
+                              {row.sampleReason || '—'}
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
