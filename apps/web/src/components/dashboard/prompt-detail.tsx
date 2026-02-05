@@ -62,9 +62,14 @@ export function PromptDetail({ results, runId }: PromptDetailProps) {
               </TableRow>
             ) : (
               results.map((result) => (
-                <TableRow key={result.id} className="hover:bg-primary-50/60">
-                  <TableCell className="max-w-xs truncate text-foreground" title={result.prompt.promptText}>
-                    {result.prompt.promptText}
+                <TableRow key={`${result.id}-${result.prompt?.id ?? result.id}`} className="hover:bg-primary-50/60">
+                  <TableCell className="max-w-xs text-foreground">
+                    <span className="block truncate" title={result.prompt?.promptText ?? ''}>
+                      {result.prompt?.promptText ?? '—'}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] font-mono text-muted-foreground/80" title={`promptId: ${result.prompt?.id ?? 'n/a'}`}>
+                      id: {(result.prompt?.id ?? '').slice(0, 8)}
+                    </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{result.prompt.category?.name || '-'}</TableCell>
                   <TableCell>

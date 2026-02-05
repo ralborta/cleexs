@@ -68,7 +68,31 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Run no encontrado' });
     }
 
-    return run;
+    // Cargar cada prompt por su promptId y armar la respuesta sin mutar (evitar que todos muestren el mismo)
+    const promptIds = [...new Set(run.promptResults.map((pr) => pr.promptId))];
+    const promptsById = await prisma.prompt.findMany({
+      where: { id: { in: promptIds } },
+      include: { category: true },
+    });
+    const promptMap = new Map(promptsById.map((p) => [p.id, p]));
+
+    // Ordenar resultados por orden del prompt en la versión (createdAt del prompt) y asignar prompt correcto a cada uno
+    const promptResults = run.promptResults
+      .map((pr) => {
+        const prompt = promptMap.get(pr.promptId);
+        return {
+          ...pr,
+          prompt: prompt ?? (pr as { prompt?: (typeof promptsById)[0] }).prompt,
+        };
+      })
+      .sort((a, b) => {
+        const pa = promptMap.get(a.promptId);
+        const pb = promptMap.get(b.promptId);
+        if (!pa || !pb) return 0;
+        return new Date(pa.createdAt).getTime() - new Date(pb.createdAt).getTime();
+      });
+
+    return { ...run, promptResults };
   });
 
   // POST /runs
@@ -165,7 +189,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       const truncated = responseText.length > maxSize;
       const finalResponseText = truncated ? responseText.substring(0, maxSize) : responseText;
 
-      // Crear resultado
+      // Crear resultado (promptId debe ser el que el cliente envió)
       const result = await prisma.promptResult.create({
         data: {
           runId: run.id,
@@ -184,6 +208,12 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       });
+      if (result.promptId !== result.prompt.id) {
+        fastify.log.warn(
+          { runId: run.id, expectedPromptId: promptId, storedPromptId: result.promptId },
+          'PromptResult (addResult) con promptId distinto al esperado'
+        );
+      }
 
       // Actualizar PRIA report
       await updatePRIAReport(run.id, run.brandId);
@@ -347,7 +377,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
           const truncated = responseText.length > maxSize;
           const finalResponseText = truncated ? responseText.substring(0, maxSize) : responseText;
 
-          await prisma.promptResult.create({
+          const created = await prisma.promptResult.create({
             data: {
               runId: run.id,
               promptId: prompt.id,
@@ -358,6 +388,13 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
               truncated,
             },
           });
+          // Verificación: el resultado debe tener el prompt que acabamos de usar
+          if (created.promptId !== prompt.id) {
+            fastify.log.warn(
+              { runId: run.id, expectedPromptId: prompt.id, storedPromptId: created.promptId },
+              'PromptResult creado con promptId distinto al esperado'
+            );
+          }
         }
 
         await updatePRIAReport(run.id, run.brandId);
