@@ -40,6 +40,7 @@ export default function RunResultDetailPage() {
 
   useEffect(() => {
     if (!runId || !resultId) return;
+    setRun(null);
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -94,6 +95,8 @@ export default function RunResultDetailPage() {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Run {run.id.slice(0, 8)}</span>
+            {' — '}
             {run.brand.name} — {new Date(run.periodStart).toLocaleDateString('es-AR')} a{' '}
             {new Date(run.periodEnd).toLocaleDateString('es-AR')}
           </p>

@@ -165,7 +165,7 @@ export const runsApi = {
     api<Run[]>(
       `/api/runs${tenantId || brandId ? `?${tenantId ? `tenantId=${tenantId}` : ''}${brandId ? `&brandId=${brandId}` : ''}` : ''}`
     ),
-  get: (id: string) => api<Run>(`/api/runs/${id}`),
+  get: (id: string) => api<Run>(`/api/runs/${id}`, { cache: 'no-store' }),
   create: (data: {
     tenantId: string;
     brandId: string;

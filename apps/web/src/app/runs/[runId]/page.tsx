@@ -137,6 +137,7 @@ export default function RunDetailPage() {
 
   useEffect(() => {
     if (!runId) return;
+    setRun(null);
     let cancelled = false;
     (async () => {
       setLoading(true);
