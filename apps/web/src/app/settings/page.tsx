@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
@@ -82,6 +83,8 @@ export default function SettingsPage() {
   const [runBrandId, setRunBrandId] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
+  const [executingRun, setExecutingRun] = useState(false);
+  const router = useRouter();
 
   const [configStep, setConfigStep] = useState<1 | 2 | 3 | 4>(1);
   const STEPS = [
@@ -417,6 +420,37 @@ export default function SettingsPage() {
     }
   };
 
+  const handleExecuteRun = async () => {
+    if (!tenantId) {
+      pushToast('error', 'Tenant no disponible', 'Reintentá en unos segundos.');
+      return;
+    }
+    if (!runBrandId) {
+      pushToast('info', 'Falta marca', 'Seleccioná una marca en el paso 4 (Primer Run).');
+      return;
+    }
+    if (!periodStart || !periodEnd) {
+      pushToast('info', 'Faltan fechas', 'Seleccioná inicio y fin del período en el paso 4.');
+      return;
+    }
+    setExecutingRun(true);
+    try {
+      const run = await runsApi.create({
+        tenantId,
+        brandId: runBrandId,
+        periodStart: new Date(periodStart).toISOString(),
+        periodEnd: new Date(periodEnd).toISOString(),
+      });
+      await runsApi.execute(run.id, { model: 'gpt-4o-mini' });
+      pushToast('success', 'Run ejecutado', 'La corrida se está procesando. Redirigiendo a Corridas.');
+      router.push('/runs');
+    } catch (error: any) {
+      pushToast('error', 'Error al ejecutar run', error?.message ?? 'Revisá la consola.');
+    } finally {
+      setExecutingRun(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
@@ -475,7 +509,13 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button className="bg-primary-600 text-white hover:bg-primary-700">Ejecutar Run</Button>
+            <Button
+              className="bg-primary-600 text-white hover:bg-primary-700"
+              onClick={handleExecuteRun}
+              disabled={executingRun}
+            >
+              {executingRun ? 'Ejecutando…' : 'Ejecutar Run'}
+            </Button>
             <Button variant="outline" className="border-border text-foreground hover:bg-primary-50">
               •••
             </Button>
