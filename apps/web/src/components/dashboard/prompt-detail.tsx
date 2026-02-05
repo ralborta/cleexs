@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 
 interface PromptResult {
   id: string;
+  promptId?: string;
   prompt: {
     id: string;
     promptText: string;
@@ -33,6 +34,9 @@ interface PromptDetailProps {
 }
 
 export function PromptDetail({ results, runId }: PromptDetailProps) {
+  const uniquePromptIds = [...new Set(results.map((r) => r.promptId ?? r.prompt?.id).filter(Boolean))];
+  const allSamePromptId = uniquePromptIds.length === 1 && results.length > 1;
+
   return (
     <Card className="border-transparent bg-white shadow-md">
       <CardHeader>
@@ -40,6 +44,11 @@ export function PromptDetail({ results, runId }: PromptDetailProps) {
         <CardDescription className="text-muted-foreground">
           Resultados y evidencia por cada consulta. Clic en Ver abre la pantalla de detalle.
         </CardDescription>
+        {allSamePromptId && (
+          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Todos los resultados tienen el mismo <strong>promptId</strong> en la base de datos. Si deberían ser prompts distintos, re-ejecutá la corrida con &quot;Forzar recálculo&quot; para regenerar con el prompt correcto en cada uno.
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -67,8 +76,11 @@ export function PromptDetail({ results, runId }: PromptDetailProps) {
                     <span className="block truncate" title={result.prompt?.promptText ?? ''}>
                       {result.prompt?.promptText ?? '—'}
                     </span>
-                    <span className="mt-0.5 block text-[10px] font-mono text-muted-foreground/80" title={`promptId: ${result.prompt?.id ?? 'n/a'}`}>
-                      id: {(result.prompt?.id ?? '').slice(0, 8)}
+                    <span className="mt-0.5 block text-[10px] font-mono text-muted-foreground/80">
+                      promptId (guardado): {(result.promptId ?? result.prompt?.id ?? '').slice(0, 8)}
+                      {result.promptId && result.prompt?.id && result.promptId !== result.prompt.id && (
+                        <span className="text-amber-600"> · mostrado: {result.prompt.id.slice(0, 8)}</span>
+                      )}
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{result.prompt.category?.name || '-'}</TableCell>

@@ -39,6 +39,33 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
     return runs;
   });
 
+  // GET /runs/:runId/results/:resultId — diagnóstico: devuelve el resultado con su promptId y prompt (lo que está en DB)
+  fastify.get<{ Params: { runId: string; resultId: string } }>('/:runId/results/:resultId', async (request, reply) => {
+    const { runId, resultId } = request.params;
+    const result = await prisma.promptResult.findFirst({
+      where: { id: resultId, runId },
+      include: {
+        prompt: { include: { category: true } },
+      },
+    });
+    if (!result) {
+      return reply.code(404).send({ error: 'Resultado no encontrado' });
+    }
+    return {
+      resultId: result.id,
+      promptId: result.promptId,
+      prompt: result.prompt
+        ? {
+            id: result.prompt.id,
+            promptText: result.prompt.promptText,
+            createdAt: result.prompt.createdAt,
+            category: result.prompt.category?.name,
+          }
+        : null,
+      responseTextPreview: result.responseText.slice(0, 200) + (result.responseText.length > 200 ? '…' : ''),
+    };
+  });
+
   // GET /runs/:id
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const run = await prisma.run.findUnique({
@@ -91,6 +118,14 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         if (!pa || !pb) return 0;
         return new Date(pa.createdAt).getTime() - new Date(pb.createdAt).getTime();
       });
+
+    const uniqueIds = [...new Set(promptResults.map((pr) => pr.promptId))];
+    if (uniqueIds.length === 1 && promptResults.length > 1) {
+      fastify.log.warn(
+        { runId: run.id, promptId: uniqueIds[0], resultsCount: promptResults.length },
+        'Todos los resultados del run tienen el mismo promptId; re-ejecutar con force=true si hay que usar varios prompts'
+      );
+    }
 
     return { ...run, promptResults };
   });
@@ -327,7 +362,12 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       let totalTokens = 0;
 
       try {
-        for (const prompt of prompts) {
+        // Usar índice explícito para asegurar que cada resultado guarde el prompt correcto (evitar closure/async)
+        for (let i = 0; i < prompts.length; i++) {
+          const prompt = prompts[i];
+          const promptIdToStore = prompt.id;
+          const promptTextToSend = prompt.promptText;
+
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -348,7 +388,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
                 {
                   role: 'user',
                   content:
-                    `${prompt.promptText}\n\n` +
+                    `${promptTextToSend}\n\n` +
                     `Marca a medir: ${run.brand.name}.\n` +
                     `Competidores: ${competitorList || 'no informados'}.`,
                 },
@@ -380,7 +420,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
           const created = await prisma.promptResult.create({
             data: {
               runId: run.id,
-              promptId: prompt.id,
+              promptId: promptIdToStore,
               responseText: finalResponseText,
               top3Json: top3 as unknown as Prisma.InputJsonValue,
               score,
@@ -388,10 +428,9 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
               truncated,
             },
           });
-          // Verificación: el resultado debe tener el prompt que acabamos de usar
-          if (created.promptId !== prompt.id) {
+          if (created.promptId !== promptIdToStore) {
             fastify.log.warn(
-              { runId: run.id, expectedPromptId: prompt.id, storedPromptId: created.promptId },
+              { runId: run.id, index: i, expectedPromptId: promptIdToStore, storedPromptId: created.promptId },
               'PromptResult creado con promptId distinto al esperado'
             );
           }

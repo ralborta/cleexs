@@ -117,6 +117,12 @@ export default function RunResultDetailPage() {
               <div className="rounded border border-primary-100 bg-white p-3 text-sm text-foreground">
                 {result.prompt.promptText}
               </div>
+              <p className="mt-2 text-[10px] font-mono text-muted-foreground">
+                Verificación: promptId del resultado = {(result as { promptId?: string }).promptId?.slice(0, 8) ?? '—'} · prompt mostrado id = {result.prompt?.id?.slice(0, 8) ?? '—'}
+                {(result as { promptId?: string }).promptId && result.prompt?.id && (result as { promptId?: string }).promptId !== result.prompt.id && (
+                  <span className="ml-1 text-red-600"> (no coinciden)</span>
+                )}
+              </p>
             </div>
 
             {result.top3Json.length > 0 && (
