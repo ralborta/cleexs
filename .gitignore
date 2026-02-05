@@ -34,8 +34,8 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Prisma
-prisma/migrations/
+# Prisma (migrations sí van al repo para deploy)
+# prisma/migrations/
 
 # Turbo
 .turbo/

@@ -14,7 +14,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "deploy:api": "prisma migrate deploy && node apps/api/dist/index.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
