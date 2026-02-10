@@ -16,7 +16,8 @@ function VerResultadoContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!diagnosticId) {
+    const id = searchParams.get('diagnosticId');
+    if (!id) {
       setLoading(false);
       setError('Falta el ID del diagnóstico.');
       return;
@@ -24,7 +25,7 @@ function VerResultadoContent() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await publicDiagnosticApi.get(diagnosticId);
+        const data = await publicDiagnosticApi.get(id);
         if (!cancelled) setDiagnostic(data);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagnóstico.');
@@ -33,7 +34,7 @@ function VerResultadoContent() {
       }
     })();
     return () => { cancelled = true; };
-  }, [diagnosticId]);
+  }, [diagnosticId, searchParams]);
 
   if (loading) {
     return (

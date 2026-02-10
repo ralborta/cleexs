@@ -43,9 +43,11 @@ function VerificandoContent() {
       setError('Ingresá tu correo');
       return;
     }
+    const id = searchParams.get('diagnosticId');
+    if (!id) return;
     setLoading(true);
     try {
-      await publicDiagnosticApi.setEmail(diagnosticId, trimmed);
+      await publicDiagnosticApi.setEmail(id, trimmed);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos guardar el correo. Intentá de nuevo.');
