@@ -1,12 +1,12 @@
 # Configuración para el servicio API en Railway.
 # Para que la migración corra, el servicio API debe usar la RAÍZ del repo (no apps/api).
 #
-# En Railway → @cleexs/api → Settings:
+# En Railway → servicio API → Settings:
 # - Root Directory: dejar vacío o "." (raíz del repo)
-# - Build Command: npm install && npm run build
+# - Build Command: el que venías usando (o el que auto-detecte Railway)
 # - Start Command: npm run deploy:api
 #
-# Así prisma migrate deploy corre desde la raíz (donde está prisma/) y luego arranca la API.
+# Así prisma migrate deploy corre desde la raíz y luego arranca la API.
 
 [deploy]
 startCommand = "npm run deploy:api"
