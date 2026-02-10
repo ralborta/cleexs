@@ -25,10 +25,20 @@ Si en **Settings** tenés **Build Command** o **Start Command** custom, los valo
 
 Si el deploy llega a **Build** en verde y falla en **Deploy > Pre deploy command**:
 
-- En **Settings** del servicio, buscá **Pre-deploy command** y **dejalo vacío**, **o**
-- El `railway.toml` ya pone `preDeployCommand = "true"` para anular un comando malo del dashboard. Hacé push de ese cambio y volvé a desplegar.
+- **Opción segura:** En Railway → servicio API → **Settings** → buscá **Pre-deploy command** y **borrá todo**, dejá el campo vacío. Guardá. Las migraciones ya corren en el Start, no hace falta nada en Pre-deploy.
+- **Desde código:** El `railway.toml` define `preDeployCommand = "/bin/true"` para anular el comando del dashboard. Si aun así falla, la única garantía es vaciar el campo en el dashboard.
 
 Las migraciones no van en Pre-deploy; ya se ejecutan en el **Start** (`prisma migrate deploy` dentro de `deploy:api`).
+
+### 3b. El deploy no se dispara (GitHub no actualiza)
+
+Si al hacer push no se inicia ningún deploy en Railway, forzá uno desde la terminal (en la raíz del repo):
+
+```bash
+npx -y @railway/cli up --detach
+```
+
+(Asegurate de tener el proyecto linkeado: `npx @railway/cli link` si hace falta.)
 
 ### 4. Variables de entorno
 

@@ -11,4 +11,4 @@
 
 [deploy]
 startCommand = "npm run deploy:api"
-preDeployCommand = "true"
+preDeployCommand = "/bin/true"
