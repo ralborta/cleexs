@@ -63,6 +63,7 @@ export default function SettingsPage() {
 
   const [versionName, setVersionName] = useState('PROMPTS_v1');
   const [selectedVersionId, setSelectedVersionId] = useState('');
+  const [promptName, setPromptName] = useState('');
   const [promptText, setPromptText] = useState('');
   const [wizardIndustry, setWizardIndustry] = useState('');
   const [wizardProductType, setWizardProductType] = useState('');
@@ -77,7 +78,7 @@ export default function SettingsPage() {
     calidad: 40,
     precio: 30,
   });
-  const [generatedPrompts, setGeneratedPrompts] = useState<string[]>([]);
+  const [generatedPrompts, setGeneratedPrompts] = useState<{ name: string; promptText: string }[]>([]);
   const [wizardVersionName, setWizardVersionName] = useState('PROMPTS_v1');
 
   const [runBrandId, setRunBrandId] = useState('');
@@ -247,7 +248,12 @@ export default function SettingsPage() {
       return;
     }
     try {
-      await promptsApi.createPrompt({ promptVersionId: selectedVersionId, promptText: promptText.trim() });
+      await promptsApi.createPrompt({
+        promptVersionId: selectedVersionId,
+        ...(promptName.trim() ? { name: promptName.trim() } : {}),
+        promptText: promptText.trim(),
+      });
+      setPromptName('');
       setPromptText('');
       pushToast('success', 'Prompt creado', 'Guardado correctamente.');
     } catch (error: any) {
@@ -331,19 +337,19 @@ export default function SettingsPage() {
       },
     ];
 
-    const prompts: string[] = [];
+    const prompts: { name: string; promptText: string }[] = [];
+    const types = ['Comparativo', 'Recomendación', 'Defensibilidad'] as const;
 
     intentions.forEach((intention) => {
       const prefix = `Intención: ${intention.label} (${intention.weight}%). Tipo:`;
-      prompts.push(
-        `${prefix} Comparativo.\n${intention.context}\nCompará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`
-      );
-      prompts.push(
-        `${prefix} Recomendación.\n${intention.context}\nSi tuvieras que recomendar ${product} para ${objective}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3. con motivo breve por cada uno.`
-      );
-      prompts.push(
-        `${prefix} Defensibilidad.\n${intention.context}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. Indicá 1., 2., 3. con motivo breve.`
-      );
+      const texts = [
+        `${prefix} Comparativo.\n${intention.context}\nCompará y rankeá Top 3 de ${product} en ${country}. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
+        `${prefix} Recomendación.\n${intention.context}\nSi tuvieras que recomendar ${product} para ${objective}, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3. con motivo breve por cada uno.`,
+        `${prefix} Defensibilidad.\n${intention.context}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. Indicá 1., 2., 3. con motivo breve.`,
+      ];
+      types.forEach((tipo, i) => {
+        prompts.push({ name: `${intention.label} (${intention.weight}%) - ${tipo}`, promptText: texts[i] });
+      });
     });
 
     return prompts;
@@ -363,7 +369,7 @@ export default function SettingsPage() {
 
   const handleGeneratePrompts = () => {
     const prompts = buildPrompts();
-    setGeneratedPrompts(prompts.slice(0, 10));
+    setGeneratedPrompts(prompts.slice(0, 9));
   };
 
   const handleSaveGeneratedPrompts = async () => {
@@ -381,8 +387,8 @@ export default function SettingsPage() {
         name: wizardVersionName.trim(),
       });
       await Promise.all(
-        generatedPrompts.map((text) =>
-          promptsApi.createPrompt({ promptVersionId: version.id, promptText: text, active: true })
+        generatedPrompts.map((p) =>
+          promptsApi.createPrompt({ promptVersionId: version.id, name: p.name, promptText: p.promptText, active: true })
         )
       );
       const updated = await promptsApi.getVersions(tenantId);
@@ -782,7 +788,17 @@ export default function SettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-foreground">Nuevo prompt (manual)</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Nombre del prompt (opcional)</label>
+                    <input
+                      type="text"
+                      value={promptName}
+                      onChange={(e) => setPromptName(e.target.value)}
+                      className="w-full rounded-md border border-border bg-white px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+                      placeholder="Ej: Urgencia - Recomendación"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Texto del prompt</label>
                     <textarea
                       value={promptText}
                       onChange={(e) => setPromptText(e.target.value)}
@@ -935,9 +951,9 @@ export default function SettingsPage() {
               </div>
               {generatedPrompts.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Prompts generados (editables):</p>
+                  <p className="text-sm text-muted-foreground">Prompts generados (cada uno con nombre de tipo):</p>
                   {generatedPrompts.map((prompt, idx) => {
-                    const quality = scorePromptQuality(prompt);
+                    const quality = scorePromptQuality(prompt.promptText);
                     const qualityLabel = quality >= 80 ? 'Alta' : quality >= 60 ? 'Media' : 'Baja';
                     const qualityClass =
                       quality >= 80
@@ -946,16 +962,16 @@ export default function SettingsPage() {
                           ? 'text-accent-700'
                           : 'text-destructive';
                     return (
-                      <div key={idx} className="space-y-1">
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
-                          <span>Calidad estimada:</span>
-                          <span className={`font-medium ${qualityClass}`}>{qualityLabel} ({quality}/100)</span>
+                      <div key={idx} className="space-y-1 rounded border border-border bg-white/80 p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-foreground">{prompt.name}</span>
+                          <span className={`text-xs font-medium ${qualityClass}`}>{qualityLabel} ({quality}/100)</span>
                         </div>
                         <textarea
-                          value={prompt}
+                          value={prompt.promptText}
                           onChange={(e) => {
                             const next = [...generatedPrompts];
-                            next[idx] = e.target.value;
+                            next[idx] = { ...next[idx], promptText: e.target.value };
                             setGeneratedPrompts(next);
                           }}
                           className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"

@@ -11,6 +11,7 @@ interface PromptResult {
   id: string;
   prompt: {
     id: string;
+    name?: string | null;
     promptText: string;
     category?: { name: string };
   };
@@ -114,6 +115,9 @@ export default function RunResultDetailPage() {
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-primary-700">
                 Consulta enviada (prompt)
               </p>
+              {result.prompt.name && (
+                <p className="mb-1 text-sm font-medium text-foreground">{result.prompt.name}</p>
+              )}
               <div className="rounded border border-primary-100 bg-white p-3 text-sm text-foreground">
                 {result.prompt.promptText}
               </div>

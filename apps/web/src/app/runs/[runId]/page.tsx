@@ -317,17 +317,14 @@ export default function RunDetailPage() {
             variant="outline"
             className="border-primary-600 text-primary-700 hover:bg-primary-50"
             disabled={reExecuting}
-            onClick={async () => {
+            onClick={() => {
               if (!confirm('¿Volver a ejecutar esta corrida? Se borrarán los resultados actuales y se generarán de nuevo (un resultado por cada prompt de la versión).')) return;
               setReExecuting(true);
-              try {
-                await runsApi.execute(runId, { force: true });
-                window.location.reload();
-              } catch (e: any) {
-                alert(e?.message ?? 'Error al ejecutar');
-              } finally {
-                setReExecuting(false);
-              }
+              runsApi
+                .execute(runId, { force: true })
+                .then(() => window.location.reload())
+                .catch((e: any) => alert(e?.message ?? 'Error al ejecutar'))
+                .finally(() => setReExecuting(false));
             }}
           >
             {reExecuting ? 'Ejecutando…' : 'Volver a ejecutar esta corrida'}
@@ -367,16 +364,13 @@ export default function RunDetailPage() {
                     variant="outline"
                     className="border-amber-600 text-amber-800 hover:bg-amber-200"
                     disabled={reExecuting}
-                    onClick={async () => {
+                    onClick={() => {
                       setReExecuting(true);
-                      try {
-                        await runsApi.execute(runId, { force: true });
-                        window.location.reload();
-                      } catch (e: any) {
-                        alert(e?.message ?? 'Error al re-ejecutar');
-                      } finally {
-                        setReExecuting(false);
-                      }
+                      runsApi
+                        .execute(runId, { force: true })
+                        .then(() => window.location.reload())
+                        .catch((e: any) => alert(e?.message ?? 'Error al re-ejecutar'))
+                        .finally(() => setReExecuting(false));
                     }}
                   >
                     {reExecuting ? 'Ejecutando…' : 'Re-ejecutar con forzar recálculo'}

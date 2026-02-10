@@ -6,6 +6,7 @@ import brandRoutes from './routes/brands';
 import promptRoutes from './routes/prompts';
 import runRoutes from './routes/runs';
 import reportRoutes from './routes/reports';
+import publicDiagnosticRoutes from './routes/public-diagnostic';
 
 async function bootstrap() {
   const server = Fastify({
@@ -41,6 +42,7 @@ async function bootstrap() {
   await server.register(promptRoutes, { prefix: '/api/prompts' });
   await server.register(runRoutes, { prefix: '/api/runs' });
   await server.register(reportRoutes, { prefix: '/api/reports' });
+  await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
 
   // Start server
   const port = Number(process.env.PORT) || Number(process.env.API_PORT) || 3001;

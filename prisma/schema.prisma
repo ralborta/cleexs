@@ -200,6 +200,7 @@ model Prompt {
   id              String   @id @default(uuid())
   promptVersionId String   @map("prompt_version_id")
   categoryId      String?  @map("category_id")
+  name            String?  // nombre corto por tipo, ej. "Urgencia (30%) - Recomendación"
   promptText      String   @db.Text @map("prompt_text")
   active          Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
@@ -298,4 +299,22 @@ model PRIAReport {
   @@index([runId])
   @@index([brandId])
   @@map("pria_reports")
+}
+
+// ============================================
+// DIAGNÓSTICO PÚBLICO (una medición por dominio)
+// ============================================
+
+model PublicDiagnostic {
+  id        String   @id @default(uuid())
+  domain    String   @unique // dominio normalizado, ej. zaza.com (una medición por dominio)
+  email     String?  // capturado en pantalla "Estamos verificando"
+  status    String   @default("pending") // pending | running | completed | failed
+  runId     String?  @map("run_id") // cuando integremos con Run real
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([domain])
+  @@index([status])
+  @@map("public_diagnostics")
 }

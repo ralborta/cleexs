@@ -86,6 +86,7 @@ const promptRoutes: FastifyPluginAsync = async (fastify) => {
         data: original.prompts.map((p) => ({
           promptVersionId: newVersion.id,
           categoryId: p.categoryId,
+          name: p.name,
           promptText: p.promptText,
           active: p.active,
         })),
@@ -112,6 +113,7 @@ const promptRoutes: FastifyPluginAsync = async (fastify) => {
   const createPromptSchema = z.object({
     promptVersionId: z.string().uuid(),
     categoryId: z.string().uuid().optional(),
+    name: z.string().min(1).max(200).optional(),
     promptText: z.string().min(1),
     active: z.boolean().optional().default(true),
   });

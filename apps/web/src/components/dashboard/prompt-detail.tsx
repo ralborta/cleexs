@@ -17,6 +17,7 @@ interface PromptResult {
   promptId?: string;
   prompt: {
     id: string;
+    name?: string | null;
     promptText: string;
     category?: { name: string };
   };
@@ -73,8 +74,11 @@ export function PromptDetail({ results, runId }: PromptDetailProps) {
               results.map((result) => (
                 <TableRow key={`${result.id}-${result.prompt?.id ?? result.id}`} className="hover:bg-primary-50/60">
                   <TableCell className="max-w-xs text-foreground">
+                    {result.prompt?.name && (
+                      <span className="block text-sm font-medium text-foreground">{result.prompt.name}</span>
+                    )}
                     <span className="block truncate" title={result.prompt?.promptText ?? ''}>
-                      {result.prompt?.promptText ?? '—'}
+                      {result.prompt?.name ? result.prompt.promptText?.slice(0, 60) + (result.prompt.promptText?.length > 60 ? '…' : '') : (result.prompt?.promptText ?? '—')}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-mono text-muted-foreground/80">
                       promptId (guardado): {(result.promptId ?? result.prompt?.id ?? '').slice(0, 8)}

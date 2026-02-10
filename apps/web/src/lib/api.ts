@@ -64,6 +64,7 @@ export interface PromptVersion {
 
 export interface Prompt {
   id: string;
+  name?: string | null;
   promptText: string;
   active: boolean;
   category?: { id: string; name: string };
@@ -156,7 +157,7 @@ export const promptsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  createPrompt: (data: { promptVersionId: string; promptText: string; active?: boolean }) =>
+  createPrompt: (data: { promptVersionId: string; name?: string; promptText: string; active?: boolean }) =>
     api<Prompt>('/api/prompts/prompts', { method: 'POST', body: JSON.stringify(data) }),
 };
 
@@ -213,4 +214,26 @@ export const reportsApi = {
     if (periodEnd) params.append('periodEnd', periodEnd);
     return api<RankingEntry[]>(`/api/reports/ranking?${params.toString()}`);
   },
+};
+
+// Diagnóstico público (flujo sin login)
+export interface PublicDiagnostic {
+  id: string;
+  domain: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  runId?: string | null;
+}
+
+export const publicDiagnosticApi = {
+  create: (url: string) =>
+    api<{ diagnosticId: string }>('/api/public/diagnostic', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }),
+  setEmail: (id: string, email: string) =>
+    api<{ ok: boolean }>(`/api/public/diagnostic/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ email }),
+    }),
+  get: (id: string) => api<PublicDiagnostic>(`/api/public/diagnostic/${id}`),
 };
