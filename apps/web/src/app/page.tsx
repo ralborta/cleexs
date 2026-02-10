@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Sparkles, ShieldCheck, TrendingUp } from 'lucide-react';
+import { ArrowRight, Search, Sparkles, ShieldCheck, TrendingUp } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -51,6 +51,30 @@ export default function Home() {
             Medí qué tan recomendado aparece tu producto en ChatGPT, con evidencia auditable y
             comparaciones consistentes.
           </p>
+        </div>
+
+        <div className="mb-8">
+          <Link href="/diagnostico">
+            <Card className="border-2 border-primary-200 bg-gradient-to-br from-primary-50 to-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg hover:border-primary-300">
+              <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white">
+                    <Search className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">Diagnóstico gratuito</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Ingresá una URL y te enviamos por correo cómo aparece recomendado tu producto. Sin registro.
+                    </p>
+                  </div>
+                </div>
+                <Button className="shrink-0 group bg-primary-600 text-white hover:bg-primary-700">
+                  Ver diagnóstico
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

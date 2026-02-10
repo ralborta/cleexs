@@ -48,6 +48,12 @@ export function Header() {
           {/* Navegación central */}
           <nav className="flex items-center gap-8">
             <Link
+              href="/diagnostico"
+              className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+            >
+              Diagnóstico
+            </Link>
+            <Link
               href="/dashboard"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
