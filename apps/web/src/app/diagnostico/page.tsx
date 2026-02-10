@@ -13,20 +13,33 @@ export default function DiagnosticoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function normalizeUrl(input: string): string {
+    const trimmed = input.trim();
+    if (!trimmed) return trimmed;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     const trimmed = url.trim();
     if (!trimmed) {
-      setError('Ingresá una URL');
+      setError('Ingresá una URL o dominio');
       return;
     }
     setLoading(true);
     try {
-      const { diagnosticId } = await publicDiagnosticApi.create(trimmed);
+      const urlToSend = normalizeUrl(trimmed);
+      const { diagnosticId } = await publicDiagnosticApi.create(urlToSend);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.');
+      const msg = err instanceof Error ? err.message : '';
+      setError(
+        msg === 'Not Found' || msg.includes('404')
+          ? 'No se pudo conectar con el servicio. Probá de nuevo en unos minutos.'
+          : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
+      );
       setLoading(false);
     }
   }
@@ -49,8 +62,9 @@ export default function DiagnosticoPage() {
                 </label>
                 <input
                   id="url"
-                  type="url"
-                  placeholder="https://tudominio.com"
+                  type="text"
+                  inputMode="url"
+                  placeholder="tudominio.com o https://tudominio.com"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
