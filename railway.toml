@@ -7,6 +7,8 @@
 # - Start Command: npm run deploy:api
 #
 # Así prisma migrate deploy corre desde la raíz y luego arranca la API.
+# Pre-deploy: anulamos el del dashboard (que falla) con un no-op; las migraciones van en el start.
 
 [deploy]
 startCommand = "npm run deploy:api"
+preDeployCommand = "true"
