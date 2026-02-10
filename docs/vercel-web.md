@@ -2,14 +2,22 @@
 
 ## Si el deploy falla en "Pre deploy command"
 
-La app **web** (Next.js en `apps/web`) **no usa Prisma** en tiempo de build. Solo la API usa Prisma.
+**Build en verde pero falla en "Deploy > Pre deploy command"?** Ese comando se configura en el **dashboard del proyecto**, no en el repo. Hay que vaciarlo o quitarlo.
 
-1. **Ver el error exacto:** en Vercel → tu proyecto → Deployment fallido → **View logs**. Ahí verás el comando que se ejecutó y el mensaje de error.
+### Pasos
 
-2. **Solución habitual:** en **Project Settings** → **Build & Development** (o la sección donde esté "Pre deploy command"):
-   - **Dejá vacío** el campo "Pre deploy command", **o**
-   - Si tenés algo como `prisma generate` o `npm run db:generate`, quitarlo. Esos comandos están en la raíz del monorepo y fallan cuando el Root Directory es `apps/web`.
+1. Entrá al proyecto en Vercel → **Settings** (del proyecto).
+2. Buscá la sección **Build & Development** o **Deploy** y el campo **"Pre deploy command"** (a veces "Pre-deploy command" o "Command to run before deploy").
+3. **Dejá el campo vacío** o borrá el comando que tenga (ej. `prisma generate`, `npm run db:generate`). La app web no necesita ningún comando previo al deploy.
+4. Guardá y volvé a desplegar (o hacé un nuevo push).
 
-3. **Root Directory:** debe ser `apps/web` para este proyecto (app Next.js).
+Para ver qué comando está fallando: en el deployment fallido → **View logs** → abrí el paso "Pre deploy command" y revisá el error.
 
-4. **Build / Install:** con el `vercel.json` en `apps/web` se usan `npm run build` e `npm install` desde esa carpeta.
+### Por qué falla
+
+La app **web** (Next.js en `apps/web`) **no usa Prisma** en tiempo de build. Si en Pre deploy tenés algo como `prisma generate`, ese comando corre con **Root Directory** = `apps/web`, donde no está el schema de Prisma (está en la raíz del monorepo), y falla.
+
+### Config útil
+
+- **Root Directory:** `apps/web`.
+- **Build / Install:** el `vercel.json` en `apps/web` ya define `npm run build` e `npm install`.
