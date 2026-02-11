@@ -28,7 +28,9 @@ export async function sendDiagnosticLink(
     throw new Error('SMTP no configurado: faltan SMTP_HOST, SMTP_USER o SMTP_PASS en las variables de entorno.');
   }
   const link = `${baseUrl.replace(/\/$/, '')}/ver-resultado?diagnosticId=${diagnosticId}`;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
+  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
+  const fromName = process.env.SMTP_FROM_NAME;
+  const from = fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
 
   await transporter.sendMail({
     from,

@@ -60,7 +60,7 @@ npx -y @railway/cli up --detach
 En el servicio API en Railway → **Variables**:
 
 - **DATABASE_URL:** connection string de PostgreSQL (si usás Postgres de Railway, podés referenciar la variable del servicio DB).
-- **Para que se envíe el correo del diagnóstico público** (link al resultado), en **Variables** del servicio API tenés que definir: **SMTP_HOST**, **SMTP_PORT** (ej. 587), **SMTP_USER**, **SMTP_PASS**. Opcional: **SMTP_FROM**, **FRONTEND_URL** (URL del front para armar el link). Si SMTP no está configurado, el diagnóstico se marca listo pero el correo no se envía (en los logs de Railway verás "Error al enviar email" o "SMTP no configurado").
+- **Para que se envíe el correo del diagnóstico público** (link al resultado), en **Variables** del servicio API definí: **SMTP_HOST**, **SMTP_PORT** (ej. 587), **SMTP_USER**, **SMTP_PASS**. Opcional: **SMTP_FROM** o **SMTP_FROM_EMAIL** (email remitente), **SMTP_FROM_NAME** (nombre del remitente), **SMTP_SECURE** (true si usás 465), **FRONTEND_URL** (URL del front para el link). Si SMTP no está configurado, el diagnóstico se marca listo pero el correo no se envía (en los logs verás "Error al enviar email" o "SMTP no configurado").
 
 ### 5. Ver qué falló
 
