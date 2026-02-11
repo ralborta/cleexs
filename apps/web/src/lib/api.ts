@@ -231,7 +231,7 @@ export const publicDiagnosticApi = {
       body: JSON.stringify({ url }),
     }),
   setEmail: (id: string, email: string) =>
-    api<{ ok: boolean }>(`/api/public/diagnostic/${id}`, {
+    api<{ ok: boolean; emailSent?: boolean | null }>(`/api/public/diagnostic/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ email }),
     }),

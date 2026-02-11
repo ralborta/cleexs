@@ -20,6 +20,7 @@ function VerificandoContent() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [emailSendFailed, setEmailSendFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!diagnosticId) {
@@ -46,9 +47,11 @@ function VerificandoContent() {
     const id = searchParams.get('diagnosticId');
     if (!id) return;
     setLoading(true);
+    setEmailSendFailed(false);
     try {
-      await publicDiagnosticApi.setEmail(id, trimmed);
+      const res = await publicDiagnosticApi.setEmail(id, trimmed);
       setSent(true);
+      if (res.emailSent === false) setEmailSendFailed(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos guardar el correo. Intentá de nuevo.');
     } finally {
@@ -82,12 +85,26 @@ function VerificandoContent() {
             </ul>
 
             {sent ? (
-              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center text-green-800">
-                <p className="font-medium">Listo</p>
-                <p className="text-sm mt-1">
-                  Te enviamos un correo con el link a tu resultado. Revisá tu bandeja (y spam) y hacé clic en el enlace cuando esté listo.
-                </p>
-              </div>
+              <>
+                {emailSendFailed ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-amber-800">
+                    <p className="font-medium">Correo no enviado</p>
+                    <p className="text-sm mt-1">
+                      Guardamos tu email pero no pudimos enviar el correo (revisá la configuración SMTP del servicio). Podés ir directo al resultado con el link que te mostramos abajo.
+                    </p>
+                    <Link href={`/ver-resultado?diagnosticId=${diagnosticId}`}>
+                      <Button variant="outline" className="mt-3">Ver resultado</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center text-green-800">
+                    <p className="font-medium">Listo</p>
+                    <p className="text-sm mt-1">
+                      Te enviamos un correo con el link a tu resultado. Revisá tu bandeja (y spam) y hacé clic en el enlace cuando esté listo.
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                 <div>
