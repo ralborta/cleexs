@@ -8,6 +8,11 @@
 #
 # Así prisma migrate deploy corre desde la raíz y luego arranca la API.
 # Pre-deploy: anulamos el del dashboard (que falla) con un no-op; las migraciones van en el start.
+#
+# Builder RAILPACK: ignora Watch Paths del dashboard, así los deploys no salen SKIPPED.
+
+[build]
+builder = "RAILPACK"
 
 [deploy]
 startCommand = "npm run deploy:api"
