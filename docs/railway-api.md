@@ -30,15 +30,21 @@ Si el deploy llega a **Build** en verde y falla en **Deploy > Pre deploy command
 
 Las migraciones no van en Pre-deploy; ya se ejecutan en el **Start** (`prisma migrate deploy` dentro de `deploy:api`).
 
-### 3b. El deploy no se dispara (GitHub no actualiza)
+### 3b. Deploys "SKIPPED" o "No changes to watched files"
 
-Si al hacer push no se inicia ningún deploy en Railway, forzá uno desde la terminal (en la raíz del repo):
+Si los deploys por CLI (`railway up`) o por GitHub salen **SKIPPED** con "No changes to watched files", Railway tiene **Watch Paths** activos: solo despliega cuando cambian archivos en esas rutas.
+
+**Qué hacer:** Railway → servicio API → **Settings** → buscá **"Watch Paths"** o **"Watchpaths"**. Dejalo **vacío** (o borrá los paths que tenga) para que cualquier push o `railway up` dispare un deploy. Guardá.
+
+### 3c. Forzar deploy desde la terminal
+
+En la raíz del repo:
 
 ```bash
 npx -y @railway/cli up --detach
 ```
 
-(Asegurate de tener el proyecto linkeado: `npx @railway/cli link` si hace falta.)
+(Si los deploys siguen en SKIPPED, primero arreglá Watch Paths como en 3b.)
 
 ### 4. Variables de entorno
 
