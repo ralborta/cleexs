@@ -30,11 +30,20 @@ Si el deploy llega a **Build** en verde y falla en **Deploy > Pre deploy command
 
 Las migraciones no van en Pre-deploy; ya se ejecutan en el **Start** (`prisma migrate deploy` dentro de `deploy:api`).
 
-### 3b. Deploys "SKIPPED" o "No changes to watched files"
+### 3b. Deploys "SKIPPED" — "No changes to watched files" (IMPORTANTE)
 
-Si los deploys por CLI (`railway up`) o por GitHub salen **SKIPPED** con "No changes to watched files", Railway tiene **Watch Paths** activos: solo despliega cuando cambian archivos en esas rutas.
+Si los deploys salen **SKIPPED** con "No changes to watched files", Railway está usando **Watch Paths** del **dashboard**. Esa decisión se toma **antes** de leer `railway.toml`, así que **no se puede arreglar desde el repo**: tenés que vaciar Watch Paths en la interfaz de Railway.
 
-**Qué hacer:** Railway → servicio API → **Settings** → buscá **"Watch Paths"** o **"Watchpaths"**. Dejalo **vacío** (o borrá los paths que tenga) para que cualquier push o `railway up` dispare un deploy. Guardá.
+**Pasos (hay que hacerlos una sola vez):**
+
+1. Entrá a **https://railway.app** → tu proyecto → servicio **@cleexs/api**.
+2. Arriba, pestaña **Settings** (junto a Deployments, Variables, Metrics).
+3. Bajá hasta la sección **Build** (o "Build & Deploy").
+4. Buscá el campo **"Watch Paths"** (o "Watchpaths" / "Paths to watch"). Suele ser un cuadro de texto con una o más rutas (ej. `apps/api/**`).
+5. **Seleccioná todo** el contenido del campo y **borralo**. Dejá el campo completamente vacío.
+6. Clic en **Save** o **Update** (o el botón que guarde los cambios del servicio).
+
+Después de eso, el próximo `git push` o `npx -y @railway/cli up --detach` debería **ejecutar** el deploy en lugar de marcarlo SKIPPED.
 
 ### 3c. Forzar deploy desde la terminal
 
@@ -51,7 +60,7 @@ npx -y @railway/cli up --detach
 En el servicio API en Railway → **Variables**:
 
 - **DATABASE_URL:** connection string de PostgreSQL (si usás Postgres de Railway, podés referenciar la variable del servicio DB).
-- Opcional para diagnóstico público / email: **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASS**, **FRONTEND_URL**.
+- **Para que se envíe el correo del diagnóstico público** (link al resultado), en **Variables** del servicio API tenés que definir: **SMTP_HOST**, **SMTP_PORT** (ej. 587), **SMTP_USER**, **SMTP_PASS**. Opcional: **SMTP_FROM**, **FRONTEND_URL** (URL del front para armar el link). Si SMTP no está configurado, el diagnóstico se marca listo pero el correo no se envía (en los logs de Railway verás "Error al enviar email" o "SMTP no configurado").
 
 ### 5. Ver qué falló
 

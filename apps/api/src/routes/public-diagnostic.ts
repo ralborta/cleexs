@@ -60,8 +60,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             data: { status: 'completed' },
           });
           if (current.email) {
-            await sendDiagnosticLink(current.email, diagnostic.id, baseUrl);
-            fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
+            try {
+              await sendDiagnosticLink(current.email, diagnostic.id, baseUrl);
+              fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
+            } catch (mailErr) {
+              fastify.log.error({ err: mailErr, diagnosticId: diagnostic.id, email: current.email }, 'Error al enviar email (revisá SMTP en Variables)');
+            }
           }
         }
       } catch (err) {
@@ -97,7 +101,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     // Si ya estaba completado (usuario tardó en poner email), enviar link ahora
     if (diagnostic.status === 'completed') {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      sendDiagnosticLink(email, id, baseUrl).catch((err) => fastify.log.error(err));
+      sendDiagnosticLink(email, id, baseUrl).catch((err) =>
+        fastify.log.error({ err, diagnosticId: id, email }, 'Error al enviar email (revisá SMTP en Variables)')
+      );
     }
 
     return reply.code(200).send({ ok: true });

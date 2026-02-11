@@ -8,7 +8,13 @@ const transporter = nodemailer.createTransport({
     process.env.SMTP_USER && process.env.SMTP_PASS
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
       : undefined,
+  connectionTimeout: 10000,
+  greetingTimeout: 5000,
 });
+
+export function isEmailConfigured(): boolean {
+  return !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== 'localhost' && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
 
 /**
  * Envía un correo con el link al resultado del diagnóstico (uno a uno, directo).
@@ -18,6 +24,9 @@ export async function sendDiagnosticLink(
   diagnosticId: string,
   baseUrl: string
 ): Promise<void> {
+  if (!isEmailConfigured()) {
+    throw new Error('SMTP no configurado: faltan SMTP_HOST, SMTP_USER o SMTP_PASS en las variables de entorno.');
+  }
   const link = `${baseUrl.replace(/\/$/, '')}/ver-resultado?diagnosticId=${diagnosticId}`;
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
 
