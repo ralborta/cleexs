@@ -6,8 +6,7 @@
 # - Build Command: el que venías usando (o el que auto-detecte Railway)
 # - Start Command: npm run deploy:api
 #
-# Start: solo arrancar la API (sin prisma migrate en start para evitar deploy colgado 40 min).
-# Migraciones: correr a mano cuando haga falta: railway run prisma migrate deploy
+# Start: migraciones primero (prisma migrate deploy) y luego la API.
 #
 # Pre-deploy: anulamos el del dashboard con un no-op.
 # Builder RAILPACK: ignora Watch Paths del dashboard.
@@ -16,7 +15,7 @@
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "echo '[Cleexs API] 0/7 Start command ejecutándose' && node apps/api/dist/index.js"
+startCommand = "npx prisma migrate deploy && echo '[Cleexs API] Start command ejecutándose' && node apps/api/dist/index.js"
 preDeployCommand = "/bin/true"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
