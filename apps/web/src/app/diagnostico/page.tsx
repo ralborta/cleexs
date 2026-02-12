@@ -25,18 +25,14 @@ export default function DiagnosticoPage() {
     e.preventDefault();
     setError(null);
     const trimmedBrand = brandName.trim();
-    const trimmedUrl = url.trim();
     if (!trimmedBrand) {
       setError('Ingresá el nombre de tu marca');
       return;
     }
-    if (!trimmedUrl) {
-      setError('Ingresá la URL de tu sitio o dominio');
-      return;
-    }
     setLoading(true);
     try {
-      const urlToSend = normalizeUrl(trimmedUrl);
+      const trimmedUrl = url.trim();
+      const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
       const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
@@ -57,7 +53,7 @@ export default function DiagnosticoPage() {
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl">Diagnóstico de recomendación</CardTitle>
             <CardDescription>
-              Ingresá tu marca y la URL de tu sitio. Analizamos cómo aparece recomendado y te mostramos el resultado.
+              Ingresá tu marca (la URL es opcional). Determinamos tu industria, competidores y generamos tu Cleexs Score.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -78,7 +74,7 @@ export default function DiagnosticoPage() {
               </div>
               <div>
                 <label htmlFor="url" className="block text-sm font-medium text-foreground mb-1">
-                  URL de tu sitio
+                  URL de tu sitio <span className="text-muted-foreground font-normal">(opcional)</span>
                 </label>
                 <input
                   id="url"

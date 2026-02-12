@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
 import { executeRun } from '../lib/run-executor';
+import { determineIndustry, getTop5Competitors } from '../lib/diagnostic-ai';
 
 function normalizeDomain(url: string): string {
   try {
@@ -19,26 +20,41 @@ function normalizeDomain(url: string): string {
   }
 }
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 50);
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
-  // POST /api/public/diagnostic — inicia diagnóstico con marca + URL, crea Run automático
+  // POST /api/public/diagnostic — marca (obligatoria) + url (opcional). IA determina industria y 5 competidores antes del run.
   fastify.post<{
-    Body: { brandName: string; url: string };
+    Body: { brandName: string; url?: string };
   }>('/diagnostic', async (request, reply) => {
     const schema = z.object({
       brandName: z.string().min(1).max(200),
-      url: z.string().min(1).max(500),
+      url: z.string().max(500).optional(),
     });
     const { brandName, url } = schema.parse(request.body);
-    const domain = normalizeDomain(url);
+    const trimmedBrand = brandName.trim();
 
-    const existing = await prisma.publicDiagnostic.findUnique({
-      where: { domain },
-    });
-    if (existing) {
-      return reply.code(409).send({
-        error: 'Esta URL o dominio ya tiene un diagnóstico. Iniciá sesión para verlo o contactanos.',
-        code: 'DOMAIN_ALREADY_USED',
-      });
+    let domain: string;
+    if (url && url.trim()) {
+      domain = normalizeDomain(url.trim());
+      const existing = await prisma.publicDiagnostic.findUnique({ where: { domain } });
+      if (existing) {
+        return reply.code(409).send({
+          error: 'Esta URL o dominio ya tiene un diagnóstico. Iniciá sesión para verlo o contactanos.',
+          code: 'DOMAIN_ALREADY_USED',
+        });
+      }
+    } else {
+      domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
     }
 
     if (!process.env.OPENAI_API_KEY) {
@@ -49,51 +65,75 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
     const rootTenant = await prisma.tenant.findFirst({
       where: { tenantCode: '000' },
-      include: { plan: true },
     });
     if (!rootTenant) {
       return reply.code(500).send({ error: 'Configuración del sistema incompleta.' });
     }
 
-    const brand = await prisma.brand.create({
-      data: {
-        tenantId: rootTenant.id,
-        name: brandName.trim(),
-        domain,
-      },
-    });
-
-    const now = new Date();
-    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-    const run = await prisma.run.create({
-      data: {
-        tenantId: rootTenant.id,
-        brandId: brand.id,
-        periodStart,
-        periodEnd,
-        runType: 'diagnostic',
-        status: 'pending',
-      },
-    });
-
     const diagnostic = await prisma.publicDiagnostic.create({
       data: {
-        brandName: brandName.trim(),
+        brandName: trimmedBrand,
         domain,
-        runId: run.id,
         status: 'running',
       },
     });
 
     setImmediate(async () => {
       try {
+        // 1. IA determina industria (antes del run)
+        const { industry } = await determineIndustry(trimmedBrand, url?.trim());
+        await prisma.publicDiagnostic.update({
+          where: { id: diagnostic.id },
+          data: { industry },
+        });
+
+        // 2. IA elige 5 competidores
+        const { competitors } = await getTop5Competitors(trimmedBrand, industry);
+
+        // 3. Crear Brand con industria y competidores
+        const brand = await prisma.brand.create({
+          data: {
+            tenantId: rootTenant.id,
+            name: trimmedBrand,
+            domain: url?.trim() ? normalizeDomain(url.trim()) : null,
+            industry,
+          },
+        });
+
+        for (const name of competitors) {
+          await prisma.competitor.create({
+            data: { brandId: brand.id, name: name.trim() || 'Competidor' },
+          });
+        }
+
+        // 4. Crear Run y ejecutar
+        const now = new Date();
+        const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+        const run = await prisma.run.create({
+          data: {
+            tenantId: rootTenant.id,
+            brandId: brand.id,
+            periodStart,
+            periodEnd,
+            runType: 'diagnostic',
+            status: 'pending',
+          },
+        });
+
+        await prisma.publicDiagnostic.update({
+          where: { id: diagnostic.id },
+          data: { runId: run.id },
+        });
+
         await executeRun(run.id);
+
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { status: 'completed' },
         });
+
         const current = await prisma.publicDiagnostic.findUnique({
           where: { id: diagnostic.id },
         });
@@ -109,18 +149,17 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           }
         }
       } catch (err) {
-        fastify.log.error({ err, diagnosticId: diagnostic.id, runId: run.id }, 'Error ejecutando run');
+        fastify.log.error({ err, diagnosticId: diagnostic.id }, 'Error en diagnóstico');
         await prisma.publicDiagnostic
           .update({ where: { id: diagnostic.id }, data: { status: 'failed' } })
           .catch(() => {});
-        await prisma.run.update({ where: { id: run.id }, data: { status: 'failed' } }).catch(() => {});
       }
     });
 
     return reply.code(201).send({ diagnosticId: diagnostic.id });
   });
 
-  // PATCH /api/public/diagnostic/:id — guarda email (al final del flujo, para enviar resultado)
+  // PATCH /api/public/diagnostic/:id — guarda email (al final del flujo)
   fastify.patch<{
     Params: { id: string };
     Body: { email: string };
@@ -143,13 +182,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     if (diagnostic.status === 'completed') {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       try {
-        if (isEmailDisabled()) {
-          emailSent = false;
-        } else if (!isEmailConfigured()) {
-          emailSent = false;
-        } else {
+        if (!isEmailDisabled() && isEmailConfigured()) {
           await sendDiagnosticLink(email, id, baseUrl);
           emailSent = true;
+        } else {
+          emailSent = false;
         }
       } catch (err) {
         emailSent = false;
@@ -160,7 +197,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.code(200).send({ ok: true, emailSent });
   });
 
-  // GET /api/public/diagnostic/:id — estado, steps para progression y datos para /ver-resultado
+  // GET /api/public/diagnostic/:id — estado, steps (industria, competidores, prompts) y resultado con Cleexs Score
   fastify.get<{ Params: { id: string } }>('/diagnostic/:id', async (request, reply) => {
     const diagnostic = await prisma.publicDiagnostic.findUnique({
       where: { id: request.params.id },
@@ -169,13 +206,34 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
 
-    const base: { id: string; domain: string; brandName?: string | null; status: string; runId?: string | null; steps?: Array<{ id: string; label: string; completed: boolean }>; progressPercent?: number } = {
+    const base: {
+      id: string;
+      domain: string;
+      brandName: string;
+      industry?: string | null;
+      status: string;
+      runId?: string | null;
+      steps?: Array<{ id: string; label: string; completed: boolean }>;
+      progressPercent?: number;
+      runResult?: {
+        brandName: string;
+        cleexsScore: number;
+        promptResults: Array<{ category: string; score: number }>;
+      };
+    } = {
       id: diagnostic.id,
       domain: diagnostic.domain,
       brandName: diagnostic.brandName,
+      industry: diagnostic.industry,
       status: diagnostic.status,
       runId: diagnostic.runId,
     };
+
+    // Steps: Determinando industria, Seleccionando competidores, + prompts del run
+    const preSteps: Array<{ id: string; label: string; completed: boolean }> = [
+      { id: 'industry', label: 'Determinando tipo de industria', completed: !!diagnostic.industry },
+      { id: 'competitors', label: 'Seleccionando 5 competidores', completed: !!diagnostic.runId },
+    ];
 
     if (diagnostic.runId && (diagnostic.status === 'running' || diagnostic.status === 'completed')) {
       const run = await prisma.run.findUnique({
@@ -202,19 +260,29 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             include: { category: true },
           });
           const resultPromptIds = new Set(run.promptResults.map((r) => r.promptId));
-          base.steps = prompts.map((p) => ({
+          const promptSteps = prompts.map((p) => ({
             id: p.id,
             label: p.name || p.promptText.slice(0, 50) + (p.promptText.length > 50 ? '…' : '') || 'Análisis',
             completed: resultPromptIds.has(p.id),
           }));
+          base.steps = [...preSteps, ...promptSteps];
           base.progressPercent =
-            prompts.length > 0 ? Math.round((run.promptResults.length / prompts.length) * 100) : 0;
+            prompts.length > 0
+              ? Math.round(
+                  ((preSteps.filter((s) => s.completed).length + run.promptResults.length) /
+                    (preSteps.length + prompts.length)) *
+                    100
+                )
+              : preSteps.filter((s) => s.completed).length * 50;
+        } else {
+          base.steps = preSteps;
+          base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
         }
         if (diagnostic.status === 'completed' && run.priaReports[0]) {
-          (base as Record<string, unknown>).runResult = {
+          const cleexsScore = run.priaReports[0].priaTotal; // Mismo cálculo, renombrado
+          base.runResult = {
             brandName: run.brand.name,
-            priaTotal: run.priaReports[0].priaTotal,
-            priaByCategory: run.priaReports[0].priaByCategoryJson as Record<string, number>,
+            cleexsScore,
             promptResults: run.promptResults.map((pr) => {
               const prompt = prompts.find((p) => p.id === pr.promptId);
               return {
@@ -224,7 +292,13 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             }),
           };
         }
+      } else {
+        base.steps = preSteps;
+        base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
       }
+    } else {
+      base.steps = preSteps;
+      base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
     }
 
     return base;

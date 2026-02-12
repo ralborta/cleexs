@@ -307,8 +307,9 @@ model PRIAReport {
 
 model PublicDiagnostic {
   id        String   @id @default(uuid())
-  brandName String?  @map("brand_name") // marca ingresada por el usuario
-  domain    String   @unique // dominio/URL normalizado, ej. zaza.com (una medición por dominio)
+  brandName String   @map("brand_name") // marca ingresada por el usuario (obligatoria)
+  domain    String   @unique // dominio normalizado o generado cuando no hay URL
+  industry  String?  @map("industry") // determinado por IA antes del run
   email     String?  // capturado al final del flujo (para enviar resultado)
   status    String   @default("pending") // pending | running | completed | failed
   runId     String?  @map("run_id") // Run real ejecutado automáticamente

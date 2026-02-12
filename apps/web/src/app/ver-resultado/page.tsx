@@ -95,9 +95,9 @@ function VerResultadoContent() {
               Resultado del diagnóstico
             </CardTitle>
             <CardDescription>
-              {diagnostic.brandName && <span className="font-medium">{diagnostic.brandName}</span>}
-              {diagnostic.brandName && ' · '}
-              <span>{diagnostic.domain}</span>
+              <span className="font-medium">{diagnostic.brandName}</span>
+              {diagnostic.industry && ` · ${diagnostic.industry}`}
+              {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -124,7 +124,7 @@ function VerResultadoContent() {
                     <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
                       <p className="font-medium">Diagnóstico listo</p>
                       <p className="text-2xl font-bold mt-2">
-                        PRIA: {runResult.priaTotal.toFixed(1)}%
+                        Cleexs Score: {runResult.cleexsScore.toFixed(1)}%
                       </p>
                       <p className="text-sm mt-1">
                         Índice de recomendación de {runResult.brandName}

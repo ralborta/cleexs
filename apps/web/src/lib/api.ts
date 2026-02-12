@@ -225,15 +225,15 @@ export interface PublicDiagnosticStep {
 
 export interface PublicDiagnosticRunResult {
   brandName: string;
-  priaTotal: number;
-  priaByCategory: Record<string, number>;
+  cleexsScore: number;
   promptResults: Array<{ category: string; score: number }>;
 }
 
 export interface PublicDiagnostic {
   id: string;
   domain: string;
-  brandName?: string | null;
+  brandName: string;
+  industry?: string | null;
   status: 'pending' | 'running' | 'completed' | 'failed';
   runId?: string | null;
   steps?: PublicDiagnosticStep[];
@@ -242,10 +242,10 @@ export interface PublicDiagnostic {
 }
 
 export const publicDiagnosticApi = {
-  create: (brandName: string, url: string) =>
+  create: (brandName: string, url?: string) =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
-      body: JSON.stringify({ brandName, url }),
+      body: JSON.stringify({ brandName, url: url || undefined }),
     }),
   setEmail: (id: string, email: string) =>
     api<{ ok: boolean; emailSent?: boolean | null }>(`/api/public/diagnostic/${id}`, {
