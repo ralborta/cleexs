@@ -16,7 +16,7 @@
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "node apps/api/dist/index.js"
+startCommand = "echo '[Cleexs API] 0/7 Start command ejecutándose' && node apps/api/dist/index.js"
 preDeployCommand = "/bin/true"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
