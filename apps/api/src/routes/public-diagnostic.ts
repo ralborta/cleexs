@@ -36,49 +36,59 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Body: { brandName: string; url?: string };
   }>('/diagnostic', async (request, reply) => {
-    const schema = z.object({
-      brandName: z.string().min(1).max(200),
-      url: z.string().max(500).optional(),
-    });
-    const { brandName, url } = schema.parse(request.body);
-    const trimmedBrand = brandName.trim();
-
-    let domain: string;
-    if (url && url.trim()) {
-      domain = normalizeDomain(url.trim());
-      const existing = await prisma.publicDiagnostic.findUnique({ where: { domain } });
-      if (existing) {
-        return reply.code(409).send({
-          error: 'Esta URL o dominio ya tiene un diagnóstico. Iniciá sesión para verlo o contactanos.',
-          code: 'DOMAIN_ALREADY_USED',
+    try {
+      const schema = z.object({
+        brandName: z.string().min(1).max(200),
+        url: z.union([z.string().max(500), z.undefined()]).optional(),
+      });
+      const parsed = schema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
         });
       }
-    } else {
-      domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
-    }
+      const { brandName, url } = parsed.data;
+      const trimmedBrand = brandName.trim();
 
-    if (!process.env.OPENAI_API_KEY) {
-      return reply.code(503).send({
-        error: 'El servicio de análisis no está disponible. Intentá más tarde.',
+      let domain: string;
+      if (url && typeof url === 'string' && url.trim()) {
+        domain = normalizeDomain(url.trim());
+        const existing = await prisma.publicDiagnostic.findUnique({ where: { domain } });
+        if (existing) {
+          return reply.code(409).send({
+            error: 'Esta URL o dominio ya tiene un diagnóstico. Iniciá sesión para verlo o contactanos.',
+            code: 'DOMAIN_ALREADY_USED',
+          });
+        }
+      } else {
+        domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(503).send({
+          error: 'El servicio de análisis no está disponible. Intentá más tarde.',
+        });
+      }
+
+      const rootTenant = await prisma.tenant.findFirst({
+        where: { tenantCode: '000' },
       });
-    }
+      if (!rootTenant) {
+        fastify.log.error('Tenant root (000) no encontrado. Ejecutá prisma db seed.');
+        return reply.code(500).send({
+          error: 'Configuración del sistema incompleta. Verificá que se haya ejecutado el seed de la base de datos.',
+        });
+      }
 
-    const rootTenant = await prisma.tenant.findFirst({
-      where: { tenantCode: '000' },
-    });
-    if (!rootTenant) {
-      return reply.code(500).send({ error: 'Configuración del sistema incompleta.' });
-    }
+      const diagnostic = await prisma.publicDiagnostic.create({
+        data: {
+          brandName: trimmedBrand,
+          domain,
+          status: 'running',
+        },
+      });
 
-    const diagnostic = await prisma.publicDiagnostic.create({
-      data: {
-        brandName: trimmedBrand,
-        domain,
-        status: 'running',
-      },
-    });
-
-    setImmediate(async () => {
+      setImmediate(async () => {
       try {
         // 1. IA determina industria (antes del run)
         const { industry } = await determineIndustry(trimmedBrand, url?.trim());
@@ -156,7 +166,17 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       }
     });
 
-    return reply.code(201).send({ diagnosticId: diagnostic.id });
+      return reply.code(201).send({ diagnosticId: diagnostic.id });
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic');
+      const message = err instanceof Error ? err.message : 'Error interno';
+      const isPrisma = message.includes('column') || message.includes('does not exist') || message.includes('Unknown');
+      return reply.code(500).send({
+        error: isPrisma
+          ? 'Error de base de datos. Ejecutá en Railway: railway run npx prisma migrate deploy'
+          : 'Error interno al crear el diagnóstico. Intentá de nuevo.',
+      });
+    }
   });
 
   // PATCH /api/public/diagnostic/:id — guarda email (al final del flujo)

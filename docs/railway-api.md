@@ -62,11 +62,24 @@ En el servicio API en Railway → **Variables**:
 - **DATABASE_URL:** connection string de PostgreSQL (si usás Postgres de Railway, podés referenciar la variable del servicio DB).
 - **Para que se envíe el correo del diagnóstico público** (link al resultado), en **Variables** del servicio API definí: **SMTP_HOST**, **SMTP_PORT** (ej. 587), **SMTP_USER**, **SMTP_PASS**. Opcional: **SMTP_FROM** o **SMTP_FROM_EMAIL** (email remitente), **SMTP_FROM_NAME** (nombre del remitente), **SMTP_SECURE** (true si usás 465), **FRONTEND_URL** (URL del front para el link). Si SMTP no está configurado, el diagnóstico se marca listo pero el correo no se envía (en los logs verás "Error al enviar email" o "SMTP no configurado").
 
-### 5. Ver qué falló
+### 5. Error 500 en diagnóstico público
+
+Si al iniciar un diagnóstico ves "Internal Server Error":
+
+1. **Migraciones pendientes:** Ejecutá las migraciones:
+   ```bash
+   railway run npx prisma migrate deploy
+   ```
+2. **Seed no ejecutado:** Si el mensaje dice "Configuración del sistema incompleta", el tenant root no existe. Ejecutá el seed:
+   ```bash
+   railway run npx prisma db seed
+   ```
+
+### 6. Ver qué falló
 
 En el deployment fallido → **View logs**: ahí ves si falló el build (npm, tsc, turbo) o el Pre-deploy. Con Root Directory vacío, Build command y Start command como arriba, y Pre-deploy vacío o `true`, el deploy debería completar.
 
-### 6. Deploy lento (5–40 min)
+### 7. Deploy lento (5–40 min)
 
 Si el deploy queda en "Deploying" mucho rato:
 
