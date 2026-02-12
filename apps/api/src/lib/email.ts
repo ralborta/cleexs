@@ -12,6 +12,10 @@ const transporter = nodemailer.createTransport({
   greetingTimeout: 5000,
 });
 
+export function isEmailDisabled(): boolean {
+  return process.env.DISABLE_EMAILS === 'true';
+}
+
 export function isEmailConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== 'localhost' && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
@@ -24,9 +28,8 @@ export async function sendDiagnosticLink(
   diagnosticId: string,
   baseUrl: string
 ): Promise<void> {
-  if (!isEmailConfigured()) {
-    throw new Error('SMTP no configurado: faltan SMTP_HOST, SMTP_USER o SMTP_PASS en las variables de entorno.');
-  }
+  if (isEmailDisabled()) return;
+  if (!isEmailConfigured()) return;
   const link = `${baseUrl.replace(/\/$/, '')}/ver-resultado?diagnosticId=${diagnosticId}`;
   const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
   const fromName = process.env.SMTP_FROM_NAME;

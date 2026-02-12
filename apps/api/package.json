@@ -4,9 +4,9 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "prebuild": "npm --workspace=@cleexs/shared run build",
+    "prebuild": "npm --workspace=@cleexs/shared run build && prisma generate --schema=../../prisma/schema.prisma",
     "build": "tsc",
-    "migrate:deploy": "prisma migrate deploy --schema=../prisma/schema.prisma",
+    "migrate:deploy": "prisma migrate deploy --schema=../../prisma/schema.prisma",
     "start": "npm run migrate:deploy && node dist/index.js",
     "lint": "eslint ."
   },

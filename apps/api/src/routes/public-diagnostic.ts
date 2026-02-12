@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { sendDiagnosticLink } from '../lib/email';
+import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
 
 function normalizeDomain(url: string): string {
   try {
@@ -61,8 +61,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           });
           if (current.email) {
             try {
-              await sendDiagnosticLink(current.email, diagnostic.id, baseUrl);
-              fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
+              if (isEmailDisabled()) {
+                fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email desactivado por DISABLE_EMAILS=true');
+              } else if (!isEmailConfigured()) {
+                fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email no enviado: SMTP no configurado');
+              } else {
+                await sendDiagnosticLink(current.email, diagnostic.id, baseUrl);
+                fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
+              }
             } catch (mailErr) {
               fastify.log.error({ err: mailErr, diagnosticId: diagnostic.id, email: current.email }, 'Error al enviar email (revisá SMTP en Variables)');
             }
@@ -102,9 +108,17 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     if (diagnostic.status === 'completed') {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       try {
-        await sendDiagnosticLink(email, id, baseUrl);
-        emailSent = true;
-        fastify.log.info({ diagnosticId: id, email }, 'Email enviado');
+        if (isEmailDisabled()) {
+          emailSent = false;
+          fastify.log.info({ diagnosticId: id, email }, 'Email desactivado por DISABLE_EMAILS=true');
+        } else if (!isEmailConfigured()) {
+          emailSent = false;
+          fastify.log.info({ diagnosticId: id, email }, 'Email no enviado: SMTP no configurado');
+        } else {
+          await sendDiagnosticLink(email, id, baseUrl);
+          emailSent = true;
+          fastify.log.info({ diagnosticId: id, email }, 'Email enviado');
+        }
       } catch (err) {
         emailSent = false;
         fastify.log.error({ err, diagnosticId: id, email }, 'Error al enviar email (revisá SMTP en Variables)');
