@@ -6,14 +6,15 @@
 # - Build Command: el que venías usando (o el que auto-detecte Railway)
 # - Start Command: npm run deploy:api
 #
-# Así prisma migrate deploy corre desde la raíz y luego arranca la API.
-# Pre-deploy: anulamos el del dashboard (que falla) con un no-op; las migraciones van en el start.
+# Start: solo arrancar la API (sin prisma migrate en start para evitar deploy colgado 40 min).
+# Migraciones: correr a mano cuando haga falta: railway run prisma migrate deploy
 #
-# Builder RAILPACK: ignora Watch Paths del dashboard, así los deploys no salen SKIPPED.
+# Pre-deploy: anulamos el del dashboard con un no-op.
+# Builder RAILPACK: ignora Watch Paths del dashboard.
 
 [build]
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "npm run deploy:api"
+startCommand = "node apps/api/dist/index.js"
 preDeployCommand = "/bin/true"
