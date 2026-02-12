@@ -65,3 +65,11 @@ En el servicio API en Railway → **Variables**:
 ### 5. Ver qué falló
 
 En el deployment fallido → **View logs**: ahí ves si falló el build (npm, tsc, turbo) o el Pre-deploy. Con Root Directory vacío, Build command y Start command como arriba, y Pre-deploy vacío o `true`, el deploy debería completar.
+
+### 6. Deploy lento (5–40 min)
+
+Si el deploy queda en "Deploying" mucho rato:
+
+1. **Healthcheck:** El `railway.toml` define `healthcheckPath = "/health"` y `healthcheckTimeout = 60`. Railway espera a que `/health` devuelva 200; si no lo hace en 60 s, falla el deploy (antes eran 5 min por defecto). Revisá los **Deploy logs** para ver si aparece `[Cleexs API] Servidor activo` — eso indica que la app levantó bien.
+2. **Conexión a la DB:** La API usa `connect_timeout=15` en la URL de Prisma. Si la DB tarda, el arranque falla en ~15 s en lugar de colgarse.
+3. **Build:** Si la demora está en el **Build** (antes de "Deploying"), puede ser por npm install o turbo en el monorepo. Revisá en qué fase se queda más tiempo.
