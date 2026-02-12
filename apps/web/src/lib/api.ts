@@ -223,10 +223,21 @@ export interface PublicDiagnosticStep {
   completed: boolean;
 }
 
+export interface PublicDiagnosticPromptResult {
+  category: string;
+  score: number;
+  promptText?: string;
+  responseText?: string;
+  top3Json?: Array<{ position: number; name: string; type: string; reason?: string }>;
+  flags?: Record<string, boolean>;
+}
+
 export interface PublicDiagnosticRunResult {
   brandName: string;
   cleexsScore: number;
-  promptResults: Array<{ category: string; score: number }>;
+  competitors: string[];
+  brandAliases: string[];
+  promptResults: PublicDiagnosticPromptResult[];
 }
 
 export interface PublicDiagnostic {

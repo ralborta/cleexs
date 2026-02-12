@@ -238,7 +238,16 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runResult?: {
         brandName: string;
         cleexsScore: number;
-        promptResults: Array<{ category: string; score: number }>;
+        competitors: string[];
+        brandAliases: string[];
+        promptResults: Array<{
+          category: string;
+          score: number;
+          promptText?: string;
+          responseText?: string;
+          top3Json?: Array<{ position: number; name: string; type: string; reason?: string }>;
+          flags?: Record<string, boolean>;
+        }>;
       };
     } = {
       id: diagnostic.id,
@@ -299,18 +308,37 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
         }
         if (diagnostic.status === 'completed' && run.priaReports[0]) {
-          const cleexsScore = run.priaReports[0].priaTotal; // Mismo cálculo, renombrado
-          base.runResult = {
-            brandName: run.brand.name,
-            cleexsScore,
-            promptResults: run.promptResults.map((pr) => {
-              const prompt = prompts.find((p) => p.id === pr.promptId);
-              return {
-                category: prompt?.category?.name ?? 'General',
+          const fullRun = await prisma.run.findUnique({
+            where: { id: diagnostic.runId },
+            include: {
+              promptResults: {
+                include: {
+                  prompt: { include: { category: true } },
+                },
+                orderBy: { createdAt: 'asc' },
+              },
+              brand: {
+                include: { competitors: true, aliases: true },
+              },
+            },
+          });
+          if (fullRun) {
+            const cleexsScore = run.priaReports[0].priaTotal;
+            base.runResult = {
+              brandName: fullRun.brand.name,
+              cleexsScore,
+              competitors: fullRun.brand.competitors.map((c) => c.name),
+              brandAliases: fullRun.brand.aliases.map((a) => a.alias),
+              promptResults: fullRun.promptResults.map((pr) => ({
+                category: pr.prompt?.category?.name ?? 'General',
                 score: pr.score,
-              };
-            }),
-          };
+                promptText: pr.prompt?.promptText ?? '',
+                responseText: pr.responseText,
+                top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
+                flags: (pr.flags as Record<string, boolean>) ?? {},
+              })),
+            };
+          }
         }
       } else {
         base.steps = preSteps;
