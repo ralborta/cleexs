@@ -1,27 +1,54 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Suspense, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
-import { CheckCircle2, Circle, Loader2, Mail } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-const STEPS = [
-  { id: 'domain', label: 'Verificando dominio' },
-  { id: 'index', label: 'Analizando índice de recomendación' },
-  { id: 'report', label: 'Generando reporte' },
-];
-
 function VerificandoContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [emailSendFailed, setEmailSendFailed] = useState(false);
+  const [diagnostic, setDiagnostic] = useState<Awaited<ReturnType<typeof publicDiagnosticApi.get>> | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!diagnosticId) return;
+    const id = diagnosticId;
+
+    const poll = async () => {
+      try {
+        const data = await publicDiagnosticApi.get(id);
+        setDiagnostic(data);
+        if (data.status === 'completed') {
+          router.replace(`/ver-resultado?diagnosticId=${id}`);
+          return false;
+        }
+        if (data.status === 'failed') return false;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al cargar el diagnóstico');
+        return false;
+      }
+      return true;
+    };
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      const keepPolling = await poll();
+      if (!keepPolling) clearInterval(interval);
+    }, 1500);
+
+    poll();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [diagnosticId, router]);
 
   if (!diagnosticId) {
     return (
@@ -29,108 +56,90 @@ function VerificandoContent() {
         <div className="mx-auto max-w-lg text-center">
           <p className="text-muted-foreground">Faltan datos del diagnóstico. Volvé a empezar desde la pantalla anterior.</p>
           <Link href="/diagnostico">
-            <Button className="mt-4">Ir al diagnóstico</Button>
+            <button className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90">
+              Ir al diagnóstico
+            </button>
           </Link>
         </div>
       </main>
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const trimmed = email.trim();
-    if (!trimmed) {
-      setError('Ingresá tu correo');
-      return;
-    }
-    const id = searchParams.get('diagnosticId');
-    if (!id) return;
-    setLoading(true);
-    setEmailSendFailed(false);
-    try {
-      const res = await publicDiagnosticApi.setEmail(id, trimmed);
-      setSent(true);
-      if (res.emailSent === false) setEmailSendFailed(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos guardar el correo. Intentá de nuevo.');
-    } finally {
-      setLoading(false);
-    }
+  if (error) {
+    return (
+      <main className="min-h-[calc(100vh-72px)] px-6 py-16">
+        <div className="mx-auto max-w-lg text-center">
+          <p className="text-destructive">{error}</p>
+          <Link href="/diagnostico">
+            <button className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90">
+              Volver al diagnóstico
+            </button>
+          </Link>
+        </div>
+      </main>
+    );
   }
+
+  const steps = diagnostic?.steps ?? [];
+  const progress = diagnostic?.progressPercent ?? 0;
+  const title = diagnostic?.brandName
+    ? `${diagnostic.brandName} & competidores`
+    : 'Analizando…';
 
   return (
     <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
-      <div className="mx-auto max-w-lg space-y-6">
+      <div className="mx-auto max-w-xl">
         <Card className="border-transparent bg-white shadow-md">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl">Estamos verificando</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl">Analizando</CardTitle>
             <CardDescription>
-              En unos segundos tendremos tu diagnóstico. Dejanos tu correo y te enviamos el link cuando esté listo.
+              {title}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
+            {/* Lista de progresión (estilo costado izquierdo) */}
             <ul className="space-y-3">
-              {STEPS.map((step, i) => (
-                <li key={step.id} className="flex items-center gap-3 text-muted-foreground">
-                  {i < 2 ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-primary-600" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <span>{step.label}</span>
-                  {i < 2 && <CheckCircle2 className="ml-auto h-5 w-5 text-green-600" />}
+              {steps.length > 0 ? (
+                steps.map((step) => (
+                  <li key={step.id} className="flex items-center gap-3">
+                    {step.completed ? (
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 shrink-0 text-muted-300" />
+                    )}
+                    <span className={step.completed ? 'text-foreground' : 'text-muted-foreground'}>
+                      {step.label}
+                    </span>
+                    {!step.completed && steps.some((s) => !s.completed) && steps.indexOf(step) === steps.findIndex((s) => !s.completed) && (
+                      <Loader2 className="ml-auto h-4 w-4 animate-spin text-primary-600" />
+                    )}
+                  </li>
+                ))
+              ) : (
+                <li className="flex items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary-600" />
+                  <span>Iniciando análisis…</span>
                 </li>
-              ))}
+              )}
             </ul>
 
-            {sent ? (
-              <>
-                {emailSendFailed ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-amber-800">
-                    <p className="font-medium">Correo no enviado</p>
-                    <p className="text-sm mt-1">
-                      Guardamos tu email pero no pudimos enviar el correo (revisá la configuración SMTP del servicio). Podés ir directo al resultado con el link que te mostramos abajo.
-                    </p>
-                    <Link href={`/ver-resultado?diagnosticId=${diagnosticId}`}>
-                      <Button variant="outline" className="mt-3">Ver resultado</Button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center text-green-800">
-                    <p className="font-medium">Listo</p>
-                    <p className="text-sm mt-1">
-                      Te enviamos un correo con el link a tu resultado. Revisá tu bandeja (y spam) y hacé clic en el enlace cuando esté listo.
-                    </p>
-                  </div>
+            {/* Barra inferior progresiva */}
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {diagnostic?.status === 'running' ? 'En curso…' : diagnostic?.status === 'completed' ? 'Listo' : 'Preparando…'}
+                </span>
+                {steps.length > 0 && (
+                  <span className="font-medium">{progress}%</span>
                 )}
-              </>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-                    Correo electrónico
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    disabled={loading}
-                  />
-                </div>
-                {error && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {error}
-                  </p>
-                )}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Enviando…' : <><Mail className="mr-2 h-4 w-4" />Enviar</>}
-                </Button>
-              </form>
-            )}
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -140,11 +149,13 @@ function VerificandoContent() {
 
 export default function VerificandoPage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-[calc(100vh-72px)] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="min-h-[calc(100vh-72px)] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        </main>
+      }
+    >
       <VerificandoContent />
     </Suspense>
   );

@@ -307,10 +307,11 @@ model PRIAReport {
 
 model PublicDiagnostic {
   id        String   @id @default(uuid())
-  domain    String   @unique // dominio normalizado, ej. zaza.com (una medición por dominio)
-  email     String?  // capturado en pantalla "Estamos verificando"
+  brandName String?  @map("brand_name") // marca ingresada por el usuario
+  domain    String   @unique // dominio/URL normalizado, ej. zaza.com (una medición por dominio)
+  email     String?  // capturado al final del flujo (para enviar resultado)
   status    String   @default("pending") // pending | running | completed | failed
-  runId     String?  @map("run_id") // cuando integremos con Run real
+  runId     String?  @map("run_id") // Run real ejecutado automáticamente
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

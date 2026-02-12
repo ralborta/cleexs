@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
-import { Loader2, LogIn, FileCheck, AlertCircle } from 'lucide-react';
+import { Loader2, LogIn, FileCheck, AlertCircle, Mail } from 'lucide-react';
 
 function VerResultadoContent() {
   const searchParams = useSearchParams();
@@ -14,6 +14,10 @@ function VerResultadoContent() {
   const [diagnostic, setDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailSendFailed, setEmailSendFailed] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get('diagnosticId');
@@ -35,6 +39,21 @@ function VerResultadoContent() {
     })();
     return () => { cancelled = true; };
   }, [diagnosticId, searchParams]);
+
+  async function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!diagnosticId || !email.trim()) return;
+    setEmailLoading(true);
+    try {
+      const res = await publicDiagnosticApi.setEmail(diagnosticId, email.trim());
+      setEmailSent(true);
+      if (res.emailSent === false) setEmailSendFailed(true);
+    } catch {
+      setEmailSendFailed(true);
+    } finally {
+      setEmailLoading(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -64,6 +83,7 @@ function VerResultadoContent() {
   const isCompleted = diagnostic.status === 'completed';
   const isPending = diagnostic.status === 'pending' || diagnostic.status === 'running';
   const isFailed = diagnostic.status === 'failed';
+  const runResult = diagnostic.runResult;
 
   return (
     <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
@@ -75,14 +95,16 @@ function VerResultadoContent() {
               Resultado del diagnóstico
             </CardTitle>
             <CardDescription>
-              Dominio: <strong>{diagnostic.domain}</strong>
+              {diagnostic.brandName && <span className="font-medium">{diagnostic.brandName}</span>}
+              {diagnostic.brandName && ' · '}
+              <span>{diagnostic.domain}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {isPending && (
               <div className="flex items-center gap-3 rounded-lg border border-primary-200 bg-primary-50 p-4 text-primary-800">
                 <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                <p>Tu diagnóstico sigue en proceso. Revisá tu correo: te enviamos el link cuando esté listo.</p>
+                <p>Tu diagnóstico sigue en proceso. Cuando esté listo podés recargar la página o te enviamos el link por correo si ingresás tu email abajo.</p>
               </div>
             )}
 
@@ -97,16 +119,66 @@ function VerResultadoContent() {
 
             {isCompleted && (
               <>
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-                  <p className="font-medium">Diagnóstico listo</p>
-                  <p className="text-sm mt-1">
-                    Aquí podrás ver el reporte completo cuando integremos la medición real. Por ahora este es un placeholder.
-                  </p>
+                {runResult ? (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+                      <p className="font-medium">Diagnóstico listo</p>
+                      <p className="text-2xl font-bold mt-2">
+                        PRIA: {runResult.priaTotal.toFixed(1)}%
+                      </p>
+                      <p className="text-sm mt-1">
+                        Índice de recomendación de {runResult.brandName}
+                      </p>
+                    </div>
+                    {runResult.promptResults.length > 0 && (
+                      <div className="rounded-lg border border-border bg-muted/20 p-4">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Por categoría</p>
+                        <ul className="space-y-1">
+                          {runResult.promptResults.map((pr, i) => (
+                            <li key={i} className="flex justify-between text-sm">
+                              <span>{pr.category}</span>
+                              <span className="font-medium">{(pr.score * 100).toFixed(0)}%</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+                    <p className="font-medium">Diagnóstico listo</p>
+                    <p className="text-sm mt-1">Cargando detalle del reporte…</p>
+                  </div>
+                )}
+
+                {/* Email al final del flujo */}
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium text-foreground mb-2">¿Querés recibir el resultado por correo?</p>
+                  {emailSent ? (
+                    emailSendFailed ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
+                        <p className="text-sm">Guardamos tu email pero no pudimos enviar el correo. Podés compartir este link para ver el resultado.</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-green-700">Te enviamos el link por correo. Revisá tu bandeja (y spam).</p>
+                    )
+                  ) : (
+                    <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        disabled={emailLoading}
+                      />
+                      <Button type="submit" disabled={emailLoading || !email.trim()}>
+                        {emailLoading ? 'Enviando…' : <><Mail className="mr-2 h-4 w-4" />Enviar</>}
+                      </Button>
+                    </form>
+                  )}
                 </div>
-                <div className="rounded-lg border border-border bg-muted/30 p-6 text-center text-muted-foreground">
-                  <p className="text-sm">Reporte PRIA (próximamente)</p>
-                  <p className="text-xs mt-2">runId: {diagnostic.runId ?? '—'}</p>
-                </div>
+
                 <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-3">
                     Creá una cuenta o iniciá sesión para guardar resultados y hacer más análisis.

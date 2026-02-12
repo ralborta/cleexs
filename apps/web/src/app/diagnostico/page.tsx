@@ -9,6 +9,7 @@ import { Search } from 'lucide-react';
 
 export default function DiagnosticoPage() {
   const router = useRouter();
+  const [brandName, setBrandName] = useState('');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,15 +24,20 @@ export default function DiagnosticoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const trimmed = url.trim();
-    if (!trimmed) {
-      setError('Ingresá una URL o dominio');
+    const trimmedBrand = brandName.trim();
+    const trimmedUrl = url.trim();
+    if (!trimmedBrand) {
+      setError('Ingresá el nombre de tu marca');
+      return;
+    }
+    if (!trimmedUrl) {
+      setError('Ingresá la URL de tu sitio o dominio');
       return;
     }
     setLoading(true);
     try {
-      const urlToSend = normalizeUrl(trimmed);
-      const { diagnosticId } = await publicDiagnosticApi.create(urlToSend);
+      const urlToSend = normalizeUrl(trimmedUrl);
+      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -51,14 +57,28 @@ export default function DiagnosticoPage() {
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl">Diagnóstico de recomendación</CardTitle>
             <CardDescription>
-              Ingresá la URL de tu sitio o dominio. Te mostramos cómo aparece recomendado y te enviamos el resultado por correo.
+              Ingresá tu marca y la URL de tu sitio. Analizamos cómo aparece recomendado y te mostramos el resultado.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="url" className="sr-only">
-                  URL o dominio
+                <label htmlFor="brand" className="block text-sm font-medium text-foreground mb-1">
+                  Marca
+                </label>
+                <input
+                  id="brand"
+                  type="text"
+                  placeholder="Ej: Argento's Italian Bistro"
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label htmlFor="url" className="block text-sm font-medium text-foreground mb-1">
+                  URL de tu sitio
                 </label>
                 <input
                   id="url"
@@ -78,11 +98,11 @@ export default function DiagnosticoPage() {
               )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
-                  'Verificando…'
+                  'Iniciando…'
                 ) : (
                   <>
                     <Search className="mr-2 h-4 w-4" />
-                    Ver diagnóstico
+                    Iniciar diagnóstico
                   </>
                 )}
               </Button>

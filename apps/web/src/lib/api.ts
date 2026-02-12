@@ -217,18 +217,35 @@ export const reportsApi = {
 };
 
 // Diagnóstico público (flujo sin login)
+export interface PublicDiagnosticStep {
+  id: string;
+  label: string;
+  completed: boolean;
+}
+
+export interface PublicDiagnosticRunResult {
+  brandName: string;
+  priaTotal: number;
+  priaByCategory: Record<string, number>;
+  promptResults: Array<{ category: string; score: number }>;
+}
+
 export interface PublicDiagnostic {
   id: string;
   domain: string;
+  brandName?: string | null;
   status: 'pending' | 'running' | 'completed' | 'failed';
   runId?: string | null;
+  steps?: PublicDiagnosticStep[];
+  progressPercent?: number;
+  runResult?: PublicDiagnosticRunResult;
 }
 
 export const publicDiagnosticApi = {
-  create: (url: string) =>
+  create: (brandName: string, url: string) =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ brandName, url }),
     }),
   setEmail: (id: string, email: string) =>
     api<{ ok: boolean; emailSent?: boolean | null }>(`/api/public/diagnostic/${id}`, {
