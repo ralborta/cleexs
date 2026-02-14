@@ -104,6 +104,7 @@ function DashboardContent() {
     runId: data.latestRun?.id ?? '',
     periodStart: data.latestRun?.periodStart ?? new Date().toISOString(),
     periodEnd: data.latestRun?.periodEnd ?? new Date().toISOString(),
+    domain: row.type === 'brand' ? data.brand.domain : undefined,
   }));
 
   return (
@@ -130,7 +131,7 @@ function DashboardContent() {
             <CleexsTrendCard data={data.trend} />
           </div>
           <div className="lg:col-span-1">
-            <CompetitorComparisonCard data={data.comparison} />
+            <CompetitorComparisonCard data={data.comparison} brandDomain={data.brand.domain} />
           </div>
           <div className="lg:col-span-1">
             <BrandPerceptionCard />

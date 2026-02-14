@@ -9,11 +9,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { BarChart3 } from 'lucide-react';
 import { RankingEntry } from '@/lib/api';
 
+type RankingEntryWithLogo = RankingEntry & { domain?: string | null };
+
 interface BrandRankingCardProps {
-  data: RankingEntry[];
+  data: RankingEntryWithLogo[];
   title?: string;
   showCompetitors?: boolean;
   scoreColumnLabel?: string;
@@ -62,9 +65,12 @@ export function BrandRankingCard({
                     <TableCell className="font-medium text-foreground">{index + 1}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white text-xs font-semibold">
-                          {entry.brandName.charAt(0).toUpperCase()}
-                        </div>
+                        <BrandLogo
+                          name={entry.brandName}
+                          domain={entry.domain}
+                          size={32}
+                          className="ring-1 ring-primary-100"
+                        />
                         <span className="font-medium text-foreground">{entry.brandName}</span>
                       </div>
                     </TableCell>
@@ -87,9 +93,9 @@ export function BrandRankingCard({
         </Table>
 
         {!showCompetitors && (
-        <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
-          <div className="h-5 w-5 rounded bg-primary-50 flex items-center justify-center">
-              <span className="text-xs">O</span>
+          <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="h-5 w-5 rounded bg-primary-50 flex items-center justify-center">
+              <span className="text-xs font-medium text-primary-700">O</span>
             </div>
             <span>OpenAI</span>
           </div>

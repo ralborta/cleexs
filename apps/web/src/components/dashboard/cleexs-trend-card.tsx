@@ -1,10 +1,19 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
 import { PRIAReport } from '@/lib/api';
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface CleexsTrendCardProps {
   data: PRIAReport[];
@@ -20,7 +29,7 @@ export function CleexsTrendCard({ data, brandName }: CleexsTrendCardProps) {
       month: 'short',
       day: 'numeric',
     }),
-    'Cleexs Score': report.priaTotal,
+    score: report.priaTotal,
   }));
 
   const currentScore = data.length > 0 ? data[data.length - 1].priaTotal : 0;
@@ -29,72 +38,79 @@ export function CleexsTrendCard({ data, brandName }: CleexsTrendCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
+    <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold text-foreground">Tendencia Cleexs Score</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Métricas principales */}
+          {/* Métricas principales - estilo similar a imagen */}
           <div>
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-bold text-primary-700">
+            <div className="flex flex-wrap items-baseline gap-2 mb-1">
+              <span className="text-2xl font-bold text-foreground">
                 Cleexs Score actual: {currentScore.toFixed(0)}
               </span>
+              {change !== 0 && (
+                <span className={`inline-flex items-center gap-1 text-sm font-semibold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                  {isPositive ? 'Subió' : 'Bajó'} {isPositive ? '+' : ''}{change.toFixed(0)} frente al mes pasado
+                </span>
+              )}
             </div>
-            {change !== 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {isPositive ? 'Subió' : 'Bajó'} {Math.abs(change).toFixed(0)} frente al mes pasado
-                </span>
-                <span className={`text-sm font-semibold ${isPositive ? 'text-primary-700' : 'text-destructive'}`}>
-                  {isPositive ? '+' : ''}{change.toFixed(0)}
-                </span>
-              </div>
-            )}
           </div>
 
-          {/* Gráfico */}
-          <div className="h-[200px]">
+          {/* Gráfico con gradiente y área */}
+          <div className="h-[200px] -mx-1">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="cleexsScoreGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#818cf8" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                 <XAxis
                   dataKey="fecha"
-                  stroke="#475569"
-                  fontSize={12}
+                  stroke="#64748b"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
                   domain={[0, 100]}
-                  stroke="#475569"
-                  fontSize={12}
+                  stroke="#64748b"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
+                  width={32}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'white',
                     border: '1px solid #E2E8F0',
                     borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                   }}
+                  formatter={(value: number) => [value.toFixed(0), 'Cleexs Score']}
                 />
-                <Line
+                <ReferenceLine y={currentScore} stroke="#6366f1" strokeDasharray="4 4" strokeOpacity={0.5} />
+                <Area
                   type="monotone"
-                  dataKey="Cleexs Score"
-                  stroke="#2563EB"
-                  strokeWidth={3}
-                  dot={{ fill: '#2563EB', r: 4 }}
-                  activeDot={{ r: 6 }}
+                  dataKey="score"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#cleexsScoreGradient)"
+                  dot={{ fill: '#6366f1', r: 3, strokeWidth: 2, stroke: 'white' }}
+                  activeDot={{ r: 5, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
 
           {/* Descripción y selector */}
           <div className="flex items-center justify-between pt-2">
-            <p className="text-sm text-muted-foreground">Evolución de tu Cleexs Score</p>
+            <p className="text-sm text-muted-foreground">Analizá cómo avanza tu Cleexs Score en IA</p>
             <div className="relative">
               <select
                 value={timeRange}
