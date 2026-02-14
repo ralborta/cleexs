@@ -236,6 +236,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
       runResult?: {
+        brandId: string;
         brandName: string;
         cleexsScore: number;
         competitors: string[];
@@ -325,6 +326,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           if (fullRun) {
             const cleexsScore = run.priaReports[0].priaTotal;
             base.runResult = {
+              brandId: fullRun.brand.id,
               brandName: fullRun.brand.name,
               cleexsScore,
               competitors: fullRun.brand.competitors.map((c) => c.name),

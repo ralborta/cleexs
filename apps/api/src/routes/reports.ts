@@ -2,6 +2,60 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 
+const normalizeName = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, '')
+    .trim();
+
+interface ComparisonRow {
+  name: string;
+  type: string;
+  appearances: number;
+  averagePosition: number;
+  share: number;
+  sampleReason?: string;
+}
+
+function buildComparisonSummary(
+  promptResults: Array<{ top3Json: unknown }>
+): ComparisonRow[] {
+  const totals = new Map<
+    string,
+    { name: string; type: string; count: number; positionSum: number; sampleReason?: string }
+  >();
+  let totalEntries = 0;
+  for (const result of promptResults) {
+    const top3 = (result.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>) || [];
+    for (const entry of top3) {
+      totalEntries += 1;
+      const key = `${normalizeName(entry.name)}|${entry.type}`;
+      const current = totals.get(key) || {
+        name: entry.name,
+        type: entry.type,
+        count: 0,
+        positionSum: 0,
+      };
+      totals.set(key, {
+        ...current,
+        count: current.count + 1,
+        positionSum: current.positionSum + entry.position,
+        sampleReason: current.sampleReason || entry.reason,
+      });
+    }
+  }
+  return Array.from(totals.values()).map((row) => ({
+    name: row.name,
+    type: row.type,
+    appearances: row.count,
+    averagePosition: row.count ? row.positionSum / row.count : 0,
+    share: totalEntries ? (row.count / totalEntries) * 100 : 0,
+    sampleReason: row.sampleReason,
+  }));
+}
+
 const reportRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /reports/pria?brandId=...&versionId=...&startDate=...&endDate=...
   fastify.get<{
@@ -189,6 +243,75 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       .sort((a, b) => b.pria - a.pria);
 
     return ranking;
+  });
+
+  // GET /reports/brand-dashboard?brandId=... — dashboard centrado en una marca
+  fastify.get<{
+    Querystring: { brandId: string };
+  }>('/brand-dashboard', async (request, reply) => {
+    const { brandId } = request.query;
+
+    const brand = await prisma.brand.findUnique({
+      where: { id: brandId },
+      include: {
+        aliases: true,
+        competitors: true,
+      },
+    });
+
+    if (!brand) {
+      return reply.code(404).send({ error: 'Marca no encontrada' });
+    }
+
+    // Último run completado de esta marca
+    const latestRun = await prisma.run.findFirst({
+      where: { brandId, status: 'completed' },
+      include: {
+        promptResults: {
+          include: { prompt: { include: { category: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        priaReports: { take: 1, orderBy: { createdAt: 'desc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const cleexsScore = latestRun?.priaReports?.[0]?.priaTotal ?? 0;
+    const comparison = latestRun
+      ? buildComparisonSummary(latestRun.promptResults.map((pr) => ({ top3Json: pr.top3Json })))
+      : [];
+
+    // PRIA reports para tendencia (histórico)
+    const priaReports = await prisma.pRIAReport.findMany({
+      where: { brandId },
+      include: {
+        run: {
+          include: { brand: { select: { id: true, name: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    return {
+      brand: {
+        id: brand.id,
+        name: brand.name,
+        domain: brand.domain,
+        industry: brand.industry,
+        competitors: brand.competitors.map((c) => ({ id: c.id, name: c.name })),
+      },
+      cleexsScore,
+      comparison,
+      latestRun: latestRun
+        ? {
+            id: latestRun.id,
+            periodStart: latestRun.periodStart,
+            periodEnd: latestRun.periodEnd,
+          }
+        : null,
+      trend: priaReports.reverse(), // orden cronológico para el gráfico
+    };
   });
 };
 

@@ -9,20 +9,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { RankingEntry } from '@/lib/api';
 
 interface BrandRankingCardProps {
   data: RankingEntry[];
   title?: string;
   showCompetitors?: boolean;
+  scoreColumnLabel?: string;
 }
 
 export function BrandRankingCard({
   data,
   title = 'Ranking de marcas',
   showCompetitors = false,
+  scoreColumnLabel,
 }: BrandRankingCardProps) {
+  const scoreLabel = scoreColumnLabel ?? (showCompetitors ? '% en Top 3' : 'Cleexs Score');
   return (
     <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
@@ -42,7 +45,7 @@ export function BrandRankingCard({
             <TableRow className="border-b border-border bg-primary-50/80">
               <TableHead className="w-[50px] text-muted-foreground font-medium">#</TableHead>
               <TableHead className="text-muted-foreground font-medium">Marca</TableHead>
-              <TableHead className="text-right text-muted-foreground font-medium">Cleexs Score</TableHead>
+              <TableHead className="text-right text-muted-foreground font-medium">{scoreLabel}</TableHead>
               <TableHead className="text-right text-muted-foreground font-medium">Ranking</TableHead>
             </TableRow>
           </TableHeader>
@@ -54,12 +57,7 @@ export function BrandRankingCard({
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((entry, index) => {
-                // Mock data para cambios (en producción vendría de la API)
-                const change = Math.floor(Math.random() * 10) - 5;
-                const isPositive = change > 0;
-
-                return (
+              data.map((entry, index) => (
                   <TableRow key={entry.brandId} className="hover:bg-primary-50/60">
                     <TableCell className="font-medium text-foreground">{index + 1}</TableCell>
                     <TableCell>
@@ -71,33 +69,19 @@ export function BrandRankingCard({
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-semibold text-foreground">
-                          {entry.pria.toFixed(0)}
-                        </span>
-                        {change !== 0 && (
-                          <div className={`flex items-center gap-1 text-xs ${isPositive ? 'text-primary-700' : 'text-accent-700'}`}>
-                            {isPositive ? (
-                              <TrendingUp className="h-3 w-3" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3" />
-                            )}
-                            <span>{Math.abs(change)}</span>
-                          </div>
-                        )}
-                      </div>
+                      <span className="font-semibold text-foreground">
+                        {entry.pria.toFixed(showCompetitors ? 1 : 0)}
+                        {showCompetitors && '%'}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <span className="font-medium text-foreground">#{index + 1}</span>
-                        {index < 3 && (
-                          <span className="h-2 w-2 rounded-full bg-accent-600"></span>
-                        )}
-                      </div>
+                      <span className="font-medium text-foreground">#{index + 1}</span>
+                      {index < 3 && (
+                        <span className="ml-1 inline-block h-2 w-2 rounded-full bg-accent-600" />
+                      )}
                     </TableCell>
                   </TableRow>
-                );
-              })
+                ))
             )}
           </TableBody>
         </Table>

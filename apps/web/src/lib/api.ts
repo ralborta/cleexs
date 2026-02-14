@@ -214,7 +214,26 @@ export const reportsApi = {
     if (periodEnd) params.append('periodEnd', periodEnd);
     return api<RankingEntry[]>(`/api/reports/ranking?${params.toString()}`);
   },
+  getBrandDashboard: (brandId: string) =>
+    api<BrandDashboard>(`/api/reports/brand-dashboard?brandId=${brandId}`),
 };
+
+export interface BrandDashboardComparisonRow {
+  name: string;
+  type: string;
+  appearances: number;
+  averagePosition: number;
+  share: number;
+  sampleReason?: string;
+}
+
+export interface BrandDashboard {
+  brand: { id: string; name: string; domain?: string; industry?: string; competitors: { id: string; name: string }[] };
+  cleexsScore: number;
+  comparison: BrandDashboardComparisonRow[];
+  latestRun: { id: string; periodStart: string; periodEnd: string } | null;
+  trend: PRIAReport[];
+}
 
 // Diagnóstico público (flujo sin login)
 export interface PublicDiagnosticStep {
@@ -233,6 +252,7 @@ export interface PublicDiagnosticPromptResult {
 }
 
 export interface PublicDiagnosticRunResult {
+  brandId?: string;
   brandName: string;
   cleexsScore: number;
   competitors: string[];
