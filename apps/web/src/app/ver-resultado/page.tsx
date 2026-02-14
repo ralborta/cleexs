@@ -440,15 +440,15 @@ function VerResultadoContent() {
                     Creá una cuenta o iniciá sesión para guardar resultados y hacer más análisis.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <Link href={runResult?.brandId ? `/dashboard?brandId=${runResult.brandId}` : '/dashboard'}>
-                      <Button>
+                    <Button asChild>
+                      <Link href={runResult?.brandId ? `/dashboard?brandId=${runResult.brandId}` : '/dashboard'}>
                         <LogIn className="mr-2 h-4 w-4" />
                         Ir al dashboard
-                      </Button>
-                    </Link>
-                    <Link href="/diagnostico">
-                      <Button variant="outline">Otro diagnóstico</Button>
-                    </Link>
+                      </Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <Link href="/diagnostico">Otro diagnóstico</Link>
+                    </Button>
                   </div>
                 </div>
               </>

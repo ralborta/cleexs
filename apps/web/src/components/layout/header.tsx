@@ -60,7 +60,7 @@ export function Header() {
               Proyectos
             </Link>
             <Link
-              href="/reports"
+              href="/runs"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Reportes
