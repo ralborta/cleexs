@@ -9,41 +9,53 @@ interface BrandLogoProps {
   className?: string;
 }
 
-/** Intenta mostrar logo via Clearbit; fallback a inicial estilizada */
+function normalizeDomain(input: string | undefined | null): string | null {
+  let d = input?.trim();
+  if (!d) return null;
+  try {
+    if (d.startsWith('http')) d = new URL(d).hostname;
+    if (d.startsWith('www.')) d = d.slice(4);
+    return d || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Logos: Logo.dev (si hay token), Google Favicon (fallback), o inicial */
 export function BrandLogo({ name, domain, size = 32, className = '' }: BrandLogoProps) {
   const [imgError, setImgError] = useState(false);
 
-  let cleanDomain = domain?.trim();
-  if (cleanDomain) {
-    try {
-      if (cleanDomain.startsWith('http')) {
-        cleanDomain = new URL(cleanDomain).hostname;
-      }
-      // Quitar www. para mejor resultado en Clearbit
-      if (cleanDomain.startsWith('www.')) {
-        cleanDomain = cleanDomain.slice(4);
-      }
-    } catch {
-      cleanDomain = undefined;
+  const logoDevToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+  const cleanDomain = normalizeDomain(domain);
+
+  // 1. Logo.dev: dominio o búsqueda por nombre (5k gratis/día en logo.dev)
+  let logoUrl: string | null = null;
+  if (logoDevToken) {
+    if (cleanDomain) {
+      logoUrl = `https://img.logo.dev/${encodeURIComponent(cleanDomain)}?token=${logoDevToken}&size=${size}`;
+    } else if (name?.trim()) {
+      logoUrl = `https://img.logo.dev/name/${encodeURIComponent(name.trim())}?token=${logoDevToken}&size=${size}`;
     }
   }
-  const clearbitUrl = cleanDomain
-    ? `https://logo.clearbit.com/${encodeURIComponent(cleanDomain)}`
-    : null;
+  // 2. Google Favicon: solo cuando tenemos dominio (gratis, sin API key)
+  else if (cleanDomain) {
+    logoUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(cleanDomain)}&sz=${Math.min(size, 256)}`;
+  }
 
-  const initial = name.charAt(0).toUpperCase();
+  const initial = name?.charAt(0)?.toUpperCase() || '?';
 
-  if (clearbitUrl && !imgError) {
+  if (logoUrl && !imgError) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- Clearbit logos son URLs externas dinámicas
+      // eslint-disable-next-line @next/next/no-img-element -- URLs dinámicas externas (Logo.dev, Google)
       <img
-        src={clearbitUrl}
+        src={logoUrl}
         alt={name}
         width={size}
         height={size}
         className={`rounded-lg object-contain bg-white shrink-0 ${className}`}
         onError={() => setImgError(true)}
         style={{ minWidth: size, minHeight: size }}
+        loading="lazy"
       />
     );
   }
