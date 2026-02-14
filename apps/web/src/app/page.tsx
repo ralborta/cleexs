@@ -10,7 +10,7 @@ export default function Home() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white px-4 py-2 text-sm text-primary-700 shadow-sm">
             <Sparkles className="h-4 w-4" />
-            Nuevo PRIA Platform
+            Nuevo Cleexs
           </div>
           <div className="flex items-center justify-center gap-3 mt-6 mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 shadow-lg">
@@ -46,7 +46,7 @@ export default function Home() {
             </div>
             <h1 className="text-5xl font-bold tracking-tight text-foreground">Cleexs</h1>
           </div>
-          <p className="text-xl text-muted-foreground mb-2">PRIA Platform</p>
+          <p className="text-xl text-muted-foreground mb-2">Plataforma de Cleexs Score</p>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Medí qué tan recomendado aparece tu producto en ChatGPT, con evidencia auditable y
             comparaciones consistentes.
@@ -85,7 +85,7 @@ export default function Home() {
                 Dashboard
               </CardTitle>
               <CardDescription>
-                Visualizá rankings, tendencias y análisis de PRIA con estilo ejecutivo.
+                Visualizá rankings, tendencias y Cleexs Score con estilo ejecutivo.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">

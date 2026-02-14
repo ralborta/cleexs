@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { BrandRankingCard } from '@/components/dashboard/brand-ranking-card';
-import { PRIATrendCard } from '@/components/dashboard/pria-trend-card';
+import { CleexsTrendCard } from '@/components/dashboard/cleexs-trend-card';
 import { PromptRankingCard } from '@/components/dashboard/prompt-ranking-card';
 import { CompetitorComparisonCard } from '@/components/dashboard/competitor-comparison-card';
 import { BrandPerceptionCard } from '@/components/dashboard/brand-perception-card';
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           <p className="text-sm font-medium text-primary-700">Vista general</p>
           <h1 className="text-3xl font-bold text-foreground">Panel</h1>
           <p className="text-muted-foreground">
-            Visualizá el estado de tu PRIA con rankings, tendencias y percepción de marca.
+            Visualizá el estado de tu Cleexs Score con rankings, tendencias y percepción de marca.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export default function DashboardPage() {
             <BrandRankingCard data={ranking} />
           </div>
           <div className="lg:col-span-1">
-            <PRIATrendCard data={trend} />
+            <CleexsTrendCard data={trend} />
           </div>
           <div className="lg:col-span-1">
             <PromptRankingCard prompts={prompts} />

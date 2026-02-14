@@ -16,15 +16,15 @@ export function TrendChart({ data, brandName }: TrendChartProps) {
       month: 'short',
       year: 'numeric',
     }),
-    PRIA: report.priaTotal,
+    'Cleexs Score': report.priaTotal,
     marca: brandName || report.run.brand.name,
   }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tendencia PRIA</CardTitle>
-        <CardDescription>Evolución del índice PRIA en el tiempo</CardDescription>
+        <CardTitle>Tendencia Cleexs Score</CardTitle>
+        <CardDescription>Evolución del Cleexs Score en el tiempo</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -34,7 +34,7 @@ export function TrendChart({ data, brandName }: TrendChartProps) {
             <YAxis domain={[0, 100]} />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="PRIA" stroke="#8884d8" strokeWidth={2} />
+            <Line type="monotone" dataKey="Cleexs Score" stroke="#8884d8" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>

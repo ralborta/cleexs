@@ -63,7 +63,7 @@ export default function RunsPage() {
       await runsApi.execute(runId, { model: 'gpt-4o-mini' });
       const data = await runsApi.list(tenantId);
       setRuns(data);
-      setNotice({ type: 'success', message: 'Run ejecutado y PRIA actualizado.' });
+      setNotice({ type: 'success', message: 'Run ejecutado y Cleexs Score actualizado.' });
     } catch (error: any) {
       setNotice({ type: 'error', message: error?.message || 'No se pudo ejecutar el run.' });
     } finally {
@@ -154,7 +154,7 @@ export default function RunsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-xl text-foreground">Lista de Runs</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Corridas de análisis por marca y período, con estado y PRIA agregado.
+            Corridas de análisis por marca y período, con estado y Cleexs Score agregado.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -182,7 +182,7 @@ export default function RunsPage() {
                 <TableHead className="text-muted-foreground font-semibold">Marca</TableHead>
                 <TableHead className="text-muted-foreground font-semibold">Período</TableHead>
                 <TableHead className="text-muted-foreground font-semibold">Estado</TableHead>
-                <TableHead className="text-right text-muted-foreground font-semibold">PRIA</TableHead>
+                <TableHead className="text-right text-muted-foreground font-semibold">Cleexs Score</TableHead>
                 <TableHead className="text-muted-foreground font-semibold">Acciones</TableHead>
               </TableRow>
             </TableHeader>

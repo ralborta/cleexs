@@ -98,7 +98,7 @@ export default function AddResultPage() {
           <p className="text-sm font-medium text-primary-700">Carga manual</p>
           <h1 className="text-3xl font-bold text-foreground">Agregar Resultado Manual</h1>
           <p className="text-muted-foreground">
-            Pegá la respuesta completa de ChatGPT para que el sistema detecte el Top 3 y calcule PRIA.
+            Pegá la respuesta completa de ChatGPT para que el sistema detecte el Top 3 y calcule el Cleexs Score.
           </p>
         </div>
 

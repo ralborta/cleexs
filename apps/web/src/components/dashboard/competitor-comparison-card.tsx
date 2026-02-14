@@ -31,7 +31,7 @@ export function CompetitorComparisonCard({
           <CardTitle className="text-lg font-semibold text-foreground">Comparación con competidores</CardTitle>
         </div>
         <CardDescription className="text-sm text-muted-foreground mt-1">
-          Compará tu PRIA con tus principales competidores.
+          Compará tu Cleexs Score con tus principales competidores.
         </CardDescription>
       </CardHeader>
       <CardContent>

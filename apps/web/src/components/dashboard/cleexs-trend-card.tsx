@@ -1,38 +1,37 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PRIAReport } from '@/lib/api';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-interface PRIATrendCardProps {
+interface CleexsTrendCardProps {
   data: PRIAReport[];
   brandName?: string;
 }
 
-export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
+export function CleexsTrendCard({ data, brandName }: CleexsTrendCardProps) {
   const [timeRange, setTimeRange] = useState('Últimos 30 días');
 
-  // Preparar datos para el gráfico
+  // Preparar datos para el gráfico (priaTotal = Cleexs Score en backend)
   const chartData = data.map((report) => ({
     fecha: new Date(report.run.periodStart).toLocaleDateString('es-AR', {
       month: 'short',
       day: 'numeric',
     }),
-    PRIA: report.priaTotal,
+    'Cleexs Score': report.priaTotal,
   }));
 
-  // Calcular PRIA actual y cambio
-  const currentPRIA = data.length > 0 ? data[data.length - 1].priaTotal : 0;
-  const previousPRIA = data.length > 1 ? data[data.length - 2].priaTotal : currentPRIA;
-  const change = currentPRIA - previousPRIA;
+  const currentScore = data.length > 0 ? data[data.length - 1].priaTotal : 0;
+  const previousScore = data.length > 1 ? data[data.length - 2].priaTotal : currentScore;
+  const change = currentScore - previousScore;
   const isPositive = change >= 0;
 
   return (
     <Card className="border-transparent bg-white shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-foreground">Tendencia PRIA</CardTitle>
+        <CardTitle className="text-lg font-semibold text-foreground">Tendencia Cleexs Score</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -40,7 +39,7 @@ export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
           <div>
             <div className="flex items-baseline gap-2 mb-1">
               <span className="text-3xl font-bold text-primary-700">
-                PRIA actual: {currentPRIA.toFixed(0)}%
+                Cleexs Score actual: {currentScore.toFixed(0)}
               </span>
             </div>
             {change !== 0 && (
@@ -83,7 +82,7 @@ export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
                 />
                 <Line
                   type="monotone"
-                  dataKey="PRIA"
+                  dataKey="Cleexs Score"
                   stroke="#2563EB"
                   strokeWidth={3}
                   dot={{ fill: '#2563EB', r: 4 }}
@@ -95,7 +94,7 @@ export function PRIATrendCard({ data, brandName }: PRIATrendCardProps) {
 
           {/* Descripción y selector */}
           <div className="flex items-center justify-between pt-2">
-            <p className="text-sm text-muted-foreground">Analizá cómo avanza tu PRIA en IA</p>
+            <p className="text-sm text-muted-foreground">Evolución de tu Cleexs Score</p>
             <div className="relative">
               <select
                 value={timeRange}

@@ -19,8 +19,8 @@ export function RankingTable({ data }: RankingTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ranking PRIA</CardTitle>
-        <CardDescription>Comparación de marcas por índice PRIA</CardDescription>
+        <CardTitle>Ranking Cleexs Score</CardTitle>
+        <CardDescription>Comparación de marcas por Cleexs Score</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -28,7 +28,7 @@ export function RankingTable({ data }: RankingTableProps) {
             <TableRow>
               <TableHead className="w-[50px]">#</TableHead>
               <TableHead>Marca</TableHead>
-              <TableHead className="text-right">PRIA</TableHead>
+              <TableHead className="text-right">Cleexs Score</TableHead>
               <TableHead className="text-right">Período</TableHead>
             </TableRow>
           </TableHeader>

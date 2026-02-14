@@ -32,7 +32,7 @@ export function BrandRankingCard({
         </div>
         {showCompetitors && (
           <CardDescription className="text-sm text-muted-foreground mt-1">
-            Compará tu PRIA con tus principales competidores.
+            Compará tu Cleexs Score con tus principales competidores.
           </CardDescription>
         )}
       </CardHeader>
@@ -42,7 +42,7 @@ export function BrandRankingCard({
             <TableRow className="border-b border-border bg-primary-50/80">
               <TableHead className="w-[50px] text-muted-foreground font-medium">#</TableHead>
               <TableHead className="text-muted-foreground font-medium">Marca</TableHead>
-              <TableHead className="text-right text-muted-foreground font-medium">PRIA</TableHead>
+              <TableHead className="text-right text-muted-foreground font-medium">Cleexs Score</TableHead>
               <TableHead className="text-right text-muted-foreground font-medium">Ranking</TableHead>
             </TableRow>
           </TableHeader>
