@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -16,18 +16,28 @@ export default function DiagnosticoPage() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return;
+    (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess = (token: string) => {
+      setTurnstileToken(token);
+      setError(null);
+    };
+    (window as Window & { __onTurnstileExpire?: () => void }).__onTurnstileExpire = () => {
+      setTurnstileToken(null);
+    };
+    return () => {
+      delete (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess;
+      delete (window as Window & { __onTurnstileExpire?: () => void }).__onTurnstileExpire;
+    };
+  }, []);
 
   function normalizeUrl(input: string): string {
     const trimmed = input.trim();
     if (!trimmed) return trimmed;
     if (/^https?:\/\//i.test(trimmed)) return trimmed;
     return `https://${trimmed}`;
-  }
-
-  function getTurnstileToken(): string | null {
-    if (!TURNSTILE_SITE_KEY) return null;
-    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[name="cf-turnstile-response"]');
-    return textarea?.value?.trim() || null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -38,18 +48,14 @@ export default function DiagnosticoPage() {
       setError('Ingresá el nombre de tu marca');
       return;
     }
-    if (TURNSTILE_SITE_KEY) {
-      const token = getTurnstileToken();
-      if (!token) {
-        setError('Completá la verificación de seguridad antes de continuar.');
-        return;
-      }
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError('Completá la verificación de seguridad antes de continuar.');
+      return;
     }
     setLoading(true);
     try {
       const trimmedUrl = url.trim();
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const turnstileToken = getTurnstileToken();
       const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend, turnstileToken ?? undefined);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
@@ -118,6 +124,8 @@ export default function DiagnosticoPage() {
                       data-sitekey={TURNSTILE_SITE_KEY}
                       data-theme="light"
                       data-size="normal"
+                      data-callback="__onTurnstileSuccess"
+                      data-expired-callback="__onTurnstileExpire"
                     />
                   </div>
                 </>
