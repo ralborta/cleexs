@@ -273,10 +273,14 @@ export interface PublicDiagnostic {
 }
 
 export const publicDiagnosticApi = {
-  create: (brandName: string, url?: string) =>
+  create: (brandName: string, url?: string, turnstileToken?: string) =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
-      body: JSON.stringify({ brandName, url: url || undefined }),
+      body: JSON.stringify({
+        brandName,
+        url: url || undefined,
+        turnstileToken: turnstileToken || undefined,
+      }),
     }),
   setEmail: (id: string, email: string) =>
     api<{ ok: boolean; emailSent?: boolean | null }>(`/api/public/diagnostic/${id}`, {

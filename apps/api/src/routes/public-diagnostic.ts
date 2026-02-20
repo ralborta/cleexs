@@ -32,14 +32,31 @@ function slugify(text: string): string {
 }
 
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
+  async function verifyTurnstileToken(token: string, remoteip?: string): Promise<boolean> {
+    const secret = process.env.TURNSTILE_SECRET_KEY;
+    if (!secret) return true;
+    try {
+      const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, response: token, remoteip }),
+      });
+      const data = (await res.json()) as { success?: boolean };
+      return !!data.success;
+    } catch {
+      return false;
+    }
+  }
+
   // POST /api/public/diagnostic — marca (obligatoria) + url (opcional). IA determina industria y 5 competidores antes del run.
   fastify.post<{
-    Body: { brandName: string; url?: string };
+    Body: { brandName: string; url?: string; turnstileToken?: string };
   }>('/diagnostic', async (request, reply) => {
     try {
       const schema = z.object({
         brandName: z.string().min(1).max(200),
         url: z.union([z.string().max(500), z.undefined()]).optional(),
+        turnstileToken: z.union([z.string().max(2500), z.undefined()]).optional(),
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -47,8 +64,28 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
         });
       }
-      const { brandName, url } = parsed.data;
+      const { brandName, url, turnstileToken } = parsed.data;
       const trimmedBrand = brandName.trim();
+
+      const secret = process.env.TURNSTILE_SECRET_KEY;
+      if (secret) {
+        if (!turnstileToken?.trim()) {
+          return reply.code(400).send({
+            error: 'Falta la verificación de seguridad. Recargá la página e intentá de nuevo.',
+            code: 'CAPTCHA_MISSING',
+          });
+        }
+        const ok = await verifyTurnstileToken(
+          turnstileToken.trim(),
+          request.ip
+        );
+        if (!ok) {
+          return reply.code(400).send({
+            error: 'La verificación de seguridad falló. Probá de nuevo.',
+            code: 'CAPTCHA_FAILED',
+          });
+        }
+      }
 
       let domain: string;
       if (url && typeof url === 'string' && url.trim()) {

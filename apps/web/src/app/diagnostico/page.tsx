@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
 import { Search } from 'lucide-react';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function DiagnosticoPage() {
   const router = useRouter();
@@ -21,6 +24,12 @@ export default function DiagnosticoPage() {
     return `https://${trimmed}`;
   }
 
+  function getTurnstileToken(): string | null {
+    if (!TURNSTILE_SITE_KEY) return null;
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[name="cf-turnstile-response"]');
+    return textarea?.value?.trim() || null;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -29,18 +38,28 @@ export default function DiagnosticoPage() {
       setError('Ingresá el nombre de tu marca');
       return;
     }
+    if (TURNSTILE_SITE_KEY) {
+      const token = getTurnstileToken();
+      if (!token) {
+        setError('Completá la verificación de seguridad antes de continuar.');
+        return;
+      }
+    }
     setLoading(true);
     try {
       const trimmedUrl = url.trim();
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend);
+      const turnstileToken = getTurnstileToken();
+      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend, turnstileToken ?? undefined);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       setError(
         msg === 'Not Found' || msg.includes('404')
           ? 'No se pudo conectar con el servicio. Probá de nuevo en unos minutos.'
-          : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
+          : msg === 'CAPTCHA_FAILED' || msg.includes('captcha')
+            ? 'La verificación de seguridad falló. Probá de nuevo.'
+            : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
       );
       setLoading(false);
     }
@@ -87,6 +106,22 @@ export default function DiagnosticoPage() {
                   disabled={loading}
                 />
               </div>
+              {TURNSTILE_SITE_KEY && (
+                <>
+                  <Script
+                    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+                    strategy="lazyOnload"
+                  />
+                  <div className="flex justify-center min-h-[65px]">
+                    <div
+                      className="cf-turnstile"
+                      data-sitekey={TURNSTILE_SITE_KEY}
+                      data-theme="light"
+                      data-size="normal"
+                    />
+                  </div>
+                </>
+              )}
               {error && (
                 <p className="text-sm text-destructive" role="alert">
                   {error}
