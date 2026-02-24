@@ -23,7 +23,14 @@ export function isEmailConfigured(): boolean {
 /** Análisis con IA para incluir en el email del diagnóstico */
 export interface DiagnosticAnalysisForEmail {
   resumenEjecutivo?: string;
-  comentariosPorIntencion?: Array<{ intencion: string; comentario: string; score: number }>;
+  contextoCompetitivo?: string;
+  comentariosPorIntencion?: Array<{
+    intencion: string;
+    comentario: string;
+    score: number;
+    interpretacion?: string;
+  }>;
+  aspectosAdicionales?: string;
   fortalezas?: string[];
   debilidades?: string[];
   sugerencias?: string[];
@@ -35,13 +42,23 @@ function buildAnalysisText(analysis: DiagnosticAnalysisForEmail): string {
   if (analysis.resumenEjecutivo) {
     parts.push('RESUMEN EJECUTIVO\n' + analysis.resumenEjecutivo);
   }
+  if (analysis.contextoCompetitivo) {
+    parts.push('CONTEXTO COMPETITIVO\n' + analysis.contextoCompetitivo);
+  }
   if (analysis.comentariosPorIntencion?.length) {
     parts.push(
-      'COMENTARIOS POR INTENCIÓN\n' +
+      'ANÁLISIS POR INTENCIÓN (Urgencia, Calidad, Precio, Consideración)\n' +
         analysis.comentariosPorIntencion
-          .map((c) => `• ${c.intencion} (Score: ${c.score}): ${c.comentario}`)
-          .join('\n')
+          .map((c) => {
+            let block = `${c.intencion} (Score: ${c.score})\n${c.comentario}`;
+            if (c.interpretacion) block += `\n${c.interpretacion}`;
+            return block;
+          })
+          .join('\n\n')
     );
+  }
+  if (analysis.aspectosAdicionales) {
+    parts.push('OTROS ASPECTOS RELEVANTES\n' + analysis.aspectosAdicionales);
   }
   if (analysis.fortalezas?.length) {
     parts.push('FORTALEZAS\n' + analysis.fortalezas.map((f) => `• ${f}`).join('\n'));
@@ -71,16 +88,29 @@ function buildAnalysisHtml(analysis: DiagnosticAnalysisForEmail): string {
   const sections: string[] = [];
   if (analysis.resumenEjecutivo) {
     sections.push(
-      `<div style="margin-bottom: 20px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Resumen ejecutivo</p><p style="line-height: 1.6; color: #374151;">${escapeHtml(analysis.resumenEjecutivo).replace(/\n/g, '<br>')}</p></div>`
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Resumen ejecutivo</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(analysis.resumenEjecutivo).replace(/\n/g, '<br>')}</p></div>`
+    );
+  }
+  if (analysis.contextoCompetitivo) {
+    sections.push(
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Contexto competitivo</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(analysis.contextoCompetitivo).replace(/\n/g, '<br>')}</p></div>`
     );
   }
   if (analysis.comentariosPorIntencion?.length) {
     sections.push(
-      `<div style="margin-bottom: 20px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Comentarios por intención</p><ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #374151;">` +
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Análisis por intención (Urgencia, Calidad, Precio, Consideración)</p><div style="line-height: 1.7; color: #374151;">` +
         analysis.comentariosPorIntencion
-          .map((c) => `<li><strong>${escapeHtml(c.intencion)}</strong> (${c.score}): ${escapeHtml(c.comentario)}</li>`)
+          .map(
+            (c) =>
+              `<div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #3b82f6;"><p style="margin: 0 0 8px 0;"><strong>${escapeHtml(c.intencion)}</strong> — Score: ${c.score}</p><p style="margin: 0 0 6px 0;">${escapeHtml(c.comentario).replace(/\n/g, '<br>')}</p>${c.interpretacion ? `<p style="margin: 0; font-size: 14px; color: #4b5563;">${escapeHtml(c.interpretacion).replace(/\n/g, '<br>')}</p>` : ''}</div>`
+          )
           .join('') +
-        '</ul></div>'
+        '</div></div>'
+    );
+  }
+  if (analysis.aspectosAdicionales) {
+    sections.push(
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Otros aspectos relevantes</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(analysis.aspectosAdicionales).replace(/\n/g, '<br>')}</p></div>`
     );
   }
   if (analysis.fortalezas?.length) {
