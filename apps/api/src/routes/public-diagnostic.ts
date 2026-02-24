@@ -5,6 +5,7 @@ import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/e
 import { executeRun } from '../lib/run-executor';
 import { determineIndustry, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
+import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 
 function normalizeDomain(url: string): string {
   try {
@@ -170,9 +171,41 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
         await executeRun(run.id, { promptVersionId: promptVersion.id });
 
+        let analysisJson: object | null = null;
+        try {
+          const fullRun = await prisma.run.findUnique({
+            where: { id: run.id },
+            include: {
+              promptResults: {
+                include: { prompt: { select: { promptText: true } } },
+                orderBy: { createdAt: 'asc' },
+              },
+              brand: { include: { competitors: true } },
+            },
+          });
+          const priaReport = await prisma.pRIAReport.findFirst({
+            where: { runId: run.id },
+            orderBy: { createdAt: 'desc' },
+          });
+          if (fullRun && priaReport) {
+            const ctx = buildRunContext({
+              run: fullRun,
+              priaReport,
+              industry: industry || diagnostic.industry || 'General',
+            });
+            const analysis = await generateDiagnosticAnalysis(ctx);
+            if (analysis) analysisJson = analysis;
+          }
+        } catch (analysisErr) {
+          fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');
+        }
+
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
-          data: { status: 'completed' },
+          data: {
+            status: 'completed',
+            ...(analysisJson != null ? { analysisJson: analysisJson as object } : {}),
+          },
         });
 
         const current = await prisma.publicDiagnostic.findUnique({
@@ -182,7 +215,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
           try {
             if (!isEmailDisabled() && isEmailConfigured()) {
-              await sendDiagnosticLink(current.email, diagnostic.id, baseUrl);
+              await sendDiagnosticLink(
+                current.email,
+                diagnostic.id,
+                baseUrl,
+                analysisJson ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail) : null
+              );
               fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
             }
           } catch (mailErr) {
@@ -234,7 +272,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       try {
         if (!isEmailDisabled() && isEmailConfigured()) {
-          await sendDiagnosticLink(email, id, baseUrl);
+          const analysis =
+            diagnostic.analysisJson && typeof diagnostic.analysisJson === 'object' && !Array.isArray(diagnostic.analysisJson)
+              ? (diagnostic.analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
+              : null;
+          await sendDiagnosticLink(email, id, baseUrl, analysis);
           emailSent = true;
         } else {
           emailSent = false;
