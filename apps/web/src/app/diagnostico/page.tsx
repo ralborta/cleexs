@@ -17,19 +17,31 @@ export default function DiagnosticoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;
     (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess = (token: string) => {
       setTurnstileToken(token);
       setError(null);
+      setTurnstileError(null);
     };
     (window as Window & { __onTurnstileExpire?: () => void }).__onTurnstileExpire = () => {
       setTurnstileToken(null);
     };
+    (window as Window & { __onTurnstileError?: (errorCode?: string | number) => void }).__onTurnstileError = (errorCode?: string | number) => {
+      setTurnstileToken(null);
+      const code = String(errorCode ?? '');
+      if (code.includes('110200')) {
+        setTurnstileError('Dominio no autorizado. Agregalo en Cloudflare Dashboard → Turnstile → tu widget → Hostname Management.');
+      } else {
+        setTurnstileError('La verificación no pudo cargar. Probá en otra red o desactivá extensiones/bloqueadores.');
+      }
+    };
     return () => {
       delete (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess;
       delete (window as Window & { __onTurnstileExpire?: () => void }).__onTurnstileExpire;
+      delete (window as Window & { __onTurnstileError?: (errorCode?: string | number) => void }).__onTurnstileError;
     };
   }, []);
 
@@ -49,7 +61,7 @@ export default function DiagnosticoPage() {
       return;
     }
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      setError('Completá la verificación de seguridad antes de continuar.');
+      setError(turnstileError || 'Completá la verificación de seguridad antes de continuar.');
       return;
     }
     setLoading(true);
@@ -137,8 +149,14 @@ export default function DiagnosticoPage() {
                       data-size="normal"
                       data-callback="__onTurnstileSuccess"
                       data-expired-callback="__onTurnstileExpire"
+                      data-error-callback="__onTurnstileError"
                     />
                   </div>
+                  {turnstileError && (
+                    <p className="text-sm text-amber-600 bg-amber-50 rounded-md px-3 py-2">
+                      {turnstileError}
+                    </p>
+                  )}
                 </>
               )}
               {error && (
