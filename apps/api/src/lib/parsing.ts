@@ -116,8 +116,9 @@ const MAX_REASON_LENGTH = 500;
 function extractReasonFromLine(line: string, brandName: string): string | undefined {
   const idx = line.toLowerCase().indexOf(brandName.toLowerCase());
   if (idx === -1) return undefined;
-  const after = line.slice(idx + brandName.length).replace(/^[\s\-:–—•]+/, '').trim();
-  if (!after) return undefined;
+  let after = line.slice(idx + brandName.length).replace(/^[\s\-:–—•]+/, '').trim();
+  after = after.replace(/\*+/g, '').trim(); // quitar markdown **
+  if (!after || after.length < 2) return undefined;
   return after.length > MAX_REASON_LENGTH ? after.slice(0, MAX_REASON_LENGTH).trim() : after;
 }
 

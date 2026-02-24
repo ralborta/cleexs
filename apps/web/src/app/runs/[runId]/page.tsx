@@ -94,11 +94,11 @@ const normalizeIntentionKey = (value: string) => {
 const INTENTION_LABELS: Record<string, { label: string; description: string }> = {
   urgencia: {
     label: 'Urgencia',
-    description: 'Mide cómo ChatGPT te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta rápida).',
+    description: 'Mide cómo la IA te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta rápida).',
   },
   consideracion: {
     label: 'Consideración',
-    description: 'Mide cómo ChatGPT te recomienda cuando el usuario está evaluando con tiempo (ej. educación, banco, seguro, decisión a mediano plazo).',
+    description: 'Mide cómo la IA te recomienda cuando el usuario está evaluando con tiempo (ej. educación, banco, seguro, decisión a mediano plazo).',
   },
   calidad: {
     label: 'Calidad',
@@ -108,6 +108,11 @@ const INTENTION_LABELS: Record<string, { label: string; description: string }> =
     label: 'Precio',
     description: 'Mide cómo aparecés cuando el usuario busca buen precio y valor.',
   },
+};
+
+const sanitizeReason = (r?: string) => {
+  const s = (r || '').replace(/\*+/g, '').trim();
+  return s.length >= 2 ? s : undefined;
 };
 
 const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
@@ -126,11 +131,12 @@ const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
         count: 0,
         positionSum: 0,
       };
+      const reason = sanitizeReason(entry.reason) || sanitizeReason(current.sampleReason);
       totals.set(key, {
         ...current,
         count: current.count + 1,
         positionSum: current.positionSum + entry.position,
-        sampleReason: current.sampleReason || entry.reason,
+        sampleReason: reason || current.sampleReason,
       });
     });
   });
@@ -534,7 +540,7 @@ export default function RunDetailPage() {
                           <TableCell className="text-right text-muted-foreground">{row.averagePosition.toFixed(2)}</TableCell>
                           <TableCell className="text-right text-muted-foreground">{row.share.toFixed(1)}%</TableCell>
                           <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={row.sampleReason}>
-                            {row.sampleReason || '—'}
+                            {(row.sampleReason && row.sampleReason.replace(/\*+/g, '').trim().length >= 2) ? row.sampleReason.replace(/\*+/g, '').trim() : '—'}
                           </TableCell>
                         </TableRow>
                       ))

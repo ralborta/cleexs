@@ -39,12 +39,16 @@ export async function sendDiagnosticLink(
     from,
     to,
     subject: 'Tu diagnóstico Cleexs está listo',
-    text: `Tu diagnóstico está listo. Abrí este link para ver los resultados y registrarte:\n\n${link}`,
+    text: `Tu diagnóstico está listo.\n\nVer resultados: ${link}\n\nCopiá el link en el navegador si no funciona el botón.`,
     html: `
-      <p>Tu diagnóstico está listo.</p>
-      <p><a href="${link}">Ver resultados y registrarme</a></p>
-      <p>Si el enlace no funciona, copiá esta URL en el navegador:</p>
-      <p>${link}</p>
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <p>Tu diagnóstico Cleexs está listo.</p>
+        <p style="margin: 24px 0;">
+          <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Ver resultados</a>
+        </p>
+        <p style="color: #6b7280; font-size: 14px;">Si el botón no funciona, copiá este link en el navegador:</p>
+        <p style="word-break: break-all; font-size: 14px;">${link}</p>
+      </div>
     `,
   });
 }

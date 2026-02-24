@@ -48,7 +48,7 @@ export default function Home() {
           </div>
           <p className="text-xl text-muted-foreground mb-2">Plataforma de Cleexs Score</p>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Medí qué tan recomendado aparece tu producto en ChatGPT, con evidencia auditable y
+            Medí qué tan recomendado aparece tu producto en la IA, con evidencia auditable y
             comparaciones consistentes.
           </p>
         </div>

@@ -98,7 +98,7 @@ export default function AddResultPage() {
           <p className="text-sm font-medium text-primary-700">Carga manual</p>
           <h1 className="text-3xl font-bold text-foreground">Agregar Resultado Manual</h1>
           <p className="text-muted-foreground">
-            Pegá la respuesta completa de ChatGPT para que el sistema detecte el Top 3 y calcule el Cleexs Score.
+            Pegá la respuesta completa del modelo de IA para que el sistema detecte el Top 3 y calcule el Cleexs Score.
           </p>
         </div>
 
@@ -106,7 +106,7 @@ export default function AddResultPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-xl text-foreground">Nuevo Resultado</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Seleccioná un Run y un Prompt, luego pega la respuesta completa de ChatGPT
+              Seleccioná un Run y un Prompt, luego pega la respuesta completa del modelo
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -175,13 +175,13 @@ export default function AddResultPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2 text-foreground">
-                Respuesta de ChatGPT (completa)
+                Respuesta del modelo (completa)
               </label>
               <textarea
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
                 className="w-full rounded-md border border-border bg-white px-3 py-2 min-h-[300px] font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
-                placeholder="Pega aquí la respuesta completa de ChatGPT..."
+                placeholder="Pega aquí la respuesta completa del modelo..."
                 required
               />
               <p className="text-xs text-muted-foreground mt-1">
