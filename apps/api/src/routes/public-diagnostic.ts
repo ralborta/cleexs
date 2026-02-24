@@ -332,96 +332,96 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runId: diagnostic.runId,
     };
 
-    // Steps: Determinando industria, Seleccionando competidores, + prompts del run
-    const preSteps: Array<{ id: string; label: string; completed: boolean }> = [
-      { id: 'industry', label: 'Determinando tipo de industria', completed: !!diagnostic.industry },
-      { id: 'competitors', label: 'Seleccionando 5 competidores', completed: !!diagnostic.runId },
+    // 11 pasos fijos del análisis (todos deben cumplirse en el proceso)
+    const DIAGNOSTIC_STEP_LABELS = [
+      'Verificando acceso de IA al sitio',
+      'Analizando orden para IA',
+      'Midiendo claridad de respuesta',
+      'Evaluando autoridad real',
+      'Chequeando idioma para IA',
+      'Revisando actualización de info',
+      'Detectando confianza real',
+      'Testeando carga y funcionamiento',
+      'Rastreando menciones externas',
+      'Midiendo intención cubierta',
+      'Evaluando comprensión por IA',
     ];
+
+    let steps: Array<{ id: string; label: string; completed: boolean }>;
+    let progressPercent: number;
 
     if (diagnostic.runId && (diagnostic.status === 'running' || diagnostic.status === 'completed')) {
       const run = await prisma.run.findUnique({
         where: { id: diagnostic.runId },
         include: {
-          promptResults: {
-            select: { promptId: true, score: true },
-            orderBy: { createdAt: 'asc' },
-          },
+          promptResults: { select: { promptId: true }, orderBy: { createdAt: 'asc' } },
           priaReports: { take: 1, orderBy: { createdAt: 'desc' } },
           brand: { select: { name: true } },
         },
       });
-      if (run) {
-        let prompts: Array<{ id: string; name: string | null; promptText: string; category: { name: string } | null }> = [];
-        const promptVersion = await prisma.promptVersion.findFirst({
-          where: { tenantId: run.tenantId, active: true },
-          orderBy: { createdAt: 'desc' },
-        });
-        if (promptVersion) {
-          prompts = await prisma.prompt.findMany({
-            where: { promptVersionId: promptVersion.id, active: true },
-            orderBy: { createdAt: 'asc' },
-            include: { category: true },
-          });
-          const resultPromptIds = new Set(run.promptResults.map((r) => r.promptId));
-          const promptSteps = prompts.map((p) => ({
-            id: p.id,
-            label: p.name || p.promptText.slice(0, 50) + (p.promptText.length > 50 ? '…' : '') || 'Análisis',
-            completed: resultPromptIds.has(p.id),
-          }));
-          base.steps = [...preSteps, ...promptSteps];
-          base.progressPercent =
-            prompts.length > 0
-              ? Math.round(
-                  ((preSteps.filter((s) => s.completed).length + run.promptResults.length) /
-                    (preSteps.length + prompts.length)) *
-                    100
-                )
-              : preSteps.filter((s) => s.completed).length * 50;
+      const completedCount = run?.promptResults.length ?? 0;
+      const preCompleted = (!!diagnostic.industry ? 1 : 0) + (!!diagnostic.runId ? 1 : 0);
+      const analysisStepsCount = DIAGNOSTIC_STEP_LABELS.length - 2;
+
+      steps = DIAGNOSTIC_STEP_LABELS.map((label, idx) => {
+        let completed: boolean;
+        if (idx < 2) {
+          completed = idx === 0 ? !!diagnostic.industry : !!diagnostic.runId;
         } else {
-          base.steps = preSteps;
-          base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
+          completed = completedCount > idx - 2;
         }
-        if (diagnostic.status === 'completed' && run.priaReports[0]) {
-          const fullRun = await prisma.run.findUnique({
-            where: { id: diagnostic.runId },
-            include: {
-              promptResults: {
-                include: {
-                  prompt: { include: { category: true } },
-                },
-                orderBy: { createdAt: 'asc' },
+        return { id: `step-${idx + 1}`, label, completed };
+      });
+      progressPercent = Math.round(
+        ((preCompleted + Math.min(completedCount, analysisStepsCount)) / DIAGNOSTIC_STEP_LABELS.length) * 100
+      );
+      base.steps = steps;
+      base.progressPercent = progressPercent;
+
+      if (run && diagnostic.status === 'completed' && run.priaReports[0]) {
+        const fullRun = await prisma.run.findUnique({
+          where: { id: diagnostic.runId },
+          include: {
+            promptResults: {
+              include: {
+                prompt: { include: { category: true } },
               },
-              brand: {
-                include: { competitors: true, aliases: true },
-              },
+              orderBy: { createdAt: 'asc' },
             },
-          });
-          if (fullRun) {
-            const cleexsScore = run.priaReports[0].priaTotal;
-            base.runResult = {
-              brandId: fullRun.brand.id,
-              brandName: fullRun.brand.name,
-              cleexsScore,
-              competitors: fullRun.brand.competitors.map((c) => c.name),
-              brandAliases: fullRun.brand.aliases.map((a) => a.alias),
-              promptResults: fullRun.promptResults.map((pr) => ({
-                category: pr.prompt?.category?.name ?? 'General',
-                score: pr.score,
-                promptText: pr.prompt?.promptText ?? '',
-                responseText: pr.responseText,
-                top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
-                flags: (pr.flags as Record<string, boolean>) ?? {},
-              })),
-            };
-          }
+            brand: {
+              include: { competitors: true, aliases: true },
+            },
+          },
+        });
+        if (fullRun) {
+          const cleexsScore = run.priaReports[0].priaTotal;
+          base.runResult = {
+            brandId: fullRun.brand.id,
+            brandName: fullRun.brand.name,
+            cleexsScore,
+            competitors: fullRun.brand.competitors.map((c) => c.name),
+            brandAliases: fullRun.brand.aliases.map((a) => a.alias),
+            promptResults: fullRun.promptResults.map((pr) => ({
+              category: pr.prompt?.category?.name ?? 'General',
+              score: pr.score,
+              promptText: pr.prompt?.promptText ?? '',
+              responseText: pr.responseText,
+              top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
+              flags: (pr.flags as Record<string, boolean>) ?? {},
+            })),
+          };
         }
-      } else {
-        base.steps = preSteps;
-        base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
       }
     } else {
-      base.steps = preSteps;
-      base.progressPercent = preSteps.filter((s) => s.completed).length * 50;
+      const preCompleted = (!!diagnostic.industry ? 1 : 0) + (!!diagnostic.runId ? 1 : 0);
+      steps = DIAGNOSTIC_STEP_LABELS.map((label, idx) => ({
+        id: `step-${idx + 1}`,
+        label,
+        completed: idx < 2 && (idx === 0 ? !!diagnostic.industry : !!diagnostic.runId),
+      }));
+      progressPercent = Math.round((preCompleted / DIAGNOSTIC_STEP_LABELS.length) * 100);
+      base.steps = steps;
+      base.progressPercent = progressPercent;
     }
 
     return base;
