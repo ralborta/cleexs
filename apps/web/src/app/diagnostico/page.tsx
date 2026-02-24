@@ -1,14 +1,11 @@
 'use client';
 
-import { useState, useLayoutEffect } from 'react';
-import Script from 'next/script';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
 import { Search } from 'lucide-react';
-
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function DiagnosticoPage() {
   const router = useRouter();
@@ -16,34 +13,6 @@ export default function DiagnosticoPage() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileError, setTurnstileError] = useState<string | null>(null);
-
-  useLayoutEffect(() => {
-    if (!TURNSTILE_SITE_KEY) return;
-    (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess = (token: string) => {
-      setTurnstileToken(token);
-      setError(null);
-      setTurnstileError(null);
-    };
-    (window as Window & { __onTurnstileExpire?: () => void }).__onTurnstileExpire = () => {
-      setTurnstileToken(null);
-    };
-    (window as Window & { __onTurnstileError?: (errorCode?: string | number) => void }).__onTurnstileError = (errorCode?: string | number) => {
-      setTurnstileToken(null);
-      const code = String(errorCode ?? '');
-      if (code.includes('110200')) {
-        setTurnstileError('Dominio no autorizado. Agregalo en Cloudflare Dashboard → Turnstile → tu widget → Hostname Management.');
-      } else {
-        setTurnstileError('La verificación no pudo cargar. Probá en otra red o desactivá extensiones/bloqueadores.');
-      }
-    };
-    return () => {
-      delete (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess;
-      delete (window as Window & { __onTurnstileExpire?: () => void }).__onTurnstileExpire;
-      delete (window as Window & { __onTurnstileError?: (errorCode?: string | number) => void }).__onTurnstileError;
-    };
-  }, []);
 
   function normalizeUrl(input: string): string {
     const trimmed = input.trim();
@@ -60,34 +29,18 @@ export default function DiagnosticoPage() {
       setError('Ingresá el nombre de tu marca');
       return;
     }
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      setError(turnstileError || 'Completá la verificación de seguridad antes de continuar.');
-      return;
-    }
     setLoading(true);
     try {
       const trimmedUrl = url.trim();
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend, turnstileToken ?? undefined);
+      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      const code = (err as Error & { code?: string }).code;
-      const isCaptchaError = code === 'CAPTCHA_FAILED' || code === 'CAPTCHA_MISSING' || msg.includes('verificación de seguridad') || msg.includes('captcha');
-      if (isCaptchaError) {
-        setTurnstileToken(null);
-        try {
-          (window as Window & { turnstile?: { reset: (id?: string) => void } }).turnstile?.reset?.('turnstile-widget');
-        } catch {
-          /* widget might not be ready */
-        }
-      }
       setError(
         msg === 'Not Found' || msg.includes('404')
           ? 'No se pudo conectar con el servicio. Probá de nuevo en unos minutos.'
-          : isCaptchaError
-            ? 'La verificación de seguridad falló. Completá el captcha de nuevo e intentá.'
-            : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
+          : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
       );
       setLoading(false);
     }
@@ -134,31 +87,6 @@ export default function DiagnosticoPage() {
                   disabled={loading}
                 />
               </div>
-              {TURNSTILE_SITE_KEY && (
-                <>
-                  <Script
-                    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-                    strategy="afterInteractive"
-                  />
-                  <div className="flex justify-center min-h-[65px]">
-                    <div
-                      id="turnstile-widget"
-                      className="cf-turnstile"
-                      data-sitekey={TURNSTILE_SITE_KEY}
-                      data-theme="light"
-                      data-size="normal"
-                      data-callback="__onTurnstileSuccess"
-                      data-expired-callback="__onTurnstileExpire"
-                      data-error-callback="__onTurnstileError"
-                    />
-                  </div>
-                  {turnstileError && (
-                    <p className="text-sm text-amber-600 bg-amber-50 rounded-md px-3 py-2">
-                      {turnstileError}
-                    </p>
-                  )}
-                </>
-              )}
               {error && (
                 <p className="text-sm text-destructive" role="alert">
                   {error}
