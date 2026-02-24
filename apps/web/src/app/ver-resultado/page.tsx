@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { publicDiagnosticApi, type PublicDiagnostic, type PublicDiagnosticRunResult, type PublicDiagnosticPromptResult } from '@/lib/api';
-import { Loader2, LogIn, FileCheck, AlertCircle, Mail } from 'lucide-react';
+import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock } from 'lucide-react';
 
 const normalizeName = (value: string) =>
   value
@@ -120,6 +120,54 @@ const buildComparisonSummary = (results: PublicDiagnosticPromptResult[]): Compar
     }))
     .sort((a, b) => b.appearances - a.appearances);
 };
+
+/** Vista limitada Freemium: solo Cleexs Score + CTA */
+function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }) {
+  return (
+    <div className="space-y-6">
+      <Card className="border-transparent bg-white shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Tu resultado para {runResult.brandName}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 to-accent-50 p-4">
+            <p className="text-xs font-medium text-primary-700">Cleexs Score</p>
+            <p className="text-4xl font-bold text-foreground">{runResult.cleexsScore.toFixed(0)}</p>
+            <p className="text-xs text-muted-foreground">Score ponderado 0-100</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-transparent bg-gradient-to-br from-amber-50/80 to-orange-50/60 shadow-md border-amber-200/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+            <Lock className="h-5 w-5 text-amber-600" />
+            Desbloqueá el reporte completo
+          </CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Ya hiciste una corrida gratuita para este dominio. Para ver métricas detalladas, comparaciones, análisis por intención y recomendaciones, creá una cuenta o pasá a Gold.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild className="bg-primary-600 hover:bg-primary-700">
+              <Link href="/planes">
+                <LogIn className="mr-2 h-4 w-4" />
+                Ver planes y crear cuenta
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/diagnostico">Otro diagnóstico</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function ReporteCompleto({ runResult, brandName }: { runResult: PublicDiagnosticRunResult; brandName: string }) {
   const results = runResult.promptResults || [];
@@ -435,7 +483,11 @@ function VerResultadoContent() {
             {isCompleted && (
               <>
                 {runResult ? (
-                  <ReporteCompleto runResult={runResult} brandName={runResult.brandName} />
+                  diagnostic.showFullReport ? (
+                    <ReporteCompleto runResult={runResult} brandName={runResult.brandName} />
+                  ) : (
+                    <ReporteFreemium runResult={runResult} />
+                  )
                 ) : (
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
                     <p className="font-medium">Diagnóstico listo</p>
@@ -471,19 +523,25 @@ function VerResultadoContent() {
                   )}
                 </div>
 
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Creá una cuenta o iniciá sesión para guardar resultados y hacer más análisis.
+                <div className="pt-6 mt-6 border-t rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
+                  <p className="text-sm font-medium text-foreground mb-2">
+                    ¿Querés más corridas y reportes completos?
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Creá una cuenta o pasá a Gold para análisis ilimitados.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <Button asChild>
-                      <Link href={runResult?.brandId ? `/dashboard?brandId=${runResult.brandId}` : '/dashboard'}>
+                    <Button asChild className="bg-primary-600 hover:bg-primary-700">
+                      <Link href="/planes">
                         <LogIn className="mr-2 h-4 w-4" />
-                        Ir al dashboard
+                        Ver planes
                       </Link>
                     </Button>
                     <Button variant="outline" asChild>
                       <Link href="/diagnostico">Otro diagnóstico</Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/dashboard">Ir al dashboard</Link>
                     </Button>
                   </div>
                 </div>

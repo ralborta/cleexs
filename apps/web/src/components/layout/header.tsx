@@ -54,6 +54,12 @@ export function Header() {
               Diagnóstico
             </Link>
             <Link
+              href="/planes"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Planes
+            </Link>
+            <Link
               href="/dashboard"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >

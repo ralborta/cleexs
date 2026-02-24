@@ -268,6 +268,9 @@ export interface PublicDiagnostic {
   brandName: string;
   industry?: string | null;
   status: 'pending' | 'running' | 'completed' | 'failed';
+  tier?: 'gold' | 'freemium';
+  isFirstRun?: boolean;
+  showFullReport?: boolean;
   runId?: string | null;
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;
@@ -288,5 +291,6 @@ export const publicDiagnosticApi = {
       method: 'PATCH',
       body: JSON.stringify({ email }),
     }),
-  get: (id: string) => api<PublicDiagnostic>(`/api/public/diagnostic/${id}`),
+  get: (id: string, tier?: 'gold' | 'freemium') =>
+    api<PublicDiagnostic>(`/api/public/diagnostic/${id}${tier ? `?tier=${tier}` : ''}`),
 };

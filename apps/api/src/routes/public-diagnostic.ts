@@ -57,13 +57,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       let domain: string;
       if (url && typeof url === 'string' && url.trim()) {
         domain = normalizeDomain(url.trim());
-        const existing = await prisma.publicDiagnostic.findUnique({ where: { domain } });
-        if (existing) {
-          return reply.code(409).send({
-            error: 'Esta URL o dominio ya tiene un diagnóstico. Iniciá sesión para verlo o contactanos.',
-            code: 'DOMAIN_ALREADY_USED',
-          });
-        }
       } else {
         domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
       }
@@ -171,6 +164,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
         await executeRun(run.id, { promptVersionId: promptVersion.id });
 
+        // Marcar completado de inmediato para que la UI redirija (el análisis IA va después)
+        await prisma.publicDiagnostic.update({
+          where: { id: diagnostic.id },
+          data: { status: 'completed' },
+        });
+
         let analysisJson: object | null = null;
         try {
           const fullRun = await prisma.run.findUnique({
@@ -200,13 +199,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');
         }
 
-        await prisma.publicDiagnostic.update({
-          where: { id: diagnostic.id },
-          data: {
-            status: 'completed',
-            ...(analysisJson != null ? { analysisJson: analysisJson as object } : {}),
-          },
-        });
+        if (analysisJson != null) {
+          await prisma.publicDiagnostic.update({
+            where: { id: diagnostic.id },
+            data: { analysisJson: analysisJson as object },
+          });
+        }
 
         const current = await prisma.publicDiagnostic.findUnique({
           where: { id: diagnostic.id },
@@ -272,8 +270,13 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       try {
         if (!isEmailDisabled() && isEmailConfigured()) {
+          const isFirstRun = await isFirstRunForDomain(id, diagnostic.domain);
+          const includeAnalysis = isFirstRun; // Gold vendría de auth; por ahora solo primera corrida recibe análisis
           const analysis =
-            diagnostic.analysisJson && typeof diagnostic.analysisJson === 'object' && !Array.isArray(diagnostic.analysisJson)
+            includeAnalysis &&
+            diagnostic.analysisJson &&
+            typeof diagnostic.analysisJson === 'object' &&
+            !Array.isArray(diagnostic.analysisJson)
               ? (diagnostic.analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
               : null;
           await sendDiagnosticLink(email, id, baseUrl, analysis);
@@ -290,8 +293,17 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.code(200).send({ ok: true, emailSent });
   });
 
+  // Fase 3: determina si es primera corrida para este dominio (ve todo) o Freemium (limitado)
+  async function isFirstRunForDomain(diagnosticId: string, domain: string): Promise<boolean> {
+    const firstCompleted = await prisma.publicDiagnostic.findFirst({
+      where: { domain, status: 'completed' },
+      orderBy: { createdAt: 'asc' },
+    });
+    return !!firstCompleted && firstCompleted.id === diagnosticId;
+  }
+
   // GET /api/public/diagnostic/:id — estado, steps (industria, competidores, prompts) y resultado con Cleexs Score
-  fastify.get<{ Params: { id: string } }>('/diagnostic/:id', async (request, reply) => {
+  fastify.get<{ Params: { id: string }; Querystring: { tier?: string } }>('/diagnostic/:id', async (request, reply) => {
     const diagnostic = await prisma.publicDiagnostic.findUnique({
       where: { id: request.params.id },
     });
@@ -299,12 +311,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
 
+    const tier = request.query?.tier === 'gold' ? 'gold' : 'freemium';
+    const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
+    const showFullReport = tier === 'gold' || isFirstRun;
+
     const base: {
       id: string;
       domain: string;
       brandName: string;
       industry?: string | null;
       status: string;
+      tier: 'gold' | 'freemium';
+      isFirstRun: boolean;
+      showFullReport: boolean;
       runId?: string | null;
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
@@ -329,6 +348,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       brandName: diagnostic.brandName,
       industry: diagnostic.industry,
       status: diagnostic.status,
+      tier,
+      isFirstRun,
+      showFullReport,
       runId: diagnostic.runId,
     };
 
@@ -401,14 +423,16 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             cleexsScore,
             competitors: fullRun.brand.competitors.map((c) => c.name),
             brandAliases: fullRun.brand.aliases.map((a) => a.alias),
-            promptResults: fullRun.promptResults.map((pr) => ({
-              category: pr.prompt?.category?.name ?? 'General',
-              score: pr.score,
-              promptText: pr.prompt?.promptText ?? '',
-              responseText: pr.responseText,
-              top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
-              flags: (pr.flags as Record<string, boolean>) ?? {},
-            })),
+            promptResults: showFullReport
+              ? fullRun.promptResults.map((pr) => ({
+                  category: pr.prompt?.category?.name ?? 'General',
+                  score: pr.score,
+                  promptText: pr.prompt?.promptText ?? '',
+                  responseText: pr.responseText,
+                  top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
+                  flags: (pr.flags as Record<string, boolean>) ?? {},
+                }))
+              : [],
           };
         }
       }

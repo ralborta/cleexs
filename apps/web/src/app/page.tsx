@@ -77,6 +77,10 @@ export default function Home() {
           </Link>
         </div>
 
+        <p className="text-center text-sm text-muted-foreground mb-8">
+          ¿Querés reportes completos siempre? <Link href="/planes" className="text-primary-600 hover:underline font-medium">Ver planes</Link>
+        </p>
+
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="border-transparent bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
             <CardHeader className="pb-3">
