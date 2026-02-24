@@ -11,7 +11,9 @@ export async function api<T>(endpoint: string, options?: RequestInit): Promise<T
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+    const err = new Error(error.error || `HTTP error! status: ${response.status}`);
+    if (error.code) (err as Error & { code?: string }).code = error.code;
+    throw err;
   }
 
   return response.json();

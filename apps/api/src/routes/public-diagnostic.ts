@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
 import { executeRun } from '../lib/run-executor';
 import { determineIndustry, getTop5Competitors } from '../lib/diagnostic-ai';
+import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 
 function normalizeDomain(url: string): string {
   try {
@@ -36,14 +37,23 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const secret = process.env.TURNSTILE_SECRET_KEY;
     if (!secret) return true;
     try {
+      const body = new URLSearchParams();
+      body.append('secret', secret);
+      body.append('response', token);
+      if (remoteip) body.append('remoteip', remoteip);
+
       const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, response: token, remoteip }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
       });
-      const data = (await res.json()) as { success?: boolean };
+      const data = (await res.json()) as { success?: boolean; 'error-codes'?: string[] };
+      if (!data.success) {
+        fastify.log.warn({ errorCodes: data['error-codes'] }, 'Turnstile verification failed');
+      }
       return !!data.success;
-    } catch {
+    } catch (err) {
+      fastify.log.warn({ err }, 'Turnstile siteverify request failed');
       return false;
     }
   }
@@ -153,6 +163,34 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
+        // 3b. Intención automática (Urgencia vs Consideración) según industria
+        const intention = getIntentionForIndustry(industry);
+        const diagnosticPrompts = buildDiagnosticPrompts(
+          trimmedBrand,
+          industry,
+          competitors,
+          intention
+        );
+
+        // 3c. Crear versión de prompts dinámica para este diagnóstico
+        const promptVersion = await prisma.promptVersion.create({
+          data: {
+            tenantId: rootTenant.id,
+            name: `DIAG_${diagnostic.id}`,
+            active: false, // Solo para este diagnóstico, no interfiere con runs del admin
+          },
+        });
+        for (const p of diagnosticPrompts) {
+          await prisma.prompt.create({
+            data: {
+              promptVersionId: promptVersion.id,
+              name: p.name,
+              promptText: p.promptText,
+              active: true,
+            },
+          });
+        }
+
         // 4. Crear Run y ejecutar
         const now = new Date();
         const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -174,7 +212,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           data: { runId: run.id },
         });
 
-        await executeRun(run.id);
+        await executeRun(run.id, { promptVersionId: promptVersion.id });
 
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },

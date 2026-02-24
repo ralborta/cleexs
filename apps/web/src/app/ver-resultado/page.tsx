@@ -45,9 +45,30 @@ const extractIntention = (promptText: string) => {
 const normalizeIntentionKey = (value: string) => {
   const n = normalizeName(value);
   if (n.includes('urgencia')) return 'urgencia';
+  if (n.includes('consideracion')) return 'consideracion';
   if (n.includes('calidad')) return 'calidad';
   if (n.includes('precio')) return 'precio';
   return null;
+};
+
+/** Etiqueta y descripción por intención */
+const INTENTION_LABELS: Record<string, { label: string; description: string }> = {
+  urgencia: {
+    label: 'Urgencia',
+    description: 'Mide cómo ChatGPT te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta rápida).',
+  },
+  consideracion: {
+    label: 'Consideración',
+    description: 'Mide cómo ChatGPT te recomienda cuando el usuario está evaluando con tiempo (ej. educación, banco, seguro, decisión a mediano plazo).',
+  },
+  calidad: {
+    label: 'Calidad',
+    description: 'Mide tu posicionamiento cuando el usuario prioriza la mejor calidad en el mercado.',
+  },
+  precio: {
+    label: 'Precio',
+    description: 'Mide cómo aparecés cuando el usuario busca buen precio y valor.',
+  },
 };
 
 interface ComparisonRow {
@@ -175,13 +196,23 @@ function ReporteCompleto({ runResult, brandName }: { runResult: PublicDiagnostic
                 </div>
               )
             ) : (
-              intentionScores.map((item) => (
-                <div key={item.key} className="rounded-lg border border-border bg-white p-3">
-                  <p className="text-xs font-medium text-muted-foreground capitalize">{item.key}</p>
-                  <p className="text-2xl font-semibold text-foreground">{item.score.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Peso {item.weight}%</p>
-                </div>
-              ))
+              intentionScores.map((item) => {
+                const meta = INTENTION_LABELS[item.key];
+                return (
+                  <div key={item.key} className="rounded-lg border border-border bg-white p-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {meta?.label ?? item.key}
+                    </p>
+                    <p className="text-2xl font-semibold text-foreground">{item.score.toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">Peso {item.weight}%</p>
+                    {meta?.description && (
+                      <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                        {meta.description}
+                      </p>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </CardContent>

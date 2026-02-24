@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useLayoutEffect } from 'react';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ export default function DiagnosticoPage() {
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;
     (window as Window & { __onTurnstileSuccess?: (token: string) => void }).__onTurnstileSuccess = (token: string) => {
       setTurnstileToken(token);
@@ -60,11 +60,21 @@ export default function DiagnosticoPage() {
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
+      const code = (err as Error & { code?: string }).code;
+      const isCaptchaError = code === 'CAPTCHA_FAILED' || code === 'CAPTCHA_MISSING' || msg.includes('verificación de seguridad') || msg.includes('captcha');
+      if (isCaptchaError) {
+        setTurnstileToken(null);
+        try {
+          (window as Window & { turnstile?: { reset: (id?: string) => void } }).turnstile?.reset?.('turnstile-widget');
+        } catch {
+          /* widget might not be ready */
+        }
+      }
       setError(
         msg === 'Not Found' || msg.includes('404')
           ? 'No se pudo conectar con el servicio. Probá de nuevo en unos minutos.'
-          : msg === 'CAPTCHA_FAILED' || msg.includes('captcha')
-            ? 'La verificación de seguridad falló. Probá de nuevo.'
+          : isCaptchaError
+            ? 'La verificación de seguridad falló. Completá el captcha de nuevo e intentá.'
             : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
       );
       setLoading(false);
@@ -116,10 +126,11 @@ export default function DiagnosticoPage() {
                 <>
                   <Script
                     src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-                    strategy="lazyOnload"
+                    strategy="afterInteractive"
                   />
                   <div className="flex justify-center min-h-[65px]">
                     <div
+                      id="turnstile-widget"
                       className="cf-turnstile"
                       data-sitekey={TURNSTILE_SITE_KEY}
                       data-theme="light"
