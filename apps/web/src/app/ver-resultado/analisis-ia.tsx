@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DiagnosticAnalysisSingle, DiagnosticAnalysisJson } from '@/lib/api';
 import { isDiagnosticAnalysisGold } from '@/lib/api';
@@ -138,7 +139,17 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
         Análisis con IA
       </h2>
       <Card className="border-transparent bg-white shadow-md">
-        <CardContent className="pt-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Así te ven en OpenAI (ChatGPT)</CardTitle>
+          <CardDescription>
+            Este diagnóstico usó solo un modelo. Para ver también Gemini y la perspectiva combinada de ambas IAs, hacé un{' '}
+            <Link href="/diagnostico?tier=gold" className="text-primary-600 underline hover:no-underline">
+              diagnóstico Gold
+            </Link>{' '}
+            desde Planes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <BlockAnalisisUnico a={analysisJson} />
         </CardContent>
       </Card>
