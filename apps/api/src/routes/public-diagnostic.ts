@@ -274,15 +274,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       try {
         if (!isEmailDisabled() && isEmailConfigured()) {
-          const isFirstRun = await isFirstRunForDomain(id, diagnostic.domain);
-          const isGold = diagnostic.tier === 'gold';
+          const fresh = await prisma.publicDiagnostic.findUnique({
+            where: { id },
+            select: { analysisJson: true, tier: true, domain: true },
+          });
+          const isFirstRun = fresh ? await isFirstRunForDomain(id, fresh.domain) : false;
+          const isGold = fresh?.tier === 'gold';
           const includeAnalysis = isFirstRun || isGold;
           const analysis =
             includeAnalysis &&
-            diagnostic.analysisJson &&
-            typeof diagnostic.analysisJson === 'object' &&
-            !Array.isArray(diagnostic.analysisJson)
-              ? (diagnostic.analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
+            fresh?.analysisJson &&
+            typeof fresh.analysisJson === 'object' &&
+            !Array.isArray(fresh.analysisJson)
+              ? (fresh.analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
               : null;
           await sendDiagnosticLink(email, id, baseUrl, analysis);
           emailSent = true;
@@ -333,6 +337,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runId?: string | null;
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
+      analysisJson?: object | null;
       runResult?: {
         brandId: string;
         brandName: string;
@@ -405,6 +410,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       );
       base.steps = steps;
       base.progressPercent = progressPercent;
+
+      if (diagnostic.status === 'completed' && showFullReport && diagnostic.analysisJson && typeof diagnostic.analysisJson === 'object' && !Array.isArray(diagnostic.analysisJson)) {
+        base.analysisJson = diagnostic.analysisJson as object;
+      }
 
       if (run && diagnostic.status === 'completed' && run.priaReports[0]) {
         const fullRun = await prisma.run.findUnique({

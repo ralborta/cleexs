@@ -262,6 +262,44 @@ export interface PublicDiagnosticRunResult {
   promptResults: PublicDiagnosticPromptResult[];
 }
 
+/** Análisis simple (un solo proveedor) */
+export interface DiagnosticAnalysisSingle {
+  resumenEjecutivo?: string;
+  contextoCompetitivo?: string;
+  comentariosPorIntencion?: Array<{
+    intencion: string;
+    comentario: string;
+    score: number;
+    interpretacion?: string;
+  }>;
+  aspectosAdicionales?: string;
+  fortalezas?: string[];
+  debilidades?: string[];
+  sugerencias?: string[];
+  proximosPasos?: string[];
+}
+
+/** Análisis Gold: OpenAI + Gemini + perspectiva combinada */
+export interface DiagnosticAnalysisGold {
+  tier: 'gold';
+  metrics: {
+    cleexsScore: number;
+    intentionScores: Array<{ label: string; score: number; weight: number }>;
+    comparisonSummary: Array<{ name: string; type: string; appearances: number; share: number }>;
+  };
+  analisisOpenAI: DiagnosticAnalysisSingle;
+  analisisGemini: DiagnosticAnalysisSingle;
+  perspectivaAmbos: string;
+}
+
+export type DiagnosticAnalysisJson = DiagnosticAnalysisSingle | DiagnosticAnalysisGold;
+
+export function isDiagnosticAnalysisGold(
+  a: DiagnosticAnalysisJson | null | undefined
+): a is DiagnosticAnalysisGold {
+  return !!a && typeof a === 'object' && (a as { tier?: string }).tier === 'gold';
+}
+
 export interface PublicDiagnostic {
   id: string;
   domain: string;
@@ -275,6 +313,7 @@ export interface PublicDiagnostic {
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;
   runResult?: PublicDiagnosticRunResult;
+  analysisJson?: DiagnosticAnalysisJson | null;
 }
 
 export const publicDiagnosticApi = {
