@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
@@ -9,6 +9,9 @@ import { Search } from 'lucide-react';
 
 export default function DiagnosticoPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tierParam = searchParams.get('tier');
+  const tier = tierParam === 'gold' ? 'gold' as const : undefined;
   const [brandName, setBrandName] = useState('');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,8 +36,8 @@ export default function DiagnosticoPage() {
     try {
       const trimmedUrl = url.trim();
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend);
-      router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}`);
+      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend, tier);
+      router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}${tier ? `&tier=${tier}` : ''}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       setError(

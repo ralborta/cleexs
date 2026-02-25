@@ -21,3 +21,12 @@ La app **web** (Next.js en `apps/web`) **no usa Prisma** en tiempo de build. Si 
 
 - **Root Directory:** `apps/web`.
 - **Build / Install:** el `vercel.json` en `apps/web` ya define `npm run build` e `npm install`.
+
+### Variables de entorno (Vercel → proyecto → Settings → Environment Variables)
+
+| Variable | Obligatoria | Descripción |
+|----------|-------------|-------------|
+| **NEXT_PUBLIC_API_URL** | ✅ | URL de la API en producción (ej. `https://tu-api.railway.app`). |
+| NEXT_PUBLIC_LOGO_DEV_TOKEN | Opcional | Logo.dev para avatares de marcas (5k gratis/día). |
+
+Flujo: GitHub → Vercel (web) + Railway (API). En Railway definí `FRONTEND_URL` con la URL de Vercel.

@@ -310,6 +310,7 @@ model PublicDiagnostic {
   brandName   String   @map("brand_name") // marca ingresada por el usuario (obligatoria)
   domain      String   // dominio normalizado; múltiples corridas permitidas (Fase 3 Freemium)
   industry    String?  @map("industry") // determinado por IA antes del run
+  tier        String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
   email       String?  // capturado al final del flujo (para enviar resultado)
   status      String   @default("pending") // pending | running | completed | failed
   runId       String?  @map("run_id") // Run real ejecutado automáticamente

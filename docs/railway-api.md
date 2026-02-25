@@ -55,13 +55,20 @@ npx -y @railway/cli up --detach
 
 (Si los deploys siguen en SKIPPED, primero arreglá Watch Paths como en 3b.)
 
-### 4. Variables de entorno
+### 4. Variables de entorno (Railway → API → Variables)
 
 En el servicio API en Railway → **Variables**:
 
+| Variable | Obligatoria | Descripción |
+|----------|-------------|-------------|
+| **DATABASE_URL** | ✅ | Connection string de PostgreSQL (Postgres de Railway → referencia la variable del servicio DB). |
+| **OPENAI_API_KEY** | ✅ | Para análisis Freemium y Gold. Sin esto no hay análisis con IA. |
+| **GOOGLE_AI_API_KEY** | Plan Gold | Para análisis Gemini. Sin esto, Gold usa solo OpenAI. Alternativa: `GEMINI_API_KEY`. |
+| **FRONTEND_URL** | ✅ | URL del front (ej. `https://tu-app.vercel.app`) para links en emails y CORS. |
+| **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASS** | Envío de emails | Para el correo del diagnóstico público. Sin esto, no se envía el link. |
+| SMTP_FROM, SMTP_FROM_NAME, SMTP_SECURE | Opcional | Remitente y TLS. |
+
 - **CORS:** La API permite automáticamente `*.vercel.app` y `*.vercel.sh`. Para otros dominios, usá `FRONTEND_URL` o `FRONTEND_URLS` (separados por coma).
-- **DATABASE_URL:** connection string de PostgreSQL (si usás Postgres de Railway, podés referenciar la variable del servicio DB).
-- **Para que se envíe el correo del diagnóstico público** (link al resultado), en **Variables** del servicio API definí: **SMTP_HOST**, **SMTP_PORT** (ej. 587), **SMTP_USER**, **SMTP_PASS**. Opcional: **SMTP_FROM** o **SMTP_FROM_EMAIL** (email remitente), **SMTP_FROM_NAME** (nombre del remitente), **SMTP_SECURE** (true si usás 465), **FRONTEND_URL** (URL del front para el link). Si SMTP no está configurado, el diagnóstico se marca listo pero el correo no se envía (en los logs verás "Error al enviar email" o "SMTP no configurado").
 
 ### 5. Error 500 en diagnóstico público
 

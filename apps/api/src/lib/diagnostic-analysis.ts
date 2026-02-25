@@ -1,9 +1,15 @@
 /**
  * Genera análisis detallado con IA para el resultado del diagnóstico público.
- * Fase 2: resumen ejecutivo, comentarios por intención, fortalezas, debilidades, sugerencias, próximos pasos.
+ * Freemium: solo OpenAI (ChatGPT). Gold: OpenAI + Gemini + perspectiva combinada.
  */
 
 import type { Run, PromptResult, PRIAReport } from '@prisma/client';
+import {
+  generateWithOpenAI,
+  generateWithGemini,
+  generatePerspectivaAmbos,
+  type DiagnosticAnalysisSingle,
+} from './diagnostic-analysis-providers';
 
 const normalizeName = (v: string) =>
   v
@@ -42,6 +48,28 @@ export interface RunContextInput {
   };
   priaReport: PRIAReport | null;
   industry: string;
+}
+
+function buildContextForAI(ctx: RunContext): string {
+  const parts: string[] = [
+    `Marca: ${ctx.brandName}`,
+    `Industria: ${ctx.industry || 'General'}`,
+    `Cleexs Score total: ${ctx.cleexsScore} (0-100, mayor = mejor posicionamiento en IA)`,
+    `Competidores evaluados: ${ctx.competitors.join(', ') || 'ninguno'}`,
+    '',
+    'Scores por intención de búsqueda (qué mide cada una):',
+    ...ctx.intentionScores.map((i) => {
+      const desc = INTENTION_DESCRIPTIONS[i.key];
+      return `- ${i.label}: ${i.score.toFixed(0)} (peso ${i.weight}%)${desc ? ` — ${desc}` : ''}`;
+    }),
+    '',
+    'Resumen de apariciones en Top 3 de las IAs:',
+    ...ctx.comparisonSummary.slice(0, 15).map(
+      (r) =>
+        `- ${r.name} (${r.type}): ${r.appearances} apariciones, posición media ${r.averagePosition.toFixed(2)}, ${r.share.toFixed(1)}% del Top 3${r.sampleReason ? `. Motivo ejemplo: ${r.sampleReason}` : ''}`
+    ),
+  ];
+  return parts.join('\n');
 }
 
 export function buildRunContext(input: RunContextInput): RunContext {
@@ -104,6 +132,7 @@ export function buildRunContext(input: RunContextInput): RunContext {
   };
 }
 
+/** Formato Freemium: un solo análisis (OpenAI) */
 export interface DiagnosticAnalysis {
   resumenEjecutivo: string;
   contextoCompetitivo?: string;
@@ -118,6 +147,25 @@ export interface DiagnosticAnalysis {
   debilidades: string[];
   sugerencias: string[];
   proximosPasos: string[];
+}
+
+/** Formato Gold: OpenAI + Gemini + síntesis. Incluye métricas para contexto. */
+export interface DiagnosticAnalysisGold {
+  tier: 'gold';
+  metrics: {
+    cleexsScore: number;
+    intentionScores: Array<{ label: string; score: number; weight: number }>;
+    comparisonSummary: Array<{ name: string; type: string; appearances: number; share: number }>;
+  };
+  analisisOpenAI: DiagnosticAnalysisSingle;
+  analisisGemini: DiagnosticAnalysisSingle;
+  perspectivaAmbos: string;
+}
+
+export type DiagnosticAnalysisOutput = DiagnosticAnalysis | DiagnosticAnalysisGold;
+
+function isGoldFormat(a: unknown): a is DiagnosticAnalysisGold {
+  return typeof a === 'object' && a !== null && (a as { tier?: string }).tier === 'gold';
 }
 
 interface RunContext {
@@ -147,123 +195,54 @@ const INTENTION_DESCRIPTIONS: Record<string, string> = {
     'Mide cómo aparece la marca cuando el usuario busca buen precio, valor o relación calidad-precio.',
 };
 
-function buildContextForAI(ctx: RunContext): string {
-  const parts: string[] = [
-    `Marca: ${ctx.brandName}`,
-    `Industria: ${ctx.industry || 'General'}`,
-    `Cleexs Score total: ${ctx.cleexsScore} (0-100, mayor = mejor posicionamiento en IA)`,
-    `Competidores evaluados: ${ctx.competitors.join(', ') || 'ninguno'}`,
-    '',
-    'Scores por intención de búsqueda (qué mide cada una):',
-    ...ctx.intentionScores.map((i) => {
-      const desc = INTENTION_DESCRIPTIONS[i.key];
-      return `- ${i.label}: ${i.score.toFixed(0)} (peso ${i.weight}%)${desc ? ` — ${desc}` : ''}`;
-    }),
-    '',
-    'Resumen de apariciones en Top 3 de las IAs:',
-    ...ctx.comparisonSummary.slice(0, 15).map(
-      (r) =>
-        `- ${r.name} (${r.type}): ${r.appearances} apariciones, posición media ${r.averagePosition.toFixed(2)}, ${r.share.toFixed(1)}% del Top 3${r.sampleReason ? `. Motivo ejemplo: ${r.sampleReason}` : ''}`
-    ),
-  ];
-  return parts.join('\n');
-}
-
-export async function generateDiagnosticAnalysis(ctx: RunContext): Promise<DiagnosticAnalysis | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-
+export async function generateDiagnosticAnalysis(
+  ctx: RunContext,
+  tier: 'freemium' | 'gold' = 'freemium'
+): Promise<DiagnosticAnalysisOutput | null> {
   const contextText = buildContextForAI(ctx);
 
-  const systemPrompt = `Sos un analista senior de marketing digital y posicionamiento de marcas ante la IA. Tu rol es explicar de forma CLARA y EXTENSA los resultados del diagnóstico para que cualquier persona entienda qué significan y qué hacer.
-
-IMPORTANTE: Escribí de forma explicativa y didáctica. Cada sección debe ser extensa y clara. Evitá frases cortas o telegráficas. El receptor debe entender el contexto, el significado de cada métrica y las implicaciones prácticas.
-
-Generá un informe ÚNICAMENTE como JSON válido, sin markdown ni texto extra. Estructura:
-
-{
-  "resumenEjecutivo": "3-4 párrafos extensos. Explicá: qué mide el Cleexs Score, qué implica el valor obtenido para esta marca, cómo se compara con un posicionamiento ideal, y qué dice esto sobre cómo las IAs (ChatGPT, etc.) recomiendan a la marca vs competidores. Usá lenguaje accesible.",
-  "contextoCompetitivo": "1-2 párrafos explicando cómo se posiciona la marca frente a sus competidores en las respuestas de las IAs. Mencioná qué competidores aparecen más, en qué contextos, y qué patrones ves. Sed concreto con los datos del Top 3.",
-  "comentariosPorIntencion": [
-    {
-      "intencion": "Urgencia",
-      "score": 67,
-      "comentario": "2-3 oraciones explicando qué significa este score: cómo la IA recomienda a la marca cuando el usuario busca algo urgente. Contextualizá con la industria.",
-      "interpretacion": "1 párrafo adicional sobre implicaciones prácticas: qué implica para la estrategia, en qué momento de búsqueda la marca está mejor o peor posicionada."
-    }
-  ],
-  "aspectosAdicionales": "1-2 párrafos sobre otros aspectos relevantes: consistencia de aparición, visibilidad general, defensibilidad ante preguntas tipo '¿hay algo mejor que X?', patrones que notás en los motivos dados por la IA.",
-  "fortalezas": ["Cada ítem: oración completa y explicativa (no solo 'Buena visibilidad' sino 'La marca tiene buena visibilidad en búsquedas de X porque...'). 4-6 ítems."],
-  "debilidades": ["Idem: oraciones completas que expliquen el problema y por qué importa. 4-6 ítems."],
-  "sugerencias": ["Cada una: sugerencia concreta + breve explicación del porqué y el impacto esperado. 4-6 ítems."],
-  "proximosPasos": ["Pasos numerables y accionables, cada uno explicado en 1-2 oraciones. 5-7 pasos."]
-}
-
-REGLAS:
-- comentariosPorIntencion: incluir EXACTAMENTE las intenciones que aparecen en los datos (Urgencia, Consideración, Calidad, Precio según corresponda). Scores deben coincidir con los datos. comentario + interpretacion deben ser extensos y claros.
-- Todos los textos en español, tono profesional pero accesible.
-- No uses markdown (**) dentro de los strings.
-- Sed específico con la marca y la industria, no genérico.`;
-
-  const userPrompt = `Analizá este diagnóstico y generá el informe JSON:\n\n${contextText}`;
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.3,
-        max_tokens: 4500,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
-    });
-
-    const json = (await response.json()) as {
-      error?: { message?: string };
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    if (!response.ok) throw new Error(json?.error?.message || 'OpenAI error');
-
-    const content = json?.choices?.[0]?.message?.content?.trim();
-    if (!content) return null;
-
-    const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-    const parsed = JSON.parse(cleaned) as DiagnosticAnalysis;
-
-    if (!parsed.resumenEjecutivo || !Array.isArray(parsed.fortalezas)) {
-      return null;
-    }
-
-    return {
-      resumenEjecutivo: String(parsed.resumenEjecutivo || ''),
-      contextoCompetitivo:
-        typeof parsed.contextoCompetitivo === 'string' ? parsed.contextoCompetitivo.trim() : undefined,
-      comentariosPorIntencion: Array.isArray(parsed.comentariosPorIntencion)
-        ? parsed.comentariosPorIntencion.map((c) => ({
-            intencion: String(c.intencion || ''),
-            comentario: String(c.comentario || ''),
-            score: Number(c.score) || 0,
-            interpretacion:
-              typeof (c as { interpretacion?: string }).interpretacion === 'string'
-                ? (c as { interpretacion?: string }).interpretacion!.trim()
-                : undefined,
-          }))
-        : [],
-      aspectosAdicionales:
-        typeof parsed.aspectosAdicionales === 'string' ? parsed.aspectosAdicionales.trim() : undefined,
-      fortalezas: Array.isArray(parsed.fortalezas) ? parsed.fortalezas.map(String).filter(Boolean) : [],
-      debilidades: Array.isArray(parsed.debilidades) ? parsed.debilidades.map(String).filter(Boolean) : [],
-      sugerencias: Array.isArray(parsed.sugerencias) ? parsed.sugerencias.map(String).filter(Boolean) : [],
-      proximosPasos: Array.isArray(parsed.proximosPasos) ? parsed.proximosPasos.map(String).filter(Boolean) : [],
-    };
-  } catch {
-    return null;
+  if (tier === 'freemium') {
+    const analysis = await generateWithOpenAI(contextText);
+    return analysis;
   }
+
+  // Gold: OpenAI + Gemini + perspectiva combinada
+  const [openaiAnalysis, geminiAnalysis] = await Promise.all([
+    generateWithOpenAI(contextText),
+    generateWithGemini(contextText),
+  ]);
+
+  if (!openaiAnalysis) return null;
+  if (!geminiAnalysis) {
+    return openaiAnalysis as DiagnosticAnalysis;
+  }
+
+  const perspectivaAmbos = await generatePerspectivaAmbos(
+    contextText,
+    openaiAnalysis,
+    geminiAnalysis
+  );
+
+  const goldOutput: DiagnosticAnalysisGold = {
+    tier: 'gold',
+    metrics: {
+      cleexsScore: ctx.cleexsScore,
+      intentionScores: ctx.intentionScores.map((i) => ({
+        label: i.label,
+        score: i.score,
+        weight: i.weight,
+      })),
+      comparisonSummary: ctx.comparisonSummary.slice(0, 10).map((r) => ({
+        name: r.name,
+        type: r.type,
+        appearances: r.appearances,
+        share: r.share,
+      })),
+    },
+    analisisOpenAI: openaiAnalysis,
+    analisisGemini: geminiAnalysis,
+    perspectivaAmbos: perspectivaAmbos || 'Ambas perspectivas coinciden en la relevancia del Cleexs Score para evaluar el posicionamiento en IA.',
+  };
+
+  return goldOutput;
 }

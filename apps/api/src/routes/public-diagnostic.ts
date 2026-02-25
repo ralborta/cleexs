@@ -36,14 +36,15 @@ function slugify(text: string): string {
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
-  // POST /api/public/diagnostic — marca (obligatoria) + url (opcional). IA determina industria y 5 competidores antes del run.
+  // POST /api/public/diagnostic — marca (obligatoria) + url (opcional) + tier (freemium|gold)
   fastify.post<{
-    Body: { brandName: string; url?: string };
+    Body: { brandName: string; url?: string; tier?: 'freemium' | 'gold' };
   }>('/diagnostic', async (request, reply) => {
     try {
       const schema = z.object({
         brandName: z.string().min(1).max(200),
         url: z.union([z.string().max(500), z.undefined()]).optional(),
+        tier: z.enum(['freemium', 'gold']).optional(),
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -51,7 +52,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
         });
       }
-      const { brandName, url } = parsed.data;
+      const { brandName, url, tier: requestedTier } = parsed.data;
       const trimmedBrand = brandName.trim();
 
       let domain: string;
@@ -77,11 +78,13 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
       const diagnostic = await prisma.publicDiagnostic.create({
         data: {
           brandName: trimmedBrand,
           domain,
           status: 'running',
+          tier,
         },
       });
 
@@ -192,8 +195,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               priaReport,
               industry: industry || diagnostic.industry || 'General',
             });
-            const analysis = await generateDiagnosticAnalysis(ctx);
-            if (analysis) analysisJson = analysis;
+            const analysisTier = diagnostic.tier === 'gold' ? 'gold' : 'freemium';
+            const analysis = await generateDiagnosticAnalysis(ctx, analysisTier);
+            if (analysis) analysisJson = analysis as object;
           }
         } catch (analysisErr) {
           fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');
@@ -271,7 +275,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         if (!isEmailDisabled() && isEmailConfigured()) {
           const isFirstRun = await isFirstRunForDomain(id, diagnostic.domain);
-          const includeAnalysis = isFirstRun; // Gold vendría de auth; por ahora solo primera corrida recibe análisis
+          const isGold = diagnostic.tier === 'gold';
+          const includeAnalysis = isFirstRun || isGold;
           const analysis =
             includeAnalysis &&
             diagnostic.analysisJson &&
@@ -311,7 +316,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
 
-    const tier = request.query?.tier === 'gold' ? 'gold' : 'freemium';
+    const tier =
+      request.query?.tier === 'gold' || (diagnostic.tier ?? 'freemium') === 'gold' ? 'gold' : 'freemium';
     const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
     const showFullReport = tier === 'gold' || isFirstRun;
 

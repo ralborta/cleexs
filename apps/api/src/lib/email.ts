@@ -20,8 +20,8 @@ export function isEmailConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== 'localhost' && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
-/** Análisis con IA para incluir en el email del diagnóstico */
-export interface DiagnosticAnalysisForEmail {
+/** Análisis simple (Freemium o parte de Gold) */
+export interface SingleAnalysisForEmail {
   resumenEjecutivo?: string;
   contextoCompetitivo?: string;
   comentariosPorIntencion?: Array<{
@@ -37,18 +37,34 @@ export interface DiagnosticAnalysisForEmail {
   proximosPasos?: string[];
 }
 
-function buildAnalysisText(analysis: DiagnosticAnalysisForEmail): string {
+/** Análisis Gold: OpenAI + Gemini + perspectiva combinada */
+export interface DiagnosticAnalysisGoldForEmail {
+  tier: 'gold';
+  metrics: {
+    cleexsScore: number;
+    intentionScores: Array<{ label: string; score: number; weight: number }>;
+    comparisonSummary: Array<{ name: string; type: string; appearances: number; share: number }>;
+  };
+  analisisOpenAI: SingleAnalysisForEmail;
+  analisisGemini: SingleAnalysisForEmail;
+  perspectivaAmbos: string;
+}
+
+/** Análisis con IA para incluir en el email del diagnóstico */
+export type DiagnosticAnalysisForEmail = SingleAnalysisForEmail | DiagnosticAnalysisGoldForEmail;
+
+function isGoldFormat(a: DiagnosticAnalysisForEmail): a is DiagnosticAnalysisGoldForEmail {
+  return typeof a === 'object' && a !== null && (a as { tier?: string }).tier === 'gold';
+}
+
+function buildSingleAnalysisText(a: SingleAnalysisForEmail): string {
   const parts: string[] = [];
-  if (analysis.resumenEjecutivo) {
-    parts.push('RESUMEN EJECUTIVO\n' + analysis.resumenEjecutivo);
-  }
-  if (analysis.contextoCompetitivo) {
-    parts.push('CONTEXTO COMPETITIVO\n' + analysis.contextoCompetitivo);
-  }
-  if (analysis.comentariosPorIntencion?.length) {
+  if (a.resumenEjecutivo) parts.push('RESUMEN EJECUTIVO\n' + a.resumenEjecutivo);
+  if (a.contextoCompetitivo) parts.push('CONTEXTO COMPETITIVO\n' + a.contextoCompetitivo);
+  if (a.comentariosPorIntencion?.length) {
     parts.push(
-      'ANÁLISIS POR INTENCIÓN (Urgencia, Calidad, Precio, Consideración)\n' +
-        analysis.comentariosPorIntencion
+      'ANÁLISIS POR INTENCIÓN\n' +
+        a.comentariosPorIntencion
           .map((c) => {
             let block = `${c.intencion} (Score: ${c.score})\n${c.comentario}`;
             if (c.interpretacion) block += `\n${c.interpretacion}`;
@@ -57,22 +73,32 @@ function buildAnalysisText(analysis: DiagnosticAnalysisForEmail): string {
           .join('\n\n')
     );
   }
-  if (analysis.aspectosAdicionales) {
-    parts.push('OTROS ASPECTOS RELEVANTES\n' + analysis.aspectosAdicionales);
-  }
-  if (analysis.fortalezas?.length) {
-    parts.push('FORTALEZAS\n' + analysis.fortalezas.map((f) => `• ${f}`).join('\n'));
-  }
-  if (analysis.debilidades?.length) {
-    parts.push('DEBILIDADES\n' + analysis.debilidades.map((d) => `• ${d}`).join('\n'));
-  }
-  if (analysis.sugerencias?.length) {
-    parts.push('SUGERENCIAS\n' + analysis.sugerencias.map((s) => `• ${s}`).join('\n'));
-  }
-  if (analysis.proximosPasos?.length) {
-    parts.push('PRÓXIMOS PASOS\n' + analysis.proximosPasos.map((p) => `• ${p}`).join('\n'));
-  }
+  if (a.aspectosAdicionales) parts.push('OTROS ASPECTOS RELEVANTES\n' + a.aspectosAdicionales);
+  if (a.fortalezas?.length) parts.push('FORTALEZAS\n' + a.fortalezas.map((f) => `• ${f}`).join('\n'));
+  if (a.debilidades?.length) parts.push('DEBILIDADES\n' + a.debilidades.map((d) => `• ${d}`).join('\n'));
+  if (a.sugerencias?.length) parts.push('SUGERENCIAS\n' + a.sugerencias.map((s) => `• ${s}`).join('\n'));
+  if (a.proximosPasos?.length) parts.push('PRÓXIMOS PASOS\n' + a.proximosPasos.map((p) => `• ${p}`).join('\n'));
   return parts.join('\n\n');
+}
+
+function buildMetricsText(m: DiagnosticAnalysisGoldForEmail['metrics']): string {
+  const parts: string[] = [
+    `Cleexs Score: ${m.cleexsScore.toFixed(0)}`,
+    m.intentionScores.map((i) => `${i.label}: ${i.score.toFixed(0)} (peso ${i.weight}%)`).join('\n'),
+    m.comparisonSummary.map((c) => `${c.name} (${c.type}): ${c.appearances} apariciones, ${c.share.toFixed(1)}% Top 3`).join('\n'),
+  ];
+  return parts.filter(Boolean).join('\n');
+}
+
+function buildAnalysisText(analysis: DiagnosticAnalysisForEmail): string {
+  if (isGoldFormat(analysis)) {
+    const metrics = 'MÉTRICAS DEL DIAGNÓSTICO\n' + buildMetricsText(analysis.metrics);
+    const openai = 'ASÍ TE VEN EN OPENAI (ChatGPT)\n' + buildSingleAnalysisText(analysis.analisisOpenAI);
+    const gemini = 'ASÍ TE VEN EN GEMINI\n' + buildSingleAnalysisText(analysis.analisisGemini);
+    const ambos = 'ASÍ TE VEN EN AMBOS\n' + analysis.perspectivaAmbos;
+    return [metrics, openai, gemini, ambos].join('\n\n---\n\n');
+  }
+  return buildSingleAnalysisText(analysis);
 }
 
 function escapeHtml(s: string): string {
@@ -84,22 +110,22 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function buildAnalysisHtml(analysis: DiagnosticAnalysisForEmail): string {
+function buildSingleAnalysisHtml(a: SingleAnalysisForEmail): string {
   const sections: string[] = [];
-  if (analysis.resumenEjecutivo) {
+  if (a.resumenEjecutivo) {
     sections.push(
-      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Resumen ejecutivo</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(analysis.resumenEjecutivo).replace(/\n/g, '<br>')}</p></div>`
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Resumen ejecutivo</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(a.resumenEjecutivo).replace(/\n/g, '<br>')}</p></div>`
     );
   }
-  if (analysis.contextoCompetitivo) {
+  if (a.contextoCompetitivo) {
     sections.push(
-      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Contexto competitivo</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(analysis.contextoCompetitivo).replace(/\n/g, '<br>')}</p></div>`
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Contexto competitivo</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(a.contextoCompetitivo).replace(/\n/g, '<br>')}</p></div>`
     );
   }
-  if (analysis.comentariosPorIntencion?.length) {
+  if (a.comentariosPorIntencion?.length) {
     sections.push(
-      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Análisis por intención (Urgencia, Calidad, Precio, Consideración)</p><div style="line-height: 1.7; color: #374151;">` +
-        analysis.comentariosPorIntencion
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Análisis por intención</p><div style="line-height: 1.7; color: #374151;">` +
+        a.comentariosPorIntencion
           .map(
             (c) =>
               `<div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #3b82f6;"><p style="margin: 0 0 8px 0;"><strong>${escapeHtml(c.intencion)}</strong> — Score: ${c.score}</p><p style="margin: 0 0 6px 0;">${escapeHtml(c.comentario).replace(/\n/g, '<br>')}</p>${c.interpretacion ? `<p style="margin: 0; font-size: 14px; color: #4b5563;">${escapeHtml(c.interpretacion).replace(/\n/g, '<br>')}</p>` : ''}</div>`
@@ -108,40 +134,66 @@ function buildAnalysisHtml(analysis: DiagnosticAnalysisForEmail): string {
         '</div></div>'
     );
   }
-  if (analysis.aspectosAdicionales) {
+  if (a.aspectosAdicionales) {
     sections.push(
-      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Otros aspectos relevantes</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(analysis.aspectosAdicionales).replace(/\n/g, '<br>')}</p></div>`
+      `<div style="margin-bottom: 24px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">Otros aspectos relevantes</p><p style="line-height: 1.7; color: #374151;">${escapeHtml(a.aspectosAdicionales).replace(/\n/g, '<br>')}</p></div>`
     );
   }
-  if (analysis.fortalezas?.length) {
+  if (a.fortalezas?.length) {
     sections.push(
       `<div style="margin-bottom: 20px;"><p style="font-weight: 600; color: #15803d; margin-bottom: 8px;">Fortalezas</p><ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #374151;">` +
-        analysis.fortalezas.map((f) => `<li>${escapeHtml(f)}</li>`).join('') +
+        a.fortalezas.map((f) => `<li>${escapeHtml(f)}</li>`).join('') +
         '</ul></div>'
     );
   }
-  if (analysis.debilidades?.length) {
+  if (a.debilidades?.length) {
     sections.push(
       `<div style="margin-bottom: 20px;"><p style="font-weight: 600; color: #b45309; margin-bottom: 8px;">Debilidades</p><ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #374151;">` +
-        analysis.debilidades.map((d) => `<li>${escapeHtml(d)}</li>`).join('') +
+        a.debilidades.map((d) => `<li>${escapeHtml(d)}</li>`).join('') +
         '</ul></div>'
     );
   }
-  if (analysis.sugerencias?.length) {
+  if (a.sugerencias?.length) {
     sections.push(
       `<div style="margin-bottom: 20px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Sugerencias</p><ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #374151;">` +
-        analysis.sugerencias.map((s) => `<li>${escapeHtml(s)}</li>`).join('') +
+        a.sugerencias.map((s) => `<li>${escapeHtml(s)}</li>`).join('') +
         '</ul></div>'
     );
   }
-  if (analysis.proximosPasos?.length) {
+  if (a.proximosPasos?.length) {
     sections.push(
       `<div style="margin-bottom: 20px; padding: 12px; background: #eff6ff; border-radius: 8px;"><p style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Próximos pasos</p><ol style="margin: 0; padding-left: 20px; line-height: 1.6; color: #374151;">` +
-        analysis.proximosPasos.map((p) => `<li>${escapeHtml(p)}</li>`).join('') +
+        a.proximosPasos.map((p) => `<li>${escapeHtml(p)}</li>`).join('') +
         '</ol></div>'
     );
   }
   return sections.join('');
+}
+
+function buildMetricsHtml(m: DiagnosticAnalysisGoldForEmail['metrics']): string {
+  const intentionRows = m.intentionScores.map((i) => `${escapeHtml(i.label)}: ${i.score.toFixed(0)} (peso ${i.weight}%)`).join('<br>');
+  const comparisonRows = m.comparisonSummary.map((c) => `${escapeHtml(c.name)} (${escapeHtml(c.type)}): ${c.appearances} apariciones, ${c.share.toFixed(1)}% Top 3`).join('<br>');
+  return `<div style="margin-bottom: 24px; padding: 16px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9;"><p style="font-weight: 600; color: #0369a1; margin-bottom: 10px;">Métricas del diagnóstico</p><p style="margin: 0 0 8px 0;"><strong>Cleexs Score:</strong> ${m.cleexsScore.toFixed(0)}</p><p style="margin: 0 0 8px 0;"><strong>Por intención:</strong><br>${intentionRows}</p><p style="margin: 0;"><strong>Top competidores:</strong><br>${comparisonRows}</p></div>`;
+}
+
+function buildAnalysisHtml(analysis: DiagnosticAnalysisForEmail): string {
+  if (isGoldFormat(analysis)) {
+    const metrics = buildMetricsHtml(analysis.metrics);
+    const openai =
+      '<div style="margin-bottom: 28px;"><p style="font-weight: 700; font-size: 16px; color: #0f172a; margin-bottom: 12px;">Así te ven en OpenAI (ChatGPT)</p>' +
+      buildSingleAnalysisHtml(analysis.analisisOpenAI) +
+      '</div>';
+    const gemini =
+      '<div style="margin-bottom: 28px;"><p style="font-weight: 700; font-size: 16px; color: #0f172a; margin-bottom: 12px;">Así te ven en Gemini</p>' +
+      buildSingleAnalysisHtml(analysis.analisisGemini) +
+      '</div>';
+    const ambos =
+      '<div style="margin-bottom: 20px; padding: 16px; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981;"><p style="font-weight: 700; font-size: 16px; color: #065f46; margin-bottom: 10px;">Así te ven en ambos</p><p style="line-height: 1.7; color: #374151;">' +
+      escapeHtml(analysis.perspectivaAmbos).replace(/\n/g, '<br>') +
+      '</p></div>';
+    return metrics + openai + gemini + ambos;
+  }
+  return buildSingleAnalysisHtml(analysis);
 }
 
 /**
