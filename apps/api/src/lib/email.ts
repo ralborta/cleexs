@@ -20,8 +20,9 @@ export function isEmailConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== 'localhost' && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
-/** Análisis simple (Freemium o parte de Gold) */
+/** Análisis simple (Freemium o parte de Gold). goldFallback = Gold pedido pero solo OpenAI disponible */
 export interface SingleAnalysisForEmail {
+  goldFallback?: true;
   resumenEjecutivo?: string;
   contextoCompetitivo?: string;
   comentariosPorIntencion?: Array<{
@@ -92,13 +93,21 @@ function buildMetricsText(m: DiagnosticAnalysisGoldForEmail['metrics']): string 
 
 function buildAnalysisText(analysis: DiagnosticAnalysisForEmail): string {
   if (isGoldFormat(analysis)) {
-    const metrics = 'MÉTRICAS DEL DIAGNÓSTICO\n' + buildMetricsText(analysis.metrics);
-    const openai = 'ASÍ TE VEN EN OPENAI (ChatGPT)\n' + buildSingleAnalysisText(analysis.analisisOpenAI);
-    const gemini = 'ASÍ TE VEN EN GEMINI\n' + buildSingleAnalysisText(analysis.analisisGemini);
-    const ambos = 'ASÍ TE VEN EN AMBOS\n' + analysis.perspectivaAmbos;
-    return [metrics, openai, gemini, ambos].join('\n\n---\n\n');
+    return buildGoldAnalysisText(analysis);
   }
-  return buildSingleAnalysisText(analysis);
+  const note =
+    (analysis as SingleAnalysisForEmail).goldFallback
+      ? 'NOTA: Este diagnóstico era Gold; Gemini no estaba disponible (configurá GOOGLE_AI_API_KEY). Solo se incluye análisis OpenAI (ChatGPT).\n\n'
+      : '';
+  return note + buildSingleAnalysisText(analysis);
+}
+
+function buildGoldAnalysisText(analysis: DiagnosticAnalysisGoldForEmail): string {
+  const metrics = 'MÉTRICAS DEL DIAGNÓSTICO\n' + buildMetricsText(analysis.metrics);
+  const openai = 'ASÍ TE VEN EN OPENAI (ChatGPT)\n' + buildSingleAnalysisText(analysis.analisisOpenAI);
+  const gemini = 'ASÍ TE VEN EN GEMINI\n' + buildSingleAnalysisText(analysis.analisisGemini);
+  const ambos = 'ASÍ TE VEN EN AMBOS\n' + analysis.perspectivaAmbos;
+  return [metrics, openai, gemini, ambos].join('\n\n---\n\n');
 }
 
 function escapeHtml(s: string): string {
@@ -193,7 +202,11 @@ function buildAnalysisHtml(analysis: DiagnosticAnalysisForEmail): string {
       '</p></div>';
     return metrics + openai + gemini + ambos;
   }
-  return buildSingleAnalysisHtml(analysis);
+  const single = analysis as SingleAnalysisForEmail;
+  const fallbackNote = single.goldFallback
+    ? '<div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;"><p style="margin: 0; font-size: 14px; color: #92400e;">Este diagnóstico era Gold; Gemini no estaba disponible (configurá GOOGLE_AI_API_KEY en la API). Solo se incluye análisis OpenAI (ChatGPT).</p></div>'
+    : '';
+  return fallbackNote + buildSingleAnalysisHtml(analysis);
 }
 
 /**

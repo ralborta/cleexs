@@ -197,7 +197,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             });
             const analysisTier = diagnostic.tier === 'gold' ? 'gold' : 'freemium';
             const analysis = await generateDiagnosticAnalysis(ctx, analysisTier);
-            if (analysis) analysisJson = analysis as object;
+            if (analysis) {
+              analysisJson = analysis as object;
+              if (analysisTier === 'gold' && (analysis as { tier?: string }).tier !== 'gold') {
+                fastify.log.warn(
+                  { diagnosticId: diagnostic.id },
+                  'Diagnóstico Gold pero Gemini no disponible: solo se guardó análisis OpenAI. Configurá GOOGLE_AI_API_KEY en la API.'
+                );
+              }
+            }
           }
         } catch (analysisErr) {
           fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');

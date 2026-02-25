@@ -262,8 +262,9 @@ export interface PublicDiagnosticRunResult {
   promptResults: PublicDiagnosticPromptResult[];
 }
 
-/** Análisis simple (un solo proveedor) */
+/** Análisis simple (un solo proveedor). goldFallback = diagnóstico Gold pero solo OpenAI disponible */
 export interface DiagnosticAnalysisSingle {
+  goldFallback?: true;
   resumenEjecutivo?: string;
   contextoCompetitivo?: string;
   comentariosPorIntencion?: Array<{

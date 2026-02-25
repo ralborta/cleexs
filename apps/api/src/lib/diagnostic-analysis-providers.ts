@@ -106,9 +106,13 @@ export async function generateWithGemini(
   contextText: string
 ): Promise<DiagnosticAnalysisSingle | null> {
   const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn('[Gemini] No GOOGLE_AI_API_KEY ni GEMINI_API_KEY; se omite el análisis con Gemini.');
+    return null;
+  }
 
   try {
+    console.log('[Gemini] Llamando a Gemini (gemini-1.5-flash)…');
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
@@ -123,8 +127,12 @@ export async function generateWithGemini(
     const result = await model.generateContent(prompt);
     const response = result.response;
     const content = response.text()?.trim();
-    return content ? parseAnalysisResponse(content) : null;
-  } catch {
+    const parsed = content ? parseAnalysisResponse(content) : null;
+    if (parsed) console.log('[Gemini] Análisis recibido correctamente.');
+    else console.warn('[Gemini] Respuesta vacía o no parseable.');
+    return parsed;
+  } catch (err) {
+    console.warn('[Gemini] Error:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }

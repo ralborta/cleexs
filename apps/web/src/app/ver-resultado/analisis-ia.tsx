@@ -132,22 +132,37 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
       </div>
     );
   }
+  const isGoldFallback = analysisJson && (analysisJson as { goldFallback?: true }).goldFallback === true;
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Sparkles className="h-6 w-6 text-primary-600" />
         Análisis con IA
       </h2>
+      {isGoldFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
+          <p className="font-medium">Diagnóstico Gold: solo OpenAI disponible</p>
+          <p className="mt-1">
+            Gemini no estaba configurado o falló. Configurá <strong>GOOGLE_AI_API_KEY</strong> en la API (Railway) y volvé a hacer un diagnóstico Gold para ver OpenAI + Gemini + perspectiva combinada.
+          </p>
+        </div>
+      )}
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Así te ven en OpenAI (ChatGPT)</CardTitle>
-          <CardDescription>
-            Este diagnóstico usó solo un modelo. Para ver también Gemini y la perspectiva combinada de ambas IAs, hacé un{' '}
-            <Link href="/diagnostico?tier=gold" className="text-primary-600 underline hover:no-underline">
-              diagnóstico Gold
-            </Link>{' '}
-            desde Planes.
-          </CardDescription>
+          {isGoldFallback ? (
+            <CardDescription>
+              Gemini no disponible en este run. Revisá la variable GOOGLE_AI_API_KEY en la API.
+            </CardDescription>
+          ) : (
+            <CardDescription>
+              Este diagnóstico usó solo un modelo. Para ver también Gemini y la perspectiva combinada, hacé un{' '}
+              <Link href="/diagnostico?tier=gold" className="text-primary-600 underline hover:no-underline">
+                diagnóstico Gold
+              </Link>{' '}
+              desde Planes.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <BlockAnalisisUnico a={analysisJson} />

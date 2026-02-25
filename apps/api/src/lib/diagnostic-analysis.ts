@@ -147,6 +147,8 @@ export interface DiagnosticAnalysis {
   debilidades: string[];
   sugerencias: string[];
   proximosPasos: string[];
+  /** true cuando el diagnóstico era Gold pero Gemini no estaba disponible (solo OpenAI) */
+  goldFallback?: true;
 }
 
 /** Formato Gold: OpenAI + Gemini + síntesis. Incluye métricas para contexto. */
@@ -214,7 +216,7 @@ export async function generateDiagnosticAnalysis(
 
   if (!openaiAnalysis) return null;
   if (!geminiAnalysis) {
-    return openaiAnalysis as DiagnosticAnalysis;
+    return { ...openaiAnalysis, goldFallback: true as const };
   }
 
   const perspectivaAmbos = await generatePerspectivaAmbos(
