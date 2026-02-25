@@ -1,21 +1,14 @@
 # Configuración para el servicio API en Railway.
-# Para que la migración corra, el servicio API debe usar la RAÍZ del repo (no apps/api).
+# Root Directory: raíz del repo (para Prisma y workspaces).
 #
-# En Railway → servicio API → Settings:
-# - Root Directory: dejar vacío o "." (raíz del repo)
-# - Build Command: el que venías usando (o el que auto-detecte Railway)
-# - Start Command: npm run deploy:api
-#
-# Start: migraciones primero (prisma migrate deploy) y luego la API.
-#
-# Pre-deploy: anulamos el del dashboard con un no-op.
-# Builder RAILPACK: ignora Watch Paths del dashboard.
+# Flujo: Build → Pre-deploy (migraciones) → Start (solo Node) → Healthcheck.
+# Así /health responde en segundos y "Deploying" no se alarga esperando migraciones.
 
 [build]
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "npx prisma migrate deploy && echo '[Cleexs API] Start command ejecutándose' && node apps/api/dist/index.js"
-preDeployCommand = "/bin/true"
+preDeployCommand = "npx prisma migrate deploy"
+startCommand = "node apps/api/dist/index.js"
 healthcheckPath = "/health"
-healthcheckTimeout = 60
+healthcheckTimeout = 120
