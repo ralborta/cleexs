@@ -409,6 +409,40 @@ function VerResultadoContent() {
     return () => { cancelled = true; };
   }, [diagnosticId, searchParams]);
 
+  // Si está completado y debería tener análisis pero aún no llegó (se genera en background), hacer polling
+  useEffect(() => {
+    const id = diagnosticId;
+    if (
+      !id ||
+      !diagnostic ||
+      diagnostic.status !== 'completed' ||
+      !diagnostic.showFullReport ||
+      diagnostic.analysisJson != null
+    ) {
+      return;
+    }
+    const maxAttempts = 23;
+    const intervalMs = 4000;
+    let attempts = 0;
+    const timer = setInterval(async () => {
+      attempts += 1;
+      if (attempts > maxAttempts) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const data = await publicDiagnosticApi.get(id);
+        if (data.analysisJson != null) {
+          setDiagnostic(data);
+          clearInterval(timer);
+        }
+      } catch {
+        // ignorar errores de polling
+      }
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [diagnosticId, diagnostic]);
+
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!diagnosticId || !email.trim()) return;
@@ -504,6 +538,13 @@ function VerResultadoContent() {
                 {diagnostic.showFullReport && diagnostic.analysisJson && (
                   <div className="pt-6 border-t">
                     <AnalisisIA analysisJson={diagnostic.analysisJson} />
+                  </div>
+                )}
+
+                {diagnostic.showFullReport && !diagnostic.analysisJson && (
+                  <div className="pt-6 border-t rounded-lg border border-primary-200 bg-primary-50/50 p-4 text-primary-800">
+                    <p className="font-medium">Generando análisis con IA (OpenAI + Gemini)…</p>
+                    <p className="text-sm mt-1">La página se actualizará sola en unos segundos. Si no aparece, recargá.</p>
                   </div>
                 )}
 
