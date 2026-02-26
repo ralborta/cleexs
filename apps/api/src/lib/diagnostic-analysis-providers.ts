@@ -102,6 +102,14 @@ export async function generateWithOpenAI(
   }
 }
 
+// Orden de modelos a probar: el primero que responda se usa (Google va descontinuando; nombres pueden variar).
+const GEMINI_MODELS_TO_TRY = [
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+];
+
 export async function generateWithGemini(
   contextText: string
 ): Promise<DiagnosticAnalysisSingle | null> {
@@ -111,48 +119,48 @@ export async function generateWithGemini(
     return null;
   }
 
-  // gemini-2.0-flash suele estar en nivel gratuito; si falla, revisar logs [Gemini] en Railway
-  const MODEL = 'gemini-2.0-flash';
-  try {
-    console.log(`[Gemini] Iniciando llamada con modelo ${MODEL}…`);
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: MODEL,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 4500,
-      },
-    });
+  const prompt = `${SYSTEM_PROMPT}\n\nAnalizá este diagnóstico y generá el informe JSON:\n\n${contextText}`;
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(apiKey);
 
-    const prompt = `${SYSTEM_PROMPT}\n\nAnalizá este diagnóstico y generá el informe JSON:\n\n${contextText}`;
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const content = response.text()?.trim();
+  for (const modelId of GEMINI_MODELS_TO_TRY) {
+    try {
+      console.log(`[Gemini] Probando modelo ${modelId}…`);
+      const model = genAI.getGenerativeModel({
+        model: modelId,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 4500,
+        },
+      });
 
-    if (!content) {
-      console.warn(`[Gemini] Respuesta vacía. finishReason: ${response.candidates?.[0]?.finishReason}`);
-      return null;
-    }
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const content = response.text()?.trim();
 
-    const parsed = parseAnalysisResponse(content);
-    if (parsed) {
-      console.log('[Gemini] Análisis recibido y parseado correctamente.');
-    } else {
-      console.warn('[Gemini] Respuesta recibida pero no parseó como JSON válido. Primeros 200 chars:', content.slice(0, 200));
+      if (!content) {
+        console.warn(`[Gemini] ${modelId}: respuesta vacía. finishReason: ${response.candidates?.[0]?.finishReason}`);
+        continue;
+      }
+
+      const parsed = parseAnalysisResponse(content);
+      if (parsed) {
+        console.log(`[Gemini] OK con modelo ${modelId}.`);
+        return parsed;
+      }
+      console.warn(`[Gemini] ${modelId}: respuesta no parseó como JSON. Primeros 200 chars:`, content.slice(0, 200));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('API_KEY') || msg.includes('403') || msg.includes('permission') || msg.includes('not valid')) {
+        console.error(`[Gemini] Error de API key (no se reintenta con otros modelos): ${msg}`);
+        return null;
+      }
+      console.warn(`[Gemini] ${modelId} no disponible: ${msg}`);
     }
-    return parsed;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[Gemini] Error con modelo ${MODEL}: ${msg}`);
-    if (msg.includes('404') || msg.includes('not found')) {
-      console.error('[Gemini] El modelo no existe o no está disponible para esta API key. Verificá en: https://ai.google.dev/gemini-api/docs/models');
-    }
-    if (msg.includes('API_KEY') || msg.includes('403') || msg.includes('permission')) {
-      console.error('[Gemini] Problema de autenticación. Verificá que GOOGLE_AI_API_KEY sea válida y tenga acceso a Gemini API.');
-    }
-    return null;
   }
+
+  console.warn('[Gemini] Ningún modelo respondió. Probados:', GEMINI_MODELS_TO_TRY.join(', '));
+  return null;
 }
 
 export async function generatePerspectivaAmbos(

@@ -46,7 +46,8 @@ function VerificandoContent() {
         const data = await publicDiagnosticApi.get(id);
         setDiagnostic(data);
         if (data.status === 'completed') {
-          router.replace(`/ver-resultado?diagnosticId=${id}`);
+          const tierQ = data.tier === 'gold' ? '&tier=gold' : '';
+          router.replace(`/ver-resultado?diagnosticId=${id}${tierQ}`);
           return false;
         }
         if (data.status === 'failed') return false;

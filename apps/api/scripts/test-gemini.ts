@@ -11,7 +11,9 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const MODELS_TO_TEST = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+// Solo modelos actualmente soportados (Google descontinuó 1.x y algunos 2.0 sin versión)
+// Orden: el que usa la API primero, luego alternativas
+const MODELS_TO_TEST = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-001'];
 
 async function testModel(modelName: string) {
   console.log(`\n🔷 Probando modelo: ${modelName}`);
@@ -23,7 +25,6 @@ async function testModel(modelName: string) {
       generationConfig: {
         temperature: 0.1,
         maxOutputTokens: 200,
-        responseMimeType: 'application/json',
       },
     });
 
@@ -49,15 +50,20 @@ async function testModel(modelName: string) {
 
 async function main() {
   console.log(`🔑 API Key detectada: ${apiKey!.slice(0, 8)}...`);
-  console.log(`📊 Probando ${MODELS_TO_TEST.length} modelos...\n`);
+  console.log(`📊 Probando ${MODELS_TO_TEST.length} modelos en un solo run...\n`);
 
-  let successCount = 0;
+  const ok: string[] = [];
+  const fail: string[] = [];
   for (const model of MODELS_TO_TEST) {
     const success = await testModel(model);
-    if (success) successCount++;
+    if (success) ok.push(model);
+    else fail.push(model);
   }
 
-  console.log(`\n✅ Test finalizado. ${successCount}/${MODELS_TO_TEST.length} modelos funcionaron.`);
+  console.log('\n' + '─'.repeat(50));
+  console.log(`✅ Funcionan: ${ok.length > 0 ? ok.join(', ') : 'ninguno'}`);
+  if (fail.length > 0) console.log(`❌ Fallan: ${fail.join(', ')}`);
+  console.log(`Total: ${ok.length}/${MODELS_TO_TEST.length} modelos OK.`);
 }
 
 main().catch(console.error);

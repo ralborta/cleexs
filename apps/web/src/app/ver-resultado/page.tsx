@@ -390,15 +390,17 @@ function VerResultadoContent() {
 
   useEffect(() => {
     const id = searchParams.get('diagnosticId');
+    const tierParam = searchParams.get('tier');
     if (!id) {
       setLoading(false);
       setError('Falta el ID del diagnóstico.');
       return;
     }
+    const tier = tierParam === 'gold' ? 'gold' : undefined;
     let cancelled = false;
     (async () => {
       try {
-        const data = await publicDiagnosticApi.get(id);
+        const data = await publicDiagnosticApi.get(id, tier);
         if (!cancelled) setDiagnostic(data);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagnóstico.');
@@ -412,6 +414,7 @@ function VerResultadoContent() {
   // Si está completado y debería tener análisis pero aún no llegó (se genera en background), hacer polling
   useEffect(() => {
     const id = diagnosticId;
+    const tier = searchParams.get('tier') === 'gold' ? 'gold' : undefined;
     if (
       !id ||
       !diagnostic ||
@@ -431,7 +434,7 @@ function VerResultadoContent() {
         return;
       }
       try {
-        const data = await publicDiagnosticApi.get(id);
+        const data = await publicDiagnosticApi.get(id, tier);
         if (data.analysisJson != null) {
           setDiagnostic(data);
           clearInterval(timer);
@@ -441,7 +444,7 @@ function VerResultadoContent() {
       }
     }, intervalMs);
     return () => clearInterval(timer);
-  }, [diagnosticId, diagnostic]);
+  }, [diagnosticId, diagnostic, searchParams]);
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
