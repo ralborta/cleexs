@@ -111,7 +111,8 @@ export async function generateWithGemini(
     return null;
   }
 
-  const MODEL = 'gemini-2.5-pro';
+  // gemini-2.0-flash suele estar en nivel gratuito; si falla, revisar logs [Gemini] en Railway
+  const MODEL = 'gemini-2.0-flash';
   try {
     console.log(`[Gemini] Iniciando llamada con modelo ${MODEL}…`);
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
@@ -121,7 +122,6 @@ export async function generateWithGemini(
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 4500,
-        responseMimeType: 'application/json',
       },
     });
 
