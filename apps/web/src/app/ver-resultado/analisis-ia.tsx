@@ -139,33 +139,48 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
         <Sparkles className="h-6 w-6 text-primary-600" />
         Análisis con IA
       </h2>
-      {isGoldFallback && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
-          <p className="font-medium">Diagnóstico Gold: solo OpenAI disponible</p>
-          <p className="mt-1">
-            Gemini no estaba configurado o falló. Configurá <strong>GOOGLE_AI_API_KEY</strong> en la API (Railway) y volvé a hacer un diagnóstico Gold para ver OpenAI + Gemini + perspectiva combinada.
-          </p>
-        </div>
-      )}
+      {/* Siempre mismo orden: 1) OpenAI, 2) Gemini, 3) Ambos */}
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Así te ven en OpenAI (ChatGPT)</CardTitle>
-          {isGoldFallback ? (
+          {isGoldFallback && (
             <CardDescription>
-              Gemini no disponible en este run. Revisá la variable GOOGLE_AI_API_KEY en la API.
-            </CardDescription>
-          ) : (
-            <CardDescription>
-              Este diagnóstico usó solo un modelo. Para ver también Gemini y la perspectiva combinada, hacé un{' '}
-              <Link href="/diagnostico?tier=gold" className="text-primary-600 underline hover:no-underline">
-                diagnóstico Gold
-              </Link>{' '}
-              desde Planes.
+              Gemini no disponible en este run. Revisá GOOGLE_AI_API_KEY en la API (Railway).
             </CardDescription>
           )}
         </CardHeader>
         <CardContent>
           <BlockAnalisisUnico a={analysisJson} />
+        </CardContent>
+      </Card>
+      <Card className="border-transparent bg-white shadow-md border-amber-200/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Así te ven en Gemini</CardTitle>
+          <CardDescription>
+            {isGoldFallback
+              ? 'No disponible en este run. Configurá GOOGLE_AI_API_KEY en la API y volvé a hacer un diagnóstico Gold.'
+              : <>Para ver Gemini y la perspectiva combinada, hacé un <Link href="/diagnostico?tier=gold" className="text-primary-600 underline hover:no-underline">diagnóstico Gold</Link> desde Planes.</>}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isGoldFallback ? (
+            <p className="text-sm text-muted-foreground italic">Gemini no estaba configurado o falló en esta corrida.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">—</p>
+          )}
+        </CardContent>
+      </Card>
+      <Card className="border-transparent bg-white shadow-md border-primary-200/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Así te ven en ambos</CardTitle>
+          <CardDescription>Perspectiva combinada de ambas IAs</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isGoldFallback ? (
+            <p className="text-sm text-muted-foreground italic">Disponible cuando OpenAI y Gemini respondan en un diagnóstico Gold.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">—</p>
+          )}
         </CardContent>
       </Card>
     </div>
