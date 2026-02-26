@@ -111,15 +111,17 @@ export async function generateWithGemini(
     return null;
   }
 
+  const MODEL = 'gemini-2.5-pro';
   try {
-    console.log('[Gemini] Llamando a Gemini (gemini-1.5-flash)…');
+    console.log(`[Gemini] Iniciando llamada con modelo ${MODEL}…`);
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: MODEL,
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 4500,
+        responseMimeType: 'application/json',
       },
     });
 
@@ -127,12 +129,28 @@ export async function generateWithGemini(
     const result = await model.generateContent(prompt);
     const response = result.response;
     const content = response.text()?.trim();
-    const parsed = content ? parseAnalysisResponse(content) : null;
-    if (parsed) console.log('[Gemini] Análisis recibido correctamente.');
-    else console.warn('[Gemini] Respuesta vacía o no parseable.');
+
+    if (!content) {
+      console.warn(`[Gemini] Respuesta vacía. finishReason: ${response.candidates?.[0]?.finishReason}`);
+      return null;
+    }
+
+    const parsed = parseAnalysisResponse(content);
+    if (parsed) {
+      console.log('[Gemini] Análisis recibido y parseado correctamente.');
+    } else {
+      console.warn('[Gemini] Respuesta recibida pero no parseó como JSON válido. Primeros 200 chars:', content.slice(0, 200));
+    }
     return parsed;
   } catch (err) {
-    console.warn('[Gemini] Error:', err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[Gemini] Error con modelo ${MODEL}: ${msg}`);
+    if (msg.includes('404') || msg.includes('not found')) {
+      console.error('[Gemini] El modelo no existe o no está disponible para esta API key. Verificá en: https://ai.google.dev/gemini-api/docs/models');
+    }
+    if (msg.includes('API_KEY') || msg.includes('403') || msg.includes('permission')) {
+      console.error('[Gemini] Problema de autenticación. Verificá que GOOGLE_AI_API_KEY sea válida y tenga acceso a Gemini API.');
+    }
     return null;
   }
 }
