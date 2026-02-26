@@ -145,7 +145,7 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
           <CardTitle className="text-base">Así te ven en OpenAI (ChatGPT)</CardTitle>
           {isGoldFallback && (
             <CardDescription>
-              Gemini no disponible en este run. Revisá GOOGLE_AI_API_KEY en la API (Railway).
+              En esta corrida Gemini no respondió. Revisá GOOGLE_AI_API_KEY en la API (Railway) para ver también Gemini y la perspectiva combinada.
             </CardDescription>
           )}
         </CardHeader>
@@ -158,8 +158,8 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
           <CardTitle className="text-base">Así te ven en Gemini</CardTitle>
           <CardDescription>
             {isGoldFallback
-              ? 'No disponible en este run. Configurá GOOGLE_AI_API_KEY en la API y volvé a hacer un diagnóstico Gold.'
-              : <>Para ver Gemini y la perspectiva combinada, hacé un <Link href="/diagnostico?tier=gold" className="text-primary-600 underline hover:no-underline">diagnóstico Gold</Link> desde Planes.</>}
+              ? 'No disponible en esta corrida. Configurá GOOGLE_AI_API_KEY en la API para que la primera corrida incluya OpenAI + Gemini + perspectiva combinada.'
+              : 'En la primera corrida por dominio se muestra OpenAI, Gemini y la perspectiva de ambos.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -177,7 +177,7 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
         </CardHeader>
         <CardContent>
           {isGoldFallback ? (
-            <p className="text-sm text-muted-foreground italic">Disponible cuando OpenAI y Gemini respondan en un diagnóstico Gold.</p>
+            <p className="text-sm text-muted-foreground italic">Se genera cuando OpenAI y Gemini responden en la primera corrida.</p>
           ) : (
             <p className="text-sm text-muted-foreground">—</p>
           )}

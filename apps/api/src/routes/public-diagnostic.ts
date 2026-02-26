@@ -195,10 +195,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               priaReport,
               industry: industry || diagnostic.industry || 'General',
             });
-            // Primera corrida gratis O Gold: análisis completo (OpenAI + Gemini). Resto: solo OpenAI.
+            // Primera corrida del dominio = análisis completo: OpenAI + Gemini + perspectiva ambos (uno por uno y después juntos). Sin depender de Gold.
             const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
-            const runFullAnalysis = diagnostic.tier === 'gold' || isFirstRun;
-            const analysis = await generateDiagnosticAnalysis(ctx, runFullAnalysis ? 'gold' : 'freemium');
+            const analysis = await generateDiagnosticAnalysis(ctx, isFirstRun ? 'gold' : 'freemium');
             if (analysis) {
               analysisJson = analysis as object;
               if ((analysis as { tier?: string }).tier !== 'gold') {
