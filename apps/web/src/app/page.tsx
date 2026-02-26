@@ -1,79 +1,146 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, TrendingUp, ShieldCheck } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowRight, Search, Sparkles, ShieldCheck, TrendingUp } from 'lucide-react';
 
 export default function Home() {
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-slate-50">
-
-      {/* Hero */}
-      <section className="border-b border-slate-200 bg-white px-6 py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 mb-4">
-            AI Recommendation Index
-          </p>
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl mb-4">
-            ¿Cómo te recomienda la IA?
-          </h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto mb-8">
-            Medí qué tan bien aparece tu marca cuando la gente le pregunta a ChatGPT o Gemini.
-            Comparate con tus competidores con evidencia real.
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <Link href="/diagnostico">
-              <Button size="lg" className="bg-primary-600 hover:bg-primary-700 text-white">
-                Iniciar diagnóstico gratuito
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/planes">
-              <Button size="lg" variant="outline" className="text-slate-600">
-                Ver planes
-              </Button>
-            </Link>
+    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
+      <div className="mx-auto max-w-6xl">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white px-4 py-2 text-sm text-primary-700 shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            Nuevo Cleexs
           </div>
+          <div className="flex items-center justify-center gap-3 mt-6 mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 shadow-lg">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2L2 7L12 12L22 7L12 2Z"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M2 17L12 22L22 17"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M2 12L12 17L22 12"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h1 className="text-5xl font-bold tracking-tight text-foreground">Cleexs</h1>
+          </div>
+          <p className="text-xl text-muted-foreground mb-2">Plataforma de Cleexs Score</p>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Medí qué tan recomendado aparece tu producto en la IA, con evidencia auditable y
+            comparaciones consistentes.
+          </p>
         </div>
-      </section>
 
-      {/* Feature cards */}
-      <section className="px-6 py-12">
-        <div className="mx-auto max-w-4xl grid gap-4 md:grid-cols-2">
+        <div className="mb-8">
+          <Link href="/diagnostico">
+            <Card className="border-2 border-primary-200 bg-gradient-to-br from-primary-50 to-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg hover:border-primary-300">
+              <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white">
+                    <Search className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">Diagnóstico gratuito</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Ingresá una URL y te enviamos por correo cómo aparece recomendado tu producto. Sin registro.
+                    </p>
+                  </div>
+                </div>
+                <Button className="shrink-0 group bg-primary-600 text-white hover:bg-primary-700">
+                  Ver diagnóstico
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
 
-          <Link href="/dashboard" className="group block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50">
+        <p className="text-center text-sm text-muted-foreground mb-8">
+          ¿Querés reportes completos siempre? <Link href="/planes" className="text-primary-600 hover:underline font-medium">Ver planes</Link>
+        </p>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="border-transparent bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl flex items-center gap-2 text-foreground">
                 <TrendingUp className="h-5 w-5 text-primary-600" />
+                Dashboard
+              </CardTitle>
+              <CardDescription>
+                Visualizá rankings, tendencias y Cleexs Score con estilo ejecutivo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Link href="/dashboard">
+                <Button className="w-full group bg-primary-600 text-white hover:bg-primary-700">
+                  Ver Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                <div className="rounded-lg border border-border bg-primary-50 px-3 py-2">
+                  Ranking vs competidores
+                </div>
+                <div className="rounded-lg border border-border bg-primary-50 px-3 py-2">
+                  Tendencia mensual
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-slate-900 mb-1 group-hover:text-primary-600 transition-colors">
-                  Dashboard
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Rankings, tendencias y Cleexs Score con comparación frente a competidores.
-                </p>
-              </div>
-            </div>
-          </Link>
+            </CardContent>
+          </Card>
 
-          <Link href="/runs" className="group block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50">
+          <Card className="border-transparent bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl flex items-center gap-2 text-foreground">
                 <ShieldCheck className="h-5 w-5 text-primary-600" />
+                Runs
+              </CardTitle>
+              <CardDescription>
+                Gestioná corridas, evidencia y overrides con trazabilidad completa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Link href="/runs">
+                <Button className="w-full border-primary-200 text-primary-700 hover:bg-primary-50" variant="outline" asChild>
+                  <span className="group inline-flex items-center justify-center">
+                    Ver Runs
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Button>
+              </Link>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                <div className="rounded-lg border border-border bg-primary-50 px-3 py-2">
+                  Evidencia completa
+                </div>
+                <div className="rounded-lg border border-border bg-primary-50 px-3 py-2">
+                  Overrides manuales
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-slate-900 mb-1 group-hover:text-primary-600 transition-colors">
-                  Runs
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Corridas auditables con evidencia completa y trazabilidad por prompt.
-                </p>
-              </div>
-            </div>
-          </Link>
-
+            </CardContent>
+          </Card>
         </div>
-      </section>
-
+      </div>
     </main>
   );
 }

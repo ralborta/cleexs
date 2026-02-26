@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
-import { ArrowRight } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export default function DiagnosticoPage() {
   const router = useRouter();
@@ -49,81 +50,64 @@ export default function DiagnosticoPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-slate-50 flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md">
-
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 mb-2">
-            Diagnóstico gratuito
-          </p>
-          <h1 className="text-2xl font-bold text-slate-900">Analizá tu marca</h1>
-          <p className="mt-1.5 text-sm text-slate-500">
-            Determinamos tu industria, competidores y Cleexs Score. Sin registro.
-          </p>
-        </div>
-
-        {/* Form card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-
-            <div className="space-y-1.5">
-              <label htmlFor="brand" className="block text-sm font-medium text-slate-700">
-                Nombre de marca
-              </label>
-              <input
-                id="brand"
-                type="text"
-                placeholder="Ej: Argento's Italian Bistro"
-                value={brandName}
-                onChange={(e) => setBrandName(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 transition-colors"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="url" className="block text-sm font-medium text-slate-700">
-                Sitio web{' '}
-                <span className="font-normal text-slate-400">(opcional)</span>
-              </label>
-              <input
-                id="url"
-                type="text"
-                inputMode="url"
-                placeholder="tudominio.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 transition-colors"
-                disabled={loading}
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive" role="alert">{error}</p>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white"
-              disabled={loading}
-            >
-              {loading ? (
-                'Iniciando…'
-              ) : (
-                <>
-                  Iniciar diagnóstico
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
+      <div className="mx-auto max-w-lg">
+        <Card className="border-transparent bg-white shadow-md">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-2xl">Diagnóstico de recomendación</CardTitle>
+            <CardDescription>
+              Ingresá tu marca (la URL es opcional). Determinamos tu industria, competidores y generamos tu Cleexs Score.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="brand" className="block text-sm font-medium text-foreground mb-1">
+                  Marca
+                </label>
+                <input
+                  id="brand"
+                  type="text"
+                  placeholder="Ej: Argento's Italian Bistro"
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label htmlFor="url" className="block text-sm font-medium text-foreground mb-1">
+                  URL de tu sitio <span className="text-muted-foreground font-normal">(opcional)</span>
+                </label>
+                <input
+                  id="url"
+                  type="text"
+                  inputMode="url"
+                  placeholder="tudominio.com o https://tudominio.com"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  disabled={loading}
+                />
+              </div>
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
               )}
-            </Button>
-          </form>
-        </div>
-
-        <p className="mt-4 text-center text-xs text-slate-400">
-          Gratis · Sin registro · Resultado por email
-        </p>
-
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  'Iniciando…'
+                ) : (
+                  <>
+                    <Search className="mr-2 h-4 w-4" />
+                    Iniciar diagnóstico
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
