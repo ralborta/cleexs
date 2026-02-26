@@ -19,7 +19,6 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
-import { AnalisisIA } from './analisis-ia';
 import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock } from 'lucide-react';
 
 const normalizeName = (value: string) =>
@@ -176,7 +175,37 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
   );
 }
 
-function ReporteCompleto({ runResult, brandName }: { runResult: PublicDiagnosticRunResult; brandName: string }) {
+/** Construye un runResult sintético "Ambos" promediando scores de ChatGPT y Gemini */
+function buildRunResultAmbos(
+  a: PublicDiagnosticRunResult,
+  b: PublicDiagnosticRunResult
+): PublicDiagnosticRunResult {
+  const prA = a.promptResults || [];
+  const prB = b.promptResults || [];
+  const promptResults = prA.map((pr, i) => ({
+    ...pr,
+    score: (pr.score + (prB[i]?.score ?? pr.score)) / 2,
+  }));
+  const cleexsScore = ((a.cleexsScore ?? 0) + (b.cleexsScore ?? 0)) / 2;
+  return {
+    brandId: a.brandId,
+    brandName: a.brandName,
+    cleexsScore,
+    competitors: a.competitors ?? [],
+    brandAliases: a.brandAliases ?? [],
+    promptResults,
+  };
+}
+
+function ReporteCompleto({
+  runResult,
+  brandName,
+  modelLabel = 'Modelo: ChatGPT (OpenAI)',
+}: {
+  runResult: PublicDiagnosticRunResult;
+  brandName: string;
+  modelLabel?: string;
+}) {
   const results = runResult.promptResults || [];
   const brandAliases = runResult.brandAliases || [];
   const totalPrompts = results.length;
@@ -233,7 +262,7 @@ function ReporteCompleto({ runResult, brandName }: { runResult: PublicDiagnostic
       {/* Cleexs Score */}
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Modelo: ChatGPT (OpenAI)</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{modelLabel}</p>
           <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
@@ -529,7 +558,32 @@ function VerResultadoContent() {
               <>
                 {runResult ? (
                   diagnostic.showFullReport ? (
-                    <ReporteCompleto runResult={runResult} brandName={runResult.brandName} />
+                    <div className="space-y-10">
+                      <ReporteCompleto
+                        runResult={runResult}
+                        brandName={runResult.brandName}
+                        modelLabel="Modelo: ChatGPT (OpenAI)"
+                      />
+                      {diagnostic.runResultGemini ? (
+                        <>
+                          <ReporteCompleto
+                            runResult={diagnostic.runResultGemini}
+                            brandName={diagnostic.runResultGemini.brandName}
+                            modelLabel="Modelo: Gemini"
+                          />
+                          <ReporteCompleto
+                            runResult={buildRunResultAmbos(runResult, diagnostic.runResultGemini)}
+                            brandName={runResult.brandName}
+                            modelLabel="Ambos (promedio ChatGPT + Gemini)"
+                          />
+                        </>
+                      ) : (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
+                          <p className="font-medium">En esta corrida no hay score de Gemini</p>
+                          <p className="mt-1">Para ver ChatGPT, Gemini y Ambos en pantalla hacé un diagnóstico nuevo (este fue creado antes de tener Gemini o la API key no estaba configurada en el servidor).</p>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <ReporteFreemium runResult={runResult} />
                   )
@@ -540,18 +594,7 @@ function VerResultadoContent() {
                   </div>
                 )}
 
-                {diagnostic.showFullReport && diagnostic.analysisJson && (
-                  <div className="pt-6 border-t">
-                    <AnalisisIA analysisJson={diagnostic.analysisJson} />
-                  </div>
-                )}
-
-                {diagnostic.showFullReport && !diagnostic.analysisJson && (
-                  <div className="pt-6 border-t rounded-lg border border-primary-200 bg-primary-50/50 p-4 text-primary-800">
-                    <p className="font-medium">Generando análisis con IA (OpenAI + Gemini)…</p>
-                    <p className="text-sm mt-1">La página se actualizará sola en unos segundos. Si no aparece, recargá.</p>
-                  </div>
-                )}
+                {/* El detalle del análisis (resumen, fortalezas, debilidades) solo va por email; en pantalla solo scores y métricas. */}
 
                 {/* Email al final del flujo */}
                 <div className="pt-4 border-t">

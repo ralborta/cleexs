@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
-import { executeRun } from '../lib/run-executor';
+import { executeRun, executeRunGemini } from '../lib/run-executor';
 import { determineIndustry, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
@@ -167,10 +167,32 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
         await executeRun(run.id, { promptVersionId: promptVersion.id });
 
+        // Run Gemini con los mismos prompts (score y métricas para Gemini)
+        let runGeminiId: string | null = null;
+        try {
+          const runGemini = await prisma.run.create({
+            data: {
+              tenantId: rootTenant.id,
+              brandId: brand.id,
+              periodStart,
+              periodEnd,
+              runType: 'diagnostic_gemini',
+              status: 'pending',
+            },
+          });
+          await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
+          runGeminiId = runGemini.id;
+        } catch (geminiErr) {
+          fastify.log.warn(
+            { err: geminiErr, diagnosticId: diagnostic.id },
+            'Run Gemini no ejecutado (sin key o error). Solo se muestra score OpenAI.'
+          );
+        }
+
         // Marcar completado de inmediato para que la UI redirija (el análisis IA va después)
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
-          data: { status: 'completed' },
+          data: { status: 'completed', ...(runGeminiId && { runGeminiId }) },
         });
 
         let analysisJson: object | null = null;
@@ -334,6 +356,23 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
     const showFullReport = tier === 'gold' || isFirstRun;
 
+    const runResultShape = {
+      brandId: '' as string,
+      brandName: '' as string,
+      cleexsScore: 0 as number,
+      competitors: [] as string[],
+      brandAliases: [] as string[],
+      promptResults: [] as Array<{
+        category: string;
+        score: number;
+        promptText?: string;
+        responseText?: string;
+        top3Json?: Array<{ position: number; name: string; type: string; reason?: string }>;
+        flags?: Record<string, boolean>;
+      }>,
+    };
+    type RunResultType = typeof runResultShape;
+
     const base: {
       id: string;
       domain: string;
@@ -347,21 +386,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
       analysisJson?: object | null;
-      runResult?: {
-        brandId: string;
-        brandName: string;
-        cleexsScore: number;
-        competitors: string[];
-        brandAliases: string[];
-        promptResults: Array<{
-          category: string;
-          score: number;
-          promptText?: string;
-          responseText?: string;
-          top3Json?: Array<{ position: number; name: string; type: string; reason?: string }>;
-          flags?: Record<string, boolean>;
-        }>;
-      };
+      runResult?: RunResultType;
+      runResultGemini?: RunResultType;
     } = {
       id: diagnostic.id,
       domain: diagnostic.domain,
@@ -458,6 +484,50 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
                 }))
               : [],
           };
+        }
+      }
+
+      // Run Gemini: mismo formato de runResult para score y métricas por modelo
+      if (diagnostic.runGeminiId && diagnostic.status === 'completed' && showFullReport) {
+        const runGemini = await prisma.run.findUnique({
+          where: { id: diagnostic.runGeminiId },
+          include: {
+            promptResults: { select: { promptId: true }, orderBy: { createdAt: 'asc' } },
+            priaReports: { take: 1, orderBy: { createdAt: 'desc' } },
+          },
+        });
+        if (runGemini?.status === 'completed' && runGemini.priaReports[0]) {
+          const fullRunGemini = await prisma.run.findUnique({
+            where: { id: diagnostic.runGeminiId },
+            include: {
+              promptResults: {
+                include: {
+                  prompt: { include: { category: true } },
+                },
+                orderBy: { createdAt: 'asc' },
+              },
+              brand: {
+                include: { competitors: true, aliases: true },
+              },
+            },
+          });
+          if (fullRunGemini) {
+            base.runResultGemini = {
+              brandId: fullRunGemini.brand.id,
+              brandName: fullRunGemini.brand.name,
+              cleexsScore: runGemini.priaReports[0].priaTotal,
+              competitors: fullRunGemini.brand.competitors.map((c) => c.name),
+              brandAliases: fullRunGemini.brand.aliases.map((a) => a.alias),
+              promptResults: fullRunGemini.promptResults.map((pr) => ({
+                category: pr.prompt?.category?.name ?? 'General',
+                score: pr.score,
+                promptText: pr.prompt?.promptText ?? '',
+                responseText: pr.responseText,
+                top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
+                flags: (pr.flags as Record<string, boolean>) ?? {},
+              })),
+            };
+          }
         }
       }
     } else {

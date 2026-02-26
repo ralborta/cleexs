@@ -313,7 +313,8 @@ model PublicDiagnostic {
   tier        String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
   email       String?  // capturado al final del flujo (para enviar resultado)
   status      String   @default("pending") // pending | running | completed | failed
-  runId       String?  @map("run_id") // Run real ejecutado automáticamente
+  runId       String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
+  runGeminiId String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
   analysisJson Json?   @map("analysis_json") // análisis detallado con IA (Fase 2)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

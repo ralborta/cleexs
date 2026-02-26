@@ -314,6 +314,7 @@ export interface PublicDiagnostic {
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;
   runResult?: PublicDiagnosticRunResult;
+  runResultGemini?: PublicDiagnosticRunResult;
   analysisJson?: DiagnosticAnalysisJson | null;
 }
 
