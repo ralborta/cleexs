@@ -3,34 +3,29 @@
  * Uso: npx tsx scripts/test-gemini.ts
  */
 
-const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
+// Doc: GEMINI_API_KEY o GOOGLE_API_KEY (GOOGLE_API_KEY tiene prioridad si ambas están)
+const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
 
 if (!apiKey) {
-  console.error('❌ Falta GOOGLE_AI_API_KEY o GEMINI_API_KEY en el entorno.');
+  console.error('❌ Falta GEMINI_API_KEY o GOOGLE_API_KEY en el entorno.');
   console.error('   Ejecutá: GEMINI_API_KEY=tu_key npx tsx scripts/test-gemini.ts');
   process.exit(1);
 }
 
-// Solo modelos actualmente soportados (Google descontinuó 1.x y algunos 2.0 sin versión)
-// Orden: el que usa la API primero, luego alternativas
-const MODELS_TO_TEST = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-001'];
+// Incluir gemini-3-flash-preview (doc actual de Google); luego alternativas
+const MODELS_TO_TEST = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-001'];
 
 async function testModel(modelName: string) {
   console.log(`\n🔷 Probando modelo: ${modelName}`);
   try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey!);
-    const model = genAI.getGenerativeModel({
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    const response = await ai.models.generateContent({
       model: modelName,
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 200,
-      },
+      contents: `Respondé SOLO con JSON válido: {"status":"ok","modelo":"${modelName}","mensaje":"Gemini funcionando correctamente"}`,
+      config: { temperature: 0.1, maxOutputTokens: 200 },
     });
-
-    const prompt = `Respondé SOLO con JSON válido: {"status":"ok","modelo":"${modelName}","mensaje":"Gemini funcionando correctamente"}`;
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = (response.text ?? '').trim();
     console.log(`✅ Respuesta recibida: ${text}`);
 
     try {

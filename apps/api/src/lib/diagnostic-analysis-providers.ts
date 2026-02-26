@@ -102,8 +102,9 @@ export async function generateWithOpenAI(
   }
 }
 
-// Orden de modelos a probar: el primero que responda se usa (Google va descontinuando; nombres pueden variar).
+// Orden de modelos a probar: el primero que responda se usa. gemini-3-flash-preview es el de la doc actual de Google.
 const GEMINI_MODELS_TO_TRY = [
+  'gemini-3-flash-preview',
   'gemini-2.5-flash',
   'gemini-2.5-pro',
   'gemini-2.0-flash',
@@ -113,33 +114,33 @@ const GEMINI_MODELS_TO_TRY = [
 export async function generateWithGemini(
   contextText: string
 ): Promise<DiagnosticAnalysisSingle | null> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
+  // Doc: GEMINI_API_KEY o GOOGLE_API_KEY; si ambas están, GOOGLE_API_KEY tiene prioridad. Mantenemos GOOGLE_AI_API_KEY por compatibilidad.
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
-    console.warn('[Gemini] No GOOGLE_AI_API_KEY ni GEMINI_API_KEY; se omite el análisis con Gemini.');
+    console.warn('[Gemini] No GOOGLE_API_KEY ni GEMINI_API_KEY; se omite el análisis con Gemini.');
     return null;
   }
 
   const prompt = `${SYSTEM_PROMPT}\n\nAnalizá este diagnóstico y generá el informe JSON:\n\n${contextText}`;
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const { GoogleGenAI } = await import('@google/genai');
+  const ai = new GoogleGenAI({ apiKey });
 
   for (const modelId of GEMINI_MODELS_TO_TRY) {
     try {
       console.log(`[Gemini] Probando modelo ${modelId}…`);
-      const model = genAI.getGenerativeModel({
+      const response = await ai.models.generateContent({
         model: modelId,
-        generationConfig: {
+        contents: prompt,
+        config: {
           temperature: 0.3,
           maxOutputTokens: 4500,
         },
       });
 
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const content = response.text()?.trim();
+      const content = response.text?.trim();
 
       if (!content) {
-        console.warn(`[Gemini] ${modelId}: respuesta vacía. finishReason: ${response.candidates?.[0]?.finishReason}`);
+        console.warn(`[Gemini] ${modelId}: respuesta vacía. finishReason: ${(response as { candidates?: Array<{ finishReason?: string }> }).candidates?.[0]?.finishReason}`);
         continue;
       }
 

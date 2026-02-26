@@ -71,7 +71,7 @@ async function bootstrap() {
     const address = await server.listen({ port, host });
     log(`7/7 Servidor activo: ${address} — /health listo para Railway`);
     log(
-      process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY
+      process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
         ? 'Gemini API key: configurada (diagnósticos Gold usarán OpenAI + Gemini)'
         : 'Gemini API key: NO CONFIGURADA — diagnósticos Gold usarán solo OpenAI'
     );

@@ -133,6 +133,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
     <div className="space-y-6">
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Modelo: ChatGPT (OpenAI)</p>
           <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             Tu resultado para {runResult.brandName}
@@ -232,6 +233,7 @@ function ReporteCompleto({ runResult, brandName }: { runResult: PublicDiagnostic
       {/* Cleexs Score */}
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Modelo: ChatGPT (OpenAI)</p>
           <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
