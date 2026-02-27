@@ -419,6 +419,7 @@ function VerResultadoContent() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailSendFailed, setEmailSendFailed] = useState(false);
+  const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
 
   useEffect(() => {
     const id = searchParams.get('diagnosticId');
@@ -522,10 +523,6 @@ function VerResultadoContent() {
   const isPending = diagnostic.status === 'pending' || diagnostic.status === 'running';
   const isFailed = diagnostic.status === 'failed';
   const runResult = diagnostic.runResult;
-
-  type VistaModelo = 'consolidado' | 'chatgpt' | 'gemini';
-  const [vistaModelo, setVistaModelo] = useState<VistaModelo>('consolidado');
-
   const runResultGemini = diagnostic.runResultGemini;
   const tieneGemini = !!runResultGemini;
   const runResultToShow: PublicDiagnosticRunResult | null =
