@@ -19,7 +19,8 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
-import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock } from 'lucide-react';
+import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard } from 'lucide-react';
+import { ReporteModerno } from './reporte-moderno';
 
 const normalizeName = (value: string) =>
   value
@@ -522,10 +523,24 @@ function VerResultadoContent() {
   const isFailed = diagnostic.status === 'failed';
   const runResult = diagnostic.runResult;
 
+  type VistaModelo = 'consolidado' | 'chatgpt' | 'gemini';
+  const [vistaModelo, setVistaModelo] = useState<VistaModelo>('consolidado');
+
+  const runResultGemini = diagnostic.runResultGemini;
+  const tieneGemini = !!runResultGemini;
+  const runResultToShow: PublicDiagnosticRunResult | null =
+    !runResult
+      ? null
+      : vistaModelo === 'consolidado' && runResultGemini
+        ? buildRunResultAmbos(runResult, runResultGemini)
+        : vistaModelo === 'gemini' && runResultGemini
+          ? runResultGemini
+          : runResult;
+
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
+    <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
       <div className="mx-auto max-w-4xl space-y-6">
-        <Card className="border-transparent bg-white shadow-md">
+        <Card className="border-0 bg-white shadow-lg shadow-slate-200/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileCheck className="h-6 w-6 text-primary-600" />
@@ -558,30 +573,58 @@ function VerResultadoContent() {
               <>
                 {runResult ? (
                   diagnostic.showFullReport ? (
-                    <div className="space-y-10">
-                      <ReporteCompleto
-                        runResult={runResult}
-                        brandName={runResult.brandName}
-                        modelLabel="Modelo: ChatGPT (OpenAI)"
-                      />
-                      {diagnostic.runResultGemini ? (
-                        <>
-                          <ReporteCompleto
-                            runResult={diagnostic.runResultGemini}
-                            brandName={diagnostic.runResultGemini.brandName}
-                            modelLabel="Modelo: Gemini"
-                          />
-                          <ReporteCompleto
-                            runResult={buildRunResultAmbos(runResult, diagnostic.runResultGemini)}
-                            brandName={runResult.brandName}
-                            modelLabel="Ambos (promedio ChatGPT + Gemini)"
-                          />
-                        </>
-                      ) : (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
-                          <p className="font-medium">En esta corrida no hay score de Gemini</p>
-                          <p className="mt-1">Para ver ChatGPT, Gemini y Ambos en pantalla hacé un diagnóstico nuevo (este fue creado antes de tener Gemini o la API key no estaba configurada en el servidor).</p>
+                    <div className="space-y-6">
+                      {tieneGemini && (
+                        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                          <span className="mr-2 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setVistaModelo('consolidado')}
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                                vistaModelo === 'consolidado'
+                                  ? 'bg-primary-600 text-white shadow-md'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              <LayoutDashboard className="h-4 w-4" />
+                              Consolidado
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setVistaModelo('chatgpt')}
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                                vistaModelo === 'chatgpt'
+                                  ? 'bg-primary-600 text-white shadow-md'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              <img src="https://chat.openai.com/favicon.ico" alt="" width={18} height={18} className="rounded-sm" />
+                              ChatGPT
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setVistaModelo('gemini')}
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                                vistaModelo === 'gemini'
+                                  ? 'bg-primary-600 text-white shadow-md'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              <img src="https://www.gstatic.com/lamda/images/gemini_favicon_fallback_boot_2.png" alt="" width={18} height={18} className="rounded-sm" />
+                              Gemini
+                            </button>
+                          </div>
                         </div>
+                      )}
+                      {!tieneGemini && (
+                        <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-3 text-sm text-amber-800">
+                          <p className="font-medium">Solo consolidado (ChatGPT)</p>
+                          <p className="mt-0.5">Para ver también Gemini hacé un diagnóstico nuevo con la API key de Gemini configurada.</p>
+                        </div>
+                      )}
+                      {runResultToShow && (
+                        <ReporteModerno runResult={runResultToShow} brandName={runResultToShow.brandName} />
                       )}
                     </div>
                   ) : (
