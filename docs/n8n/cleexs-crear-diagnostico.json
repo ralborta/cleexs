@@ -1,0 +1,99 @@
+{
+  "name": "Cleexs - Crear diagnóstico",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0000-4000-8000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLEEXS_API_URL || 'http://localhost:3001' }}/api/public/diagnostic",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ brandName: $json.brandName || 'Marca a medir', url: $json.url || '' }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0000-4000-8000-000000000002",
+      "name": "Crear diagnóstico",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "POST a la API de Cleexs. Entrada: brandName (requerido), url (opcional). Respuesta: { diagnosticId }."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "out-diagnosticId",
+              "name": "diagnosticId",
+              "value": "={{ $json.diagnosticId }}",
+              "type": "string"
+            },
+            {
+              "id": "out-link",
+              "name": "linkResultado",
+              "value": "={{ ($env.CLEEXS_FRONTEND_URL || 'http://localhost:3000') + '/ver-resultado?diagnosticId=' + $json.diagnosticId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0000-4000-8000-000000000003",
+      "name": "Armar link resultado",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Opcional: definí CLEEXS_FRONTEND_URL en n8n para que el link apunte a tu front."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Crear diagnóstico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear diagnóstico": {
+      "main": [
+        [
+          {
+            "node": "Armar link resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}
