@@ -191,161 +191,185 @@ export function ReporteModerno({
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Cleexs Score — card principal */}
-      <Card className="overflow-hidden border-0 bg-white shadow-lg shadow-slate-200/60">
-        <CardContent className="p-6">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Cleexs Score</p>
-              <p className="mt-1 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-                {Math.round(displayScore)}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
-              </p>
-            </div>
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-3xl font-bold text-white shadow-lg">
-              {Math.round(displayScore)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      {/* Fila superior: 3 cards — estilo RankIA */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Card 1 — Ranking de marcas (tabla compacta) */}
+        <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="pb-2 pt-5">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <BarChart3 className="h-4 w-4 text-slate-500" />
+              Ranking de marcas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {results.length > 0 && comparisonSummary.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-slate-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 bg-slate-50">
+                      <TableHead className="h-9 text-xs font-semibold text-slate-600">#</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600">Marca</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-600">Score</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-600">% Top 3</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {comparisonSummary.slice(0, 6).map((row, idx) => (
+                      <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
+                        <TableCell className="py-2 text-xs text-slate-500">{idx + 1}</TableCell>
+                        <TableCell className="py-2 text-sm font-medium text-slate-800">{row.name}</TableCell>
+                        <TableCell className="py-2 text-right text-sm font-semibold text-slate-700">
+                          {row.averagePosition.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="py-2 text-right text-sm text-slate-600">{row.share.toFixed(0)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="py-4 text-center text-sm text-slate-500">Sin datos de ranking.</p>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Intenciones — barras de progreso */}
-      <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-slate-800">Por intención</CardTitle>
-          <CardDescription className="text-sm text-slate-500">
-            Cómo te recomienda la IA según el tipo de búsqueda del usuario
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {intentionScores.length === 0 && results.length > 0 ? (
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-              <BarChart3 className="h-5 w-5 text-slate-400" />
-              <div>
-                <p className="font-medium text-slate-800">General</p>
-                <p className="text-2xl font-bold text-primary-600">{runResult.cleexsScore?.toFixed(0) ?? '—'}</p>
+        {/* Card 2 — Cleexs Score (centro, destacado como PRIA Trend) */}
+        <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="pb-1 pt-5">
+            <CardTitle className="text-base font-bold text-slate-800">Cleexs Score</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <p className="text-2xl font-bold text-slate-900">
+              Cleexs actual: <span className="text-primary-600">{Math.round(displayScore)}</span>
+            </p>
+            <p className="mt-0.5 text-sm text-slate-500">
+              {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
+            </p>
+            <div className="mt-4 flex justify-center">
+              <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-violet-600 text-4xl font-bold text-white shadow-lg">
+                {Math.round(displayScore)}
               </div>
             </div>
-          ) : (
-            intentionScores.map((item) => {
-              const meta = INTENTION_LABELS[item.key];
-              const score = Math.round(item.score);
-              return (
-                <div key={item.key} className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {meta?.icon ?? null}
-                      <span className="text-sm font-medium text-slate-700">{meta?.label ?? item.key}</span>
-                      <span className="text-xs text-slate-400">Peso {item.weight}%</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900">{score}</span>
-                  </div>
-                  <ProgressBar value={score} />
-                </div>
-              );
-            })
-          )}
-        </CardContent>
-      </Card>
+            <p className="mt-3 text-xs text-slate-500">Indicador 0–100 de recomendación en IA</p>
+          </CardContent>
+        </Card>
 
-      {/* Métricas del análisis — barras */}
-      <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-slate-800">Métricas del análisis</CardTitle>
-          <CardDescription className="text-sm text-slate-500">
-            Coherencia, visibilidad y ranking en esta corrida
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map((m) => (
-              <div
-                key={m.label}
-                className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50/50 p-4"
-              >
-                <div className="flex items-center gap-2">
-                  <m.icon className="h-4 w-4 text-slate-500" />
-                  <span className="text-xs font-medium text-slate-600">{m.label}</span>
+        {/* Card 3 — Por intención (lista con barras, estilo Prompt Ranking) */}
+        <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="pb-2 pt-5">
+            <CardTitle className="text-base font-bold text-slate-800">Por intención</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0">
+            {intentionScores.length === 0 && results.length > 0 ? (
+              <div className="flex items-center gap-2 rounded-lg bg-slate-50 p-3">
+                <BarChart3 className="h-4 w-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-700">General {runResult.cleexsScore?.toFixed(0) ?? '—'}</span>
+              </div>
+            ) : (
+              intentionScores.map((item) => {
+                const meta = INTENTION_LABELS[item.key];
+                const score = Math.round(item.score);
+                return (
+                  <div key={item.key} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {meta?.icon ?? null}
+                        <span className="text-sm font-medium text-slate-700">{meta?.label ?? item.key}</span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-900">{score}%</span>
+                    </div>
+                    <ProgressBar value={score} />
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Línea central — texto comparativo */}
+      <p className="text-center text-sm font-medium text-slate-700">
+        Compará tu Cleexs Score con tus principales competidores.
+      </p>
+
+      {/* Fila inferior: 2 cards (izq más ancha) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Card 4 — Métricas (lista con barras, estilo Brand Ranking abajo) */}
+        <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="pb-2 pt-5">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <BarChart3 className="h-4 w-4 text-slate-500" />
+              Métricas del análisis
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Coherencia, visibilidad y ranking en esta corrida
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0">
+            {metrics.map((m, idx) => (
+              <div key={m.label} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-slate-100 text-xs font-semibold text-slate-600">
+                  {idx + 1}
+                </span>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-slate-700">{m.label}</span>
+                    <span className="shrink-0 text-sm font-bold text-slate-900">{m.value}%</span>
+                  </div>
+                  <ProgressBar value={m.value} className="h-2 bg-slate-200" />
                 </div>
-                <p className="text-2xl font-bold text-slate-900">{m.value}%</p>
-                <ProgressBar value={m.value} className="bg-slate-200" />
-                <p className="text-xs text-slate-500">{m.detail}</p>
               </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Comparaciones y sugerencias */}
-      <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-slate-800">Comparaciones y sugerencias</CardTitle>
-          <CardDescription className="text-sm text-slate-500">
-            Top 3 por prompt con la marca medida y competidores
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <span className="text-slate-600">
-              <span className="font-medium text-slate-800">Marca medida:</span> {runResult.brandName}
-            </span>
-            <span className="text-slate-600">
-              <span className="font-medium text-slate-800">Competidores:</span>{' '}
-              {competitorsUsed.length > 0 ? competitorsUsed.join(', ') : '—'}
-            </span>
-          </div>
-          <p className="text-sm font-medium text-slate-700">Resumen de apariciones en Top 3</p>
-          {results.length > 0 ? (
-            <div className="overflow-hidden rounded-xl border border-slate-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-200 bg-slate-100 hover:bg-slate-100">
-                    <TableHead className="font-semibold text-slate-700">Marca</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Tipo</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Apariciones</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Pos. media</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">% Top 3</TableHead>
-                    <TableHead className="font-semibold text-slate-700 max-w-[180px]">Motivo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {comparisonSummary.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-slate-500">
-                        No hay Top 3 parseado para esta corrida.
-                      </TableCell>
+        {/* Card 5 — Comparaciones y sugerencias (tabla completa + marca/competidores) */}
+        <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="pb-2 pt-5">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <TrendingUp className="h-4 w-4 text-slate-500" />
+              Comparaciones y sugerencias
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Marca medida: <span className="font-semibold text-slate-700">{runResult.brandName}</span>
+              {competitorsUsed.length > 0 && ` · Competidores: ${competitorsUsed.slice(0, 3).join(', ')}${competitorsUsed.length > 3 ? '…' : ''}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {results.length > 0 && comparisonSummary.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-slate-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 bg-slate-50">
+                      <TableHead className="text-xs font-semibold text-slate-600">Marca</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600">Tipo</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-600">Apar.</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-600">% Top 3</TableHead>
                     </TableRow>
-                  ) : (
-                    comparisonSummary.map((row) => (
-                      <TableRow key={`${row.name}-${row.type}`} className="border-slate-100">
-                        <TableCell className="font-medium text-slate-800">{row.name}</TableCell>
-                        <TableCell className="text-slate-600">{row.type === 'brand' ? 'marca' : 'competidor'}</TableCell>
-                        <TableCell className="text-right text-slate-600">{row.appearances}</TableCell>
-                        <TableCell className="text-right text-slate-600">{row.averagePosition.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-slate-600">{row.share.toFixed(1)}%</TableCell>
-                        <TableCell className="max-w-[180px] truncate text-sm text-slate-500" title={row.sampleReason}>
-                          {row.sampleReason && row.sampleReason.replace(/\*+/g, '').trim().length >= 2
-                            ? row.sampleReason.replace(/\*+/g, '').trim()
-                            : '—'}
-                        </TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {comparisonSummary.map((row) => (
+                      <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
+                        <TableCell className="py-2 text-sm font-medium text-slate-800">{row.name}</TableCell>
+                        <TableCell className="py-2 text-xs text-slate-600">{row.type === 'brand' ? 'marca' : 'competidor'}</TableCell>
+                        <TableCell className="py-2 text-right text-sm text-slate-600">{row.appearances}</TableCell>
+                        <TableCell className="py-2 text-right text-sm text-slate-600">{row.share.toFixed(1)}%</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">No hay resultados para comparar.</p>
-          )}
-          <p className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            Definí industria o tipo de producto en la marca para sugerencias más relevantes.
-          </p>
-        </CardContent>
-      </Card>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="py-4 text-center text-sm text-slate-500">No hay Top 3 parseado.</p>
+            )}
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
+              <Info className="h-3.5 w-3.5 shrink-0" />
+              Definí industria o tipo de producto para sugerencias más relevantes.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
