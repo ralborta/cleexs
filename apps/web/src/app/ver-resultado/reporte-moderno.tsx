@@ -175,7 +175,7 @@ export function ReporteModerno({
       ? results.reduce((s, r) => s + (r.score || 0) * 100, 0) / results.length
       : 0;
   const cleexsScore = intentionScores.length > 0 ? cleexsScoreByIntention : fallbackScore;
-  const displayScore = (cleexsScore || runResult.cleexsScore ?? 0);
+  const displayScore = (cleexsScore || runResult.cleexsScore) ?? 0;
 
   const comparisonSummary = buildComparisonSummary(results);
   const competitorsUsed =
