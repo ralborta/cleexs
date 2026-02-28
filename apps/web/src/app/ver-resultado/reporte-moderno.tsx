@@ -191,9 +191,9 @@ export function ReporteModerno({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {/* Fila superior: 3 cards — sombra de color por tarjeta, estilo RankIA */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Card 1 — Ranking de marcas — sombra azul */}
         <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-blue-400 bg-white shadow-[0_8px_30px_-5px_rgba(59,130,246,0.2)]">
           <CardHeader className="pb-2 pt-5">
@@ -295,7 +295,7 @@ export function ReporteModerno({
       </p>
 
       {/* Fila inferior: 2 cards — sombra de color cada una */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Card 4 — Métricas — sombra esmeralda */}
         <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-emerald-400 bg-white shadow-[0_8px_30px_-5px_rgba(16,185,129,0.2)]">
           <CardHeader className="pb-2 pt-5">

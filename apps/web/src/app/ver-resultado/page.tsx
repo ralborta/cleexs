@@ -19,7 +19,7 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
-import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard } from 'lucide-react';
+import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ReporteModerno } from './reporte-moderno';
 
 const normalizeName = (value: string) =>
@@ -420,6 +420,7 @@ function VerResultadoContent() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailSendFailed, setEmailSendFailed] = useState(false);
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
+  const [geminiLogoError, setGeminiLogoError] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get('diagnosticId');
@@ -536,7 +537,7 @@ function VerResultadoContent() {
 
   return (
     <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-8 px-2 sm:px-4">
         <Card className="border-0 bg-white shadow-lg shadow-slate-200/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -570,45 +571,56 @@ function VerResultadoContent() {
               <>
                 {runResult ? (
                   diagnostic.showFullReport ? (
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {tieneGemini && (
-                        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                          <span className="mr-2 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                          <span className="mr-1 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
+                          <div className="flex flex-wrap gap-3">
                             <button
                               type="button"
                               onClick={() => setVistaModelo('consolidado')}
-                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                                 vistaModelo === 'consolidado'
-                                  ? 'bg-primary-600 text-white shadow-md'
-                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50'
+                                  ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                               }`}
                             >
-                              <LayoutDashboard className="h-4 w-4" />
+                              <LayoutDashboard className="h-4 w-4 shrink-0" />
                               Consolidado
                             </button>
                             <button
                               type="button"
                               onClick={() => setVistaModelo('chatgpt')}
-                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                                 vistaModelo === 'chatgpt'
-                                  ? 'bg-primary-600 text-white shadow-md'
-                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50'
+                                  ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                               }`}
                             >
-                              <img src="https://chat.openai.com/favicon.ico" alt="" width={18} height={18} className="rounded-sm" />
+                              <img src="https://chat.openai.com/favicon.ico" alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0 rounded-sm" />
                               ChatGPT
                             </button>
                             <button
                               type="button"
                               onClick={() => setVistaModelo('gemini')}
-                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                                 vistaModelo === 'gemini'
-                                  ? 'bg-primary-600 text-white shadow-md'
-                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50'
+                                  ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                               }`}
                             >
-                              <img src="https://www.gstatic.com/lamda/images/gemini_favicon_fallback_boot_2.png" alt="" width={18} height={18} className="rounded-sm" />
+                              {geminiLogoError ? (
+                                <Sparkles className="h-[18px] w-[18px] shrink-0 text-blue-600" aria-hidden />
+                              ) : (
+                                <img
+                                  src="https://www.gstatic.com/lamda/images/gemini_favicon_fallback_boot_2.png"
+                                  alt=""
+                                  width={18}
+                                  height={18}
+                                  className="h-[18px] w-[18px] shrink-0 rounded-sm"
+                                  onError={() => setGeminiLogoError(true)}
+                                />
+                              )}
                               Gemini
                             </button>
                           </div>
