@@ -54,7 +54,7 @@ export default function Home() {
         </div>
 
         <div className="mb-8">
-          <Link href="/diagnostico">
+          <Link href="/diagnostico/crear">
             <Card className="border-2 border-primary-200 bg-gradient-to-br from-primary-50 to-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg hover:border-primary-300">
               <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6">
                 <div className="flex items-center gap-4">

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { publicDiagnosticApi } from '@/lib/api';
 import { Search } from 'lucide-react';
 
-export default function DiagnosticoPage() {
+export default function CrearDiagnosticoPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tierParam = searchParams.get('tier');

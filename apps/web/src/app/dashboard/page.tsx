@@ -60,7 +60,7 @@ function DashboardContent() {
               Hacé un diagnóstico gratuito y desde el resultado vas a poder acceder a tu dashboard.
             </p>
           </div>
-          <Link href="/diagnostico">
+          <Link href="/diagnostico/crear">
             <Button className="bg-primary-600 text-white hover:bg-primary-700">
               Hacer diagnóstico gratuito
             </Button>
@@ -87,7 +87,7 @@ function DashboardContent() {
         <div className="max-w-md text-center space-y-4">
           <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
           <p className="text-muted-foreground">{error || 'Marca no encontrada.'}</p>
-          <Link href="/diagnostico">
+          <Link href="/diagnostico/crear">
             <Button variant="outline">Hacer diagnóstico</Button>
           </Link>
         </div>

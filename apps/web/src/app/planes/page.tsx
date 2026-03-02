@@ -19,7 +19,7 @@ const PLANS = [
       'Corridas adicionales: vista limitada (Cleexs Score)',
     ],
     cta: 'Empezar gratis',
-    href: '/diagnostico',
+    href: '/diagnostico/crear',
     popular: false,
   },
   {
@@ -37,7 +37,7 @@ const PLANS = [
       'Tabla de comparaciones vs competidores',
     ],
     cta: 'Probar Gold',
-    href: '/diagnostico?tier=gold',
+    href: '/diagnostico/crear?tier=gold',
     popular: true,
   },
 ];
@@ -115,7 +115,7 @@ export default function PlanesPage() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-10">
-          ¿Necesitás medir tu marca? <Link href="/diagnostico" className="text-primary-600 hover:underline font-medium">Diagnóstico gratuito</Link>
+          ¿Necesitás medir tu marca? <Link href="/diagnostico/crear" className="text-primary-600 hover:underline font-medium">Diagnóstico gratuito</Link>
         </p>
       </div>
     </main>

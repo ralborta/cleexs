@@ -167,7 +167,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/diagnostico">Otro diagnóstico</Link>
+              <Link href="/diagnostico/crear">Otro diagnóstico</Link>
             </Button>
           </div>
         </CardContent>
@@ -512,7 +512,7 @@ function VerResultadoContent() {
         <div className="mx-auto max-w-lg text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
           <p className="mt-4 text-muted-foreground">{error || 'Diagnóstico no encontrado.'}</p>
-          <Link href="/diagnostico">
+          <Link href="/diagnostico/crear">
             <Button className="mt-4">Hacer un nuevo diagnóstico</Button>
           </Link>
         </div>
@@ -561,8 +561,8 @@ function VerResultadoContent() {
             {isFailed && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
                 <p>El análisis no pudo completarse. Podés intentar de nuevo con un nuevo diagnóstico.</p>
-                <Link href="/diagnostico">
-                  <Button variant="outline" className="mt-3">Nuevo diagnóstico</Button>
+<Link href="/diagnostico/crear">
+                <Button variant="outline" className="mt-3">Nuevo diagnóstico</Button>
                 </Link>
               </div>
             )}
@@ -691,7 +691,7 @@ function VerResultadoContent() {
                       </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                      <Link href="/diagnostico">Otro diagnóstico</Link>
+                      <Link href="/diagnostico/crear">Otro diagnóstico</Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
                       <Link href="/dashboard">Ir al dashboard</Link>

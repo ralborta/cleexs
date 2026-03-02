@@ -78,7 +78,7 @@ function VerificandoContent() {
       <main className="min-h-[calc(100vh-72px)] px-6 py-16">
         <div className="mx-auto max-w-lg text-center">
           <p className="text-muted-foreground">Faltan datos del diagnóstico. Volvé a empezar desde la pantalla anterior.</p>
-          <Link href="/diagnostico">
+          <Link href="/diagnostico/crear">
             <Button className="mt-4">Ir al diagnóstico</Button>
           </Link>
         </div>
@@ -91,7 +91,7 @@ function VerificandoContent() {
       <main className="min-h-[calc(100vh-72px)] px-6 py-16">
         <div className="mx-auto max-w-lg text-center">
           <p className="text-destructive">{error}</p>
-          <Link href="/diagnostico">
+          <Link href="/diagnostico/crear">
             <Button className="mt-4" variant="outline">Volver al diagnóstico</Button>
           </Link>
         </div>
