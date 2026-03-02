@@ -11,8 +11,6 @@ interface IntentCardProps {
   className?: string;
 }
 
-const ACCENT_CLASS = 'absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-amber-400';
-
 function ProgressBar({ value }: { value: number }) {
   const pct = Math.min(100, Math.max(0, value));
   return (
@@ -31,12 +29,11 @@ export function IntentCard({ items, className }: IntentCardProps) {
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-0 border-l-4 border-amber-400 bg-white shadow-sm',
+        'relative overflow-hidden rounded-2xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-50/40 to-white shadow-sm',
         className
       )}
     >
-      <div className={ACCENT_CLASS} aria-hidden />
-      <CardHeader className="relative pb-2 pl-6">
+      <CardHeader className="relative pb-2 pl-5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle className="text-base font-bold text-slate-800">Por intención</CardTitle>
@@ -50,7 +47,7 @@ export function IntentCard({ items, className }: IntentCardProps) {
           </span>
         </div>
       </CardHeader>
-      <CardContent className="relative space-y-4 pl-6 pt-0">
+      <CardContent className="relative space-y-4 pl-5 pt-0">
         <div className="space-y-3">
           {items.map((item) => (
             <div key={item.key} className="space-y-1">

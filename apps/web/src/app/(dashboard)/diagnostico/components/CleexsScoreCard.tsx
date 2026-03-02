@@ -19,8 +19,6 @@ interface CleexsScoreCardProps {
   className?: string;
 }
 
-const ACCENT_CLASS = 'absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-violet-400';
-
 function MiniProgress({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
@@ -44,12 +42,11 @@ export function CleexsScoreCard({ data, className }: CleexsScoreCardProps) {
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-0 border-l-4 border-violet-400 bg-white shadow-sm',
+        'relative overflow-hidden rounded-2xl border-2 border-violet-200/80 bg-gradient-to-br from-violet-50/40 to-white shadow-sm',
         className
       )}
     >
-      <div className={ACCENT_CLASS} aria-hidden />
-      <CardHeader className="relative pb-1 pl-6">
+      <CardHeader className="relative pb-1 pl-5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle className="text-base font-bold text-slate-800">Cleexs Score</CardTitle>
@@ -65,7 +62,7 @@ export function CleexsScoreCard({ data, className }: CleexsScoreCardProps) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="relative space-y-4 pl-6 pt-2">
+      <CardContent className="relative space-y-4 pl-5 pt-2">
         <div className="flex flex-col items-center rounded-xl border-2 border-violet-100 bg-gradient-to-br from-violet-50 to-primary-50/80 p-4 shadow-inner">
           <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">
             Cleexs actual

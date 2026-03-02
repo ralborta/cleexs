@@ -19,20 +19,17 @@ interface BrandRankingCardProps {
   className?: string;
 }
 
-const ACCENT_CLASS = 'absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-blue-400';
-
 export function BrandRankingCard({ rows, topN = 6, className }: BrandRankingCardProps) {
   const displayRows = rows.slice(0, topN);
 
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-0 border-l-4 border-blue-400 bg-white shadow-sm',
+        'relative overflow-hidden rounded-2xl border-2 border-blue-200/80 bg-gradient-to-br from-blue-50/40 to-white shadow-sm',
         className
       )}
     >
-      <div className={ACCENT_CLASS} aria-hidden />
-      <CardHeader className="relative pb-2 pl-6">
+      <CardHeader className="relative pb-2 pl-5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle className="text-base font-bold text-slate-800">Ranking de marcas</CardTitle>
@@ -45,7 +42,7 @@ export function BrandRankingCard({ rows, topN = 6, className }: BrandRankingCard
           </span>
         </div>
       </CardHeader>
-      <CardContent className="relative pl-6 pt-0">
+      <CardContent className="relative pl-5 pt-0">
         <Table>
           <TableHeader>
             <TableRow className="border-slate-200 hover:bg-transparent">

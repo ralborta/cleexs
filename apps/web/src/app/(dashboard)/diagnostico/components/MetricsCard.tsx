@@ -9,8 +9,6 @@ interface MetricsCardProps {
   className?: string;
 }
 
-const ACCENT_CLASS = 'absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-emerald-400';
-
 function ProgressBar({ value }: { value: number }) {
   const pct = Math.min(100, Math.max(0, value));
   return (
@@ -27,18 +25,17 @@ export function MetricsCard({ items, className }: MetricsCardProps) {
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-0 border-l-4 border-emerald-400 bg-white shadow-sm',
+        'relative overflow-hidden rounded-2xl border-2 border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 to-white shadow-sm',
         className
       )}
     >
-      <div className={ACCENT_CLASS} aria-hidden />
-      <CardHeader className="relative pb-2 pl-6">
+      <CardHeader className="relative pb-2 pl-5">
         <CardTitle className="text-base font-bold text-slate-800">Métricas del análisis</CardTitle>
         <CardDescription className="text-sm text-slate-500">
           Coherencia, visibilidad y ranking en esta corrida
         </CardDescription>
       </CardHeader>
-      <CardContent className="relative pl-6 pt-0">
+      <CardContent className="relative pl-5 pt-0">
         <ul className="space-y-4">
           {items.map((item) => (
             <li key={item.id} className="flex items-center gap-3">
