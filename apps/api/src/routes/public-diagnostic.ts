@@ -33,16 +33,23 @@ function slugify(text: string): string {
     .slice(0, 50);
 }
 
+/** Deriva un nombre de marca desde el dominio cuando solo se envía URL (ej: cleexs.com → Cleexs) */
+function deriveBrandFromDomain(domain: string): string {
+  const base = domain.split('.')[0] || domain;
+  if (!base) return domain;
+  return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
-  // POST /api/public/diagnostic — marca (obligatoria) + url (opcional) + tier (freemium|gold)
+  // POST /api/public/diagnostic — marca y/o url (al menos uno obligatorio) + tier (freemium|gold)
   fastify.post<{
-    Body: { brandName: string; url?: string; tier?: 'freemium' | 'gold' };
+    Body: { brandName?: string; url?: string; tier?: 'freemium' | 'gold' };
   }>('/diagnostic', async (request, reply) => {
     try {
       const schema = z.object({
-        brandName: z.string().min(1).max(200),
+        brandName: z.string().max(200).optional(),
         url: z.union([z.string().max(500), z.undefined()]).optional(),
         tier: z.enum(['freemium', 'gold']).optional(),
       });
@@ -53,13 +60,23 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const { brandName, url, tier: requestedTier } = parsed.data;
-      const trimmedBrand = brandName.trim();
+      const trimmedBrand = (brandName ?? '').trim();
+      const trimmedUrl = (url ?? '').trim();
+
+      if (!trimmedBrand && !trimmedUrl) {
+        return reply.code(400).send({
+          error: 'Ingresá la marca o la URL de tu sitio (al menos uno).',
+        });
+      }
 
       let domain: string;
-      if (url && typeof url === 'string' && url.trim()) {
-        domain = normalizeDomain(url.trim());
+      let brandForRun: string;
+      if (trimmedUrl) {
+        domain = normalizeDomain(trimmedUrl);
+        brandForRun = trimmedBrand || deriveBrandFromDomain(domain);
       } else {
         domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
+        brandForRun = trimmedBrand;
       }
 
       if (!process.env.OPENAI_API_KEY) {
@@ -81,7 +98,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
       const diagnostic = await prisma.publicDiagnostic.create({
         data: {
-          brandName: trimmedBrand,
+          brandName: brandForRun,
           domain,
           status: 'running',
           tier,
@@ -91,21 +108,21 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       setImmediate(async () => {
       try {
         // 1. IA determina industria (antes del run)
-        const { industry } = await determineIndustry(trimmedBrand, url?.trim());
+        const { industry } = await determineIndustry(brandForRun, trimmedUrl || undefined);
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { industry },
         });
 
         // 2. IA elige 5 competidores
-        const { competitors } = await getTop5Competitors(trimmedBrand, industry);
+        const { competitors } = await getTop5Competitors(brandForRun, industry);
 
         // 3. Crear Brand con industria y competidores
         const brand = await prisma.brand.create({
           data: {
             tenantId: rootTenant.id,
-            name: trimmedBrand,
-            domain: url?.trim() ? normalizeDomain(url.trim()) : null,
+            name: brandForRun,
+            domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
             industry,
           },
         });
@@ -119,7 +136,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         // 3b. Intención automática (Urgencia vs Consideración) según industria
         const intention = getIntentionForIndustry(industry);
         const diagnosticPrompts = buildDiagnosticPrompts(
-          trimmedBrand,
+          brandForRun,
           industry,
           competitors,
           intention
@@ -301,6 +318,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     let emailSent: boolean | null = null;
+    let emailError: 'provider_rejected' | 'send_failed' | undefined;
     if (diagnostic.status === 'completed') {
       const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       try {
@@ -327,10 +345,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       } catch (err) {
         emailSent = false;
         fastify.log.error({ err, diagnosticId: id, email }, 'Error al enviar email');
+        const message = err instanceof Error ? err.message : String(err);
+        emailError =
+          message.includes('recipient') || message.includes('ENOTFOUND') || message.includes('refused')
+            ? 'provider_rejected'
+            : 'send_failed';
       }
     }
 
-    return reply.code(200).send({ ok: true, emailSent });
+    return reply.code(200).send({ ok: true, emailSent, ...(emailError && { emailError }) });
   });
 
   // Fase 3: determina si es primera corrida para este dominio (ve todo) o Freemium (limitado)

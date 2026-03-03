@@ -36,6 +36,8 @@ export interface Plan {
   brandsLimit: number;
 }
 
+export type RunScheduleType = 'semanal' | 'quincenal' | 'mensual';
+
 export interface Brand {
   id: string;
   name: string;
@@ -44,6 +46,7 @@ export interface Brand {
   productType?: string;
   country?: string;
   objective?: string;
+  runSchedule?: RunScheduleType | null;
   aliases: Array<{ id: string; alias: string }>;
   competitors: Array<{ id: string; name: string }>;
 }
@@ -146,6 +149,11 @@ export const brandsApi = {
     api<CompetitorSuggestionResponse>(`/api/brands/${brandId}/competitor-suggestions`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  updateRunSchedule: (brandId: string, runSchedule: RunScheduleType | null) =>
+    api<Brand>(`/api/brands/${brandId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ runSchedule }),
     }),
 };
 
@@ -326,20 +334,23 @@ export interface PublicDiagnostic {
 }
 
 export const publicDiagnosticApi = {
-  create: (brandName: string, url?: string, tier?: 'gold' | 'freemium') =>
+  create: (brandName?: string, url?: string, tier?: 'gold' | 'freemium') =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
       body: JSON.stringify({
-        brandName,
-        url: url || undefined,
-        tier: tier === 'gold' ? 'gold' : undefined,
+        ...(brandName != null && brandName !== '' && { brandName }),
+        ...(url != null && url !== '' && { url }),
+        ...(tier === 'gold' && { tier: 'gold' as const }),
       }),
     }),
   setEmail: (id: string, email: string) =>
-    api<{ ok: boolean; emailSent?: boolean | null }>(`/api/public/diagnostic/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ email }),
-    }),
+    api<{ ok: boolean; emailSent?: boolean | null; emailError?: 'provider_rejected' | 'send_failed' }>(
+      `/api/public/diagnostic/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ email }),
+      }
+    ),
   get: (id: string, tier?: 'gold' | 'freemium') =>
     api<PublicDiagnostic>(`/api/public/diagnostic/${id}${tier ? `?tier=${tier}` : ''}`),
 };

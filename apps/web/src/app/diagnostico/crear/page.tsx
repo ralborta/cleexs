@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
-import { Search } from 'lucide-react';
+import { Search, Tag, Globe } from 'lucide-react';
 
 export default function CrearDiagnosticoPage() {
   const router = useRouter();
@@ -28,15 +28,15 @@ export default function CrearDiagnosticoPage() {
     e.preventDefault();
     setError(null);
     const trimmedBrand = brandName.trim();
-    if (!trimmedBrand) {
-      setError('Ingresá el nombre de tu marca');
+    const trimmedUrl = url.trim();
+    if (!trimmedBrand && !trimmedUrl) {
+      setError('Ingresá la marca o la URL de tu sitio (al menos uno).');
       return;
     }
     setLoading(true);
     try {
-      const trimmedUrl = url.trim();
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand, urlToSend, tier);
+      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}${tier ? `&tier=${tier}` : ''}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -56,46 +56,58 @@ export default function CrearDiagnosticoPage() {
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl">Diagnóstico de recomendación</CardTitle>
             <CardDescription>
-              Ingresá tu marca (la URL es opcional). Determinamos tu industria, competidores y generamos tu Cleexs Score.
+              Ingresá tu marca o la URL de tu sitio (o ambos). Determinamos tu industria, competidores y generamos tu Cleexs Score.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="brand" className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
+                  <Tag className="h-4 w-4 text-primary-600 shrink-0" aria-hidden />
                   Marca
                 </label>
-                <input
-                  id="brand"
-                  type="text"
-                  placeholder="Ej: Argento's Italian Bistro"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
+                  <input
+                    id="brand"
+                    type="text"
+                    placeholder="Ej: Argento's Italian Bistro"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={loading}
+                  />
+                </div>
               </div>
               <div>
-                <label htmlFor="url" className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="url" className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
+                  <Globe className="h-4 w-4 text-primary-600 shrink-0" aria-hidden />
                   URL de tu sitio <span className="text-muted-foreground font-normal">(opcional)</span>
                 </label>
-                <input
-                  id="url"
-                  type="text"
-                  inputMode="url"
-                  placeholder="tudominio.com o https://tudominio.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
+                  <input
+                    id="url"
+                    type="text"
+                    inputMode="url"
+                    placeholder="tudominio.com o https://tudominio.com"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={loading}
+                  />
+                </div>
               </div>
               {error && (
                 <p className="text-sm text-destructive" role="alert">
                   {error}
                 </p>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || (!brandName.trim() && !url.trim())}
+              >
                 {loading ? (
                   'Iniciando…'
                 ) : (

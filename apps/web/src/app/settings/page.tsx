@@ -13,6 +13,7 @@ import {
   Brand,
   PromptVersion,
   CompetitorSuggestionItem,
+  RunScheduleType,
 } from '@/lib/api';
 
 function normalizeSuggestions(items: CompetitorSuggestionItem[]): CompetitorSuggestionItem[] {
@@ -87,12 +88,14 @@ export default function SettingsPage() {
   const [executingRun, setExecutingRun] = useState(false);
   const router = useRouter();
 
-  const [configStep, setConfigStep] = useState<1 | 2 | 3 | 4>(1);
+  const [configStep, setConfigStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [updatingScheduleBrandId, setUpdatingScheduleBrandId] = useState<string | null>(null);
   const STEPS = [
     { id: 1 as const, label: 'Tu marca' },
     { id: 2 as const, label: 'Comparar con' },
     { id: 3 as const, label: 'Intenciones a medir' },
     { id: 4 as const, label: 'Primer Run' },
+    { id: 5 as const, label: 'Corridas programadas' },
   ];
 
   useEffect(() => {
@@ -460,6 +463,20 @@ export default function SettingsPage() {
     }
   };
 
+  const handleRunScheduleChange = async (brandId: string, runSchedule: RunScheduleType | null) => {
+    setUpdatingScheduleBrandId(brandId);
+    try {
+      await brandsApi.updateRunSchedule(brandId, runSchedule);
+      const updated = await brandsApi.list(tenantId);
+      setBrands(updated);
+      pushToast('success', 'Frecuencia actualizada', 'La corrida programada se guardó correctamente.');
+    } catch (error: any) {
+      pushToast('error', 'No se pudo guardar', error?.message ?? 'Reintentá más tarde.');
+    } finally {
+      setUpdatingScheduleBrandId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
@@ -475,6 +492,7 @@ export default function SettingsPage() {
   const hasPrompts = promptsCount > 0;
   const hasRun = Boolean(periodStart && periodEnd);
   const completedSteps = [hasBrand, hasCompetitors, hasPrompts, hasRun].filter(Boolean).length;
+  const totalStepsForProgress = 4; // pasos 1-4 para "completado"; paso 5 es config opcional
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
@@ -539,7 +557,8 @@ export default function SettingsPage() {
                 (step.id === 1 && hasBrand) ||
                 (step.id === 2 && hasCompetitors) ||
                 (step.id === 3 && hasPrompts) ||
-                (step.id === 4 && hasRun);
+                (step.id === 4 && hasRun) ||
+                step.id === 5;
               return (
                 <button
                   key={step.id}
@@ -561,7 +580,7 @@ export default function SettingsPage() {
                   <span className={`text-sm ${active ? 'font-semibold text-foreground' : 'text-foreground'}`}>
                     {step.label}
                   </span>
-                  {index < 3 && <div className="h-px w-6 bg-border shrink-0" />}
+                  {index < STEPS.length - 1 && <div className="h-px w-6 bg-border shrink-0" />}
                 </button>
               );
             })}
@@ -1050,6 +1069,78 @@ export default function SettingsPage() {
                     >
                       Crear Run
                     </Button>
+                    <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(5)}>
+                      Siguiente: Corridas programadas →
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Paso 5: Corridas programadas (n8n) */}
+            {configStep === 5 && (
+              <Card className="border-transparent bg-white shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-foreground">Corridas programadas</CardTitle>
+                  <CardDescription>
+                    Configurá por marca la frecuencia de corridas que ejecutará n8n (semanal, quincenal, mensual). La prueba gratuita corre sola bajo demanda.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-border bg-slate-50/80 p-3">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Cada marca puede tener una frecuencia distinta. Los flujos de n8n consultan la API con el header <code className="rounded bg-slate-200 px-1">X-Cron-Secret</code> y ejecutan las corridas según el cron que configures (ej. lunes 8:00 para semanal).
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Variables en n8n: <code className="rounded bg-slate-200 px-1">CLEEXS_API_URL</code>, <code className="rounded bg-slate-200 px-1">CRON_SECRET</code> (mismo valor que en la API).
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">Marcas y frecuencia</p>
+                    <div className="rounded-md border border-border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-slate-100 border-b border-border">
+                            <th className="text-left p-3 font-medium text-foreground">Marca</th>
+                            <th className="text-left p-3 font-medium text-foreground">Frecuencia</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {brands.map((brand) => (
+                            <tr key={brand.id} className="border-b border-border last:border-0 hover:bg-slate-50/50">
+                              <td className="p-3 font-medium text-foreground">{brand.name}</td>
+                              <td className="p-3">
+                                <select
+                                  value={brand.runSchedule ?? ''}
+                                  onChange={(e) => {
+                                    const v = e.target.value as '' | RunScheduleType;
+                                    handleRunScheduleChange(brand.id, v === '' ? null : v);
+                                  }}
+                                  disabled={updatingScheduleBrandId === brand.id}
+                                  className="rounded-md border border-border bg-white px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600 disabled:opacity-60"
+                                >
+                                  <option value="">Ninguna</option>
+                                  <option value="semanal">Semanal</option>
+                                  <option value="quincenal">Quincenal</option>
+                                  <option value="mensual">Mensual</option>
+                                </select>
+                                {updatingScheduleBrandId === brand.id && (
+                                  <span className="ml-2 text-xs text-muted-foreground">Guardando…</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {brands.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-4">No hay marcas. Creá una en el paso &quot;Tu marca&quot;.</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3 pt-2 border-t border-border">
+                    <Button variant="outline" className="border-border text-foreground hover:bg-primary-50" onClick={() => setConfigStep(4)}>
+                      ← Anterior
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1059,7 +1150,7 @@ export default function SettingsPage() {
         <Card className="border-transparent bg-white shadow-md h-fit">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg text-foreground">Resultado</CardTitle>
-            <CardDescription>Paso {configStep} de 4 — {STEPS[configStep - 1].label}</CardDescription>
+            <CardDescription>Paso {configStep} de {STEPS.length} — {STEPS[configStep - 1].label}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-border bg-primary-50/70 p-3">
@@ -1073,7 +1164,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Estado</span>
               <span className="font-semibold text-foreground">
-                {completedSteps} / 4
+                {completedSteps} / {totalStepsForProgress}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">

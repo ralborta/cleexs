@@ -419,6 +419,7 @@ function VerResultadoContent() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailSendFailed, setEmailSendFailed] = useState(false);
+  const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
   const [geminiLogoError, setGeminiLogoError] = useState(false);
 
@@ -484,10 +485,14 @@ function VerResultadoContent() {
     e.preventDefault();
     if (!diagnosticId || !email.trim()) return;
     setEmailLoading(true);
+    setEmailErrorCode(undefined);
     try {
       const res = await publicDiagnosticApi.setEmail(diagnosticId, email.trim());
       setEmailSent(true);
-      if (res.emailSent === false) setEmailSendFailed(true);
+      if (res.emailSent === false) {
+        setEmailSendFailed(true);
+        if (res.emailError) setEmailErrorCode(res.emailError);
+      }
     } catch {
       setEmailSendFailed(true);
     } finally {
@@ -655,6 +660,13 @@ function VerResultadoContent() {
                     emailSendFailed ? (
                       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
                         <p className="text-sm">Guardamos tu email pero no pudimos enviar el correo. Podés compartir este link para ver el resultado.</p>
+                        {emailErrorCode === 'provider_rejected' && (
+                          <p className="mt-2 text-sm text-amber-700">
+                            Si usás Resend: sin dominio verificado solo podés enviar a tu propio correo. Verificá tu dominio en{' '}
+                            <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline">resend.com/domains</a>{' '}
+                            y usá como remitente una dirección de ese dominio (ej. noreply@tudominio.com).
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-green-700">Te enviamos el link por correo. Revisá tu bandeja (y spam).</p>

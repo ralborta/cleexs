@@ -92,6 +92,30 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
     return brand;
   });
 
+  // PATCH /brands/:id — actualizar runSchedule (corridas programadas: semanal, quincenal, mensual)
+  const patchBrandSchema = z.object({
+    runSchedule: z.enum(['semanal', 'quincenal', 'mensual']).nullable(),
+  });
+
+  fastify.patch<{ Params: { id: string }; Body: z.infer<typeof patchBrandSchema> }>(
+    '/:id',
+    async (request, reply) => {
+      const data = patchBrandSchema.parse(request.body);
+      const brand = await prisma.brand.update({
+        where: { id: request.params.id },
+        data: {
+          ...(data.runSchedule !== undefined && { runSchedule: data.runSchedule }),
+        },
+        include: {
+          aliases: true,
+          competitors: true,
+          tenant: { select: { id: true, tenantCode: true } },
+        },
+      });
+      return brand;
+    }
+  );
+
   // POST /brands
   const createBrandSchema = z.object({
     tenantId: z.string().uuid(),

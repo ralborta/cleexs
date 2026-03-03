@@ -1,0 +1,119 @@
+{
+  "name": "Cleexs - Corridas programadas (semanal)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * 1" }
+          ]
+        }
+      },
+      "id": "cron-1",
+      "name": "Cada lunes 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Cron: lunes a las 8:00. Ajustá la zona horaria en n8n."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ ($env.CLEEXS_API_URL || 'http://localhost:3001') + '/api/cron/scheduled-runs?frequency=semanal' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Cron-Secret",
+              "value": "={{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "cron-2",
+      "name": "Listar marcas semanales",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "GET devuelve { items: [{ brandId, tenantId, brandName, periodStart, periodEnd }] }. Definí CRON_SECRET igual que en la API."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "id": "cron-3",
+      "name": "Un ítem por marca",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLEEXS_API_URL || 'http://localhost:3001' }}/api/runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, brandId: $json.brandId, periodStart: $json.periodStart, periodEnd: $json.periodEnd }) }}"
+      },
+      "id": "cron-4",
+      "name": "Crear run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.CLEEXS_API_URL || 'http://localhost:3001') + '/api/runs/' + $json.id + '/execute' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}"
+      },
+      "id": "cron-5",
+      "name": "Ejecutar run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Dispara la corrida (OpenAI). Si hay muchas marcas, considerá un Wait entre ejecuciones."
+    }
+  ],
+  "connections": {
+    "Cada lunes 8:00": {
+      "main": [[{ "node": "Listar marcas semanales", "type": "main", "index": 0 }]]
+    },
+    "Listar marcas semanales": {
+      "main": [[{ "node": "Un ítem por marca", "type": "main", "index": 0 }]]
+    },
+    "Un ítem por marca": {
+      "main": [[{ "node": "Crear run", "type": "main", "index": 0 }]]
+    },
+    "Crear run": {
+      "main": [[{ "node": "Ejecutar run", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "meta": { "templateCredsSetupCompleted": false },
+  "pinData": {}
+}

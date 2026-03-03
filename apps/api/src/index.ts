@@ -12,6 +12,7 @@ import promptRoutes from './routes/prompts';
 import runRoutes from './routes/runs';
 import reportRoutes from './routes/reports';
 import publicDiagnosticRoutes from './routes/public-diagnostic';
+import cronRoutes from './routes/cron';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -60,6 +61,7 @@ async function bootstrap() {
   await server.register(runRoutes, { prefix: '/api/runs' });
   await server.register(reportRoutes, { prefix: '/api/reports' });
   await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
+  await server.register(cronRoutes, { prefix: '/api/cron' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server
