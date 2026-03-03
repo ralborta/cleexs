@@ -25,7 +25,7 @@ export function BrandRankingCard({ rows, topN = 6, className }: BrandRankingCard
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-2 border-blue-200/80 bg-gradient-to-br from-blue-50/40 to-white shadow-sm',
+        'relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50/40 to-white shadow-sm',
         className
       )}
     >

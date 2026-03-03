@@ -25,7 +25,7 @@ export function MetricsCard({ items, className }: MetricsCardProps) {
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-2 border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 to-white shadow-sm',
+        'relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50/40 to-white shadow-sm',
         className
       )}
     >

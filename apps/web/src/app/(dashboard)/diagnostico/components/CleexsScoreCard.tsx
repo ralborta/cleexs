@@ -42,7 +42,7 @@ export function CleexsScoreCard({ data, className }: CleexsScoreCardProps) {
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-2 border-violet-200/80 bg-gradient-to-br from-violet-50/40 to-white shadow-sm',
+        'relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-50/40 to-white shadow-sm',
         className
       )}
     >
@@ -63,7 +63,7 @@ export function CleexsScoreCard({ data, className }: CleexsScoreCardProps) {
         </div>
       </CardHeader>
       <CardContent className="relative space-y-4 pl-5 pt-2">
-        <div className="flex flex-col items-center rounded-xl border-2 border-violet-100 bg-gradient-to-br from-violet-50 to-primary-50/80 p-4 shadow-inner">
+        <div className="flex flex-col items-center rounded-xl bg-gradient-to-br from-violet-50/60 to-primary-50/60 p-4 shadow-inner">
           <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">
             Cleexs actual
           </span>

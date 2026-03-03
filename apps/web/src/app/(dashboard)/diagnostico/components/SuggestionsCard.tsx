@@ -23,7 +23,7 @@ export function SuggestionsCard({ comparaciones, sugerencias, className }: Sugge
   return (
     <Card
       className={cn(
-        'relative overflow-hidden rounded-2xl border-2 border-sky-200/80 bg-gradient-to-br from-sky-50/40 to-white shadow-sm',
+        'relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50/40 to-white shadow-sm',
         className
       )}
     >

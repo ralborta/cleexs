@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.py[cod]
+*.rar
+
+# Dependencies (cada proyecto tiene el suyo)
+Project1/frontend/node_modules/
+Project2/frontend/node_modules/
