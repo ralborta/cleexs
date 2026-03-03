@@ -184,9 +184,15 @@ function VerificandoContent() {
             <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-600">
-                  {isRunning ? 'En curso…' : diagnostic?.status === 'completed' ? 'Listo' : 'Preparando…'}
+                  {progress >= 100 && isRunning
+                    ? 'Preparando…'
+                    : isRunning
+                      ? 'En curso…'
+                      : diagnostic?.status === 'completed'
+                        ? 'Listo'
+                        : 'Preparando…'}
                 </span>
-                {steps.length > 0 && (
+                {steps.length > 0 && progress < 100 && (
                   <span className="rounded-full bg-blue-100 px-3 py-0.5 text-sm font-semibold text-blue-700">
                     {progress}%
                   </span>
@@ -195,22 +201,29 @@ function VerificandoContent() {
               <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-700 ease-out"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
 
-              {/* IA + tiempo transcurrido */}
-              <div className="mt-4 flex items-center gap-3 rounded-lg bg-white/80 py-3 px-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
-                  <Sparkles className="h-4 w-4" />
+              {/* Al 100%: círculo progresivo + mensaje; si no, IA + tiempo */}
+              {progress >= 100 && isRunning ? (
+                <div className="mt-4 flex items-center justify-center gap-3 rounded-lg bg-white/80 py-3 px-4">
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin text-indigo-500" aria-hidden />
+                  <span className="text-sm font-medium text-slate-600">Preparando tu informe…</span>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-500">Análisis con IA</p>
-                  <p className="text-sm font-semibold text-slate-800">
-                    Tiempo transcurrido: {formatElapsed(elapsedSeconds)}
-                  </p>
+              ) : (
+                <div className="mt-4 flex items-center gap-3 rounded-lg bg-white/80 py-3 px-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">Análisis con IA</p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Tiempo transcurrido: {formatElapsed(elapsedSeconds)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
