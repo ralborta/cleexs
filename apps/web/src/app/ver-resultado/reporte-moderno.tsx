@@ -195,7 +195,7 @@ export function ReporteModerno({
       {/* Fila superior: 3 cards — sombra de color por tarjeta, estilo RankIA */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Card 1 — Ranking de marcas — sombra azul */}
-        <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-blue-400 bg-white shadow-[0_8px_30px_-5px_rgba(59,130,246,0.2)]">
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-blue-50/40 to-white shadow-sm">
           <CardHeader className="pb-2 pt-5">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <BarChart3 className="h-4 w-4 text-blue-500" />
@@ -235,7 +235,7 @@ export function ReporteModerno({
         </Card>
 
         {/* Card 2 — Cleexs Score: número dentro del recuadro — sombra violeta */}
-        <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-violet-400 bg-white shadow-[0_8px_30px_-5px_rgba(139,92,246,0.2)]">
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-violet-50/40 to-white shadow-sm">
           <CardHeader className="pb-1 pt-5">
             <CardTitle className="text-base font-bold text-slate-800">Cleexs Score</CardTitle>
             <CardDescription className="text-sm text-slate-500">
@@ -243,7 +243,7 @@ export function ReporteModerno({
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
-            <div className="flex flex-col items-center rounded-2xl border-2 border-violet-100 bg-gradient-to-br from-violet-50 to-primary-50/80 p-6 shadow-inner">
+            <div className="flex flex-col items-center rounded-2xl bg-gradient-to-br from-violet-50/60 to-primary-50/60 p-6 shadow-inner">
               <span className="text-sm font-semibold uppercase tracking-wider text-violet-600">Cleexs actual</span>
               <span className="mt-2 text-5xl font-bold tabular-nums text-violet-700">
                 {Math.round(displayScore)}
@@ -254,7 +254,7 @@ export function ReporteModerno({
         </Card>
 
         {/* Card 3 — Por intención — sombra ámbar */}
-        <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-amber-400 bg-white shadow-[0_8px_30px_-5px_rgba(245,158,11,0.2)]">
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-amber-50/40 to-white shadow-sm">
           <CardHeader className="pb-2 pt-5">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <Zap className="h-4 w-4 text-amber-500" />
@@ -297,7 +297,7 @@ export function ReporteModerno({
       {/* Fila inferior: 2 cards — sombra de color cada una */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Card 4 — Métricas — sombra esmeralda */}
-        <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-emerald-400 bg-white shadow-[0_8px_30px_-5px_rgba(16,185,129,0.2)]">
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50/40 to-white shadow-sm">
           <CardHeader className="pb-2 pt-5">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
@@ -326,7 +326,7 @@ export function ReporteModerno({
         </Card>
 
         {/* Card 5 — Comparaciones — sombra índigo */}
-        <Card className="overflow-hidden rounded-xl border-0 border-l-4 border-indigo-400 bg-white shadow-[0_8px_30px_-5px_rgba(99,102,241,0.2)]">
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-indigo-50/40 to-white shadow-sm">
           <CardHeader className="pb-2 pt-5">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <TrendingUp className="h-4 w-4 text-indigo-500" />
