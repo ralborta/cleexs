@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * Página pública de diagnóstico (entrada para pruebas).
+ * URL: /diagnostico/crear o /prueba-gratuita
+ * No requiere login; el middleware mantiene esta ruta como pública.
+ */
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
