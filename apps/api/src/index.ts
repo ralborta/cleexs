@@ -32,6 +32,8 @@ async function bootstrap() {
   const RAILWAY_HEALTHCHECK = 'https://healthcheck.railway.app';
   const isVercelOrigin = (o: string) =>
     o.endsWith('.vercel.app') || o.endsWith('.vercel.sh');
+  const isNivel41Origin = (o: string) =>
+    o.endsWith('.nivel41.com') || o === 'https://nivel41.com' || o === 'http://nivel41.com';
 
   log('4/7 Registrando CORS...');
   await server.register(cors, {
@@ -41,6 +43,7 @@ async function bootstrap() {
       if (allowedOrigins.includes('*')) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
       if (isVercelOrigin(origin)) return cb(null, true);
+      if (isNivel41Origin(origin)) return cb(null, true);
       if (origin === RAILWAY_HEALTHCHECK || origin === 'http://healthcheck.railway.app')
         return cb(null, true);
       return cb(new Error('Not allowed by CORS'), false);
