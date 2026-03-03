@@ -4,19 +4,27 @@ import { prisma } from '../lib/prisma';
 
 const RUN_SCHEDULE_VALUES = ['semanal', 'quincenal', 'mensual'] as const;
 
+/** Normaliza un header a string (Fastify/Node pueden devolver string | string[]) */
+function headerString(value: string | string[] | undefined): string | undefined {
+  if (value == null) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
 /**
  * Rutas para n8n (corridas programadas). Protegidas por CRON_SECRET.
  * GET /api/cron/scheduled-runs?frequency=semanal
  * Devuelve marcas con runSchedule = frequency y el periodo sugerido (periodStart, periodEnd).
  */
-function checkCronSecret(request: { headers: { [k: string]: string | undefined } }, reply: any): boolean {
+function checkCronSecret(request: { headers: { [k: string]: string | string[] | undefined } }, reply: any): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     reply.code(500).send({ error: 'CRON_SECRET no configurado' });
     return false;
   }
-  const auth = request.headers['x-cron-secret'] || request.headers.authorization?.replace(/^Bearer\s+/i, '');
-  if (auth !== secret) {
+  const raw = request.headers['x-cron-secret'] ?? request.headers.authorization;
+  const auth = headerString(raw);
+  const token = typeof auth === 'string' ? auth.replace(/^Bearer\s+/i, '').trim() : undefined;
+  if (token !== secret) {
     reply.code(401).send({ error: 'No autorizado' });
     return false;
   }
