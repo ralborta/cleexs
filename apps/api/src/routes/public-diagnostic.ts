@@ -388,6 +388,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       analysisJson?: object | null;
       runResult?: RunResultType;
       runResultGemini?: RunResultType;
+      trendData?: Array<{ label: string; score: number; date: string }>;
     } = {
       id: diagnostic.id,
       domain: diagnostic.domain,
@@ -540,6 +541,36 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       progressPercent = Math.round((preCompleted / DIAGNOSTIC_STEP_LABELS.length) * 100);
       base.steps = steps;
       base.progressPercent = progressPercent;
+    }
+
+    // Tendencia: últimas corridas completadas del mismo dominio (promedio y N puntos)
+    if (diagnostic.status === 'completed' && diagnostic.domain) {
+      const lastDiagnostics = await prisma.publicDiagnostic.findMany({
+        where: { domain: diagnostic.domain, status: 'completed', runId: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        select: { id: true, runId: true, createdAt: true },
+      });
+      const runIds = lastDiagnostics.map((d) => d.runId).filter(Boolean) as string[];
+      if (runIds.length > 0) {
+        const runs = await prisma.run.findMany({
+          where: { id: { in: runIds } },
+          include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+        });
+        const scoreByRunId = new Map<string | null, number>();
+        runs.forEach((r) => {
+          const score = r.priaReports[0]?.priaTotal;
+          if (score != null) scoreByRunId.set(r.id, score);
+        });
+        const chronological = [...lastDiagnostics].reverse();
+        base.trendData = chronological
+          .filter((d) => d.runId && scoreByRunId.has(d.runId))
+          .map((d, idx) => ({
+            label: `Corrida ${idx + 1}`,
+            score: scoreByRunId.get(d.runId!) ?? 0,
+            date: d.createdAt.toISOString(),
+          }));
+      }
     }
 
     return base;

@@ -9,7 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult } from '@/lib/api';
+import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import {
   Zap,
@@ -129,9 +130,11 @@ function ProgressBar({ value, className = '' }: { value: number; className?: str
 export function ReporteModerno({
   runResult,
   brandName,
+  trendData,
 }: {
   runResult: PublicDiagnosticRunResult;
   brandName: string;
+  trendData?: PublicDiagnosticTrendPoint[];
 }) {
   const results = runResult.promptResults || [];
   const brandAliases = runResult.brandAliases || [];
@@ -250,6 +253,40 @@ export function ReporteModerno({
               </span>
               <span className="mt-2 text-xs text-slate-500">Indicador 0–100 de recomendación en IA</span>
             </div>
+            {trendData && trendData.length >= 1 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-slate-600">
+                  Tendencia
+                  {trendData.length >= 2 && (
+                    <span className="ml-2 text-slate-500">
+                      (promedio: {Math.round(trendData.reduce((a, p) => a + p.score, 0) / trendData.length)})
+                    </span>
+                  )}
+                </p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      formatter={(v: number) => [Math.round(v), 'Score']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="rgb(139, 92, 246)"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      name="Score"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+                {trendData.length === 1 && (
+                  <p className="text-xs text-slate-500">Más diagnósticos del mismo sitio completarán la tendencia.</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

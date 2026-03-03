@@ -301,6 +301,12 @@ export function isDiagnosticAnalysisGold(
   return !!a && typeof a === 'object' && (a as { tier?: string }).tier === 'gold';
 }
 
+export interface PublicDiagnosticTrendPoint {
+  label: string;
+  score: number;
+  date: string;
+}
+
 export interface PublicDiagnostic {
   id: string;
   domain: string;
@@ -316,6 +322,7 @@ export interface PublicDiagnostic {
   runResult?: PublicDiagnosticRunResult;
   runResultGemini?: PublicDiagnosticRunResult;
   analysisJson?: DiagnosticAnalysisJson | null;
+  trendData?: PublicDiagnosticTrendPoint[];
 }
 
 export const publicDiagnosticApi = {

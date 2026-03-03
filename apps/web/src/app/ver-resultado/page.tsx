@@ -633,7 +633,7 @@ function VerResultadoContent() {
                         </div>
                       )}
                       {runResultToShow && (
-                        <ReporteModerno runResult={runResultToShow} brandName={runResultToShow.brandName} />
+                        <ReporteModerno runResult={runResultToShow} brandName={runResultToShow.brandName} trendData={diagnostic.trendData} />
                       )}
                     </div>
                   ) : (
