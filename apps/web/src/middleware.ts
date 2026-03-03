@@ -40,9 +40,14 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const host = request.headers.get('host') || request.nextUrl.hostname || '';
 
-  // Subdominio solo para pruebas: solo diagnóstico + flujo resultado; el resto → /diagnostico/crear
+  // Subdominio solo para pruebas: raíz y todo lo no permitido → /diagnostico/crear
   if (PUBLIC_TEST_HOST && host === PUBLIC_TEST_HOST) {
-    if (!isAllowedOnPublicTestHost(pathname)) {
+    const allowed =
+      pathname === '/diagnostico/crear' ||
+      pathname === '/prueba-gratuita' ||
+      pathname.startsWith('/diagnostico/verificando') ||
+      pathname.startsWith('/ver-resultado');
+    if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
       url.pathname = '/diagnostico/crear';
       url.search = '';
