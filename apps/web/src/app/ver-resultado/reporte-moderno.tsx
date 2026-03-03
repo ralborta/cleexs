@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import {
   Zap,
@@ -247,7 +247,7 @@ export function ReporteModerno({
           </CardHeader>
           <CardContent className="pt-2">
             <div className="flex flex-col items-center rounded-2xl bg-gradient-to-br from-violet-50/60 to-primary-50/60 p-6 shadow-inner">
-              <span className="text-sm font-semibold uppercase tracking-wider text-violet-600">Cleexs actual</span>
+              <span className="text-sm font-semibold uppercase tracking-wider text-violet-600">Cleexs Score</span>
               <span className="mt-2 text-5xl font-bold tabular-nums text-violet-700">
                 {Math.round(displayScore)}
               </span>
@@ -322,6 +322,26 @@ export function ReporteModerno({
                 );
               })
             )}
+            {intentionScores.length >= 1 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-slate-600">Comparación rápida</p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <BarChart
+                    data={intentionScores.map((item) => ({
+                      name: INTENTION_LABELS[item.key]?.label ?? item.key,
+                      value: Math.round(item.score),
+                    }))}
+                    margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#64748b" />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number) => [v, '%']} />
+                    <Bar dataKey="value" fill="rgb(245, 158, 11)" radius={[4, 4, 0, 0]} name="%" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -390,7 +410,18 @@ export function ReporteModerno({
                     {comparisonSummary.map((row) => (
                       <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
                         <TableCell className="py-2 text-sm font-medium text-slate-800">{row.name}</TableCell>
-                        <TableCell className="py-2 text-xs text-slate-600">{row.type === 'brand' ? 'marca' : 'competidor'}</TableCell>
+                        <TableCell className="py-2">
+                          <span
+                            className={cn(
+                              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                              row.type === 'brand'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-slate-100 text-slate-700'
+                            )}
+                          >
+                            {row.type === 'brand' ? 'marca' : 'competidor'}
+                          </span>
+                        </TableCell>
                         <TableCell className="py-2 text-right text-sm text-slate-600">{row.appearances}</TableCell>
                         <TableCell className="py-2 text-right text-sm text-slate-600">{row.share.toFixed(1)}%</TableCell>
                       </TableRow>
