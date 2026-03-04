@@ -62,7 +62,7 @@ function DetailPopup({
         {/* Cabecera azul con logo a un extremo e ícono + título */}
         <div className="flex shrink-0 items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4 text-white">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0">
+            <div className="relative h-[6.25rem] w-[6.25rem] shrink-0">
               <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" />
             </div>
             <div className="flex min-w-0 items-center gap-2">

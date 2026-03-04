@@ -29,17 +29,17 @@ export function Header() {
         <div className="container mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
             <Link href="/diagnostico/crear" className="flex items-center gap-3 text-foreground no-underline hover:opacity-90">
-              <div className="relative h-[7.5rem] w-[7.5rem] shrink-0 sm:h-32 sm:w-32">
+              <div className="relative h-[12.5rem] w-[12.5rem] shrink-0 sm:h-[15rem] sm:w-[15rem]">
                 <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
               </div>
               <span className="text-xl font-semibold">Cleexs</span>
             </Link>
             <Link
               href="/diagnostico/crear"
-              className="relative flex h-14 w-14 shrink-0 items-center justify-center text-foreground no-underline hover:opacity-90 sm:h-16 sm:w-16"
+              className="relative flex h-[7.5rem] w-[7.5rem] shrink-0 items-center justify-center text-foreground no-underline hover:opacity-90 sm:h-[8rem] sm:w-[8rem]"
               aria-label="Cleexs"
             >
-              <Image src={LOGO_SRC} alt="Cleexs" width={64} height={64} className="object-contain h-full w-full" />
+              <Image src={LOGO_SRC} alt="Cleexs" width={128} height={128} className="object-contain h-full w-full" />
             </Link>
           </div>
         </div>
@@ -53,7 +53,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 text-foreground no-underline hover:opacity-90">
-              <div className="relative h-[7.5rem] w-[7.5rem] shrink-0 sm:h-32 sm:w-32">
+              <div className="relative h-[12.5rem] w-[12.5rem] shrink-0 sm:h-[15rem] sm:w-[15rem]">
                 <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
               </div>
               <h1 className="text-2xl font-semibold text-foreground">Cleexs</h1>
