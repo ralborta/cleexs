@@ -25,31 +25,28 @@ export function Header() {
 
   if (minimal) {
     return (
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-0.5">
-          <div className="flex items-center justify-start">
-            <Link href="/diagnostico/crear" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
-              <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
-                <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
-              </div>
-            </Link>
-          </div>
+      <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
+        <div className="container mx-auto flex h-full items-center px-6">
+          <Link href="/diagnostico/crear" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
+            <div className="relative h-10 w-10 shrink-0 sm:h-12 sm:w-12">
+              <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
+            </div>
+          </Link>
         </div>
       </header>
     );
   }
 
   return (
-    <header className="border-b border-border bg-card">
-      <div className="container mx-auto px-6 py-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
-              <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
-                <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
-              </div>
-            </Link>
-          </div>
+    <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
+      <div className="container mx-auto flex h-full items-center justify-between px-6">
+        <div className="flex items-center">
+          <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
+            <div className="relative h-10 w-10 shrink-0 sm:h-12 sm:w-12">
+              <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
+            </div>
+          </Link>
+        </div>
 
           <nav className="flex items-center gap-8">
             <Link
@@ -107,7 +104,6 @@ export function Header() {
               Versión inicial
             </Button>
           </div>
-        </div>
       </div>
     </header>
   );
