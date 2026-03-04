@@ -420,6 +420,7 @@ function VerResultadoContent() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailSendFailed, setEmailSendFailed] = useState(false);
   const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
+  const [captchaChecked, setCaptchaChecked] = useState(false);
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
   const [geminiLogoError, setGeminiLogoError] = useState(false);
 
@@ -672,7 +673,7 @@ function VerResultadoContent() {
                       <p className="text-sm text-green-700">Te enviamos el link por correo. Revisá tu bandeja (y spam).</p>
                     )
                   ) : (
-                    <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-2">
+                    <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
                       <input
                         type="email"
                         placeholder="tu@email.com"
@@ -681,7 +682,21 @@ function VerResultadoContent() {
                         className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         disabled={emailLoading}
                       />
-                      <Button type="submit" disabled={emailLoading || !email.trim()}>
+                      {/* Verificación cosmética (no controla nada; solo requisito visual para el cliente) */}
+                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100/80">
+                        <input
+                          type="checkbox"
+                          checked={captchaChecked}
+                          onChange={(e) => setCaptchaChecked(e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          disabled={emailLoading}
+                        />
+                        <span>No soy un robot</span>
+                      </label>
+                      <Button
+                        type="submit"
+                        disabled={emailLoading || !email.trim() || !captchaChecked}
+                      >
                         {emailLoading ? 'Enviando…' : <><Mail className="mr-2 h-4 w-4" />Enviar</>}
                       </Button>
                     </form>
