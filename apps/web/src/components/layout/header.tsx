@@ -29,7 +29,7 @@ export function Header() {
         <div className="container mx-auto px-6 py-0.5">
           <div className="flex items-center justify-start">
             <Link href="/diagnostico/crear" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
-              <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+              <div className="relative h-16 w-16 shrink-0">
                 <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
               </div>
             </Link>
@@ -45,7 +45,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
-              <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+              <div className="relative h-16 w-16 shrink-0">
                 <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
               </div>
             </Link>
