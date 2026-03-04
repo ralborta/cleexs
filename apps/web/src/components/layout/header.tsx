@@ -1,41 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Upload, Bell, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const LOGO_SVG = (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M12 2L2 7L12 12L22 7L12 2Z"
-      stroke="white"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M2 17L12 22L22 17"
-      stroke="white"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M2 12L12 17L22 12"
-      stroke="white"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+const LOGO_SRC = '/CleexsLogo.png';
 
 /** Rutas del flujo público de diagnóstico: solo marca, sin menú completo */
 const PUBLIC_DIAGNOSTIC_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita'];
@@ -58,17 +29,17 @@ export function Header() {
         <div className="container mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
             <Link href="/diagnostico/crear" className="flex items-center gap-3 text-foreground no-underline hover:opacity-90">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 shrink-0">
-                {LOGO_SVG}
+              <div className="relative h-10 w-10 shrink-0">
+                <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
               </div>
               <span className="text-xl font-semibold">Cleexs</span>
             </Link>
             <Link
               href="/diagnostico/crear"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 text-foreground no-underline hover:opacity-90 [&_svg]:h-5 [&_svg]:w-5"
+              className="relative flex h-8 w-8 shrink-0 items-center justify-center text-foreground no-underline hover:opacity-90"
               aria-label="Cleexs"
             >
-              {LOGO_SVG}
+              <Image src={LOGO_SRC} alt="Cleexs" width={32} height={32} className="object-contain" />
             </Link>
           </div>
         </div>
@@ -82,8 +53,8 @@ export function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 text-foreground no-underline hover:opacity-90">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-700">
-                {LOGO_SVG}
+              <div className="relative h-10 w-10 shrink-0">
+                <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" priority />
               </div>
               <h1 className="text-2xl font-semibold text-foreground">Cleexs</h1>
             </Link>
