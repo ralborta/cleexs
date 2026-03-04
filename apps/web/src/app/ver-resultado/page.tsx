@@ -552,12 +552,16 @@ function VerResultadoContent() {
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
   const tieneGemini = !!runResultGemini;
-  const runResultToShow: PublicDiagnosticRunResult | null = (() => {
-    if (!runResult) return null;
-    if (vistaModelo === 'consolidado' && runResultGemini) return buildRunResultAmbos(runResult, runResultGemini);
-    if (vistaModelo === 'gemini' && runResultGemini) return runResultGemini;
-    return runResult;
-  })();
+  let runResultToShow: PublicDiagnosticRunResult | null = null;
+  if (runResult) {
+    if (vistaModelo === 'consolidado' && runResultGemini) {
+      runResultToShow = buildRunResultAmbos(runResult, runResultGemini);
+    } else if (vistaModelo === 'gemini' && runResultGemini) {
+      runResultToShow = runResultGemini;
+    } else {
+      runResultToShow = runResult;
+    }
+  }
 
   return (
     <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
