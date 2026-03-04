@@ -720,21 +720,21 @@ function VerResultadoContent() {
                         aria-labelledby="captcha-title"
                       >
                         <div
-                          className="w-full max-w-sm rounded-2xl border-2 border-violet-300 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-500 p-6 shadow-2xl"
+                          className="w-full max-w-sm rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600 p-6 shadow-2xl shadow-amber-900/20"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="rounded-xl bg-white/95 p-5 shadow-inner">
-                            <h3 id="captcha-title" className="text-lg font-bold text-slate-800 mb-1">
-                              Verificación
+                            <h3 id="captcha-title" className="text-lg font-bold text-amber-900 mb-1">
+                              Captcha
                             </h3>
-                            <p className="text-sm text-slate-600 mb-4">
-                              Escribí las <strong>6 letras</strong> que ves abajo (no importan mayúsculas ni minúsculas).
+                            <p className="text-sm text-amber-800/90 mb-4">
+                              Para continuar, escribí las <strong>6 letras</strong> que ves en la imagen. No distingue mayúsculas ni minúsculas.
                             </p>
-                            <div className="mb-3 flex items-center justify-center gap-0.5 bg-slate-100 py-3 px-3 rounded-lg border border-slate-200" style={{ letterSpacing: '0.15em' }}>
+                            <div className="mb-3 flex items-center justify-center gap-0.5 bg-amber-50 py-3 px-3 rounded-lg border border-amber-300" style={{ letterSpacing: '0.15em' }}>
                               {captchaChars.map(({ char, rotation, skew, y }, i) => (
                                 <span
                                   key={i}
-                                  className="select-none font-mono text-2xl font-bold text-violet-800"
+                                  className="select-none font-mono text-2xl font-bold text-amber-900"
                                   style={{
                                     transform: `rotate(${rotation}deg) skewX(${skew}deg) translateY(${y}px)`,
                                     display: 'inline-block',
@@ -748,29 +748,29 @@ function VerResultadoContent() {
                               type="text"
                               inputMode="text"
                               autoComplete="off"
-                              placeholder="Las 6 letras"
+                              placeholder="Escribí el código"
                               maxLength={8}
                               value={captchaInput}
                               onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-                              className="w-full rounded-lg border-2 border-violet-200 bg-white px-3 py-2.5 text-center font-mono text-lg tracking-widest text-slate-800 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                              className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2.5 text-center font-mono text-lg tracking-widest text-amber-900 placeholder:text-amber-500 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-300"
                               disabled={emailLoading}
                             />
                             {captchaInput.length >= 6 && !captchaOk && (
-                              <p className="mt-2 text-xs font-medium text-amber-600">El código no coincide. Revisalo.</p>
+                              <p className="mt-2 text-xs font-medium text-amber-700">El código no coincide. Revisalo.</p>
                             )}
                             <div className="mt-4 flex gap-2">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="flex-1"
+                                className="flex-1 border-amber-400 text-amber-800 hover:bg-amber-50"
                                 onClick={() => setCaptchaPopupOpen(false)}
                               >
                                 Cancelar
                               </Button>
                               <Button
                                 type="button"
-                                className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white"
+                                className="flex-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white border-0"
                                 disabled={!captchaOk}
                                 onClick={() => {
                                   if (!captchaOk) return;
