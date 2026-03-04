@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import React, { Fragment, Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -552,21 +552,19 @@ function VerResultadoContent() {
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
   const tieneGemini = !!runResultGemini;
-  let runResultToShow: PublicDiagnosticRunResult | null = null;
-  if (runResult) {
-    if (vistaModelo === 'consolidado' && runResultGemini) {
-      runResultToShow = buildRunResultAmbos(runResult, runResultGemini);
-    } else if (vistaModelo === 'gemini' && runResultGemini) {
-      runResultToShow = runResultGemini;
-    } else {
-      runResultToShow = runResult;
-    }
-  }
+  const runResultToShow: PublicDiagnosticRunResult | null = runResult
+    ? vistaModelo === 'consolidado' && runResultGemini
+      ? buildRunResultAmbos(runResult, runResultGemini)
+      : vistaModelo === 'gemini' && runResultGemini
+        ? runResultGemini
+        : runResult
+    : null;
 
-  const resultContent = (
-    <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
-      <div className="mx-auto max-w-6xl space-y-8 px-2 sm:px-4">
-        <Card className="border-0 bg-white shadow-lg shadow-slate-200/60">
+  return (
+    <div>
+      <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
+        <div className="mx-auto max-w-6xl space-y-8 px-2 sm:px-4">
+          <Card className="border-0 bg-white shadow-lg shadow-slate-200/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileCheck className="h-6 w-6 text-primary-600" />
@@ -596,7 +594,7 @@ function VerResultadoContent() {
             )}
 
             {isCompleted && (
-              <>
+              <Fragment>
                 {runResult ? (
                   diagnostic.showFullReport ? (
                     <div className="space-y-8">
@@ -695,6 +693,7 @@ function VerResultadoContent() {
                       <p className="text-sm text-green-700">Te enviamos el link por correo. Revisá tu bandeja (y spam).</p>
                     )
                   ) : (
+                    <Fragment>
                     <form ref={emailFormRef} onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
                       <input
                         type="email"
@@ -708,10 +707,9 @@ function VerResultadoContent() {
                         type="submit"
                         disabled={emailLoading || !email.trim()}
                       >
-                        {emailLoading ? 'Enviando…' : <><Mail className="mr-2 h-4 w-4" />Enviar</>}
+                        {emailLoading ? 'Enviando…' : <Fragment><Mail className="mr-2 h-4 w-4" />Enviar</Fragment>}
                       </Button>
                     </form>
-
                     {/* Popup captcha: se abre al hacer clic en Enviar; 6 letras, instrucciones, estilo vistoso */}
                     {captchaPopupOpen && (
                       <div
@@ -788,6 +786,7 @@ function VerResultadoContent() {
                         </div>
                       </div>
                     )}
+                    </Fragment>
                   )}
                 </div>
 
@@ -813,15 +812,14 @@ function VerResultadoContent() {
                     </Button>
                   </div>
                 </div>
-              </>
+              </Fragment>
             )}
           </CardContent>
-        </Card>
-      </div>
-    </main>
+          </Card>
+        </div>
+      </main>
+    </div>
   );
-
-  return resultContent;
 }
 
 export default function VerResultadoPage() {
