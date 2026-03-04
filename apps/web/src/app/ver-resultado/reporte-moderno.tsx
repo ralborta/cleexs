@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -30,14 +31,18 @@ import {
 
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
 
+const LOGO_SRC = '/CleexsLogo.png';
+
 function DetailPopup({
   title,
+  icon,
   body,
   examplePrompt,
   totalPrompts,
   onClose,
 }: {
   title: string;
+  icon?: React.ReactNode;
   body: React.ReactNode;
   examplePrompt?: string;
   totalPrompts?: number;
@@ -51,15 +56,24 @@ function DetailPopup({
       aria-modal="true"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+        {/* Cabecera azul con logo a un extremo e ícono + título */}
+        <div className="flex shrink-0 items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4 text-white">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="relative h-10 w-10 shrink-0">
+              <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" />
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              {icon && <span className="flex shrink-0 text-white/95 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>}
+              <h3 className="truncate text-lg font-bold text-white">{title}</h3>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
@@ -87,7 +101,7 @@ function DetailPopup({
           <button
             type="button"
             onClick={onClose}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 py-3 text-sm font-medium text-white hover:bg-slate-700"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
           >
             <ChevronUp className="h-4 w-4" />
             Volver al resumen
@@ -337,7 +351,10 @@ export function ReporteModerno({
         {/* Card 2 — Cleexs Score: número dentro del recuadro — sombra violeta */}
         <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-violet-50/40 to-white shadow-sm">
           <CardHeader className="pb-1 pt-5">
-            <CardTitle className="text-base font-bold text-slate-800">Cleexs Score</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <Award className="h-4 w-4 text-violet-500" />
+              Cleexs Score
+            </CardTitle>
             <CardDescription className="text-sm text-slate-500">
               {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
             </CardDescription>
@@ -544,6 +561,17 @@ export function ReporteModerno({
       {/* Popup de detalle: explicación larga + ejemplo de prompt */}
       {detailOpen && (
         <DetailPopup
+          icon={
+            detailOpen === 'ranking'
+              ? <BarChart3 className="h-5 w-5 text-blue-400" />
+              : detailOpen === 'cleexs'
+                ? <Award className="h-5 w-5 text-violet-300" />
+                : detailOpen === 'intention'
+                  ? <Zap className="h-5 w-5 text-amber-300" />
+                  : detailOpen === 'metrics'
+                    ? <TrendingUp className="h-5 w-5 text-emerald-300" />
+                    : <TrendingUp className="h-5 w-5 text-indigo-300" />
+          }
           title={
             detailOpen === 'ranking'
               ? 'Ranking de marcas'
