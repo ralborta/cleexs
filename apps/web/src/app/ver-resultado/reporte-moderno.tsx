@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -22,7 +23,54 @@ import {
   TrendingUp,
   Trophy,
   Info,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+
+type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
+
+function CardDetailToggle({
+  cardId,
+  expanded,
+  onToggle,
+  children,
+}: {
+  cardId: DetailCardId;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-2 rounded-lg py-1.5 pr-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+      >
+        <span className="flex items-center gap-1.5">
+          <Info className="h-4 w-4 text-slate-400" />
+          {expanded ? 'Resumen' : 'Detalle'}
+        </span>
+        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-2">
+          <div className="rounded-lg bg-slate-50/80 p-3 text-xs leading-relaxed text-slate-600">
+            {children}
+          </div>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <ChevronUp className="h-4 w-4" />
+            Volver al resumen
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const normalizeName = (value: string) =>
   value
@@ -136,6 +184,9 @@ export function ReporteModerno({
   brandName: string;
   trendData?: PublicDiagnosticTrendPoint[];
 }) {
+  const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
+  const toggleDetail = (id: DetailCardId) => setDetailOpen((v) => (v === id ? null : id));
+
   const results = runResult.promptResults || [];
   const brandAliases = runResult.brandAliases || [];
   const totalPrompts = results.length;
@@ -234,6 +285,9 @@ export function ReporteModerno({
             ) : (
               <p className="py-4 text-center text-sm text-slate-500">Sin datos de ranking.</p>
             )}
+            <CardDetailToggle cardId="ranking" expanded={detailOpen === 'ranking'} onToggle={() => toggleDetail('ranking')}>
+              Este ranking muestra cómo aparecen tu marca y los competidores en las respuestas de la IA. Para cada pregunta del análisis, la IA devuelve un Top 3; aquí se agregan todas esas apariciones. <strong>Score</strong> es la posición promedio (1 = primero, 2 = segundo, etc.) y <strong>% Top 3</strong> es en qué proporción de preguntas la marca entró en el Top 3.
+            </CardDetailToggle>
           </CardContent>
         </Card>
 
@@ -287,6 +341,9 @@ export function ReporteModerno({
                 )}
               </div>
             )}
+            <CardDetailToggle cardId="cleexs" expanded={detailOpen === 'cleexs'} onToggle={() => toggleDetail('cleexs')}>
+              El <strong>Cleexs Score</strong> es un indicador de 0 a 100 que mide qué tan bien te recomienda la IA en relación con tus competidores. Si hay intenciones definidas (urgencia, consideración, calidad, precio), el score se calcula como <strong>promedio ponderado</strong> por el peso de cada intención; si no, es el <strong>promedio simple</strong> de todos los prompts. Cuanto más alto, mejor te posiciona la IA.
+            </CardDetailToggle>
           </CardContent>
         </Card>
 
@@ -342,6 +399,9 @@ export function ReporteModerno({
                 </ResponsiveContainer>
               </div>
             )}
+            <CardDetailToggle cardId="intention" expanded={detailOpen === 'intention'} onToggle={() => toggleDetail('intention')}>
+              Las <strong>intenciones</strong> (urgencia, consideración, calidad, precio) representan distintos tipos de búsqueda del usuario. Cada prompt del análisis está asociado a una intención con un peso. El score por intención es el <strong>promedio del resultado de la IA</strong> en esos prompts; el Cleexs Score global pondera estos promedios según el peso de cada intención.
+            </CardDetailToggle>
           </CardContent>
         </Card>
       </div>
@@ -379,6 +439,9 @@ export function ReporteModerno({
                 </div>
               </div>
             ))}
+            <CardDetailToggle cardId="metrics" expanded={detailOpen === 'metrics'} onToggle={() => toggleDetail('metrics')}>
+              <strong>Confianza de formato:</strong> % de respuestas de la IA que pudieron parsearse correctamente (Top 3). <strong>Mención de marca:</strong> en qué % de respuestas se menciona tu marca. <strong>Aparición en Top 3:</strong> en qué % de preguntas tu marca aparece en el Top 3. <strong>Posición #1:</strong> en qué % de preguntas la IA te puso en primer lugar.
+            </CardDetailToggle>
           </CardContent>
         </Card>
 
@@ -436,6 +499,9 @@ export function ReporteModerno({
               <Info className="h-3.5 w-3.5 shrink-0" />
               Definí industria o tipo de producto para sugerencias más relevantes.
             </p>
+            <CardDetailToggle cardId="comparisons" expanded={detailOpen === 'comparisons'} onToggle={() => toggleDetail('comparisons')}>
+              Esta tabla resume <strong>cuántas veces</strong> apareció cada marca (tuya o competidor) en el Top 3 de las respuestas de la IA (<strong>Apar.</strong>) y qué <strong>% del total de apariciones</strong> representa (<strong>% Top 3</strong>). Así ves quién domina las recomendaciones y podés priorizar acciones para mejorar tu posicionamiento.
+            </CardDetailToggle>
           </CardContent>
         </Card>
       </div>

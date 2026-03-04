@@ -74,11 +74,17 @@ export async function executeRun(
   const brandAliases = run.brand.aliases.map((a) => a.alias);
   let totalTokens = 0;
 
+  const OPENAI_TIMEOUT_MS = 90_000; // 90s por prompt para evitar que el run quede colgado
+
   for (let i = 0; i < prompts.length; i++) {
     const prompt = prompts[i];
     options.onProgress?.(i, prompts.length, prompt.name ?? prompt.promptText?.slice(0, 40));
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      signal: controller.signal,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -104,7 +110,7 @@ export async function executeRun(
           },
         ],
       }),
-    });
+    }).finally(() => clearTimeout(timeoutId));
 
     const responseJson = (await response.json()) as {
       error?: { message?: string };

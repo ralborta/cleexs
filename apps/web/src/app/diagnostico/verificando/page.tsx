@@ -224,6 +224,11 @@ function VerificandoContent() {
                   </div>
                 </div>
               )}
+              {isRunning && progress < 100 && elapsedSeconds >= 360 && (
+                <p className="mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                  Está tardando más de lo habitual. Si el progreso no avanza, el análisis pudo haberse detenido; en ese caso intentá crear un nuevo diagnóstico más tarde.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
