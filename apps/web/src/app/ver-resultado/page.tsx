@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -423,7 +423,7 @@ function VerResultadoContent() {
   const [{ captchaCode, captchaChars }] = useState(() => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
-    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
     const captchaChars = code.split('').map((c) => ({
       char: c,
       rotation: (Math.random() - 0.5) * 24,
@@ -433,6 +433,9 @@ function VerResultadoContent() {
     return { captchaCode: code, captchaChars };
   });
   const [captchaInput, setCaptchaInput] = useState('');
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaPopupOpen, setCaptchaPopupOpen] = useState(false);
+  const emailFormRef = useRef<HTMLFormElement>(null);
   const captchaOk = captchaInput.trim().toUpperCase() === captchaCode.toUpperCase();
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
   const [geminiLogoError, setGeminiLogoError] = useState(false);
@@ -498,6 +501,10 @@ function VerResultadoContent() {
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!diagnosticId || !email.trim()) return;
+    if (!captchaVerified) {
+      setCaptchaPopupOpen(true);
+      return;
+    }
     setEmailLoading(true);
     setEmailErrorCode(undefined);
     try {
@@ -686,7 +693,7 @@ function VerResultadoContent() {
                       <p className="text-sm text-green-700">Te enviamos el link por correo. Revisá tu bandeja (y spam).</p>
                     )
                   ) : (
-                    <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
+                    <form ref={emailFormRef} onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
                       <input
                         type="email"
                         placeholder="tu@email.com"
@@ -695,45 +702,90 @@ function VerResultadoContent() {
                         className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         disabled={emailLoading}
                       />
-                      {/* Verificación: escribir código distorsionado (solo visual; validación en cliente) */}
-                      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                        <p className="mb-2 text-xs font-medium text-slate-500">Escribí el código que ves:</p>
-                        <div className="mb-3 flex items-center justify-center gap-1 bg-white py-3 px-4 rounded border border-slate-200" style={{ letterSpacing: '0.2em' }}>
-                          {captchaChars.map(({ char, rotation, skew, y }, i) => (
-                            <span
-                              key={i}
-                              className="select-none font-mono text-xl font-bold text-slate-700"
-                              style={{
-                                transform: `rotate(${rotation}deg) skewX(${skew}deg) translateY(${y}px)`,
-                                display: 'inline-block',
-                              }}
-                            >
-                              {char}
-                            </span>
-                          ))}
-                        </div>
-                        <input
-                          type="text"
-                          inputMode="text"
-                          autoComplete="off"
-                          placeholder="Código"
-                          maxLength={6}
-                          value={captchaInput}
-                          onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-center font-mono text-lg tracking-widest placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                          disabled={emailLoading}
-                        />
-                        {captchaInput.length >= 4 && !captchaOk && (
-                          <p className="mt-1 text-xs text-amber-600">El código no coincide. Revisalo.</p>
-                        )}
-                      </div>
                       <Button
                         type="submit"
-                        disabled={emailLoading || !email.trim() || !captchaOk}
+                        disabled={emailLoading || !email.trim()}
                       >
                         {emailLoading ? 'Enviando…' : <><Mail className="mr-2 h-4 w-4" />Enviar</>}
                       </Button>
                     </form>
+
+                    {/* Popup captcha: se abre al hacer clic en Enviar; 6 letras, instrucciones, estilo vistoso */}
+                    {captchaPopupOpen && (
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+                        onClick={() => setCaptchaPopupOpen(false)}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="captcha-title"
+                      >
+                        <div
+                          className="w-full max-w-sm rounded-2xl border-2 border-violet-300 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-500 p-6 shadow-2xl"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="rounded-xl bg-white/95 p-5 shadow-inner">
+                            <h3 id="captcha-title" className="text-lg font-bold text-slate-800 mb-1">
+                              Verificación
+                            </h3>
+                            <p className="text-sm text-slate-600 mb-4">
+                              Escribí las <strong>6 letras</strong> que ves abajo (no importan mayúsculas ni minúsculas).
+                            </p>
+                            <div className="mb-3 flex items-center justify-center gap-0.5 bg-slate-100 py-3 px-3 rounded-lg border border-slate-200" style={{ letterSpacing: '0.15em' }}>
+                              {captchaChars.map(({ char, rotation, skew, y }, i) => (
+                                <span
+                                  key={i}
+                                  className="select-none font-mono text-2xl font-bold text-violet-800"
+                                  style={{
+                                    transform: `rotate(${rotation}deg) skewX(${skew}deg) translateY(${y}px)`,
+                                    display: 'inline-block',
+                                  }}
+                                >
+                                  {char}
+                                </span>
+                              ))}
+                            </div>
+                            <input
+                              type="text"
+                              inputMode="text"
+                              autoComplete="off"
+                              placeholder="Las 6 letras"
+                              maxLength={8}
+                              value={captchaInput}
+                              onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
+                              className="w-full rounded-lg border-2 border-violet-200 bg-white px-3 py-2.5 text-center font-mono text-lg tracking-widest text-slate-800 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                              disabled={emailLoading}
+                            />
+                            {captchaInput.length >= 6 && !captchaOk && (
+                              <p className="mt-2 text-xs font-medium text-amber-600">El código no coincide. Revisalo.</p>
+                            )}
+                            <div className="mt-4 flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => setCaptchaPopupOpen(false)}
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                type="button"
+                                className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white"
+                                disabled={!captchaOk}
+                                onClick={() => {
+                                  if (!captchaOk) return;
+                                  setCaptchaVerified(true);
+                                  setCaptchaPopupOpen(false);
+                                  emailFormRef.current?.requestSubmit();
+                                }}
+                              >
+                                Verificar y enviar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   )}
                 </div>
 
