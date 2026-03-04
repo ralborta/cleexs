@@ -563,7 +563,7 @@ function VerResultadoContent() {
     }
   }
 
-  return (
+  const resultContent = (
     <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
       <div className="mx-auto max-w-6xl space-y-8 px-2 sm:px-4">
         <Card className="border-0 bg-white shadow-lg shadow-slate-200/60">
@@ -820,6 +820,8 @@ function VerResultadoContent() {
       </div>
     </main>
   );
+
+  return resultContent;
 }
 
 export default function VerResultadoPage() {
