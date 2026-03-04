@@ -420,7 +420,20 @@ function VerResultadoContent() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailSendFailed, setEmailSendFailed] = useState(false);
   const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
-  const [captchaChecked, setCaptchaChecked] = useState(false);
+  const [{ captchaCode, captchaChars }] = useState(() => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const captchaChars = code.split('').map((c) => ({
+      char: c,
+      rotation: (Math.random() - 0.5) * 24,
+      skew: (Math.random() - 0.5) * 12,
+      y: (Math.random() - 0.5) * 8,
+    }));
+    return { captchaCode: code, captchaChars };
+  });
+  const [captchaInput, setCaptchaInput] = useState('');
+  const captchaOk = captchaInput.trim().toUpperCase() === captchaCode.toUpperCase();
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
   const [geminiLogoError, setGeminiLogoError] = useState(false);
 
@@ -682,20 +695,41 @@ function VerResultadoContent() {
                         className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         disabled={emailLoading}
                       />
-                      {/* Verificación cosmética (no controla nada; solo requisito visual para el cliente) */}
-                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100/80">
+                      {/* Verificación: escribir código distorsionado (solo visual; validación en cliente) */}
+                      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                        <p className="mb-2 text-xs font-medium text-slate-500">Escribí el código que ves:</p>
+                        <div className="mb-3 flex items-center justify-center gap-1 bg-white py-3 px-4 rounded border border-slate-200" style={{ letterSpacing: '0.2em' }}>
+                          {captchaChars.map(({ char, rotation, skew, y }, i) => (
+                            <span
+                              key={i}
+                              className="select-none font-mono text-xl font-bold text-slate-700"
+                              style={{
+                                transform: `rotate(${rotation}deg) skewX(${skew}deg) translateY(${y}px)`,
+                                display: 'inline-block',
+                              }}
+                            >
+                              {char}
+                            </span>
+                          ))}
+                        </div>
                         <input
-                          type="checkbox"
-                          checked={captchaChecked}
-                          onChange={(e) => setCaptchaChecked(e.target.checked)}
-                          className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          type="text"
+                          inputMode="text"
+                          autoComplete="off"
+                          placeholder="Código"
+                          maxLength={6}
+                          value={captchaInput}
+                          onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-center font-mono text-lg tracking-widest placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                           disabled={emailLoading}
                         />
-                        <span>No soy un robot</span>
-                      </label>
+                        {captchaInput.length >= 4 && !captchaOk && (
+                          <p className="mt-1 text-xs text-amber-600">El código no coincide. Revisalo.</p>
+                        )}
+                      </div>
                       <Button
                         type="submit"
-                        disabled={emailLoading || !email.trim() || !captchaChecked}
+                        disabled={emailLoading || !email.trim() || !captchaOk}
                       >
                         {emailLoading ? 'Enviando…' : <><Mail className="mr-2 h-4 w-4" />Enviar</>}
                       </Button>
