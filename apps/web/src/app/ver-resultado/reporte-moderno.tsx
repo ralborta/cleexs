@@ -559,46 +559,73 @@ export function ReporteModerno({
             detailOpen === 'ranking' ? (
               <>
                 <p>
-                  Este ranking muestra <strong>cómo aparecen tu marca y los competidores</strong> en las respuestas que da la IA cuando se le preguntan cosas relacionadas con tu sector. Para llegar a estos números, el sistema hace muchas preguntas distintas a la IA (una por cada prompt) y en cada respuesta la IA devuelve un Top 3 de marcas recomendadas.
+                  Este ranking muestra <strong>cómo aparecen tu marca y los competidores</strong> en las respuestas que da la IA cuando se le hacen preguntas relacionadas con tu sector. La idea es simular distintos tipos de consulta que un usuario podría hacer (por urgencia, por calidad, por precio, etc.) y ver qué marcas recomienda la IA en cada caso.
                 </p>
                 <p>
-                  Esas apariciones se <strong>agregan</strong>: se cuenta cuántas veces salió cada marca, en qué posición y en qué proporción de preguntas. El <strong>Score</strong> que ves es la <strong>posición promedio</strong> (1 = primero, 2 = segundo, etc.). El <strong>% Top 3</strong> indica en qué proporción de todas las preguntas del análisis esa marca entró en el Top 3. Así podés ver quién domina las recomendaciones en conjunto.
+                  <strong>Cómo se construye:</strong> el sistema envía a la IA varias preguntas distintas (una por cada prompt del análisis). En cada respuesta, la IA devuelve un Top 3 de marcas recomendadas, a veces con un breve motivo. Nosotros tomamos todas esas respuestas, extraemos qué marca quedó en 1.º, 2.º y 3.º lugar en cada pregunta, y <strong>agregamos</strong> los datos: contamos cuántas veces apareció cada marca, en qué posiciones y en cuántas preguntas distintas.
+                </p>
+                <p>
+                  <strong>Qué significa cada número en la tabla:</strong> el <strong>Score</strong> es la <strong>posición promedio</strong> de esa marca cuando salió en el Top 3 (1 = siempre primero, 2 = en promedio segundo, etc.). El <strong>% Top 3</strong> indica en qué proporción de todas las preguntas del análisis esa marca llegó a estar en el Top 3. Por ejemplo, si el análisis tiene 10 preguntas y tu marca sale en el Top 3 en 7, tu % Top 3 sería 70%. Así ves de un vistazo quién domina las recomendaciones y cómo te comparás.
                 </p>
               </>
             ) : detailOpen === 'cleexs' ? (
               <>
                 <p>
-                  El <strong>Cleexs Score</strong> es un indicador de 0 a 100 que resume <strong>qué tan bien te recomienda la IA</strong> en relación con tus competidores. No es un dato que la IA devuelva directamente: lo calculamos nosotros a partir de todas las respuestas del análisis.
+                  El <strong>Cleexs Score</strong> es un indicador de 0 a 100 que resume <strong>qué tan bien te recomienda la IA</strong> en relación con tus competidores en todo el análisis. No es un número que la IA devuelva sola: lo calculamos nosotros a partir de todas las respuestas que da a las distintas preguntas (prompts).
                 </p>
                 <p>
-                  Para cada pregunta (prompt), evaluamos si tu marca aparece en el Top 3 y en qué posición; con eso se obtiene un score por pregunta. Si en el análisis hay <strong>intenciones</strong> definidas (urgencia, consideración, calidad, precio), cada prompt está asociado a una intención con un peso. En ese caso el Cleexs Score final es el <strong>promedio ponderado</strong> de los scores por intención según ese peso. Si no hay intenciones, es el <strong>promedio simple</strong> de todos los prompts. Cuanto más alto el número, mejor te posiciona la IA en conjunto.
+                  <strong>Cómo se calcula paso a paso:</strong> para cada pregunta del análisis, la IA devuelve un Top 3. Nosotros evaluamos si tu marca aparece en ese Top 3 y en qué posición (1.º, 2.º o 3.º). Con eso asignamos un score por pregunta (por ejemplo, según qué tan arriba te ubicó). Luego combinamos todos esos scores. Si el análisis tiene <strong>intenciones</strong> definidas (urgencia, consideración, calidad, precio), cada prompt está asociado a una intención con un peso; en ese caso el Cleexs Score final es el <strong>promedio ponderado</strong> de los scores por intención, según el peso de cada una. Si no hay intenciones, es el <strong>promedio simple</strong> de todos los prompts.
+                </p>
+                <p>
+                  <strong>Qué interpretar:</strong> cuanto más alto el número (cercano a 100), mejor te posiciona la IA en conjunto. Un score bajo indica que en muchas preguntas la IA recomienda más a la competencia; un score alto indica que la IA te elige con frecuencia entre las mejores opciones. Sirve como un único número de referencia para seguir tu evolución en el tiempo o compararte con otros.
                 </p>
               </>
             ) : detailOpen === 'intention' ? (
               <>
                 <p>
-                  Las <strong>intenciones</strong> (urgencia, consideración, calidad, precio) representan distintos <strong>tipos de búsqueda o necesidad</strong> del usuario: algo urgente, algo para evaluar con tiempo, prioridad por calidad o por precio. El análisis incluye prompts pensados para cada intención.
+                  Las <strong>intenciones</strong> (urgencia, consideración, calidad, precio) representan distintos <strong>tipos de búsqueda o necesidad</strong> del usuario: por ejemplo algo urgente (entrega rápida, respuesta inmediata), algo para evaluar con tiempo (educación, seguros), prioridad por la mejor calidad o por el mejor precio. El análisis incluye varios prompts pensados específicamente para cada intención, con un <strong>peso</strong> que refleja la importancia relativa de esa intención en tu sector.
                 </p>
                 <p>
-                  Cada prompt está asociado a una intención y tiene un <strong>peso</strong>. El score que ves por intención es el <strong>promedio del resultado de la IA</strong> en los prompts de esa intención (qué tan bien te ubicó en el Top 3 en esas preguntas). El <strong>Cleexs Score global</strong> se obtiene ponderando estos promedios por el peso de cada intención, para reflejar la importancia relativa de cada tipo de búsqueda.
+                  <strong>Cómo se obtienen los scores por intención:</strong> cada prompt del análisis está etiquetado con una intención. Para cada intención, tomamos todas las respuestas de la IA a esos prompts y calculamos qué tan bien te ubicó (si entraste en el Top 3 y en qué posición). El score que ves por intención es el <strong>promedio</strong> de ese desempeño en los prompts de esa intención. Así podés ver en qué tipo de búsqueda la IA te recomienda más o menos.
+                </p>
+                <p>
+                  <strong>Relación con el Cleexs Score global:</strong> el Cleexs Score total no es un promedio simple de las intenciones; es un <strong>promedio ponderado</strong>. Es decir, las intenciones con más peso (por ejemplo “urgencia” si tu negocio es muy dependiente de eso) influyen más en el número final. Eso permite que el indicador global refleje mejor la importancia relativa de cada tipo de consulta en tu contexto.
                 </p>
               </>
             ) : detailOpen === 'metrics' ? (
               <>
                 <p>
-                  Estas métricas resumen <strong>coherencia, visibilidad y ranking</strong> de tu marca en esta corrida del análisis. Todas se calculan a partir de las respuestas de la IA a los distintos prompts.
+                  Estas métricas resumen <strong>coherencia, visibilidad y ranking</strong> de tu marca en esta corrida del análisis. Todas se calculan a partir de las respuestas de la IA a los distintos prompts: no son datos que la IA devuelva directamente, sino que los derivamos nosotros parseando y contando esas respuestas.
                 </p>
                 <p>
-                  <strong>Confianza de formato:</strong> porcentaje de respuestas que pudieron parsearse correctamente (la IA devolvió un Top 3 en formato esperado). Sirve para saber si los datos son fiables. <strong>Mención de marca:</strong> en qué proporción de respuestas se menciona tu marca (aunque no sea en el Top 3). <strong>Aparición en Top 3:</strong> en qué proporción de preguntas tu marca entró en el Top 3. <strong>Posición #1:</strong> en qué proporción de preguntas la IA te puso en primer lugar. Juntas dan una idea de cómo te ve la IA en distintos contextos.
+                  <strong>Confianza de formato:</strong> es el porcentaje de respuestas en las que la IA devolvió un Top 3 en un formato que pudimos interpretar correctamente (por ejemplo, listado numerado con marcas y motivos). Si este valor es bajo, significa que muchas respuestas no siguieron el formato esperado y los datos de ranking pueden ser menos fiables. Conviene que sea alto.
+                </p>
+                <p>
+                  <strong>Mención de marca:</strong> en qué proporción de respuestas se menciona tu marca, aunque no necesariamente en el Top 3. Indica si la IA te tiene en cuenta al hablar del tema, incluso cuando no te pone entre los tres primeros.
+                </p>
+                <p>
+                  <strong>Aparición en Top 3:</strong> en qué proporción de preguntas tu marca llegó a estar en el Top 3. Es una métrica central: cuánto más alta, más veces la IA te recomienda entre las mejores opciones.
+                </p>
+                <p>
+                  <strong>Posición #1:</strong> en qué proporción de preguntas la IA te puso en primer lugar. Es el nivel más alto de recomendación; si este número crece, estás mejorando en “ser la primera opción” que la IA sugiere.
+                </p>
+                <p>
+                  Juntas, estas cuatro métricas te dan una idea clara de cómo te ve la IA: si responde de forma interpretable, si te menciona, si te incluye en el Top 3 y con qué frecuencia te elige como número uno.
                 </p>
               </>
             ) : (
               <>
                 <p>
-                  Esta tabla resume <strong>cuántas veces apareció cada marca</strong> (tuya o competidor) en el Top 3 de las respuestas de la IA a lo largo de todo el análisis, y qué parte del total de apariciones representa.
+                  Esta tabla resume <strong>cuántas veces apareció cada marca</strong> (tuya o de competidores) en el Top 3 de las respuestas de la IA a lo largo de todo el análisis, y qué parte del total de apariciones representa cada una. Sirve para ver de un vistazo quién “gana” en recomendaciones y dónde estás vos.
                 </p>
                 <p>
-                  <strong>Apar.</strong> es el número de veces que la marca salió en el Top 3. <strong>% Top 3</strong> es el porcentaje que esa marca representa sobre el total de apariciones (todas las marcas que salieron en algún Top 3). Así ves quién <strong>domina las recomendaciones</strong> y podés priorizar acciones: si un competidor tiene mucha más presencia, es un foco claro para mejorar.
+                  <strong>Cómo se arma:</strong> por cada pregunta del análisis, la IA devuelve un Top 3. Nosotros extraemos qué marcas salieron (tu marca y las que consideramos competidores) y contamos: en cuántas respuestas apareció cada una y en qué posición. Esas apariciones se suman y se muestran por marca. La columna <strong>Tipo</strong> indica si la fila corresponde a tu marca o a un competidor.
+                </p>
+                <p>
+                  <strong>Qué significa cada columna:</strong> <strong>Apar.</strong> (apariciones) es el número de veces que esa marca salió en el Top 3 en alguna pregunta. <strong>% Top 3</strong> es el porcentaje que esa marca representa sobre el <strong>total</strong> de apariciones de todas las marcas: si en todo el análisis hubo 100 apariciones en total y tu marca salió 25 veces, tu % Top 3 sería 25%. Así ves la “cuota” de recomendaciones que se lleva cada uno.
+                </p>
+                <p>
+                  <strong>Cómo usarlo:</strong> si un competidor tiene muchas más apariciones y un % Top 3 mucho mayor que el tuyo, está dominando las recomendaciones de la IA en este análisis. Eso te indica dónde hay que mejorar (contenido, señales de autoridad, claridad para la IA, etc.). Si tu marca está arriba en la tabla, estás bien posicionado; si no, la tabla te ayuda a priorizar contra quién y en qué dimensiones trabajar.
                 </p>
               </>
             )

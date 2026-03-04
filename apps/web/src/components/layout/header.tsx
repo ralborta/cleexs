@@ -56,12 +56,19 @@ export function Header() {
     return (
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-6 py-3">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <Link href="/diagnostico/crear" className="flex items-center gap-3 text-foreground no-underline hover:opacity-90">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 shrink-0">
                 {LOGO_SVG}
               </div>
               <span className="text-xl font-semibold">Cleexs</span>
+            </Link>
+            <Link
+              href="/diagnostico/crear"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 text-foreground no-underline hover:opacity-90 [&_svg]:h-5 [&_svg]:w-5"
+              aria-label="Cleexs"
+            >
+              {LOGO_SVG}
             </Link>
           </div>
         </div>
