@@ -26,7 +26,7 @@ export function Header() {
   if (minimal) {
     return (
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-1.5">
+        <div className="container mx-auto px-6 py-0.5">
           <div className="flex items-center justify-start">
             <Link href="/diagnostico/crear" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
               <div className="relative h-[12.5rem] w-[12.5rem] shrink-0 sm:h-[15rem] sm:w-[15rem]">
@@ -41,7 +41,7 @@ export function Header() {
 
   return (
     <header className="border-b border-border bg-card">
-      <div className="container mx-auto px-6 py-2">
+      <div className="container mx-auto px-6 py-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
