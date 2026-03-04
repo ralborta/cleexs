@@ -25,49 +25,93 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react';
 
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
 
-function CardDetailToggle({
-  cardId,
-  expanded,
-  onToggle,
-  children,
+function DetailPopup({
+  title,
+  body,
+  examplePrompt,
+  totalPrompts,
+  onClose,
 }: {
-  cardId: DetailCardId;
-  expanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
+  title: string;
+  body: React.ReactNode;
+  examplePrompt?: string;
+  totalPrompts?: number;
+  onClose: () => void;
 }) {
   return (
-    <div className="mt-3 border-t border-slate-100 pt-3">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-2 rounded-lg py-1.5 pr-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        <span className="flex items-center gap-1.5">
-          <Info className="h-4 w-4 text-slate-400" />
-          {expanded ? 'Resumen' : 'Detalle'}
-        </span>
-        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
-      {expanded && (
-        <div className="mt-2 space-y-2">
-          <div className="rounded-lg bg-slate-50/80 p-3 text-xs leading-relaxed text-slate-600">
-            {children}
-          </div>
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
           <button
             type="button"
-            onClick={onToggle}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Cerrar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-slate-600">
+          <div className="space-y-4">{body}</div>
+          {examplePrompt && (
+            <div className="mt-6 space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+              <p className="font-medium text-slate-700">
+                Ejemplo de uno de los prompts del análisis
+                {totalPrompts != null && (
+                  <span className="ml-1 font-normal text-slate-500">
+                    (el análisis utiliza {totalPrompts} prompts distintos que exploran distintas intenciones y contextos)
+                  </span>
+                )}
+              </p>
+              <pre className="whitespace-pre-wrap rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-600 border border-slate-100">
+                {examplePrompt}
+              </pre>
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 py-3 text-sm font-medium text-white hover:bg-slate-700"
           >
             <ChevronUp className="h-4 w-4" />
             Volver al resumen
           </button>
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
+
+function CardDetailButton({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full items-center justify-between gap-2 rounded-lg py-1.5 pr-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+      >
+        <span className="flex items-center gap-1.5">
+          <Info className="h-4 w-4 text-slate-400" />
+          Detalle
+        </span>
+        <ChevronDown className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -185,11 +229,12 @@ export function ReporteModerno({
   trendData?: PublicDiagnosticTrendPoint[];
 }) {
   const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
-  const toggleDetail = (id: DetailCardId) => setDetailOpen((v) => (v === id ? null : id));
+  const closeDetail = () => setDetailOpen(null);
 
   const results = runResult.promptResults || [];
   const brandAliases = runResult.brandAliases || [];
   const totalPrompts = results.length;
+  const examplePromptText = results[0]?.promptText ?? undefined;
 
   const parseableCount = results.filter((r) => r.top3Json && r.top3Json.length > 0).length;
   const mentionCount = results.filter((r) => isBrandMentioned(r.responseText ?? '', brandName, brandAliases)).length;
@@ -285,9 +330,7 @@ export function ReporteModerno({
             ) : (
               <p className="py-4 text-center text-sm text-slate-500">Sin datos de ranking.</p>
             )}
-            <CardDetailToggle cardId="ranking" expanded={detailOpen === 'ranking'} onToggle={() => toggleDetail('ranking')}>
-              Este ranking muestra cómo aparecen tu marca y los competidores en las respuestas de la IA. Para cada pregunta del análisis, la IA devuelve un Top 3; aquí se agregan todas esas apariciones. <strong>Score</strong> es la posición promedio (1 = primero, 2 = segundo, etc.) y <strong>% Top 3</strong> es en qué proporción de preguntas la marca entró en el Top 3.
-            </CardDetailToggle>
+            <CardDetailButton onOpen={() => setDetailOpen('ranking')} />
           </CardContent>
         </Card>
 
@@ -341,9 +384,7 @@ export function ReporteModerno({
                 )}
               </div>
             )}
-            <CardDetailToggle cardId="cleexs" expanded={detailOpen === 'cleexs'} onToggle={() => toggleDetail('cleexs')}>
-              El <strong>Cleexs Score</strong> es un indicador de 0 a 100 que mide qué tan bien te recomienda la IA en relación con tus competidores. Si hay intenciones definidas (urgencia, consideración, calidad, precio), el score se calcula como <strong>promedio ponderado</strong> por el peso de cada intención; si no, es el <strong>promedio simple</strong> de todos los prompts. Cuanto más alto, mejor te posiciona la IA.
-            </CardDetailToggle>
+            <CardDetailButton onOpen={() => setDetailOpen('cleexs')} />
           </CardContent>
         </Card>
 
@@ -399,9 +440,7 @@ export function ReporteModerno({
                 </ResponsiveContainer>
               </div>
             )}
-            <CardDetailToggle cardId="intention" expanded={detailOpen === 'intention'} onToggle={() => toggleDetail('intention')}>
-              Las <strong>intenciones</strong> (urgencia, consideración, calidad, precio) representan distintos tipos de búsqueda del usuario. Cada prompt del análisis está asociado a una intención con un peso. El score por intención es el <strong>promedio del resultado de la IA</strong> en esos prompts; el Cleexs Score global pondera estos promedios según el peso de cada intención.
-            </CardDetailToggle>
+            <CardDetailButton onOpen={() => setDetailOpen('intention')} />
           </CardContent>
         </Card>
       </div>
@@ -439,9 +478,7 @@ export function ReporteModerno({
                 </div>
               </div>
             ))}
-            <CardDetailToggle cardId="metrics" expanded={detailOpen === 'metrics'} onToggle={() => toggleDetail('metrics')}>
-              <strong>Confianza de formato:</strong> % de respuestas de la IA que pudieron parsearse correctamente (Top 3). <strong>Mención de marca:</strong> en qué % de respuestas se menciona tu marca. <strong>Aparición en Top 3:</strong> en qué % de preguntas tu marca aparece en el Top 3. <strong>Posición #1:</strong> en qué % de preguntas la IA te puso en primer lugar.
-            </CardDetailToggle>
+            <CardDetailButton onOpen={() => setDetailOpen('metrics')} />
           </CardContent>
         </Card>
 
@@ -499,12 +536,78 @@ export function ReporteModerno({
               <Info className="h-3.5 w-3.5 shrink-0" />
               Definí industria o tipo de producto para sugerencias más relevantes.
             </p>
-            <CardDetailToggle cardId="comparisons" expanded={detailOpen === 'comparisons'} onToggle={() => toggleDetail('comparisons')}>
-              Esta tabla resume <strong>cuántas veces</strong> apareció cada marca (tuya o competidor) en el Top 3 de las respuestas de la IA (<strong>Apar.</strong>) y qué <strong>% del total de apariciones</strong> representa (<strong>% Top 3</strong>). Así ves quién domina las recomendaciones y podés priorizar acciones para mejorar tu posicionamiento.
-            </CardDetailToggle>
+            <CardDetailButton onOpen={() => setDetailOpen('comparisons')} />
           </CardContent>
         </Card>
       </div>
+
+      {/* Popup de detalle: explicación larga + ejemplo de prompt */}
+      {detailOpen && (
+        <DetailPopup
+          title={
+            detailOpen === 'ranking'
+              ? 'Ranking de marcas'
+              : detailOpen === 'cleexs'
+                ? 'Cleexs Score'
+                : detailOpen === 'intention'
+                  ? 'Por intención'
+                  : detailOpen === 'metrics'
+                    ? 'Métricas del análisis'
+                    : 'Comparaciones y sugerencias'
+          }
+          body={
+            detailOpen === 'ranking' ? (
+              <>
+                <p>
+                  Este ranking muestra <strong>cómo aparecen tu marca y los competidores</strong> en las respuestas que da la IA cuando se le preguntan cosas relacionadas con tu sector. Para llegar a estos números, el sistema hace muchas preguntas distintas a la IA (una por cada prompt) y en cada respuesta la IA devuelve un Top 3 de marcas recomendadas.
+                </p>
+                <p>
+                  Esas apariciones se <strong>agregan</strong>: se cuenta cuántas veces salió cada marca, en qué posición y en qué proporción de preguntas. El <strong>Score</strong> que ves es la <strong>posición promedio</strong> (1 = primero, 2 = segundo, etc.). El <strong>% Top 3</strong> indica en qué proporción de todas las preguntas del análisis esa marca entró en el Top 3. Así podés ver quién domina las recomendaciones en conjunto.
+                </p>
+              </>
+            ) : detailOpen === 'cleexs' ? (
+              <>
+                <p>
+                  El <strong>Cleexs Score</strong> es un indicador de 0 a 100 que resume <strong>qué tan bien te recomienda la IA</strong> en relación con tus competidores. No es un dato que la IA devuelva directamente: lo calculamos nosotros a partir de todas las respuestas del análisis.
+                </p>
+                <p>
+                  Para cada pregunta (prompt), evaluamos si tu marca aparece en el Top 3 y en qué posición; con eso se obtiene un score por pregunta. Si en el análisis hay <strong>intenciones</strong> definidas (urgencia, consideración, calidad, precio), cada prompt está asociado a una intención con un peso. En ese caso el Cleexs Score final es el <strong>promedio ponderado</strong> de los scores por intención según ese peso. Si no hay intenciones, es el <strong>promedio simple</strong> de todos los prompts. Cuanto más alto el número, mejor te posiciona la IA en conjunto.
+                </p>
+              </>
+            ) : detailOpen === 'intention' ? (
+              <>
+                <p>
+                  Las <strong>intenciones</strong> (urgencia, consideración, calidad, precio) representan distintos <strong>tipos de búsqueda o necesidad</strong> del usuario: algo urgente, algo para evaluar con tiempo, prioridad por calidad o por precio. El análisis incluye prompts pensados para cada intención.
+                </p>
+                <p>
+                  Cada prompt está asociado a una intención y tiene un <strong>peso</strong>. El score que ves por intención es el <strong>promedio del resultado de la IA</strong> en los prompts de esa intención (qué tan bien te ubicó en el Top 3 en esas preguntas). El <strong>Cleexs Score global</strong> se obtiene ponderando estos promedios por el peso de cada intención, para reflejar la importancia relativa de cada tipo de búsqueda.
+                </p>
+              </>
+            ) : detailOpen === 'metrics' ? (
+              <>
+                <p>
+                  Estas métricas resumen <strong>coherencia, visibilidad y ranking</strong> de tu marca en esta corrida del análisis. Todas se calculan a partir de las respuestas de la IA a los distintos prompts.
+                </p>
+                <p>
+                  <strong>Confianza de formato:</strong> porcentaje de respuestas que pudieron parsearse correctamente (la IA devolvió un Top 3 en formato esperado). Sirve para saber si los datos son fiables. <strong>Mención de marca:</strong> en qué proporción de respuestas se menciona tu marca (aunque no sea en el Top 3). <strong>Aparición en Top 3:</strong> en qué proporción de preguntas tu marca entró en el Top 3. <strong>Posición #1:</strong> en qué proporción de preguntas la IA te puso en primer lugar. Juntas dan una idea de cómo te ve la IA en distintos contextos.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  Esta tabla resume <strong>cuántas veces apareció cada marca</strong> (tuya o competidor) en el Top 3 de las respuestas de la IA a lo largo de todo el análisis, y qué parte del total de apariciones representa.
+                </p>
+                <p>
+                  <strong>Apar.</strong> es el número de veces que la marca salió en el Top 3. <strong>% Top 3</strong> es el porcentaje que esa marca representa sobre el total de apariciones (todas las marcas que salieron en algún Top 3). Así ves quién <strong>domina las recomendaciones</strong> y podés priorizar acciones: si un competidor tiene mucha más presencia, es un foco claro para mejorar.
+                </p>
+              </>
+            )
+          }
+          examplePrompt={examplePromptText}
+          totalPrompts={totalPrompts > 0 ? totalPrompts : undefined}
+          onClose={closeDetail}
+        />
+      )}
     </div>
   );
 }
