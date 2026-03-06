@@ -14,6 +14,7 @@ import {
 import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import {
   Zap,
   Award,
@@ -331,7 +332,12 @@ export function ReporteModerno({
                     {comparisonSummary.slice(0, 6).map((row, idx) => (
                       <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
                         <TableCell className="py-2 text-xs text-slate-500">{idx + 1}</TableCell>
-                        <TableCell className="py-2 text-sm font-medium text-slate-800">{row.name}</TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-2">
+                            <BrandLogo name={row.name} size={28} className="rounded-md" />
+                            <span className="text-sm font-medium text-slate-800">{row.name}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="py-2 text-right text-sm font-semibold text-slate-700">
                           {row.averagePosition.toFixed(1)}
                         </TableCell>
@@ -526,7 +532,12 @@ export function ReporteModerno({
                   <TableBody>
                     {comparisonSummary.map((row) => (
                       <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
-                        <TableCell className="py-2 text-sm font-medium text-slate-800">{row.name}</TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-2">
+                            <BrandLogo name={row.name} size={28} className="rounded-md" />
+                            <span className="text-sm font-medium text-slate-800">{row.name}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="py-2">
                           <span
                             className={cn(
