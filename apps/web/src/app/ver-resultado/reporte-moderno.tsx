@@ -14,7 +14,6 @@ import {
 import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
-import { BrandLogo } from '@/components/ui/brand-logo';
 import {
   Zap,
   Award,
@@ -33,6 +32,15 @@ import {
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
 
 const LOGO_SRC = '/CleexsLogo.png';
+
+function BrandBadge({ name }: { name: string }) {
+  const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
+  return (
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-xs font-semibold text-white">
+      {initial}
+    </div>
+  );
+}
 
 function DetailPopup({
   title,
@@ -334,7 +342,7 @@ export function ReporteModerno({
                         <TableCell className="py-2 text-xs text-slate-500">{idx + 1}</TableCell>
                         <TableCell className="py-2">
                           <div className="flex items-center gap-2">
-                            <BrandLogo name={row.name} size={28} className="rounded-md" />
+                            <BrandBadge name={row.name} />
                             <span className="text-sm font-medium text-slate-800">{row.name}</span>
                           </div>
                         </TableCell>
@@ -534,7 +542,7 @@ export function ReporteModerno({
                       <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
                         <TableCell className="py-2">
                           <div className="flex items-center gap-2">
-                            <BrandLogo name={row.name} size={28} className="rounded-md" />
+                            <BrandBadge name={row.name} />
                             <span className="text-sm font-medium text-slate-800">{row.name}</span>
                           </div>
                         </TableCell>
