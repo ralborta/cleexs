@@ -89,10 +89,12 @@ export function buildDiagnosticPrompts(
   brandName: string,
   industry: string,
   competitors: string[],
-  intention: IntentionType
+  intention: IntentionType,
+  country?: string
 ): Array<{ name: string; promptText: string }> {
   const competitorText = competitors.length ? competitors.join(', ') : 'competidores relevantes';
   const types = ['Comparativo', 'Recomendación', 'Defensibilidad'] as const;
+  const marketLine = country ? `Mercado objetivo: ${country}.` : 'Mercado objetivo: mercado local.';
 
   const contexts = getIntentionContexts(intention, industry);
   const firstIntention = intention === 'consideracion' ? contexts.consideracion : contexts.urgencia;
@@ -108,9 +110,9 @@ export function buildDiagnosticPrompts(
   for (const intentionItem of intentions) {
     const prefix = `Intención: ${intentionItem.label} (${intentionItem.weight}%). Tipo:`;
     const texts: string[] = [
-      `${prefix} Comparativo.\n${intentionItem.context}\nCompará y rankeá Top 3 en esta categoría. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
-      `${prefix} Recomendación.\n${intentionItem.context}\nSi tuvieras que recomendar para alguien con esta necesidad, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3. con motivo breve por cada uno.`,
-      `${prefix} Defensibilidad.\n${intentionItem.context}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. Indicá 1., 2., 3. con motivo breve.`,
+      `${prefix} Comparativo.\n${intentionItem.context}\n${marketLine}\nCompará y rankeá Top 3 en esta categoría. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
+      `${prefix} Recomendación.\n${intentionItem.context}\n${marketLine}\nSi tuvieras que recomendar para alguien con esta necesidad, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3. con motivo breve por cada uno.`,
+      `${prefix} Defensibilidad.\n${intentionItem.context}\n${marketLine}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. Indicá 1., 2., 3. con motivo breve.`,
     ];
     types.forEach((tipo, i) => {
       prompts.push({

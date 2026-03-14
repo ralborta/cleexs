@@ -39,8 +39,13 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>, Js
 /**
  * Determina el tipo de industria de una marca (con URL opcional como contexto)
  */
-export async function determineIndustry(brandName: string, url?: string): Promise<IndustryResult> {
+export async function determineIndustry(
+  brandName: string,
+  url?: string,
+  country?: string
+): Promise<IndustryResult> {
   const context = url ? ` URL/sitio: ${url}` : '';
+  const marketContext = country ? ` País/mercado objetivo: ${country}.` : '';
   const content = await callOpenAI([
     {
       role: 'system',
@@ -50,7 +55,7 @@ export async function determineIndustry(brandName: string, url?: string): Promis
     },
     {
       role: 'user',
-      content: `¿Qué tipo de industria o sector es la marca "${brandName}"?${context}\n\nRespuesta (solo JSON):`,
+      content: `¿Qué tipo de industria o sector es la marca "${brandName}"?${context}${marketContext}\n\nRespuesta (solo JSON):`,
     },
   ]);
 
@@ -66,7 +71,12 @@ export async function determineIndustry(brandName: string, url?: string): Promis
 /**
  * Selecciona los 5 mejores competidores para una marca en una industria
  */
-export async function getTop5Competitors(brandName: string, industry: string): Promise<CompetitorsResult> {
+export async function getTop5Competitors(
+  brandName: string,
+  industry: string,
+  country?: string
+): Promise<CompetitorsResult> {
+  const marketContext = country ? ` País/mercado: ${country}.` : '';
   const content = await callOpenAI([
     {
       role: 'system',
@@ -76,7 +86,7 @@ export async function getTop5Competitors(brandName: string, industry: string): P
     },
     {
       role: 'user',
-      content: `Marca: ${brandName}. Industria: ${industry}.\n\n¿Cuáles son los 5 principales competidores? Respuesta (solo JSON):`,
+      content: `Marca: ${brandName}. Industria: ${industry}.${marketContext}\n\n¿Cuáles son los 5 principales competidores? Priorizá marcas relevantes de ese país/mercado. Respuesta (solo JSON):`,
     },
   ]);
 

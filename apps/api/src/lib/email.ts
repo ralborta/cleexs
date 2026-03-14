@@ -209,6 +209,79 @@ function buildAnalysisHtml(analysis: DiagnosticAnalysisForEmail): string {
   return fallbackNote + buildSingleAnalysisHtml(analysis);
 }
 
+function getBrandNameForEmail(analysis?: DiagnosticAnalysisForEmail | null): string {
+  if (!analysis) return 'tu marca';
+  if (isGoldFormat(analysis)) {
+    const brandRow = analysis.metrics.comparisonSummary.find((r) => r.type === 'brand');
+    return brandRow?.name || 'tu marca';
+  }
+  return 'tu marca';
+}
+
+function getScoreForEmail(analysis?: DiagnosticAnalysisForEmail | null): number | null {
+  if (!analysis) return null;
+  if (isGoldFormat(analysis)) return Math.round(analysis.metrics.cleexsScore);
+  const byIntention = (analysis.comentariosPorIntencion || []).map((i) => i.score).filter((s) => Number.isFinite(s));
+  if (!byIntention.length) return null;
+  return Math.round(byIntention.reduce((a, b) => a + b, 0) / byIntention.length);
+}
+
+function getIntentionScoresForEmail(analysis?: DiagnosticAnalysisForEmail | null): {
+  urgencia: string;
+  calidad: string;
+  precio: string;
+} {
+  if (!analysis) return { urgencia: '—', calidad: '—', precio: '—' };
+  if (isGoldFormat(analysis)) {
+    const scoreFor = (label: string) =>
+      analysis.metrics.intentionScores.find((i) => i.label.toLowerCase().includes(label))?.score;
+    const fmt = (v?: number) => (v == null ? '—' : `${Math.round(v)}`);
+    return {
+      urgencia: fmt(scoreFor('urgencia') ?? scoreFor('consideración') ?? scoreFor('consideracion')),
+      calidad: fmt(scoreFor('calidad')),
+      precio: fmt(scoreFor('precio')),
+    };
+  }
+  const byName = (analysis.comentariosPorIntencion || []).find((i) =>
+    i.intencion.toLowerCase().includes('urgencia')
+  )?.score;
+  const byCalidad = (analysis.comentariosPorIntencion || []).find((i) =>
+    i.intencion.toLowerCase().includes('calidad')
+  )?.score;
+  const byPrecio = (analysis.comentariosPorIntencion || []).find((i) =>
+    i.intencion.toLowerCase().includes('precio')
+  )?.score;
+  const fmt = (v?: number) => (v == null ? '—' : `${Math.round(v)}`);
+  return { urgencia: fmt(byName), calidad: fmt(byCalidad), precio: fmt(byPrecio) };
+}
+
+function getTopCompetitorsForEmail(analysis?: DiagnosticAnalysisForEmail | null): string[] {
+  if (!analysis) return [];
+  if (isGoldFormat(analysis)) {
+    return analysis.metrics.comparisonSummary
+      .filter((r) => r.type !== 'brand')
+      .sort((a, b) => b.appearances - a.appearances)
+      .slice(0, 5)
+      .map((r) => r.name);
+  }
+  return [];
+}
+
+function getExecutiveSummaryForEmail(analysis?: DiagnosticAnalysisForEmail | null): string {
+  if (!analysis) return 'Tu diagnóstico ya está listo para revisar en detalle.';
+  if (isGoldFormat(analysis)) {
+    return (
+      analysis.analisisOpenAI?.resumenEjecutivo ||
+      analysis.analisisGemini?.resumenEjecutivo ||
+      'Analizamos cómo aparecés frente a tus competidores y detectamos oportunidades para mejorar tu visibilidad en IA.'
+    );
+  }
+  return (
+    analysis.resumenEjecutivo ||
+    'Analizamos cómo aparecés frente a tus competidores y detectamos oportunidades para mejorar tu visibilidad en IA.'
+  );
+}
+
 /**
  * Envía un correo con el link al resultado del diagnóstico.
  * Si analysis está presente, incluye el informe de IA en el cuerpo (no se muestra en pantalla).
@@ -228,9 +301,19 @@ export async function sendDiagnosticLink(
 
   const hasAnalysis = analysis && typeof analysis === 'object';
   const analysisText = hasAnalysis ? '\n\n---\n\n' + buildAnalysisText(analysis) + '\n\n---\n\n' : '';
-  const analysisHtml = hasAnalysis
-    ? `<div style="margin: 24px 0; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #2563eb;">${buildAnalysisHtml(analysis)}</div>`
-    : '';
+  const analysisHtml = hasAnalysis ? buildAnalysisHtml(analysis) : '';
+
+  const brandName = escapeHtml(getBrandNameForEmail(analysis));
+  const score = getScoreForEmail(analysis);
+  const scoreText = score == null ? '—' : `${score}`;
+  const intentions = getIntentionScoresForEmail(analysis);
+  const topCompetitors = getTopCompetitorsForEmail(analysis);
+  const summary = escapeHtml(getExecutiveSummaryForEmail(analysis)).replace(/\n/g, '<br>');
+  const bookMeetingUrl = process.env.SALES_MEETING_URL || process.env.CALENDLY_URL || '';
+  const competitorsHtml =
+    topCompetitors.length > 0
+      ? topCompetitors.map((c) => `<li style="margin-bottom: 6px;">${escapeHtml(c)}</li>`).join('')
+      : '<li style="margin-bottom: 6px;">Se identificaron competidores en tu diagnóstico completo.</li>';
 
   await transporter.sendMail({
     from,
@@ -241,14 +324,64 @@ export async function sendDiagnosticLink(
       `\n\nVer resultados: ${link}\n\n` +
       `Copiá el link en el navegador si no funciona el botón.`,
     html: `
-      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
-        <p>Tu diagnóstico Cleexs está listo.</p>
-        ${analysisHtml}
-        <p style="margin: 24px 0;">
-          <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Ver resultados</a>
-        </p>
-        <p style="color: #6b7280; font-size: 14px;">Si el botón no funciona, copiá este link en el navegador:</p>
-        <p style="word-break: break-all; font-size: 14px;">${link}</p>
+      <div style="margin:0;padding:0;background:#f1f5f9;">
+        <div style="font-family:Inter,Arial,sans-serif;max-width:820px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;">
+          <div style="background:linear-gradient(135deg,#0f2d8f 0%,#2563eb 100%);padding:30px 32px;color:#fff;">
+            <p style="margin:0 0 10px 0;font-size:12px;letter-spacing:2px;font-weight:700;opacity:0.9;">CLEEXS</p>
+            <h1 style="margin:0 0 14px 0;font-size:40px;line-height:1.08;font-weight:800;">Tu diagnóstico Cleexs ya está listo</h1>
+            <p style="margin:0;font-size:20px;line-height:1.5;opacity:0.95;">Conocé cómo ve la inteligencia artificial a ${brandName}, qué competidores aparecen junto a vos y dónde están tus mayores oportunidades de mejora.</p>
+          </div>
+
+          <div style="padding:30px 32px;">
+            <p style="margin:0 0 22px 0;font-size:22px;line-height:1.45;color:#334155;">
+              Analizamos cómo aparece <strong>${brandName}</strong> dentro de las respuestas generadas por OpenAI (ChatGPT), evaluando presencia, preferencia y contexto competitivo.
+            </p>
+
+            <div style="margin:0 0 26px 0;padding:22px 24px;background:#eef4ff;border-radius:14px;border:1px solid #bcd4ff;border-left:4px solid #2563eb;">
+              <p style="margin:0 0 8px 0;font-size:18px;line-height:1.2;font-weight:800;color:#2563eb;letter-spacing:1.2px;">MÉTRICA PRINCIPAL</p>
+              <p style="margin:0 0 8px 0;font-size:50px;line-height:1.1;font-weight:800;color:#0f172a;">Cleexs Score: ${scoreText}</p>
+              <p style="margin:0 0 16px 0;color:#475569;font-size:20px;line-height:1.4;">Probabilidad de que una IA elija tu marca en decisiones automatizadas.</p>
+              <p style="margin:0;color:#111827;font-size:22px;line-height:1.6;font-weight:700;">
+                Urgencia: <span style="font-weight:500;">${escapeHtml(intentions.urgencia)}</span>
+                &nbsp;&nbsp;&nbsp;Calidad: <span style="font-weight:500;">${escapeHtml(intentions.calidad)}</span>
+                &nbsp;&nbsp;&nbsp;Precio: <span style="font-weight:500;">${escapeHtml(intentions.precio)}</span>
+              </p>
+            </div>
+
+            <div style="margin-bottom:22px;">
+              <h2 style="margin:0 0 12px 0;font-size:30px;line-height:1.2;color:#111827;">Principales competidores detectados</h2>
+              <ul style="margin:0;padding-left:24px;color:#475569;font-size:22px;line-height:1.6;">
+                ${competitorsHtml}
+              </ul>
+            </div>
+
+            <div style="margin-bottom:24px;">
+              <h2 style="margin:0 0 10px 0;font-size:30px;line-height:1.2;color:#111827;">Resumen ejecutivo</h2>
+              <p style="margin:0;color:#475569;font-size:22px;line-height:1.6;">${summary}</p>
+            </div>
+
+            <div style="margin:30px 0 8px 0;">
+              <a href="${link}" style="display:inline-block;padding:14px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:12px;font-size:20px;font-weight:700;margin-right:12px;">Ver diagnóstico completo</a>
+              ${
+                bookMeetingUrl
+                  ? `<a href="${bookMeetingUrl}" style="display:inline-block;padding:14px 24px;background:#e2e8f0;color:#1f2937;text-decoration:none;border-radius:12px;font-size:20px;font-weight:700;">Agendar una reunión</a>`
+                  : ''
+              }
+            </div>
+
+            ${
+              hasAnalysis
+                ? `<div style="margin-top:28px;padding:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                    <p style="margin:0 0 12px 0;font-size:14px;font-weight:700;letter-spacing:.3px;color:#475569;text-transform:uppercase;">Detalle del análisis</p>
+                    ${analysisHtml}
+                  </div>`
+                : ''
+            }
+
+            <p style="margin:22px 0 0 0;color:#64748b;font-size:13px;">Si el botón no funciona, copiá este link en el navegador:</p>
+            <p style="word-break:break-all;color:#334155;font-size:13px;line-height:1.5;">${link}</p>
+          </div>
+        </div>
       </div>
     `,
   });
