@@ -27,16 +27,16 @@ export function parseTop3(
   ];
 
   // 1) Intentar lista numerada (1., 2., 3. o 1) 2) 3))
-  const numberedListRegex = /(?:^|\n)\s*(\d+)[\.\)]\s*([^\n]+)/gim;
+  const numberedListRegex = /(?:^|\n)\s*(?:\*\*|__)?\s*(\d+)\s*[\.\)]\s*(?:\*\*|__)?\s*([^\n]+)/gim;
   const numberedMatches = Array.from(responseText.matchAll(numberedListRegex));
 
   if (numberedMatches.length >= 3) {
-    for (const match of numberedMatches.slice(0, 3)) {
+    for (const match of numberedMatches) {
       const position = parseInt(match[1]);
       const text = match[2].trim();
       const foundBrand = findBrandInText(text, allBrands);
 
-      if (foundBrand) {
+      if (foundBrand && !top3.find((e) => e.name === foundBrand.name)) {
         const reason = extractReasonFromLine(text, foundBrand.name);
         top3.push({
           position,
@@ -44,10 +44,11 @@ export function parseTop3(
           type: foundBrand.type,
           ...(reason && { reason }),
         });
+        if (top3.length >= 3) break;
       }
     }
 
-    if (top3.length > 0) {
+    if (top3.length >= 2) {
       return { top3, flags };
     }
   }
@@ -58,11 +59,11 @@ export function parseTop3(
 
   if (bulletMatches.length >= 3) {
     let position = 1;
-    for (const match of bulletMatches.slice(0, 3)) {
+    for (const match of bulletMatches) {
       const text = match[1].trim();
       const foundBrand = findBrandInText(text, allBrands);
 
-      if (foundBrand) {
+      if (foundBrand && !top3.find((e) => e.name === foundBrand.name)) {
         const reason = extractReasonFromLine(text, foundBrand.name);
         top3.push({
           position,
@@ -71,10 +72,11 @@ export function parseTop3(
           ...(reason && { reason }),
         });
         position++;
+        if (top3.length >= 3) break;
       }
     }
 
-    if (top3.length > 0) {
+    if (top3.length >= 2) {
       return { top3, flags };
     }
   }
@@ -96,11 +98,37 @@ export function parseTop3(
     }
   }
 
-  if (top3.length > 0) {
+  if (top3.length >= 2) {
     return { top3, flags };
   }
 
-  // 4) Texto corrido sin estructura clara
+  // 4) Fallback por aparición de marcas en texto corrido.
+  // Evita resultados con una sola marca cuando la respuesta menciona competidores sin formato estricto.
+  const seen = new Set<string>();
+  let fallbackPosition = 1;
+  for (const brand of allBrands) {
+    const idx = normalized.indexOf(normalizeText(brand.name));
+    if (idx >= 0 && !seen.has(brand.name)) {
+      const line = responseText.split('\n').find((l) => normalizeText(l).includes(normalizeText(brand.name))) || responseText;
+      const reason = extractReasonFromLine(line, brand.name);
+      top3.push({
+        position: fallbackPosition,
+        name: brand.name,
+        type: brand.type,
+        ...(reason && { reason }),
+      });
+      seen.add(brand.name);
+      fallbackPosition++;
+      if (top3.length >= 3) break;
+    }
+  }
+
+  if (top3.length >= 2) {
+    flags.ambiguous_ranking = true;
+    return { top3, flags };
+  }
+
+  // 5) Texto corrido sin estructura clara
   flags.ambiguous_ranking = true;
   flags.no_ranking = true;
 

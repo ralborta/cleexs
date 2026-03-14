@@ -264,9 +264,11 @@ export async function executeRunGemini(
     aliases: (c.aliases as string[]) || [],
   }));
   const competitorList = competitors.map((c) => c.name).join(', ');
+  const allowedBrands = [run.brand.name, ...competitors.map((c) => c.name)].join(', ');
   const brandAliases = run.brand.aliases.map((a) => a.alias);
   const systemInstruction =
-    'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). Incluí marcas y luego un breve motivo por cada una.';
+    'Respondé SOLO con un ranking Top 3 en formato numerado estricto: "1. Marca - motivo", "2. Marca - motivo", "3. Marca - motivo". ' +
+    'Usá exclusivamente marcas de la lista entregada. No inventes marcas nuevas. No agregues introducción ni cierre.';
 
   for (let i = 0; i < prompts.length; i++) {
     const prompt = prompts[i];
@@ -275,7 +277,8 @@ export async function executeRunGemini(
     const userMessage =
       `${prompt.promptText}\n\n` +
       `Marca a medir: ${run.brand.name}.\n` +
-      `Competidores: ${competitorList || 'no informados'}.`;
+      `Competidores: ${competitorList || 'no informados'}.\n` +
+      `Marcas permitidas para rankear: ${allowedBrands}.`;
 
     const responseText = await callGeminiForRanking(userMessage, systemInstruction);
 
