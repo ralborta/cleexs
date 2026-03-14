@@ -105,6 +105,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+      const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
 
       const rootTenant = await prisma.tenant.findFirst({
         where: { tenantCode: '000' },
@@ -130,8 +131,22 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         // 1. IA determina país + industria SOLO desde la marca (sin depender del dominio)
         const marketProfile = await determineMarketProfileForBrand(brandForRun, defaultCountry, 'General');
-        const marketCountry = marketProfile.country || defaultCountry;
+        const marketCountry =
+          marketProfile.confidence >= marketConfidenceMin
+            ? marketProfile.country || defaultCountry
+            : defaultCountry;
         const industry = marketProfile.industry || 'General';
+        fastify.log.info(
+          {
+            diagnosticId: diagnostic.id,
+            brandName: brandForRun,
+            marketCountry,
+            industry,
+            marketConfidence: marketProfile.confidence,
+            marketConfidenceMin,
+          },
+          'Perfil de mercado inferido por IA (país + industria)'
+        );
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { industry },

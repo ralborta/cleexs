@@ -17,6 +17,7 @@ export interface CountryResult {
 export interface MarketProfileResult {
   country: string;
   industry: string;
+  confidence: number;
 }
 
 async function callOpenAI(messages: Array<{ role: string; content: string }>, JsonSchema?: object): Promise<string> {
@@ -155,24 +156,28 @@ export async function determineMarketProfileForBrand(
     {
       role: 'system',
       content:
-        'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles"}. ' +
+        'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles","confidence":88}. ' +
         'Inferí país/mercado principal e industria/rubro de la marca basándote en conocimiento de marca, no en dominio. ' +
-        'Si no es claro, usá los fallbacks provistos.',
+        'Agregá confidence (0-100) según qué tan seguro estás. Si no es claro, usá los fallbacks provistos y baja confidence.',
     },
     {
       role: 'user',
       content:
         `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n` +
-        'Devolvé solo JSON con claves: country, industry.',
+        'Devolvé solo JSON con claves: country, industry, confidence.',
     },
   ]);
 
   try {
-    const parsed = JSON.parse(content) as { country?: string; industry?: string };
+    const parsed = JSON.parse(content) as { country?: string; industry?: string; confidence?: number | string };
     const country = `${parsed.country || fallbackCountry}`.trim() || fallbackCountry;
     const industry = `${parsed.industry || fallbackIndustry}`.trim() || fallbackIndustry;
-    return { country, industry };
+    const rawConfidence = Number(parsed.confidence);
+    const confidence = Number.isFinite(rawConfidence)
+      ? Math.max(0, Math.min(100, Math.round(rawConfidence)))
+      : 50;
+    return { country, industry, confidence };
   } catch {
-    return { country: fallbackCountry, industry: fallbackIndustry };
+    return { country: fallbackCountry, industry: fallbackIndustry, confidence: 0 };
   }
 }
