@@ -3,24 +3,79 @@
 /**
  * Página pública de diagnóstico (entrada para pruebas).
  * URL: /diagnostico/crear o /prueba-gratuita
+ * Query desde WP (cleexs.net):
+ *   ?url=dominio.com   → prefill URL
+ *   ?brand=NombreMarca → prefill marca
+ *   ?q=valor           → si parece dominio (ej. tiene punto) prefill URL, sino prefill marca
  * No requiere login; el middleware mantiene esta ruta como pública.
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
 import { Search, Tag, Globe } from 'lucide-react';
 
+/** Si parece dominio (tiene punto, sin espacios) → true */
+function looksLikeDomain(value: string): boolean {
+  const v = value.trim();
+  if (!v || /\s/.test(v)) return false;
+  return v.includes('.');
+}
+
 export default function CrearDiagnosticoPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const urlParam = searchParams.get('url') ?? '';
+  const brandParam = searchParams.get('brand') || searchParams.get('marca') || '';
+  const qParam = searchParams.get('q') ?? '';
   const tierParam = searchParams.get('tier');
+  const autostartParam = searchParams.get('autostart');
   const tier = tierParam === 'gold' ? 'gold' as const : undefined;
+  const autostart = autostartParam === '1' || autostartParam === 'true';
   const [brandName, setBrandName] = useState('');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoStartTriggered = useRef(false);
+
+  // Prefill cuando vienen desde WP (Checkear visibilidad): ?url=, ?brand= o ?q=
+  useEffect(() => {
+    const u = (urlParam || '').trim();
+    const b = (brandParam || '').trim();
+    const q = (qParam || '').trim();
+    if (u) setUrl(u);
+    if (b) setBrandName(b);
+    if (q && !u && !b) {
+      if (looksLikeDomain(q)) setUrl(q);
+      else setBrandName(q);
+    }
+  }, [urlParam, brandParam, qParam]);
+
+  // Modo WP: /diagnostico/crear?autostart=1&q=pepsi.com
+  // Crea diagnóstico automáticamente y pasa directo a la pantalla de checks.
+  useEffect(() => {
+    if (!autostart || autoStartTriggered.current) return;
+
+    const u = (urlParam || '').trim();
+    const b = (brandParam || '').trim();
+    const q = (qParam || '').trim();
+
+    let nextUrl = '';
+    let nextBrand = '';
+
+    if (u) nextUrl = u;
+    if (b) nextBrand = b;
+    if (q && !u && !b) {
+      if (looksLikeDomain(q)) nextUrl = q;
+      else nextBrand = q;
+    }
+
+    if (!nextUrl && !nextBrand) return;
+
+    autoStartTriggered.current = true;
+    void startDiagnostic(nextBrand, nextUrl);
+  }, [autostart, urlParam, brandParam, qParam, tier]);
 
   function normalizeUrl(input: string): string {
     const trimmed = input.trim();
@@ -29,11 +84,10 @@ export default function CrearDiagnosticoPage() {
     return `https://${trimmed}`;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function startDiagnostic(nextBrandName: string, nextUrl: string) {
     setError(null);
-    const trimmedBrand = brandName.trim();
-    const trimmedUrl = url.trim();
+    const trimmedBrand = nextBrandName.trim();
+    const trimmedUrl = nextUrl.trim();
     if (!trimmedBrand && !trimmedUrl) {
       setError('Ingresá la marca o la URL de tu sitio (al menos uno).');
       return;
@@ -52,6 +106,11 @@ export default function CrearDiagnosticoPage() {
       );
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await startDiagnostic(brandName, url);
   }
 
   return (
