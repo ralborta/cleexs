@@ -3,15 +3,35 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
-import { determineIndustry, getTop5Competitors } from '../lib/diagnostic-ai';
+import { determineIndustry, getTop5Competitors, determineCountryForBrand } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 
 function normalizeDomain(url: string): string {
+  const COMPOUND_PUBLIC_SUFFIXES = new Set([
+    'com.ar',
+    'com.py',
+    'com.uy',
+    'com.bo',
+    'com.pe',
+    'com.ec',
+    'com.ve',
+    'com.mx',
+    'com.co',
+    'co.cr',
+  ]);
+
   try {
     const u = new URL(url.startsWith('http') ? url : `https://${url}`);
     const host = u.hostname.toLowerCase();
     const parts = host.split('.');
+    if (parts.length >= 3) {
+      const suffix2 = parts.slice(-2).join('.');
+      if (COMPOUND_PUBLIC_SUFFIXES.has(suffix2)) {
+        const base = parts.slice(-3).join('.');
+        return base.replace(/^www\./, '');
+      }
+    }
     if (parts.length >= 2) {
       const base = parts.slice(-2).join('.');
       return base.replace(/^www\./, '');
@@ -133,7 +153,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
-      const country = inferCountryFromInput(trimmedUrl || undefined, defaultCountry);
+      const inferredByDomain = inferCountryFromInput(trimmedUrl || undefined, '');
+      const country = inferredByDomain || defaultCountry;
 
       const rootTenant = await prisma.tenant.findFirst({
         where: { tenantCode: '000' },
@@ -158,14 +179,21 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       setImmediate(async () => {
       try {
         // 1. IA determina industria (antes del run)
-        const { industry } = await determineIndustry(brandForRun, trimmedUrl || undefined, country);
+        // País/mercado: dominio (TLD) > inferencia por marca > fallback local
+        let marketCountry = country;
+        if (!inferredByDomain) {
+          const byBrand = await determineCountryForBrand(brandForRun, defaultCountry);
+          marketCountry = byBrand.country || defaultCountry;
+        }
+
+        const { industry } = await determineIndustry(brandForRun, trimmedUrl || undefined, marketCountry);
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { industry },
         });
 
         // 2. IA elige 5 competidores
-        const { competitors } = await getTop5Competitors(brandForRun, industry, country);
+        const { competitors } = await getTop5Competitors(brandForRun, industry, marketCountry);
 
         // 3. Crear Brand con industria y competidores
         const brand = await prisma.brand.create({
@@ -174,7 +202,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             name: brandForRun,
             domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
             industry,
-            country,
+            country: marketCountry,
           },
         });
 
@@ -191,7 +219,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           industry,
           competitors,
           intention,
-          country
+          marketCountry
         );
 
         // 3c. Crear versión de prompts dinámica para este diagnóstico

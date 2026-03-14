@@ -10,6 +10,10 @@ export interface CompetitorsResult {
   competitors: string[];
 }
 
+export interface CountryResult {
+  country: string;
+}
+
 async function callOpenAI(messages: Array<{ role: string; content: string }>, JsonSchema?: object): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -100,5 +104,35 @@ export async function getTop5Competitors(
     return { competitors: competitors.length >= 5 ? competitors : [...competitors, ...Array(5 - competitors.length).fill('Competidor')] };
   } catch {
     return { competitors: ['Competidor 1', 'Competidor 2', 'Competidor 3', 'Competidor 4', 'Competidor 5'] };
+  }
+}
+
+/**
+ * Intenta inferir país/mercado principal de la marca cuando no hay dominio con TLD claro.
+ */
+export async function determineCountryForBrand(
+  brandName: string,
+  fallbackCountry = 'Argentina'
+): Promise<CountryResult> {
+  const content = await callOpenAI([
+    {
+      role: 'system',
+      content:
+        'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia"}. ' +
+        'Inferí el país/mercado principal más probable de la marca. ' +
+        'Si no es claro, devolvé el país de fallback recibido.',
+    },
+    {
+      role: 'user',
+      content: `Marca: ${brandName}. País de fallback: ${fallbackCountry}.\n\nDevuelve solo JSON con la clave country.`,
+    },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as { country?: string };
+    const country = `${parsed.country || fallbackCountry}`.trim() || fallbackCountry;
+    return { country };
+  } catch {
+    return { country: fallbackCountry };
   }
 }
