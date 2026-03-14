@@ -31,16 +31,19 @@ export default function CrearDiagnosticoPage() {
   const qParam = searchParams.get('q') ?? '';
   const tierParam = searchParams.get('tier');
   const autostartParam = searchParams.get('autostart');
+  const manualParam = searchParams.get('manual');
   const tier = tierParam === 'gold' ? 'gold' as const : undefined;
-  const autostart = autostartParam === '1' || autostartParam === 'true';
+  const hasAutostartInput = Boolean(
+    (urlParam || '').trim() || (brandParam || '').trim() || (qParam || '').trim()
+  );
+  const autostartExplicit = autostartParam === '1' || autostartParam === 'true';
+  // Fallback robusto para WP: si llega input por query, autoinicia salvo que se pida modo manual explícito.
+  const autostart = autostartExplicit || (hasAutostartInput && manualParam !== '1');
   const [brandName, setBrandName] = useState('');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoStartTriggered = useRef(false);
-  const hasAutostartInput = Boolean(
-    (urlParam || '').trim() || (brandParam || '').trim() || (qParam || '').trim()
-  );
 
   // Prefill cuando vienen desde WP (Checkear visibilidad): ?url=, ?brand= o ?q=
   useEffect(() => {
