@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
-import { determineIndustry, getTop5Competitors, determineCountryForBrand } from '../lib/diagnostic-ai';
+import { determineMarketProfileForBrand, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 
@@ -60,54 +60,6 @@ function deriveBrandFromDomain(domain: string): string {
   return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
 }
 
-const COUNTRY_BY_COMPOUND_TLD: Record<string, string> = {
-  'com.ar': 'Argentina',
-  'com.py': 'Paraguay',
-  'com.uy': 'Uruguay',
-  'com.bo': 'Bolivia',
-  'com.pe': 'Perú',
-  'com.ec': 'Ecuador',
-  'com.ve': 'Venezuela',
-  'com.mx': 'México',
-  'com.co': 'Colombia',
-  'co.cr': 'Costa Rica',
-};
-
-const COUNTRY_BY_CCTLD: Record<string, string> = {
-  ar: 'Argentina',
-  py: 'Paraguay',
-  uy: 'Uruguay',
-  bo: 'Bolivia',
-  pe: 'Perú',
-  ec: 'Ecuador',
-  ve: 'Venezuela',
-  co: 'Colombia',
-  cr: 'Costa Rica',
-  mx: 'México',
-  cl: 'Chile',
-  br: 'Brasil',
-  es: 'España',
-  us: 'Estados Unidos',
-};
-
-function inferCountryFromInput(input: string | undefined, fallbackCountry: string): string {
-  if (!input) return fallbackCountry;
-  try {
-    const u = new URL(input.startsWith('http') ? input : `https://${input}`);
-    const host = u.hostname.toLowerCase().replace(/^www\./, '');
-    const parts = host.split('.');
-    if (parts.length >= 2) {
-      const compound = parts.slice(-2).join('.');
-      if (COUNTRY_BY_COMPOUND_TLD[compound]) return COUNTRY_BY_COMPOUND_TLD[compound];
-      const tld = parts[parts.length - 1];
-      if (COUNTRY_BY_CCTLD[tld]) return COUNTRY_BY_CCTLD[tld];
-    }
-  } catch {
-    // fallback abajo
-  }
-  return fallbackCountry;
-}
-
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -153,8 +105,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
-      const inferredByDomain = inferCountryFromInput(trimmedUrl || undefined, '');
-      const country = inferredByDomain || defaultCountry;
 
       const rootTenant = await prisma.tenant.findFirst({
         where: { tenantCode: '000' },
@@ -178,15 +128,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       setImmediate(async () => {
       try {
-        // 1. IA determina industria (antes del run)
-        // País/mercado: dominio (TLD) > inferencia por marca > fallback local
-        let marketCountry = country;
-        if (!inferredByDomain) {
-          const byBrand = await determineCountryForBrand(brandForRun, defaultCountry);
-          marketCountry = byBrand.country || defaultCountry;
-        }
-
-        const { industry } = await determineIndustry(brandForRun, trimmedUrl || undefined, marketCountry);
+        // 1. IA determina país + industria SOLO desde la marca (sin depender del dominio)
+        const marketProfile = await determineMarketProfileForBrand(brandForRun, defaultCountry, 'General');
+        const marketCountry = marketProfile.country || defaultCountry;
+        const industry = marketProfile.industry || 'General';
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { industry },

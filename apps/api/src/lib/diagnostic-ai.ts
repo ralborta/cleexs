@@ -14,6 +14,11 @@ export interface CountryResult {
   country: string;
 }
 
+export interface MarketProfileResult {
+  country: string;
+  industry: string;
+}
+
 async function callOpenAI(messages: Array<{ role: string; content: string }>, JsonSchema?: object): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -134,5 +139,40 @@ export async function determineCountryForBrand(
     return { country };
   } catch {
     return { country: fallbackCountry };
+  }
+}
+
+/**
+ * Primer paso del diagnóstico:
+ * identifica país/mercado e industria SOLO desde la marca (sin depender del dominio).
+ */
+export async function determineMarketProfileForBrand(
+  brandName: string,
+  fallbackCountry = 'Argentina',
+  fallbackIndustry = 'General'
+): Promise<MarketProfileResult> {
+  const content = await callOpenAI([
+    {
+      role: 'system',
+      content:
+        'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles"}. ' +
+        'Inferí país/mercado principal e industria/rubro de la marca basándote en conocimiento de marca, no en dominio. ' +
+        'Si no es claro, usá los fallbacks provistos.',
+    },
+    {
+      role: 'user',
+      content:
+        `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n` +
+        'Devolvé solo JSON con claves: country, industry.',
+    },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as { country?: string; industry?: string };
+    const country = `${parsed.country || fallbackCountry}`.trim() || fallbackCountry;
+    const industry = `${parsed.industry || fallbackIndustry}`.trim() || fallbackIndustry;
+    return { country, industry };
+  } catch {
+    return { country: fallbackCountry, industry: fallbackIndustry };
   }
 }
