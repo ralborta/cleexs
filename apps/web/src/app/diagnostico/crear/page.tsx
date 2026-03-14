@@ -14,7 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
-import { Search, Tag, Globe } from 'lucide-react';
+import { Search, Tag, Globe, Loader2 } from 'lucide-react';
 
 /** Si parece dominio (tiene punto, sin espacios) → true */
 function looksLikeDomain(value: string): boolean {
@@ -38,6 +38,9 @@ export default function CrearDiagnosticoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoStartTriggered = useRef(false);
+  const hasAutostartInput = Boolean(
+    (urlParam || '').trim() || (brandParam || '').trim() || (qParam || '').trim()
+  );
 
   // Prefill cuando vienen desde WP (Checkear visibilidad): ?url=, ?brand= o ?q=
   useEffect(() => {
@@ -111,6 +114,29 @@ export default function CrearDiagnosticoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     await startDiagnostic(brandName, url);
+  }
+
+  if (autostart && hasAutostartInput && !error) {
+    return (
+      <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
+        <div className="mx-auto max-w-lg">
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-2xl">Iniciando diagnóstico</CardTitle>
+              <CardDescription>
+                Estamos preparando tu corrida y en breve te llevamos a la pantalla de verificación.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center py-8">
+              <div className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Procesando datos...
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    );
   }
 
   return (
