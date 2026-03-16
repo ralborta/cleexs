@@ -23,7 +23,7 @@ import {
 import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ReporteModerno } from './reporte-moderno';
 
-const INTERNAL_LOGO_SRC = '/CleexsLogo.png';
+const INTERNAL_LOGO_SRC = '/CleexsMark.svg';
 
 const normalizeName = (value: string) =>
   value

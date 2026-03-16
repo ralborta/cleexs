@@ -31,7 +31,7 @@ import {
 
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
 
-const LOGO_SRC = '/CleexsLogo.png';
+const LOGO_SRC = '/CleexsMark.svg';
 
 function BrandBadge({ name }: { name: string }) {
   const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Upload, Bell, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const LOGO_SRC = '/CleexsLogo.png';
+const LOGO_SRC = '/CleexsMark.svg';
 
 /** Rutas con header mínimo: solo logo, sin menú completo */
 const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];

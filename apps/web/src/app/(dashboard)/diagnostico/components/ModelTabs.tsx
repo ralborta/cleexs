@@ -11,7 +11,7 @@ interface ModelTabsProps {
   showGemini?: boolean;
 }
 
-const INTERNAL_LOGO_SRC = '/CleexsLogo.png';
+const INTERNAL_LOGO_SRC = '/CleexsMark.svg';
 
 export function ModelTabs({ value, onChange, showGemini = true }: ModelTabsProps) {
   const base =
