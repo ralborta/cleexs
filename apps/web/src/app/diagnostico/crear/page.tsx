@@ -131,6 +131,22 @@ export default function CrearDiagnosticoPage() {
     await startDiagnostic(brandName, url);
   }
 
+  useEffect(() => {
+    if (!(autostart && hasAutostartInput && (autoStartRunning || loading))) return;
+    const watchdog = setTimeout(() => {
+      setLoading(false);
+      setAutoStartRunning(false);
+      setError('El inicio automático tardó demasiado. Podés continuar manualmente.');
+    }, 30000);
+    return () => clearTimeout(watchdog);
+  }, [autostart, hasAutostartInput, autoStartRunning, loading]);
+
+  function cancelAutostart() {
+    setLoading(false);
+    setAutoStartRunning(false);
+    setError('Inicio automático cancelado. Podés continuar manualmente.');
+  }
+
   if (autostart && hasAutostartInput && !error && (autoStartRunning || loading)) {
     return (
       <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
@@ -142,10 +158,17 @@ export default function CrearDiagnosticoPage() {
                 Estamos preparando tu corrida y en breve te llevamos a la pantalla de verificación.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center py-8">
-              <div className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Procesando datos...
+            <CardContent className="space-y-4 py-8">
+              <div className="flex items-center justify-center">
+                <div className="inline-flex items-center gap-2 text-sm text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Procesando datos...
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <Button type="button" variant="outline" onClick={cancelAutostart}>
+                  Cancelar y continuar manualmente
+                </Button>
               </div>
             </CardContent>
           </Card>
