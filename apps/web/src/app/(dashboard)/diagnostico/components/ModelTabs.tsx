@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { LayoutDashboard, Sparkles } from 'lucide-react';
 import type { ModelTab } from '../types';
 
@@ -9,6 +10,8 @@ interface ModelTabsProps {
   /** Si false, no mostrar tabs (ej. cuando no hay datos Gemini). */
   showGemini?: boolean;
 }
+
+const INTERNAL_LOGO_SRC = '/CleexsLogo.png';
 
 export function ModelTabs({ value, onChange, showGemini = true }: ModelTabsProps) {
   const base =
@@ -35,12 +38,12 @@ export function ModelTabs({ value, onChange, showGemini = true }: ModelTabsProps
           onClick={() => onChange('chatgpt')}
           className={`${base} ${value === 'chatgpt' ? active : inactive}`}
         >
-          <img
-            src="https://chat.openai.com/favicon.ico"
+          <Image
+            src={INTERNAL_LOGO_SRC}
             alt=""
             width={18}
             height={18}
-            className="h-[18px] w-[18px] shrink-0 rounded-sm"
+            className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain"
           />
           ChatGPT
         </button>

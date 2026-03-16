@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 
 const LOGO_SRC = '/CleexsLogo.png';
 
-/** Rutas del flujo público de diagnóstico: solo marca, sin menú completo */
-const PUBLIC_DIAGNOSTIC_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita'];
+/** Rutas con header mínimo: solo logo, sin menú completo */
+const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];
 const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
 
 function isPublicDiagnosticPath(pathname: string | null): boolean {
   if (!pathname) return false;
-  if (PUBLIC_DIAGNOSTIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'))) return true;
+  if (MINIMAL_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'))) return true;
   if (pathname.startsWith(VERIFYING_PATH_PREFIX)) return true;
   return false;
 }

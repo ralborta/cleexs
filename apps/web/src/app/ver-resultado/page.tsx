@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import React, { Fragment, Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -21,6 +22,8 @@ import {
 } from '@/lib/api';
 import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ReporteModerno } from './reporte-moderno';
+
+const INTERNAL_LOGO_SRC = '/CleexsLogo.png';
 
 const normalizeName = (value: string) =>
   value
@@ -610,7 +613,13 @@ function VerResultadoContent() {
                                   : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                               }`}
                             >
-                              <img src="https://chat.openai.com/favicon.ico" alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0 rounded-sm" />
+                              <Image
+                                src={INTERNAL_LOGO_SRC}
+                                alt=""
+                                width={18}
+                                height={18}
+                                className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain"
+                              />
                               ChatGPT
                             </button>
                             <button
@@ -625,12 +634,12 @@ function VerResultadoContent() {
                               {geminiLogoError ? (
                                 <Sparkles className="h-[18px] w-[18px] shrink-0 text-blue-600" aria-hidden />
                               ) : (
-                                <img
-                                  src="https://www.gstatic.com/lamda/images/gemini_favicon_fallback_boot_2.png"
+                                <Image
+                                  src={INTERNAL_LOGO_SRC}
                                   alt=""
                                   width={18}
                                   height={18}
-                                  className="h-[18px] w-[18px] shrink-0 rounded-sm"
+                                  className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain"
                                   onError={() => setGeminiLogoError(true)}
                                 />
                               )}
