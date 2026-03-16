@@ -20,6 +20,14 @@ export interface MarketProfileResult {
   confidence: number;
 }
 
+interface WebsiteEvidence {
+  title?: string;
+  metaDescription?: string;
+  h1?: string;
+  h2?: string;
+  sourceUrl?: string;
+}
+
 async function callOpenAI(messages: Array<{ role: string; content: string }>, JsonSchema?: object): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -44,6 +52,53 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>, Js
   };
   if (!response.ok) throw new Error(json?.error?.message || 'Error en OpenAI');
   return json?.choices?.[0]?.message?.content?.trim() || '';
+}
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractFirstMatch(html: string, regex: RegExp): string | undefined {
+  const m = html.match(regex);
+  const raw = m?.[1]?.trim();
+  if (!raw) return undefined;
+  return stripHtml(raw).slice(0, 220);
+}
+
+async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | null> {
+  if (!url) return null;
+  const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(normalized, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'CleexsBot/1.0 (+https://cleexs.com)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    const title = extractFirstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
+    const metaDescription =
+      extractFirstMatch(html, /<meta[^>]+name=["']description["'][^>]*content=["']([\s\S]*?)["'][^>]*>/i) ||
+      extractFirstMatch(html, /<meta[^>]+content=["']([\s\S]*?)["'][^>]*name=["']description["'][^>]*>/i);
+    const h1 = extractFirstMatch(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    const h2 = extractFirstMatch(html, /<h2[^>]*>([\s\S]*?)<\/h2>/i);
+    return { title, metaDescription, h1, h2, sourceUrl: normalized };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**
@@ -150,20 +205,36 @@ export async function determineCountryForBrand(
 export async function determineMarketProfileForBrand(
   brandName: string,
   fallbackCountry = 'Argentina',
-  fallbackIndustry = 'General'
+  fallbackIndustry = 'General',
+  websiteUrl?: string
 ): Promise<MarketProfileResult> {
+  const evidence = await fetchWebsiteEvidence(websiteUrl);
+  const websiteEvidenceText = evidence
+    ? [
+        `URL evaluada: ${evidence.sourceUrl || websiteUrl}.`,
+        evidence.title ? `Title: ${evidence.title}` : '',
+        evidence.metaDescription ? `Meta description: ${evidence.metaDescription}` : '',
+        evidence.h1 ? `H1 principal: ${evidence.h1}` : '',
+        evidence.h2 ? `H2 destacado: ${evidence.h2}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : 'Sin evidencia de website disponible.';
+
   const content = await callOpenAI([
     {
       role: 'system',
       content:
         'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles","confidence":88}. ' +
-        'Inferí país/mercado principal e industria/rubro de la marca basándote en conocimiento de marca, no en dominio. ' +
+        'Inferí país/mercado principal e industria/rubro de la marca priorizando evidencia real del website si existe. ' +
+        'No inventes rubro que contradiga la evidencia (title/meta/h1). ' +
         'Agregá confidence (0-100) según qué tan seguro estás. Si no es claro, usá los fallbacks provistos y baja confidence.',
     },
     {
       role: 'user',
       content:
         `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n` +
+        `Evidencia website:\n${websiteEvidenceText}\n` +
         'Devolvé solo JSON con claves: country, industry, confidence.',
     },
   ]);

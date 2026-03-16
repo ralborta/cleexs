@@ -130,7 +130,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       setImmediate(async () => {
       try {
         // 1. IA determina país + industria SOLO desde la marca (sin depender del dominio)
-        const marketProfile = await determineMarketProfileForBrand(brandForRun, defaultCountry, 'General');
+        const marketProfile = await determineMarketProfileForBrand(
+          brandForRun,
+          defaultCountry,
+          'General',
+          trimmedUrl || undefined
+        );
         const marketCountry =
           marketProfile.confidence >= marketConfidenceMin
             ? marketProfile.country || defaultCountry
