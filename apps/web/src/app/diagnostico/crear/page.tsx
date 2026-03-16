@@ -43,6 +43,7 @@ export default function CrearDiagnosticoPage() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoStartRunning, setAutoStartRunning] = useState(false);
   const autoStartTriggered = useRef(false);
 
   // Prefill cuando vienen desde WP (Checkear visibilidad): ?url=, ?brand= o ?q=
@@ -77,10 +78,14 @@ export default function CrearDiagnosticoPage() {
       else nextBrand = q;
     }
 
-    if (!nextUrl && !nextBrand) return;
+    if (!nextUrl && !nextBrand) {
+      setError('No pudimos leer la marca/URL desde el enlace. Probá nuevamente.');
+      return;
+    }
 
     autoStartTriggered.current = true;
-    void startDiagnostic(nextBrand, nextUrl);
+    setAutoStartRunning(true);
+    void startDiagnostic(nextBrand, nextUrl, true);
   }, [autostart, urlParam, brandParam, qParam, tier]);
 
   function normalizeUrl(input: string): string {
@@ -90,7 +95,7 @@ export default function CrearDiagnosticoPage() {
     return `https://${trimmed}`;
   }
 
-  async function startDiagnostic(nextBrandName: string, nextUrl: string) {
+  async function startDiagnostic(nextBrandName: string, nextUrl: string, fromAutoStart = false) {
     setError(null);
     const trimmedBrand = nextBrandName.trim();
     const trimmedUrl = nextUrl.trim();
@@ -101,16 +106,23 @@ export default function CrearDiagnosticoPage() {
     setLoading(true);
     try {
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const { diagnosticId } = await publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier);
+      const createPromise = publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
+      );
+      const { diagnosticId } = await Promise.race([createPromise, timeoutPromise]);
       router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}${tier ? `&tier=${tier}` : ''}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       setError(
-        msg === 'Not Found' || msg.includes('404')
+        msg === 'TIMEOUT_DIAGNOSTIC_CREATE'
+          ? 'El servicio está tardando más de lo esperado. Probá de nuevo en unos segundos.'
+          : msg === 'Not Found' || msg.includes('404')
           ? 'No se pudo conectar con el servicio. Probá de nuevo en unos minutos.'
           : msg || 'Esta URL ya tiene un diagnóstico. Revisá tu correo o probá otra.'
       );
       setLoading(false);
+      if (fromAutoStart) setAutoStartRunning(false);
     }
   }
 
@@ -119,7 +131,7 @@ export default function CrearDiagnosticoPage() {
     await startDiagnostic(brandName, url);
   }
 
-  if (autostart && hasAutostartInput && !error) {
+  if (autostart && hasAutostartInput && !error && (autoStartRunning || loading)) {
     return (
       <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
         <div className="mx-auto max-w-lg">
