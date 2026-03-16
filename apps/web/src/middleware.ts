@@ -23,6 +23,7 @@ const PUBLIC_TEST_HOST = process.env.PUBLIC_TEST_HOST || '';
 /** Rutas permitidas cuando se accede desde el subdominio de pruebas (solo esa página + flujo resultado) */
 function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname === '/' || pathname === '/diagnostico/crear' || pathname === '/prueba-gratuita') return true;
+  if (pathname === '/planes') return true;
   if (pathname.startsWith('/diagnostico/verificando')) return true;
   if (pathname.startsWith('/ver-resultado')) return true;
   return false;
@@ -45,6 +46,7 @@ export function middleware(request: NextRequest) {
     const allowed =
       pathname === '/diagnostico/crear' ||
       pathname === '/prueba-gratuita' ||
+      pathname === '/planes' ||
       pathname.startsWith('/diagnostico/verificando') ||
       pathname.startsWith('/ver-resultado');
     if (!allowed || pathname === '/' || pathname === '') {
