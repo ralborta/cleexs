@@ -155,7 +155,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
             Desbloqueá el reporte completo
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Ya hiciste una corrida gratuita para este dominio. Para ver métricas detalladas, comparaciones, análisis por intención y recomendaciones, creá una cuenta o pasá a Gold.
+            Ya hiciste una corrida gratuita para este dominio. Para ver métricas detalladas, comparaciones, análisis por intención y recomendaciones, elegí un plan de Cleexs.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -779,7 +779,7 @@ function VerResultadoContent() {
                     ¿Querés más corridas y reportes completos?
                   </p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Creá una cuenta o pasá a Gold para análisis ilimitados.
+                    Elegí un plan para habilitar análisis y reportes completos.
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <Button asChild className="bg-primary-600 hover:bg-primary-700">

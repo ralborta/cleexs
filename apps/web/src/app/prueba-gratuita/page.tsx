@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 /**
  * Entrada directa para la prueba gratuita desde el website de Cleexs.
  * Redirige al formulario de creación de diagnóstico (misma pantalla).
- * Uso: https://tu-dominio.com/prueba-gratuita o .../prueba-gratuita?tier=gold
+ * Uso: https://tu-dominio.com/prueba-gratuita o .../prueba-gratuita?tier=<plan>
  */
 export default function PruebaGratuitaPage() {
   const router = useRouter();

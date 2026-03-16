@@ -1,48 +1,22 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Sparkles, Zap } from 'lucide-react';
-
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: '$0',
-    period: '/mes',
-    description: 'Probá Cleexs sin registrarte',
-    features: [
-      '1ra corrida por dominio: reporte completo',
-      'Cleexs Score en todas las corridas',
-      'Link al resultado por correo',
-      'Corridas adicionales: vista limitada (Cleexs Score)',
-    ],
-    cta: 'Empezar gratis',
-    href: '/diagnostico/crear',
-    popular: false,
-  },
-  {
-    id: 'gold',
-    name: 'Gold',
-    price: 'Próximamente',
-    period: '',
-    description: 'Reporte completo con OpenAI + Gemini',
-    features: [
-      'Reporte completo en cada corrida',
-      'Así te ven en OpenAI (ChatGPT) y Gemini',
-      'Perspectiva combinada de ambas IAs',
-      'Análisis con IA en el correo',
-      'Métricas detalladas por intención',
-      'Tabla de comparaciones vs competidores',
-    ],
-    cta: 'Probar Gold',
-    href: '/diagnostico/crear?tier=gold',
-    popular: true,
-  },
-];
+import { Check, Sparkles } from 'lucide-react';
+import { APP_PLANS, getAnnualPrice, type BillingMode } from '@/lib/plans';
 
 export default function PlanesPage() {
+  const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const plansToRender = useMemo(() => APP_PLANS, []);
+
+  const renderPrice = (monthlyPrice: number | null) => {
+    if (monthlyPrice == null) return 'Contáctanos';
+    const value = billingMode === 'annual' ? getAnnualPrice(monthlyPrice) : monthlyPrice;
+    return `$${value}`;
+  };
+
   return (
     <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50/50 px-6 py-16">
       <div className="mx-auto max-w-5xl">
@@ -55,55 +29,89 @@ export default function PlanesPage() {
             Elegí cómo medir tu marca
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Empezá gratis con una corrida completa. Para reportes ilimitados y análisis detallado, pasá a Gold.
+            Una estructura simple para empezar, escalar y operar con equipos más grandes.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:gap-10">
-          {PLANS.map((plan) => (
+        <div className="mb-8 flex justify-center">
+          <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setBillingMode('monthly')}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                billingMode === 'monthly'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Mensual
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingMode('annual')}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                billingMode === 'annual'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Anual (20% off)
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {plansToRender.map((plan) => (
             <Card
               key={plan.id}
               className={`relative overflow-hidden transition-all duration-300 hover:shadow-xl ${
-                plan.popular
-                  ? 'border-2 border-primary-300 shadow-lg ring-2 ring-primary-100'
+                plan.highlighted
+                  ? 'border-2 border-primary-300 shadow-lg ring-2 ring-primary-100 bg-white'
                   : 'border border-border shadow-md'
               }`}
             >
-              {plan.popular && (
-                <div className="absolute top-0 right-0">
-                  <span className="inline-block bg-primary-600 text-white text-xs font-semibold px-3 py-1 rounded-bl-lg">
-                    Recomendado
+              {plan.badge && (
+                <div className="absolute right-3 top-3">
+                  <span className="inline-block rounded-full bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700">
+                    {plan.badge}
                   </span>
                 </div>
               )}
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-2 mt-2">
-                  {plan.id === 'gold' ? (
-                    <Zap className="h-6 w-6 text-primary-600" />
-                  ) : (
-                    <Sparkles className="h-6 w-6 text-muted-foreground" />
-                  )}
-                  <CardTitle className="text-2xl font-bold text-foreground">{plan.name}</CardTitle>
+              <CardHeader className="pb-3">
+                <div className="mt-2">
+                  <CardTitle className="text-3xl font-bold text-foreground">{plan.name}</CardTitle>
                 </div>
-                <div className="flex items-baseline gap-1 mt-2">
-                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-4xl font-bold text-foreground">{renderPrice(plan.monthlyPrice)}</span>
+                  <span className="text-muted-foreground">{plan.monthlyPrice == null ? '' : plan.periodLabel}</span>
                 </div>
-                <CardDescription className="text-base mt-1">{plan.description}</CardDescription>
+                <CardDescription className="mt-2 text-sm">{plan.description}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <ul className="space-y-3">
+              <CardContent className="space-y-5">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{plan.enginesTitle}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {plan.engines.map((engine) => (
+                      <span key={engine} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">
+                        {engine}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <ul className="space-y-2.5">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <Check className="h-5 w-5 shrink-0 text-primary-600 mt-0.5" />
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
+
                 <Link href={plan.href} className="block">
                   <Button
-                    className={`w-full ${plan.popular ? 'bg-primary-600 text-white hover:bg-primary-700' : ''}`}
-                    variant={plan.popular ? 'default' : 'outline'}
+                    className={`w-full ${plan.highlighted ? 'bg-primary-600 text-white hover:bg-primary-700' : ''}`}
+                    variant={plan.highlighted ? 'default' : 'outline'}
                     size="lg"
                   >
                     {plan.cta}
@@ -115,7 +123,10 @@ export default function PlanesPage() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-10">
-          ¿Necesitás medir tu marca? <Link href="/diagnostico/crear" className="text-primary-600 hover:underline font-medium">Diagnóstico gratuito</Link>
+          ¿Necesitás medir tu marca?{' '}
+          <Link href="/diagnostico/crear" className="font-medium text-primary-600 hover:underline">
+            Diagnóstico gratuito
+          </Link>
         </p>
       </div>
     </main>

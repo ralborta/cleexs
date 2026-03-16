@@ -132,7 +132,7 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
       </div>
     );
   }
-  const isGoldFallback = analysisJson && (analysisJson as { goldFallback?: true }).goldFallback === true;
+  const isDualAiFallback = analysisJson && (analysisJson as { goldFallback?: true }).goldFallback === true;
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -143,7 +143,7 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Así te ven en OpenAI (ChatGPT)</CardTitle>
-          {isGoldFallback && (
+          {isDualAiFallback && (
             <CardDescription>
               En esta corrida Gemini no respondió. Revisá GOOGLE_AI_API_KEY en la API (Railway) para ver también Gemini y la perspectiva combinada.
             </CardDescription>
@@ -157,13 +157,13 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Así te ven en Gemini</CardTitle>
           <CardDescription>
-            {isGoldFallback
+            {isDualAiFallback
               ? 'No disponible en esta corrida. Configurá GOOGLE_AI_API_KEY en la API para que la primera corrida incluya OpenAI + Gemini + perspectiva combinada.'
               : 'En la primera corrida por dominio se muestra OpenAI, Gemini y la perspectiva de ambos.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isGoldFallback ? (
+          {isDualAiFallback ? (
             <p className="text-sm text-muted-foreground italic">Gemini no estaba configurado o falló en esta corrida.</p>
           ) : (
             <p className="text-sm text-muted-foreground">—</p>
@@ -176,7 +176,7 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
           <CardDescription>Perspectiva combinada de ambas IAs</CardDescription>
         </CardHeader>
         <CardContent>
-          {isGoldFallback ? (
+          {isDualAiFallback ? (
             <p className="text-sm text-muted-foreground italic">Se genera cuando OpenAI y Gemini responden en la primera corrida.</p>
           ) : (
             <p className="text-sm text-muted-foreground">—</p>
