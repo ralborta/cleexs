@@ -17,6 +17,7 @@ function formatElapsed(seconds: number): string {
 }
 
 function VerificandoContent() {
+  const POLL_TIMEOUT_MS = 12000;
   const router = useRouter();
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
@@ -43,7 +44,11 @@ function VerificandoContent() {
 
     const poll = async () => {
       try {
-        const data = await publicDiagnosticApi.get(id);
+        const getPromise = publicDiagnosticApi.get(id);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_POLL')), POLL_TIMEOUT_MS)
+        );
+        const data = await Promise.race([getPromise, timeoutPromise]);
         setDiagnostic(data);
         if (data.status === 'completed') {
           const tierQ = data.tier === 'gold' ? '&tier=gold' : '';
@@ -52,7 +57,12 @@ function VerificandoContent() {
         }
         if (data.status === 'failed') return false;
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar el diagnóstico');
+        const msg = err instanceof Error ? err.message : '';
+        setError(
+          msg === 'TIMEOUT_DIAGNOSTIC_POLL'
+            ? 'El análisis está tardando más de lo esperado o el servidor no respondió. Reintentá.'
+            : msg || 'Error al cargar el diagnóstico'
+        );
         return false;
       }
       return true;
@@ -91,6 +101,7 @@ function VerificandoContent() {
       <main className="min-h-[calc(100vh-72px)] px-6 py-16">
         <div className="mx-auto max-w-lg text-center">
           <p className="text-destructive">{error}</p>
+          <Button className="mt-4" onClick={() => router.refresh()}>Reintentar</Button>
           <Link href="/diagnostico/crear">
             <Button className="mt-4" variant="outline">Volver al diagnóstico</Button>
           </Link>
