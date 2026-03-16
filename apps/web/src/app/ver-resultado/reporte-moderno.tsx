@@ -31,15 +31,6 @@ import {
 
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
 
-function BrandBadge({ name }: { name: string }) {
-  const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
-  return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-xs font-semibold text-white">
-      {initial}
-    </div>
-  );
-}
-
 function DetailPopup({
   title,
   icon,
@@ -339,10 +330,7 @@ export function ReporteModerno({
                       <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
                         <TableCell className="py-2 text-xs text-slate-500">{idx + 1}</TableCell>
                         <TableCell className="py-2">
-                          <div className="flex items-center gap-2">
-                            <BrandBadge name={row.name} />
-                            <span className="text-sm font-medium text-slate-800">{row.name}</span>
-                          </div>
+                          <span className="text-sm font-medium text-slate-800">{row.name}</span>
                         </TableCell>
                         <TableCell className="py-2 text-right text-sm font-semibold text-slate-700">
                           {row.averagePosition.toFixed(1)}
@@ -539,10 +527,7 @@ export function ReporteModerno({
                     {comparisonSummary.map((row) => (
                       <TableRow key={`${row.name}-${row.type}`} className="border-slate-50">
                         <TableCell className="py-2">
-                          <div className="flex items-center gap-2">
-                            <BrandBadge name={row.name} />
-                            <span className="text-sm font-medium text-slate-800">{row.name}</span>
-                          </div>
+                          <span className="text-sm font-medium text-slate-800">{row.name}</span>
                         </TableCell>
                         <TableCell className="py-2">
                           <span
