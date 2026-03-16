@@ -48,36 +48,35 @@ function DetailPopup({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Cabecera azul con logo a un extremo e ícono + título */}
-        <div className="flex shrink-0 items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4 text-white">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="flex h-[6.25rem] w-[6.25rem] shrink-0 items-center justify-center">
-              <CleexsMark className="h-16 w-16" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 ring-1 ring-slate-200">
+              <CleexsMark className="h-5 w-5" />
             </div>
             <div className="flex min-w-0 items-center gap-2">
-              {icon && <span className="flex shrink-0 text-white/95 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>}
-              <h3 className="truncate text-lg font-bold text-white">{title}</h3>
+              {icon && <span className="flex shrink-0 text-slate-500 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
+              <h3 className="truncate text-lg font-bold text-slate-900">{title}</h3>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white"
+            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-slate-600">
+        <div className="flex-1 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-slate-700">
           <div className="space-y-4">{body}</div>
           {examplePrompt && (
             <div className="mt-6 space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
@@ -99,7 +98,7 @@ function DetailPopup({
           <button
             type="button"
             onClick={onClose}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <ChevronUp className="h-4 w-4" />
             Volver al resumen
