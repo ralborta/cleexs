@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -30,8 +30,6 @@ import {
 } from 'lucide-react';
 
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
-
-const LOGO_SRC = '/CleexsMark.svg';
 
 function BrandBadge({ name }: { name: string }) {
   const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
@@ -71,8 +69,8 @@ function DetailPopup({
         {/* Cabecera azul con logo a un extremo e ícono + título */}
         <div className="flex shrink-0 items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4 text-white">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="relative h-[6.25rem] w-[6.25rem] shrink-0">
-              <Image src={LOGO_SRC} alt="Cleexs" fill className="object-contain" />
+            <div className="flex h-[6.25rem] w-[6.25rem] shrink-0 items-center justify-center">
+              <CleexsMark className="h-16 w-16" />
             </div>
             <div className="flex min-w-0 items-center gap-2">
               {icon && <span className="flex shrink-0 text-white/95 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>}

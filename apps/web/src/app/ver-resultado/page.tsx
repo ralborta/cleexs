@@ -3,7 +3,6 @@
 import { useSearchParams } from 'next/navigation';
 import React, { Fragment, Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -22,8 +21,7 @@ import {
 } from '@/lib/api';
 import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ReporteModerno } from './reporte-moderno';
-
-const INTERNAL_LOGO_SRC = '/CleexsMark.svg';
+import { CleexsMark } from '@/components/brand/cleexs-mark';
 
 const normalizeName = (value: string) =>
   value
@@ -428,7 +426,6 @@ function VerResultadoContent() {
   const [captchaPopupOpen, setCaptchaPopupOpen] = useState(false);
   const emailFormRef = useRef<HTMLFormElement>(null);
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
-  const [geminiLogoError, setGeminiLogoError] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get('diagnosticId');
@@ -613,13 +610,7 @@ function VerResultadoContent() {
                                   : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                               }`}
                             >
-                              <Image
-                                src={INTERNAL_LOGO_SRC}
-                                alt=""
-                                width={18}
-                                height={18}
-                                className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain"
-                              />
+                              <CleexsMark className="h-[18px] w-[18px] shrink-0" />
                               ChatGPT
                             </button>
                             <button
@@ -631,18 +622,7 @@ function VerResultadoContent() {
                                   : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                               }`}
                             >
-                              {geminiLogoError ? (
-                                <Sparkles className="h-[18px] w-[18px] shrink-0 text-blue-600" aria-hidden />
-                              ) : (
-                                <Image
-                                  src={INTERNAL_LOGO_SRC}
-                                  alt=""
-                                  width={18}
-                                  height={18}
-                                  className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain"
-                                  onError={() => setGeminiLogoError(true)}
-                                />
-                              )}
+                              <CleexsMark className="h-[18px] w-[18px] shrink-0" />
                               Gemini
                             </button>
                           </div>

@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import { LayoutDashboard, Sparkles } from 'lucide-react';
 import type { ModelTab } from '../types';
+import { CleexsMark } from '@/components/brand/cleexs-mark';
 
 interface ModelTabsProps {
   value: ModelTab;
@@ -10,8 +10,6 @@ interface ModelTabsProps {
   /** Si false, no mostrar tabs (ej. cuando no hay datos Gemini). */
   showGemini?: boolean;
 }
-
-const INTERNAL_LOGO_SRC = '/CleexsMark.svg';
 
 export function ModelTabs({ value, onChange, showGemini = true }: ModelTabsProps) {
   const base =
@@ -38,13 +36,7 @@ export function ModelTabs({ value, onChange, showGemini = true }: ModelTabsProps
           onClick={() => onChange('chatgpt')}
           className={`${base} ${value === 'chatgpt' ? active : inactive}`}
         >
-          <Image
-            src={INTERNAL_LOGO_SRC}
-            alt=""
-            width={18}
-            height={18}
-            className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain"
-          />
+          <CleexsMark className="h-[18px] w-[18px] shrink-0" />
           ChatGPT
         </button>
         {showGemini && (
