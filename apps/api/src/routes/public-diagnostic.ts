@@ -232,6 +232,16 @@ function deriveBrandFromDomain(domain: string): string {
   return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
 }
 
+/** Si el texto parece URL/dominio (tiene punto, www, etc.), devuelve la marca derivada; sino null */
+function deriveBrandIfLooksLikeDomain(value: string): string | null {
+  const v = value.trim().toLowerCase();
+  if (!v || !v.includes('.')) return null;
+  if (v.startsWith('www.')) return deriveBrandFromDomain(v.replace(/^www\./, ''));
+  const parts = v.split('.');
+  if (parts.length >= 2 && parts[0] && parts[0] !== 'www') return deriveBrandFromDomain(v);
+  return null;
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -265,10 +275,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       let brandForRun: string;
       if (trimmedUrl) {
         domain = normalizeDomain(trimmedUrl);
-        brandForRun = trimmedBrand || deriveBrandFromDomain(domain);
+        const derivedFromBrand = trimmedBrand ? deriveBrandIfLooksLikeDomain(trimmedBrand) : null;
+        brandForRun = derivedFromBrand ?? (trimmedBrand || deriveBrandFromDomain(domain));
       } else {
         domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
-        brandForRun = trimmedBrand;
+        const derived = deriveBrandIfLooksLikeDomain(trimmedBrand);
+        brandForRun = derived ?? trimmedBrand;
       }
 
       if (!process.env.OPENAI_API_KEY) {

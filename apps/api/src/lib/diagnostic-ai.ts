@@ -182,11 +182,17 @@ export async function getTop5Competitors(
       role: 'system',
       content:
         'Respondé SOLO con un JSON válido. Ejemplo: {"competitors": ["Marca A", "Marca B", "Marca C", "Marca D", "Marca E"]}. ' +
-        'Listá exactamente 5 competidores directos, marcas reales conocidas. Sin explicaciones.',
+        'Reglas estrictas: ' +
+        '1) Solo marcas/empresas que sean competidores DIRECTOS (misma industria, mismo mercado). ' +
+        '2) NO incluyas productos, servicios o submarcas de la misma empresa (ej. si la marca es una operadora, no incluyas su billetera móvil; si es un banco, no incluyas su app de pagos). ' +
+        '3) NO inventes marcas. Solo listá empresas que existan realmente en ese país. Si no estás seguro de que exista, no la incluyas. ' +
+        '4) Solo nombres de marcas/empresas, nunca URLs ni dominios.',
     },
     {
       role: 'user',
-      content: `Marca: ${brandName}. Industria: ${industry}.${marketContext}\n\n¿Cuáles son los 5 principales competidores? Priorizá marcas relevantes de ese país/mercado. Respuesta (solo JSON):`,
+      content:
+        `Marca: ${brandName}. Industria: ${industry}.${marketContext}\n\n` +
+        `Listá exactamente 5 competidores directos (empresas reales de ese país). Solo marcas que existan. Respuesta (solo JSON):`,
     },
   ]);
 
@@ -274,8 +280,11 @@ export async function determineMarketProfileForBrand(
   const systemPrompt =
     'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles","confidence":88}. ' +
     (countryFixed
-      ? `El país es ${countryFixed}; devolvé ese mismo valor en country. Inferí solo industria/rubro y confidence (0-100). `
-      : 'Inferí país/mercado principal e industria/rubro de la marca priorizando la evidencia (website y/o resultados de búsqueda). ') +
+      ? `El país es ${countryFixed}; devolvé ese mismo valor en country. Inferí solo industria y confidence (0-100). `
+      : 'Inferí país/mercado principal e industria de la marca priorizando la evidencia (website y/o resultados de búsqueda). ') +
+    'Industria: debe ser el SECTOR PRINCIPAL de negocio (2-5 palabras en español), al nivel donde se comparan competidores directos. ' +
+    'Ejemplos correctos: "Telecomunicaciones móviles", "Supermercados", "Bancos", "Cafeterías", "Restaurantes", "Operadores de telecomunicaciones". ' +
+    'Evitá rubros de producto/servicio específico (ej. no "billeteras móviles" si la marca es una operadora; usá "Telecomunicaciones móviles"). ' +
     'No inventes rubro que contradiga la evidencia. Si no es claro, usá los fallbacks y baja confidence.';
 
   const content = await callOpenAI([
