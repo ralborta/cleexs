@@ -583,18 +583,18 @@ export function ReporteModerno({
             <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Ranking de marcas</p>
               <p className="mt-1 text-2xl font-bold text-blue-700">{leaderRow ? `${leaderRow.share.toFixed(0)}%` : '—'}</p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
                 {leaderRow
-                  ? `${leaderRow.name} lidera el Top 3${secondRow ? ` con ${Math.max(0, leaderRow.share - secondRow.share).toFixed(1)} pts de ventaja sobre ${secondRow.name}` : ''}.`
-                  : 'No hay datos suficientes para calcular liderazgo en ranking.'}
+                  ? `${leaderRow.name} lidera el Top 3${secondRow ? ` con ${Math.max(0, leaderRow.share - secondRow.share).toFixed(1)} pts de ventaja sobre ${secondRow.name}` : ''}. Este porcentaje refleja cuánta presencia acumuló en las recomendaciones frente al total de marcas evaluadas. Si la diferencia con el segundo lugar es baja, el liderazgo todavía es frágil; si la brecha es amplia, hay una dominancia más estable en las respuestas de IA.`
+                  : 'No hay datos suficientes para calcular liderazgo en ranking. En esta corrida faltan apariciones comparables para estimar con precisión quién domina la recomendación.'}
               </p>
             </div>
 
             <div className="rounded-lg border border-violet-100 bg-violet-50/50 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Cleexs Score</p>
               <p className="mt-1 text-2xl font-bold text-violet-700">{Math.round(displayScore)}</p>
-              <p className="mt-1 text-xs text-slate-600">
-                Nivel {scoreLabel(displayScore)}: el resultado se explica por {top3Rate}% de presencia en Top 3 y {top1Rate}% en posición #1.
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                Nivel {scoreLabel(displayScore)}: el resultado se explica por {top3Rate}% de presencia en Top 3 y {top1Rate}% en posición #1. En términos prácticos, este score resume qué tan competitiva es la marca en escenarios de recomendación reales y no solo en menciones aisladas. Para subir el indicador, el foco debe estar en mejorar frecuencia de aparición y, sobre todo, la calidad de posicionamiento en primeros lugares.
               </p>
             </div>
 
@@ -603,18 +603,18 @@ export function ReporteModerno({
               <p className="mt-1 text-2xl font-bold text-amber-700">
                 {strongestIntention && weakestIntention ? `${Math.round(strongestIntention.score - weakestIntention.score)} pts` : '—'}
               </p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
                 {strongestIntention && weakestIntention
-                  ? `Mejor desempeño en ${INTENTION_LABELS[strongestIntention.key]?.label ?? strongestIntention.key} (${Math.round(strongestIntention.score)}%) y menor en ${INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key} (${Math.round(weakestIntention.score)}%).`
-                  : 'No hay suficientes datos por intención para explicar diferencias.'}
+                  ? `Mejor desempeño en ${INTENTION_LABELS[strongestIntention.key]?.label ?? strongestIntention.key} (${Math.round(strongestIntention.score)}%) y menor en ${INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key} (${Math.round(weakestIntention.score)}%). Esta brecha muestra dónde la propuesta actual conecta mejor con la necesidad del usuario y dónde pierde tracción frente a competidores. Cuanto mayor es la diferencia, más clara es la prioridad de optimización por tipo de consulta.`
+                  : 'No hay suficientes datos por intención para explicar diferencias. Conviene ampliar la base de prompts para obtener un mapa más fiable por tipo de búsqueda.'}
               </p>
             </div>
 
             <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Métricas del análisis</p>
               <p className="mt-1 text-2xl font-bold text-emerald-700">{metricsAvg}%</p>
-              <p className="mt-1 text-xs text-slate-600">
-                Promedio general {metricsAvg}%. El principal freno hoy es {bottleneckMetric.label.toLowerCase()} ({bottleneckMetric.value}%).
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                Promedio general {metricsAvg}%. El principal freno hoy es {bottleneckMetric.label.toLowerCase()} ({bottleneckMetric.value}%). Esta lectura combina calidad de formato, visibilidad y performance competitiva, por eso funciona como semáforo global del estado del diagnóstico. Si el cuello de botella mejora, suele arrastrar positivamente al resto de métricas en siguientes corridas.
               </p>
             </div>
 
@@ -623,10 +623,10 @@ export function ReporteModerno({
               <p className="mt-1 text-2xl font-bold text-indigo-700">
                 {competitorLeader ? `${Math.max(0, (competitorLeader.share || 0) - (brandRow?.share || 0)).toFixed(1)} pts` : '—'}
               </p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
                 {competitorLeader
-                  ? `${competitorLeader.name} concentra ${competitorLeader.share.toFixed(1)}% del Top 3.${brandRow ? ` Tu marca está en ${brandRow.share.toFixed(1)}%, con una brecha de ${Math.max(0, (competitorLeader.share || 0) - (brandRow.share || 0)).toFixed(1)} pts.` : ' Tu marca no figura en el Top 3 agregado de esta corrida.'}`
-                  : 'No hay comparaciones suficientes para estimar brecha competitiva.'}
+                  ? `${competitorLeader.name} concentra ${competitorLeader.share.toFixed(1)}% del Top 3.${brandRow ? ` Tu marca está en ${brandRow.share.toFixed(1)}%, con una brecha de ${Math.max(0, (competitorLeader.share || 0) - (brandRow.share || 0)).toFixed(1)} pts.` : ' Tu marca no figura en el Top 3 agregado de esta corrida.'} Este diferencial describe la distancia competitiva real en términos de recomendación de IA: no solo quién aparece más, sino quién captura mayor cuota de preferencia en las respuestas.`
+                  : 'No hay comparaciones suficientes para estimar brecha competitiva. Hace falta más volumen de apariciones para concluir una ventaja o desventaja consistente.'}
               </p>
             </div>
           </div>
