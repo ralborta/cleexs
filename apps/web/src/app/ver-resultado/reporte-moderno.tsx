@@ -1050,12 +1050,12 @@ export function ReporteModerno({
             </CardContent>
           </Card>
 
-          {/* 5. Barras apiladas por intención */}
+          {/* 5. Barras agrupadas por intención (Tu marca vs líder lado a lado) */}
           <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-orange-50/40 to-white shadow-sm lg:col-span-2">
             <CardHeader className="pb-2 pt-5">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
                 <Zap className="h-4 w-4 text-orange-500" />
-                Barras apiladas por intención
+                Comparativo por intención
               </CardTitle>
               <CardDescription className="text-xs text-slate-500">
                 Tu marca vs líder en cada tipo de consulta
@@ -1063,14 +1063,19 @@ export function ReporteModerno({
             </CardHeader>
             <CardContent className="pt-0">
               {stackedData.length > 0 && leaderName ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={stackedData} layout="vertical" margin={{ top: 4, right: 24, left: 60, bottom: 4 }}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={stackedData} layout="vertical" margin={{ top: 8, right: 24, left: 70, bottom: 8 }} barCategoryGap="20%" barGap={8}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
-                    <YAxis type="category" dataKey="intencion" width={55} tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Bar dataKey="tuMarca" stackId="a" fill="rgb(14, 165, 233)" radius={[0, 0, 0, 0]} name="Tu marca" />
-                    <Bar dataKey="lider" stackId="a" fill="rgb(148, 163, 184)" radius={[0, 0, 0, 0]} name={leaderName || 'Líder'} />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <YAxis type="category" dataKey="intencion" width={65} tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      formatter={(v: number) => [`${v}%`, '']}
+                      labelFormatter={(l) => l}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="tuMarca" fill="rgb(14, 165, 233)" radius={[0, 4, 4, 0]} name="Tu marca" maxBarSize={28} />
+                    <Bar dataKey="lider" fill="rgb(100, 116, 139)" radius={[0, 4, 4, 0]} name={leaderName} maxBarSize={28} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
