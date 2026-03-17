@@ -635,7 +635,13 @@ function VerResultadoContent() {
                         </div>
                       )}
                       {runResultToShow && (
-                        <ReporteModerno runResult={runResultToShow} brandName={runResultToShow.brandName} trendData={diagnostic.trendData} />
+                        <ReporteModerno
+                          runResult={runResultToShow}
+                          brandName={runResultToShow.brandName}
+                          trendData={diagnostic.trendData}
+                          runResultChatGPT={tieneGemini ? runResult : undefined}
+                          runResultGemini={tieneGemini ? runResultGemini : undefined}
+                        />
                       )}
                     </div>
                   ) : (

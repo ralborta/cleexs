@@ -297,22 +297,22 @@ function GaugeScore({ value, size = 140 }: { value: number; size?: number }) {
 /** Funnel: Menciones → Top 3 → #1 */
 function FunnelSteps({ mention, top3, top1 }: { mention: number; top3: number; top1: number }) {
   const steps = [
-    { label: 'Menciones', value: mention, color: 'bg-slate-200' },
-    { label: 'Top 3', value: top3, color: 'bg-sky-300' },
-    { label: 'Posición #1', value: top1, color: 'bg-violet-500' },
+    { label: 'Menciones', value: mention, gradient: 'from-slate-400 to-slate-500' },
+    { label: 'Top 3', value: top3, gradient: 'from-sky-400 to-sky-600' },
+    { label: 'Posición #1', value: top1, gradient: 'from-violet-500 to-violet-700' },
   ];
   return (
-    <div className="space-y-2">
-      {steps.map((s, i) => (
+    <div className="space-y-3">
+      {steps.map((s) => (
         <div key={s.label} className="flex items-center gap-3">
-          <span className="w-20 shrink-0 text-xs font-medium text-slate-600">{s.label}</span>
-          <div className="flex-1 overflow-hidden rounded-full bg-slate-100">
+          <span className="w-24 shrink-0 text-xs font-semibold text-slate-700">{s.label}</span>
+          <div className="flex-1 overflow-hidden rounded-lg bg-slate-100 shadow-inner">
             <div
-              className={cn('h-6 rounded-full transition-all duration-500', s.color)}
+              className={cn('h-7 rounded-lg bg-gradient-to-r transition-all duration-700', s.gradient)}
               style={{ width: `${Math.min(100, s.value)}%` }}
             />
           </div>
-          <span className="w-10 shrink-0 text-right text-sm font-semibold text-slate-700">{s.value}%</span>
+          <span className="w-12 shrink-0 text-right text-sm font-bold tabular-nums text-slate-800">{s.value}%</span>
         </div>
       ))}
     </div>
@@ -329,10 +329,14 @@ export function ReporteModerno({
   runResult,
   brandName,
   trendData,
+  runResultChatGPT,
+  runResultGemini,
 }: {
   runResult: PublicDiagnosticRunResult;
   brandName: string;
   trendData?: PublicDiagnosticTrendPoint[];
+  runResultChatGPT?: PublicDiagnosticRunResult;
+  runResultGemini?: PublicDiagnosticRunResult;
 }) {
   const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
   const [resumenExpanded, setResumenExpanded] = useState<Set<string>>(new Set());
@@ -404,12 +408,50 @@ export function ReporteModerno({
   const weakestIntention = [...intentionScores].sort((a, b) => a.score - b.score)[0];
   const metricsAvg = Math.round((formatConfidence + mentionRate + top3Rate + top1Rate) / 4);
 
-  const metrics = [
+  // Completitud: % de entradas Top 3 que tienen motivo/justificación
+  let totalEntries = 0;
+  let entriesWithReason = 0;
+  results.forEach((r) => {
+    (r.top3Json || []).forEach((e) => {
+      totalEntries += 1;
+      if (e.reason && e.reason.trim().length >= 3) entriesWithReason += 1;
+    });
+  });
+  const completenessPct = totalEntries ? Math.round((entriesWithReason / totalEntries) * 100) : 0;
+
+  // Consistencia: cuando hay ChatGPT y Gemini, % de prompts donde coinciden en #1
+  let consistencyPct = 0;
+  let consistencyCount = 0;
+  let consistencyTotal = 0;
+  if (runResultChatGPT && runResultGemini) {
+    const prA = runResultChatGPT.promptResults || [];
+    const prB = runResultGemini.promptResults || [];
+    const minLen = Math.min(prA.length, prB.length);
+    for (let i = 0; i < minLen; i++) {
+      const topA = prA[i]?.top3Json || [];
+      const topB = prB[i]?.top3Json || [];
+      const brand1A = topA.find((e) => e.position === 1)?.name;
+      const brand1B = topB.find((e) => e.position === 1)?.name;
+      if (brand1A && brand1B) {
+        consistencyTotal += 1;
+        if (normalizeName(brand1A) === normalizeName(brand1B)) consistencyCount += 1;
+      }
+    }
+    consistencyPct = consistencyTotal ? Math.round((consistencyCount / consistencyTotal) * 100) : 0;
+  }
+
+  const metricsBase = [
     { label: 'Confianza de formato', value: formatConfidence, detail: `${parseableCount}/${totalPrompts} parseable`, icon: CheckCircle2 },
     { label: 'Mención de marca', value: mentionRate, detail: `${mentionCount}/${totalPrompts} respuestas`, icon: AtSign },
     { label: 'Aparición en Top 3', value: top3Rate, detail: `${top3Count}/${totalPrompts} en Top 3`, icon: TrendingUp },
     { label: 'Posición #1', value: top1Rate, detail: `${top1Count}/${totalPrompts} en primer lugar`, icon: Trophy },
+    { label: 'Profundidad de respuesta', value: completenessPct, detail: `${entriesWithReason}/${totalEntries} con motivo`, icon: Info },
   ];
+  const metricsConsistency =
+    runResultChatGPT && runResultGemini
+      ? [{ label: 'Consistencia ChatGPT↔Gemini', value: consistencyPct, detail: `${consistencyCount}/${consistencyTotal} prompts coinciden en #1`, icon: BarChart3 }]
+      : [];
+  const metrics = [...metricsBase, ...metricsConsistency];
   const bottleneckMetric = [...metrics].sort((a, b) => a.value - b.value)[0];
 
   // Matriz por intención: intención → marca → % share en esos prompts
@@ -810,16 +852,16 @@ export function ReporteModerno({
           </CardHeader>
           <CardContent className="pt-0">
             {barData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={Math.max(180, barData.length * 36)}>
-                <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 24, left: 4, bottom: 4 }}>
+              <ResponsiveContainer width="100%" height={Math.max(200, barData.length * 40)}>
+                <BarChart data={barData} layout="vertical" margin={{ top: 8, right: 24, left: 4, bottom: 8 }} barCategoryGap="12%">
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" unit="%" />
-                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11 }} stroke="#64748b" />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#64748b" unit="%" />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12, fontWeight: 500 }} stroke="#64748b" />
                   <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     formatter={(v: number) => [`${Number(v).toFixed(1)}%`, '% Top 3']}
                   />
-                  <Bar dataKey="value" fill="rgb(14, 165, 233)" radius={[0, 4, 4, 0]} name="% Top 3">
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} name="% Top 3" maxBarSize={32}>
                     {barData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.isBrand ? 'rgb(14, 165, 233)' : 'rgb(148, 163, 184)'} />
                     ))}
@@ -936,6 +978,74 @@ export function ReporteModerno({
         </CardContent>
       </Card>
 
+      {/* Calidad de datos: Consistencia y Completitud */}
+      {(runResultChatGPT && runResultGemini) || totalEntries > 0 ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {runResultChatGPT && runResultGemini && (
+            <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-fuchsia-50/40 to-white shadow-sm">
+              <CardHeader className="pb-2 pt-5">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+                  <BarChart3 className="h-4 w-4 text-fuchsia-500" />
+                  Consistencia ChatGPT ↔ Gemini
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  % de prompts donde ambos modelos coinciden en el #1
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg bg-fuchsia-50/60 p-4">
+                    <span className="text-sm font-medium text-slate-700">Coincidencia en #1</span>
+                    <span className="text-2xl font-bold text-fuchsia-600">{consistencyPct}%</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <BarChart data={[{ name: 'Coinciden', value: consistencyPct }, { name: 'Difieren', value: 100 - consistencyPct }]} layout="vertical" margin={{ top: 4, right: 24, left: 4, bottom: 4 }}>
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" unit="%" />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} stroke="#64748b" />
+                      <Tooltip formatter={(v: number) => [`${Number(v).toFixed(0)}%`, '']} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {[{ name: 'Coinciden', value: consistencyPct }, { name: 'Difieren', value: 100 - consistencyPct }].map((entry, idx) => (
+                          <Cell key={idx} fill={entry.name === 'Coinciden' ? 'rgb(192, 132, 252)' : 'rgb(226, 232, 240)'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-slate-500">{consistencyCount} de {consistencyTotal} prompts con mismo #1</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {totalEntries > 0 && (
+            <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-lime-50/40 to-white shadow-sm">
+              <CardHeader className="pb-2 pt-5">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+                  <Info className="h-4 w-4 text-lime-600" />
+                  Profundidad de respuesta
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  % de entradas Top 3 con motivo/justificación
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg bg-lime-50/60 p-4">
+                    <span className="text-sm font-medium text-slate-700">Entradas con motivo</span>
+                    <span className="text-2xl font-bold text-lime-600">{completenessPct}%</span>
+                  </div>
+                  <div className="overflow-hidden rounded-lg bg-lime-100 shadow-inner">
+                    <div
+                      className="h-3 rounded-lg bg-gradient-to-r from-lime-400 to-lime-600 transition-all duration-600"
+                      style={{ width: `${Math.min(100, completenessPct)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">{entriesWithReason} de {totalEntries} entradas con justificación</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : null}
+
       {/* 6 nuevos gráficos: Funnel, Radar, Bubble, Treemap, Barras apiladas */}
       <div className="space-y-6">
         <h3 className="text-lg font-bold text-slate-800">Visualizaciones adicionales</h3>
@@ -972,11 +1082,11 @@ export function ReporteModerno({
                 <ResponsiveContainer width="100%" height={220}>
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis dataKey="intencion" tick={{ fontSize: 10 }} />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
-                    <Radar name="Tu marca" dataKey="tuMarca" stroke="rgb(14, 165, 233)" fill="rgb(14, 165, 233)" fillOpacity={0.4} strokeWidth={2} />
-                    <Radar name={leaderName || 'Líder'} dataKey="lider" stroke="rgb(148, 163, 184)" fill="rgb(148, 163, 184)" fillOpacity={0.3} strokeWidth={2} />
-                    <Legend />
+                    <PolarAngleAxis dataKey="intencion" tick={{ fontSize: 11, fill: '#475569' }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <Radar name="Tu marca" dataKey="tuMarca" stroke="rgb(14, 165, 233)" fill="rgb(14, 165, 233)" fillOpacity={0.45} strokeWidth={2.5} />
+                    <Radar name={leaderName || 'Líder'} dataKey="lider" stroke="rgb(100, 116, 139)" fill="rgb(100, 116, 139)" fillOpacity={0.35} strokeWidth={2} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-slate-700">{value}</span>} />
                   </RadarChart>
                 </ResponsiveContainer>
               ) : (
@@ -1001,9 +1111,18 @@ export function ReporteModerno({
                 <ResponsiveContainer width="100%" height={220}>
                   <ScatterChart margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis type="number" dataKey="x" name="% Top 3" domain={[0, 100]} tick={{ fontSize: 10 }} />
-                    <YAxis type="number" dataKey="y" name="% #1" domain={[0, 100]} tick={{ fontSize: 10 }} />
-                    <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(v: number) => [v.toFixed(1), '']} />
+                    <XAxis type="number" dataKey="x" name="% Top 3" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" />
+                    <YAxis type="number" dataKey="y" name="% #1" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" />
+                    <Tooltip
+                      cursor={{ strokeDasharray: '3 3', stroke: '#94a3b8' }}
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      formatter={(v: number, _name: string, props: { payload?: { name: string; x: number; y: number } } | undefined) => {
+                        const p = props?.payload;
+                        if (p) return [`${p.name}: ${p.x.toFixed(1)}% Top 3, ${p.y.toFixed(1)}% #1`, ''];
+                        return [v?.toFixed(1) ?? '', ''];
+                      }}
+                      labelFormatter={() => ''}
+                    />
                     <Scatter name="Marcas" data={bubbleData} fill="rgb(148, 163, 184)">
                       {bubbleData.map((entry, idx) => (
                         <Cell key={idx} fill={entry.isBrand ? 'rgb(14, 165, 233)' : 'rgb(148, 163, 184)'} />
@@ -1030,17 +1149,17 @@ export function ReporteModerno({
             </CardHeader>
             <CardContent className="pt-0">
               {treemapData.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {treemapData.map((d) => (
                     <div key={d.name} className="flex items-center gap-3">
-                      <span className="w-20 shrink-0 truncate text-xs font-medium text-slate-700">{d.name}</span>
-                      <div className="flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <span className="w-24 shrink-0 truncate text-xs font-semibold text-slate-700">{d.name}</span>
+                      <div className="flex-1 overflow-hidden rounded-lg bg-slate-100 shadow-inner">
                         <div
-                          className={cn('h-6 rounded-full transition-all duration-500', d.isBrand ? 'bg-sky-500' : 'bg-slate-400')}
+                          className={cn('h-7 rounded-lg transition-all duration-600', d.isBrand ? 'bg-gradient-to-r from-sky-400 to-sky-600' : 'bg-gradient-to-r from-slate-400 to-slate-500')}
                           style={{ width: `${Math.min(100, d.size)}%` }}
                         />
                       </div>
-                      <span className="w-10 shrink-0 text-right text-sm font-semibold text-slate-700">{d.size.toFixed(1)}%</span>
+                      <span className="w-12 shrink-0 text-right text-sm font-bold tabular-nums text-slate-800">{d.size.toFixed(1)}%</span>
                     </div>
                   ))}
                 </div>
@@ -1271,7 +1390,15 @@ export function ReporteModerno({
                   <strong>Posición #1:</strong> en qué proporción de preguntas la IA te puso en primer lugar. Es el nivel más alto de recomendación; si este número crece, estás mejorando en “ser la primera opción” que la IA sugiere.
                 </p>
                 <p>
-                  Juntas, estas cuatro métricas te dan una idea clara de cómo te ve la IA: si responde de forma interpretable, si te menciona, si te incluye en el Top 3 y con qué frecuencia te elige como número uno.
+                  <strong>Profundidad de respuesta:</strong> porcentaje de entradas del Top 3 con motivo o justificación. Indica qué tan detalladas son las recomendaciones de la IA.
+                </p>
+                {runResultChatGPT && runResultGemini && (
+                  <p>
+                    <strong>Consistencia ChatGPT↔Gemini:</strong> cuando el análisis usa ambos modelos, mide en qué proporción de prompts coinciden en la marca #1. Una consistencia alta indica que distintos modelos te posicionan de forma similar.
+                  </p>
+                )}
+                <p>
+                  Juntas, estas métricas te dan una idea clara de cómo te ve la IA: si responde de forma interpretable, si te menciona, si te incluye en el Top 3, con qué frecuencia te elige como número uno, y la calidad de las justificaciones.
                 </p>
               </>
             ) : (
