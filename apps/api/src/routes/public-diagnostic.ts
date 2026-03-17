@@ -3,9 +3,181 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
-import { determineMarketProfileForBrand, getTop5Competitors } from '../lib/diagnostic-ai';
+import { determineMarketProfileForBrand, fetchSearchEvidence, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
+
+/** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
+const GENERIC_TLDS = new Set(['com', 'net', 'org', 'info', 'biz', 'edu', 'gov', 'int', 'io', 'ai', 'app']);
+
+/**
+ * Mapa TLD → país (nombre en español).
+ * Incluye Américas completas + principales del mundo.
+ * Clave: sufijo de 2 partes (com.ar) o 1 parte (ar). Para .com/.net etc. no está en el mapa → país desde búsqueda.
+ */
+const TLD_TO_COUNTRY: Record<string, string> = {
+  // Américas — compuestos
+  'com.ar': 'Argentina',
+  'com.bo': 'Bolivia',
+  'com.br': 'Brasil',
+  'com.co': 'Colombia',
+  'co.cr': 'Costa Rica',
+  'com.ec': 'Ecuador',
+  'com.sv': 'El Salvador',
+  'com.gt': 'Guatemala',
+  'com.hn': 'Honduras',
+  'com.mx': 'México',
+  'com.ni': 'Nicaragua',
+  'com.pa': 'Panamá',
+  'com.py': 'Paraguay',
+  'com.pe': 'Perú',
+  'com.uy': 'Uruguay',
+  'com.ve': 'Venezuela',
+  'com.do': 'República Dominicana',
+  'com.cu': 'Cuba',
+  'com.pr': 'Puerto Rico',
+  'com.jm': 'Jamaica',
+  'com.tt': 'Trinidad y Tobago',
+  'com.bs': 'Bahamas',
+  'com.bb': 'Barbados',
+  'com.bz': 'Belice',
+  'com.gy': 'Guyana',
+  'com.sr': 'Surinam',
+  // Europa y otros compuestos
+  'co.uk': 'Reino Unido',
+  'com.au': 'Australia',
+  'co.nz': 'Nueva Zelanda',
+  'co.za': 'Sudáfrica',
+  'co.in': 'India',
+  'com.cn': 'China',
+  'co.jp': 'Japón',
+  'co.kr': 'Corea del Sur',
+  'com.sg': 'Singapur',
+  'com.hk': 'Hong Kong',
+  'com.tw': 'Taiwán',
+  'com.my': 'Malasia',
+  'co.id': 'Indonesia',
+  'com.ph': 'Filipinas',
+  'com.vn': 'Vietnam',
+  'com.th': 'Tailandia',
+  'com.sa': 'Arabia Saudita',
+  'com.ae': 'Emiratos Árabes Unidos',
+  'com.tr': 'Turquía',
+  'com.ru': 'Rusia',
+  'com.ua': 'Ucrania',
+  'com.pl': 'Polonia',
+  'com.ro': 'Rumania',
+  'com.gr': 'Grecia',
+  'com.pt': 'Portugal',
+  'com.ie': 'Irlanda',
+  'com.ch': 'Suiza',
+  'com.at': 'Austria',
+  'com.be': 'Bélgica',
+  'com.se': 'Suecia',
+  'com.no': 'Noruega',
+  'com.dk': 'Dinamarca',
+  'com.fi': 'Finlandia',
+  'com.cz': 'República Checa',
+  'com.hu': 'Hungría',
+  'com.il': 'Israel',
+  'com.eg': 'Egipto',
+  // Américas y mundo — un solo segmento (ccTLD)
+  ar: 'Argentina',
+  bo: 'Bolivia',
+  br: 'Brasil',
+  cl: 'Chile',
+  co: 'Colombia',
+  cr: 'Costa Rica',
+  ec: 'Ecuador',
+  sv: 'El Salvador',
+  gt: 'Guatemala',
+  hn: 'Honduras',
+  mx: 'México',
+  ni: 'Nicaragua',
+  pa: 'Panamá',
+  py: 'Paraguay',
+  pe: 'Perú',
+  uy: 'Uruguay',
+  ve: 'Venezuela',
+  do: 'República Dominicana',
+  cu: 'Cuba',
+  pr: 'Puerto Rico',
+  jm: 'Jamaica',
+  tt: 'Trinidad y Tobago',
+  gy: 'Guyana',
+  sr: 'Surinam',
+  bz: 'Belice',
+  ca: 'Canadá',
+  us: 'Estados Unidos',
+  uk: 'Reino Unido',
+  de: 'Alemania',
+  fr: 'Francia',
+  es: 'España',
+  it: 'Italia',
+  nl: 'Países Bajos',
+  pt: 'Portugal',
+  pl: 'Polonia',
+  ru: 'Rusia',
+  ua: 'Ucrania',
+  ie: 'Irlanda',
+  ch: 'Suiza',
+  at: 'Austria',
+  be: 'Bélgica',
+  gr: 'Grecia',
+  se: 'Suecia',
+  no: 'Noruega',
+  dk: 'Dinamarca',
+  fi: 'Finlandia',
+  ro: 'Rumania',
+  hu: 'Hungría',
+  cz: 'República Checa',
+  tr: 'Turquía',
+  au: 'Australia',
+  nz: 'Nueva Zelanda',
+  za: 'Sudáfrica',
+  in: 'India',
+  cn: 'China',
+  jp: 'Japón',
+  kr: 'Corea del Sur',
+  sg: 'Singapur',
+  hk: 'Hong Kong',
+  tw: 'Taiwán',
+  my: 'Malasia',
+  id: 'Indonesia',
+  ph: 'Filipinas',
+  vn: 'Vietnam',
+  th: 'Tailandia',
+  sa: 'Arabia Saudita',
+  ae: 'Emiratos Árabes Unidos',
+  il: 'Israel',
+  eg: 'Egipto',
+};
+
+/**
+ * Si el dominio tiene TLD de país (ej. nike.com.co → Colombia), devuelve el país.
+ * Si es genérico (nike.com, .net, .org) devuelve null → país se obtiene por búsqueda.
+ */
+function getCountryFromDomain(url: string): string | null {
+  try {
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const host = u.hostname.toLowerCase();
+    const parts = host.split('.').filter(Boolean);
+    if (parts.length >= 3) {
+      const compound = parts.slice(-2).join('.');
+      const country = TLD_TO_COUNTRY[compound];
+      if (country) return country;
+    }
+    if (parts.length >= 2) {
+      const single = parts[parts.length - 1]!;
+      if (GENERIC_TLDS.has(single)) return null;
+      const country = TLD_TO_COUNTRY[single];
+      if (country) return country;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function normalizeDomain(url: string): string {
   const COMPOUND_PUBLIC_SUFFIXES = new Set([
@@ -129,17 +301,21 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       setImmediate(async () => {
       try {
-        // 1. IA determina país + industria SOLO desde la marca (sin depender del dominio)
+        // 1. País: por TLD del dominio si aplica (nike.com.co → Colombia), sino por búsqueda web + IA
+        const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
+        let searchEvidence = '';
+        if (!countryFromTld) {
+          searchEvidence = await fetchSearchEvidence(brandForRun);
+        }
         const marketProfile = await determineMarketProfileForBrand(
           brandForRun,
           defaultCountry,
           'General',
-          trimmedUrl || undefined
+          trimmedUrl || undefined,
+          searchEvidence || undefined,
+          countryFromTld || undefined
         );
-        const marketCountry =
-          marketProfile.confidence >= marketConfidenceMin
-            ? marketProfile.country || defaultCountry
-            : defaultCountry;
+        const marketCountry = countryFromTld ?? (marketProfile.confidence >= marketConfidenceMin ? marketProfile.country || defaultCountry : defaultCountry);
         const industry = marketProfile.industry || 'General';
         fastify.log.info(
           {
@@ -147,10 +323,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             brandName: brandForRun,
             marketCountry,
             industry,
+            countryFromTld: countryFromTld ?? undefined,
+            usedSearch: !!searchEvidence,
             marketConfidence: marketProfile.confidence,
             marketConfidenceMin,
           },
-          'Perfil de mercado inferido por IA (país + industria)'
+          'Perfil de mercado (país por TLD o búsqueda+IA, industria por IA)'
         );
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },

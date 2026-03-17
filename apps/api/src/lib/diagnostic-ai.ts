@@ -102,6 +102,41 @@ async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | nul
 }
 
 /**
+ * Búsqueda web (Serper) para inferir país/origen de la marca cuando el dominio es genérico (.com, .net).
+ * Devuelve texto con snippets para incluir en el prompt. Si no hay API key o falla, devuelve string vacío.
+ */
+export async function fetchSearchEvidence(brandName: string): Promise<string> {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey?.trim()) return '';
+
+  const query = `"${brandName}" país origen sede marca`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ q: query, num: 8 }),
+      signal: controller.signal,
+    });
+    if (!response.ok) return '';
+    const data = (await response.json()) as {
+      organic?: Array<{ title?: string; snippet?: string; link?: string }>;
+    };
+    const organic = data?.organic ?? [];
+    const parts = organic.slice(0, 8).map((o) => [o.title, o.snippet].filter(Boolean).join(': ')).filter(Boolean);
+    return parts.length ? `Resultados de búsqueda (origen/país de la marca):\n${parts.join('\n')}` : '';
+  } catch {
+    return '';
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
  * Determina el tipo de industria de una marca (con URL opcional como contexto)
  */
 export async function determineIndustry(
@@ -200,13 +235,16 @@ export async function determineCountryForBrand(
 
 /**
  * Primer paso del diagnóstico:
- * identifica país/mercado e industria SOLO desde la marca (sin depender del dominio).
+ * identifica país/mercado e industria. Si knownCountry viene dado (ej. por TLD), solo se infiere industria.
+ * Si searchEvidence viene dado (búsqueda web), se usa para inferir país cuando el dominio es .com/.net.
  */
 export async function determineMarketProfileForBrand(
   brandName: string,
   fallbackCountry = 'Argentina',
   fallbackIndustry = 'General',
-  websiteUrl?: string
+  websiteUrl?: string,
+  searchEvidence?: string,
+  knownCountry?: string
 ): Promise<MarketProfileResult> {
   const evidence = await fetchWebsiteEvidence(websiteUrl);
   const websiteEvidenceText = evidence
@@ -221,27 +259,39 @@ export async function determineMarketProfileForBrand(
         .join('\n')
     : 'Sin evidencia de website disponible.';
 
+  const hasSearchEvidence = searchEvidence?.trim().length ? true : false;
+  const countryFixed = knownCountry?.trim();
+
+  const evidenceBlock =
+    [
+      countryFixed ? `País/mercado ya determinado: ${countryFixed}. Solo inferí industria y confidence.` : '',
+      `Evidencia website:\n${websiteEvidenceText}`,
+      hasSearchEvidence ? `\n${searchEvidence!.trim()}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+  const systemPrompt =
+    'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles","confidence":88}. ' +
+    (countryFixed
+      ? `El país es ${countryFixed}; devolvé ese mismo valor en country. Inferí solo industria/rubro y confidence (0-100). `
+      : 'Inferí país/mercado principal e industria/rubro de la marca priorizando la evidencia (website y/o resultados de búsqueda). ') +
+    'No inventes rubro que contradiga la evidencia. Si no es claro, usá los fallbacks y baja confidence.';
+
   const content = await callOpenAI([
-    {
-      role: 'system',
-      content:
-        'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles","confidence":88}. ' +
-        'Inferí país/mercado principal e industria/rubro de la marca priorizando evidencia real del website si existe. ' +
-        'No inventes rubro que contradiga la evidencia (title/meta/h1). ' +
-        'Agregá confidence (0-100) según qué tan seguro estás. Si no es claro, usá los fallbacks provistos y baja confidence.',
-    },
+    { role: 'system', content: systemPrompt },
     {
       role: 'user',
       content:
-        `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n` +
-        `Evidencia website:\n${websiteEvidenceText}\n` +
-        'Devolvé solo JSON con claves: country, industry, confidence.',
+        `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n\n${evidenceBlock}\n\nDevolvé solo JSON con claves: country, industry, confidence.`,
     },
   ]);
 
   try {
     const parsed = JSON.parse(content) as { country?: string; industry?: string; confidence?: number | string };
-    const country = `${parsed.country || fallbackCountry}`.trim() || fallbackCountry;
+    const country = countryFixed
+      ? countryFixed
+      : `${parsed.country || fallbackCountry}`.trim() || fallbackCountry;
     const industry = `${parsed.industry || fallbackIndustry}`.trim() || fallbackIndustry;
     const rawConfidence = Number(parsed.confidence);
     const confidence = Number.isFinite(rawConfidence)
@@ -249,6 +299,10 @@ export async function determineMarketProfileForBrand(
       : 50;
     return { country, industry, confidence };
   } catch {
-    return { country: fallbackCountry, industry: fallbackIndustry, confidence: 0 };
+    return {
+      country: countryFixed || fallbackCountry,
+      industry: fallbackIndustry,
+      confidence: countryFixed ? 90 : 0,
+    };
   }
 }
