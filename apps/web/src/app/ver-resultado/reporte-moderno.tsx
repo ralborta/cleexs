@@ -230,6 +230,12 @@ function ProgressBar({ value, className = '' }: { value: number; className?: str
   );
 }
 
+function scoreLabel(score: number): string {
+  if (score >= 70) return 'alto';
+  if (score >= 45) return 'medio';
+  return 'bajo';
+}
+
 export function ReporteModerno({
   runResult,
   brandName,
@@ -288,10 +294,17 @@ export function ReporteModerno({
   const displayScore = (cleexsScore || runResult.cleexsScore) ?? 0;
 
   const comparisonSummary = buildComparisonSummary(results);
+  const leaderRow = comparisonSummary[0];
+  const secondRow = comparisonSummary[1];
+  const brandRow = comparisonSummary.find((r) => r.type === 'brand' || isBrandEntry(r.name, brandName, brandAliases));
   const competitorsUsed =
     runResult.competitors?.length > 0
       ? runResult.competitors
       : Array.from(new Set(comparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
+  const competitorLeader = comparisonSummary.find((r) => r.type === 'competitor');
+  const strongestIntention = [...intentionScores].sort((a, b) => b.score - a.score)[0];
+  const weakestIntention = [...intentionScores].sort((a, b) => a.score - b.score)[0];
+  const metricsAvg = Math.round((formatConfidence + mentionRate + top3Rate + top1Rate) / 4);
 
   const metrics = [
     { label: 'Confianza de formato', value: formatConfidence, detail: `${parseableCount}/${totalPrompts} parseable`, icon: CheckCircle2 },
@@ -299,6 +312,7 @@ export function ReporteModerno({
     { label: 'Aparición en Top 3', value: top3Rate, detail: `${top3Count}/${totalPrompts} en Top 3`, icon: TrendingUp },
     { label: 'Posición #1', value: top1Rate, detail: `${top1Count}/${totalPrompts} en primer lugar`, icon: Trophy },
   ];
+  const bottleneckMetric = [...metrics].sort((a, b) => a.value - b.value)[0];
 
   return (
     <div className="space-y-8">
@@ -342,6 +356,18 @@ export function ReporteModerno({
               </div>
             ) : (
               <p className="py-4 text-center text-sm text-slate-500">Sin datos de ranking.</p>
+            )}
+            {leaderRow && (
+              <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Lectura rápida</p>
+                  <span className="text-lg font-bold text-blue-700">{leaderRow.share.toFixed(0)}%</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  {leaderRow.name} lidera el Top 3
+                  {secondRow ? ` con ${Math.max(0, leaderRow.share - secondRow.share).toFixed(1)} pts sobre ${secondRow.name}` : ''}.
+                </p>
+              </div>
             )}
             <CardDetailButton onOpen={() => setDetailOpen('ranking')} />
           </CardContent>
@@ -400,6 +426,15 @@ export function ReporteModerno({
                 )}
               </div>
             )}
+            <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Lectura rápida</p>
+                <span className="text-lg font-bold text-violet-700">{Math.round(displayScore)}</span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">
+                Nivel {scoreLabel(displayScore)}: se explica por {top3Rate}% de presencia en Top 3 y {top1Rate}% en posición #1.
+              </p>
+            </div>
             <CardDetailButton onOpen={() => setDetailOpen('cleexs')} />
           </CardContent>
         </Card>
@@ -456,6 +491,22 @@ export function ReporteModerno({
                 </ResponsiveContainer>
               </div>
             )}
+            {strongestIntention && weakestIntention && (
+              <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Lectura rápida</p>
+                  <span className="text-lg font-bold text-amber-700">
+                    {Math.round(strongestIntention.score - weakestIntention.score)} pts
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  Mejor desempeño en {INTENTION_LABELS[strongestIntention.key]?.label ?? strongestIntention.key}
+                  {' '}({Math.round(strongestIntention.score)}%) y menor en{' '}
+                  {INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key}
+                  {' '}({Math.round(weakestIntention.score)}%).
+                </p>
+              </div>
+            )}
             <CardDetailButton onOpen={() => setDetailOpen('intention')} />
           </CardContent>
         </Card>
@@ -494,6 +545,15 @@ export function ReporteModerno({
                 </div>
               </div>
             ))}
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Lectura rápida</p>
+                <span className="text-lg font-bold text-emerald-700">{metricsAvg}%</span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">
+                Promedio general {metricsAvg}%. El principal freno hoy es {bottleneckMetric.label.toLowerCase()} ({bottleneckMetric.value}%).
+              </p>
+            </div>
             <CardDetailButton onOpen={() => setDetailOpen('metrics')} />
           </CardContent>
         </Card>
@@ -554,6 +614,25 @@ export function ReporteModerno({
               <Info className="h-3.5 w-3.5 shrink-0" />
               Definí industria o tipo de producto para sugerencias más relevantes.
             </p>
+            {competitorLeader && (
+              <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/60 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Lectura rápida</p>
+                  <span className="text-lg font-bold text-indigo-700">
+                    {Math.max(0, (competitorLeader.share || 0) - (brandRow?.share || 0)).toFixed(1)} pts
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  {competitorLeader.name} concentra {competitorLeader.share.toFixed(1)}% del Top 3.
+                  {brandRow
+                    ? ` Tu marca está en ${brandRow.share.toFixed(1)}%, con una brecha de ${Math.max(
+                        0,
+                        (competitorLeader.share || 0) - (brandRow.share || 0)
+                      ).toFixed(1)} pts.`
+                    : ' Tu marca no figura en el Top 3 agregado de esta corrida.'}
+                </p>
+              </div>
+            )}
             <CardDetailButton onOpen={() => setDetailOpen('comparisons')} />
           </CardContent>
         </Card>
