@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
 import {
   Zap,
@@ -314,6 +314,68 @@ export function ReporteModerno({
   ];
   const bottleneckMetric = [...metrics].sort((a, b) => a.value - b.value)[0];
 
+  // Matriz por intención: intención → marca → % share en esos prompts
+  const intentionMatrix: Record<string, Record<string, number>> = {};
+  results.forEach((r) => {
+    const extracted = extractIntention(r.promptText || '');
+    const key = extracted ? normalizeIntentionKey(extracted.name) : null;
+    if (!key) return;
+    if (!intentionMatrix[key]) intentionMatrix[key] = {};
+    (r.top3Json || []).forEach((e) => {
+      const n = e.name.trim();
+      if (!n) return;
+      intentionMatrix[key]![n] = (intentionMatrix[key]![n] ?? 0) + 1;
+    });
+  });
+  const promptsPerIntention: Record<string, number> = {};
+  Object.keys(intentionBuckets).forEach((k) => {
+    promptsPerIntention[k] = intentionBuckets[k]!.scores.length * 3;
+  });
+  const intentionMatrixPct: Record<string, Record<string, number>> = {};
+  Object.keys(intentionMatrix).forEach((intKey) => {
+    const total = promptsPerIntention[intKey] || 1;
+    intentionMatrixPct[intKey] = {};
+    Object.keys(intentionMatrix[intKey]!).forEach((brand) => {
+      intentionMatrixPct[intKey]![brand] = (intentionMatrix[intKey]![brand]! / total) * 100;
+    });
+  });
+
+  // Datos para comparativo directo (barras)
+  const topForBars = comparisonSummary.slice(0, 6);
+  const barData = topForBars.map((row) => ({
+    name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
+    value: row.share,
+    isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
+  }));
+
+  // Resumen ejecutivo y 3 acciones prioritarias (derivado de datos)
+  const gapToLeader = competitorLeader && brandRow ? Math.max(0, (competitorLeader.share || 0) - (brandRow.share || 0)) : 0;
+  const resumenEjecutivo =
+    brandRow && leaderRow
+      ? `${brandName} tiene ${brandRow.share.toFixed(1)}% de presencia en el Top 3 de las recomendaciones de IA.`
+        + (leaderRow.name !== brandRow.name ? ` El líder es ${leaderRow.name} con ${leaderRow.share.toFixed(1)}%.` : '')
+        + ` Cleexs Score: ${Math.round(displayScore)} (nivel ${scoreLabel(displayScore)}).`
+        + (strongestIntention && weakestIntention
+          ? ` Mejor desempeño en ${INTENTION_LABELS[strongestIntention.key]?.label ?? strongestIntention.key} (${Math.round(strongestIntention.score)}%), menor en ${INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key} (${Math.round(weakestIntention.score)}%).`
+          : '')
+      : `${brandName}: no hay suficientes datos para un resumen. Completá más prompts para obtener métricas comparables.`;
+
+  const accionesPrioritarias: string[] = [];
+  if (bottleneckMetric && bottleneckMetric.value < 70) {
+    accionesPrioritarias.push(`Mejorar ${bottleneckMetric.label.toLowerCase()} (actual: ${bottleneckMetric.value}%)`);
+  }
+  if (weakestIntention && weakestIntention.score < 50) {
+    accionesPrioritarias.push(`Reforzar presencia en consultas de ${INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key} (${Math.round(weakestIntention.score)}%)`);
+  }
+  if (gapToLeader > 0 && competitorLeader) {
+    accionesPrioritarias.push(`Reducir distancia con ${competitorLeader.name} (brecha actual: ${gapToLeader.toFixed(1)} pts en Top 3)`);
+  }
+  if (accionesPrioritarias.length === 0) {
+    accionesPrioritarias.push('Mantener el nivel actual de posicionamiento');
+    if (top1Rate < 50) accionesPrioritarias.push('Aumentar apariciones en posición #1');
+  }
+  const top3Acciones = accionesPrioritarias.slice(0, 3);
+
   return (
     <div className="space-y-8">
       {/* Fila superior: 3 cards — sombra de color por tarjeta, estilo RankIA */}
@@ -572,6 +634,147 @@ export function ReporteModerno({
           </CardContent>
         </Card>
       </div>
+
+      {/* Comparativo directo + Matriz por intención */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Comparativo directo: barras Tu marca vs competidores */}
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-sky-50/40 to-white shadow-sm">
+          <CardHeader className="pb-2 pt-5">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <BarChart3 className="h-4 w-4 text-sky-500" />
+              Comparativo directo
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              % Top 3: tu marca vs competidores
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {barData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={Math.max(180, barData.length * 36)}>
+                <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 24, left: 4, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" unit="%" />
+                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11 }} stroke="#64748b" />
+                  <Tooltip
+                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    formatter={(v: number) => [`${Number(v).toFixed(1)}%`, '% Top 3']}
+                  />
+                  <Bar dataKey="value" fill="rgb(14, 165, 233)" radius={[0, 4, 4, 0]} name="% Top 3">
+                    {barData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.isBrand ? 'rgb(14, 165, 233)' : 'rgb(148, 163, 184)'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="py-8 text-center text-sm text-slate-500">Sin datos para comparativo.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Matriz por intención */}
+        <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-teal-50/40 to-white shadow-sm">
+          <CardHeader className="pb-2 pt-5">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <Zap className="h-4 w-4 text-teal-500" />
+              Matriz por intención
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              % de presencia por tipo de consulta
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {Object.keys(intentionMatrixPct).length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-slate-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 bg-slate-50">
+                      <TableHead className="text-xs font-semibold text-slate-600">Intención</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600">Tu marca</TableHead>
+                      {topForBars
+                        .filter((r) => !isBrandEntry(r.name, brandName, brandAliases))
+                        .slice(0, 3)
+                        .map((r) => (
+                          <TableHead key={r.name} className="text-right text-xs font-semibold text-slate-600">
+                            {r.name}
+                          </TableHead>
+                        ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(intentionMatrixPct).map(([intKey, row]) => {
+                      const meta = INTENTION_LABELS[intKey];
+                      const brandKey = Object.keys(row).find((k) => isBrandEntry(k, brandName, brandAliases));
+                      const brandVal = brandKey ? row[brandKey]! : 0;
+                      return (
+                        <TableRow key={intKey} className="border-slate-50">
+                          <TableCell className="py-2 text-xs font-medium text-slate-700">
+                            {meta?.label ?? intKey}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <span
+                              className={cn(
+                                'inline-flex min-w-[3rem] justify-end rounded px-1.5 py-0.5 text-xs font-semibold',
+                                brandVal >= 50 ? 'bg-teal-100 text-teal-800' : brandVal >= 25 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                              )}
+                            >
+                              {brandVal.toFixed(0)}%
+                            </span>
+                          </TableCell>
+                          {topForBars
+                            .filter((r) => !isBrandEntry(r.name, brandName, brandAliases))
+                            .slice(0, 3)
+                            .map((r) => {
+                              const val = row[r.name] ?? 0;
+                              return (
+                                <TableCell key={r.name} className="py-2 text-right">
+                                  <span
+                                    className={cn(
+                                      'inline-flex min-w-[3rem] justify-end rounded px-1.5 py-0.5 text-xs',
+                                      val >= 50 ? 'bg-teal-50 text-teal-700' : val >= 25 ? 'bg-amber-50 text-amber-700' : 'text-slate-500'
+                                    )}
+                                  >
+                                    {val.toFixed(0)}%
+                                  </span>
+                                </TableCell>
+                              );
+                            })}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-slate-500">Sin datos por intención.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Resumen ejecutivo y 3 acciones prioritarias */}
+      <Card className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+            <Award className="h-4 w-4 text-primary-500" />
+            Resumen y próximos pasos
+          </CardTitle>
+          <CardDescription>Resumen ejecutivo y acciones prioritarias derivadas de los datos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-relaxed text-slate-600">{resumenEjecutivo}</p>
+          {top3Acciones.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-slate-700 mb-2">3 acciones prioritarias</p>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-slate-600">
+                {top3Acciones.map((acc, i) => (
+                  <li key={i}>{acc}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <CardHeader className="pb-3">
