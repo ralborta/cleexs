@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import React, { Fragment, Suspense, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,7 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
-import { Loader2, LogIn, FileCheck, AlertCircle, Mail, Lock, LayoutDashboard, Sparkles } from 'lucide-react';
+import { Loader2, LogIn, FileCheck, AlertCircle, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ReporteModerno } from './reporte-moderno';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
@@ -416,15 +416,6 @@ function VerResultadoContent() {
   const [diagnostic, setDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [emailSendFailed, setEmailSendFailed] = useState(false);
-  const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
-  const [captchaChecked, setCaptchaChecked] = useState(false);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [captchaPopupOpen, setCaptchaPopupOpen] = useState(false);
-  const emailFormRef = useRef<HTMLFormElement>(null);
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
 
   useEffect(() => {
@@ -484,29 +475,6 @@ function VerResultadoContent() {
     }, intervalMs);
     return () => clearInterval(timer);
   }, [diagnosticId, diagnostic, searchParams]);
-
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!diagnosticId || !email.trim()) return;
-    if (!captchaVerified) {
-      setCaptchaPopupOpen(true);
-      return;
-    }
-    setEmailLoading(true);
-    setEmailErrorCode(undefined);
-    try {
-      const res = await publicDiagnosticApi.setEmail(diagnosticId, email.trim());
-      setEmailSent(true);
-      if (res.emailSent === false) {
-        setEmailSendFailed(true);
-        if (res.emailError) setEmailErrorCode(res.emailError);
-      }
-    } catch {
-      setEmailSendFailed(true);
-    } finally {
-      setEmailLoading(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -653,121 +621,6 @@ function VerResultadoContent() {
                     <p className="text-sm mt-1">Cargando detalle del reporte…</p>
                   </div>
                 )}
-
-                {/* El detalle del análisis (resumen, fortalezas, debilidades) solo va por email; en pantalla solo scores y métricas. */}
-
-                {/* Email al final del flujo */}
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium text-foreground mb-2">¿Querés recibir el resultado por correo?</p>
-                  {emailSent ? (
-                    emailSendFailed ? (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
-                        <p className="text-sm">Guardamos tu email pero no pudimos enviar el correo. Podés compartir este link para ver el resultado.</p>
-                        {emailErrorCode === 'provider_rejected' && (
-                          <p className="mt-2 text-sm text-amber-700">
-                            Si usás Resend: sin dominio verificado solo podés enviar a tu propio correo. Verificá tu dominio en{' '}
-                            <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline">resend.com/domains</a>{' '}
-                            y usá como remitente una dirección de ese dominio (ej. noreply@tudominio.com).
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-green-700">Te enviamos el link por correo. Revisá tu bandeja (y spam).</p>
-                    )
-                  ) : (
-                    <Fragment>
-                    <form ref={emailFormRef} onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
-                      <input
-                        type="email"
-                        placeholder="tu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        disabled={emailLoading}
-                      />
-                      <Button
-                        type="submit"
-                        disabled={emailLoading || !email.trim()}
-                      >
-                        {emailLoading ? 'Enviando…' : <Fragment><Mail className="mr-2 h-4 w-4" />Enviar</Fragment>}
-                      </Button>
-                    </form>
-                    {/* Popup captcha: diseño tipo "Unlock your free report" — ícono candado, título, checkbox "No soy un robot", legal */}
-                    {captchaPopupOpen && (
-                      <div
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
-                        onClick={() => setCaptchaPopupOpen(false)}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="captcha-title"
-                      >
-                        <div
-                          className="w-full max-w-md rounded-xl bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex flex-col items-center text-center">
-                            <Lock className="h-8 w-8 text-[#BBBBBB] mb-4" aria-hidden />
-                            <h3 id="captcha-title" className="text-2xl font-bold text-[#333333] mb-2">
-                              Desbloqueá tu informe gratuito
-                            </h3>
-                            <p className="text-[15px] text-[#666666] leading-snug mb-6 max-w-sm">
-                              Mirá cómo tu marca se posiciona en IA y recibí el resultado por correo.
-                            </p>
-                          </div>
-
-                          <div className="rounded-lg border border-[#DDDDDD] bg-[#FAFAFA] px-4 py-3 flex items-center justify-between gap-4">
-                            <label className="flex cursor-pointer items-center gap-3 flex-1 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={captchaChecked}
-                                onChange={(e) => setCaptchaChecked(e.target.checked)}
-                                className="h-5 w-5 rounded border-2 border-[#CCCCCC] bg-white text-[#333333] focus:ring-2 focus:ring-[#999999] focus:ring-offset-0"
-                                disabled={emailLoading}
-                              />
-                              <span className="text-base text-[#333333] font-normal">No soy un robot</span>
-                            </label>
-                            <div className="flex flex-col items-end shrink-0">
-                              <span className="text-sm font-bold text-[#666666]">CAPTCHA</span>
-                              <span className="text-xs text-[#999999]">Verificar - Email</span>
-                            </div>
-                          </div>
-
-                          <p className="mt-5 text-center text-[12px] leading-relaxed text-[#444444] px-1">
-                            Al continuar confirmás que entendés y aceptás los{' '}
-                            <a href="/terminos" className="underline text-[#333333] hover:text-black">Términos de Servicio</a>
-                            {' '}y consentís al uso de tu información según nuestra{' '}
-                            <a href="/privacidad" className="underline text-[#333333] hover:text-black">Política de Privacidad</a>.
-                          </p>
-
-                          <div className="mt-6 flex gap-3">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="flex-1 border-[#CCCCCC] text-[#555555] hover:bg-[#F5F5F5]"
-                              onClick={() => setCaptchaPopupOpen(false)}
-                            >
-                              Cancelar
-                            </Button>
-                            <Button
-                              type="button"
-                              className="flex-1 bg-[#333333] hover:bg-[#222222] text-white"
-                              disabled={!captchaChecked}
-                              onClick={() => {
-                                if (!captchaChecked) return;
-                                setCaptchaVerified(true);
-                                setCaptchaPopupOpen(false);
-                                emailFormRef.current?.requestSubmit();
-                              }}
-                            >
-                              Desbloquear
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    </Fragment>
-                  )}
-                </div>
 
                 <div className="pt-6 mt-6 border-t rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
                   <p className="text-sm font-medium text-foreground mb-2">
