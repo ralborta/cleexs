@@ -885,11 +885,11 @@ function SatelliteModuleSkeleton() {
             />
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 md:[&>*:last-child:nth-child(3n+1)]:col-start-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
-              className="h-16 rounded-lg border border-slate-100 bg-slate-50/80 animate-pulse"
+              className="h-[5.25rem] rounded-lg border border-slate-100 bg-slate-50/80 animate-pulse"
               style={{ animationDelay: `${i * 80}ms` }}
             />
           ))}
@@ -1001,7 +1001,7 @@ function SatelliteToolDetailPanel({
   );
 }
 
-/** Mini SVG ring de progreso para tool cards */
+/** Mini SVG ring de progreso para tool cards (icono centrado, un poco más grande) */
 function ScoreRing({
   score,
   hasError,
@@ -1011,8 +1011,8 @@ function ScoreRing({
   hasError?: boolean;
   Icon: LucideIcon;
 }) {
-  const r = 22;
-  const cx = 28;
+  const r = 26;
+  const cx = 32;
   const circumference = 2 * Math.PI * r;
   const pct = Math.min(Math.max(score, 0), 100);
   const offset = circumference * (1 - pct / 100);
@@ -1027,7 +1027,7 @@ function ScoreRing({
 
   return (
     <div className="relative flex items-center justify-center">
-      <svg width={cx * 2} height={cx * 2} className="-rotate-90">
+      <svg width={cx * 2} height={cx * 2} className="-rotate-90" aria-hidden>
         <circle
           cx={cx} cy={cx} r={r}
           fill="none"
@@ -1045,8 +1045,8 @@ function ScoreRing({
           className="transition-all duration-700 ease-out"
         />
       </svg>
-      <span className={cn('absolute flex h-9 w-9 items-center justify-center rounded-full', colors.icon)}>
-        <Icon className="h-[18px] w-[18px]" aria-hidden />
+      <span className={cn('absolute flex h-12 w-12 items-center justify-center rounded-full', colors.icon)}>
+        <Icon className="h-7 w-7" aria-hidden />
       </span>
     </div>
   );
@@ -1074,24 +1074,27 @@ function SatelliteModuleCard({
 
   const topActions = module.actions.slice(0, 3);
   const totalTools = Object.keys(module.tools || {}).length;
+  const overallStyle = satelliteScoreColor(module.overallScore, false);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-      {/* ── Header band con gradiente ── */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
-            <Sparkles className="h-4 w-4 text-white" />
+      {/* ── Cabecera: fondo blanco, score según resultado ── */}
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+            <Sparkles className="h-5 w-5 text-slate-800" aria-hidden />
           </span>
-          <div>
-            <p className="text-sm font-semibold text-white">Herramientas adicionales</p>
-            <p className="text-xs text-primary-200">Resumen AEO del sitio</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">Herramientas adicionales</p>
+            <p className="text-xs text-slate-500">Resumen AEO del sitio</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-200">Score general</p>
-          <p className="text-3xl font-black text-white leading-none">{module.overallScore.toFixed(0)}</p>
+        <div className="shrink-0 text-right">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Score general</p>
+          <p className={cn('text-3xl font-black leading-none tabular-nums', overallStyle.text)}>
+            {module.overallScore.toFixed(0)}
+          </p>
         </div>
       </div>
 
@@ -1099,11 +1102,13 @@ function SatelliteModuleCard({
 
         {/* ── Stats row ── */}
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-400 mb-1">Score satélite</p>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/90 p-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Score satélite</p>
             <div className="flex items-end gap-2">
-              <p className="text-4xl font-black text-primary-700 leading-none">{module.overallScore.toFixed(0)}</p>
-              <BarChart2 className="h-5 w-5 text-primary-400 mb-0.5" />
+              <p className={cn('text-4xl font-black leading-none tabular-nums', overallStyle.text)}>
+                {module.overallScore.toFixed(0)}
+              </p>
+              <BarChart2 className={cn('h-5 w-5 mb-0.5', overallStyle.text)} aria-hidden />
             </div>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
@@ -1141,7 +1146,7 @@ function SatelliteModuleCard({
           <p className="text-sm font-semibold text-slate-900 mb-0.5">Resumen por herramienta</p>
           <p className="text-xs text-slate-400 mb-4">Tocá una tarjeta para expandir sugerencias y métricas.</p>
 
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:[&>*:last-child:nth-child(3n+1)]:col-start-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
             {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
@@ -1177,7 +1182,7 @@ function SatelliteModuleCard({
                       {score > 0 ? Math.round(score) : '—'}
                     </p>
                     <ChevronDown
-                      className={cn('h-3.5 w-3.5 text-slate-300 transition-transform', open && 'rotate-180')}
+                      className={cn('h-4 w-4 text-slate-300 transition-transform', open && 'rotate-180')}
                       aria-hidden
                     />
                   </button>
