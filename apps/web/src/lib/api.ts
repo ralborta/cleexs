@@ -319,7 +319,7 @@ export interface PublicDiagnosticSatelliteModule {
   status: 'completed' | 'failed' | 'timeout' | 'skipped';
   targetUrl?: string;
   overallScore: number;
-  tools: Record<string, { score: number; error?: string }>;
+  tools: Record<string, { score: number; error?: string; detail?: Record<string, unknown> }>;
   actions: Array<{
     priority: string;
     source: string;

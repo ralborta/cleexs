@@ -29,7 +29,9 @@ import {
   LayoutDashboard,
   Sparkles,
   ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
@@ -523,6 +525,13 @@ function VerResultadoContent() {
         (!diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '')
       : '';
   const tieneGemini = !!runResultGemini;
+  /** Mientras el backend termina de guardar analysisJson (incluye módulo satélite), mostramos placeholder animado. */
+  const showSatelliteSkeleton =
+    isCompleted &&
+    diagnostic.showFullReport &&
+    !diagnostic.domain.startsWith('brand-') &&
+    !satelliteModule &&
+    diagnostic.analysisJson == null;
   const runResultToShow: PublicDiagnosticRunResult | null = runResult
     ? vistaModelo === 'consolidado' && runResultGemini
       ? buildRunResultAmbos(runResult, runResultGemini)
@@ -569,6 +578,7 @@ function VerResultadoContent() {
                 {runResult ? (
                   diagnostic.showFullReport ? (
                     <div className="space-y-8">
+                      {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
                       {satelliteModule && (
                         <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                       )}
@@ -694,6 +704,94 @@ function satelliteScoreStyles(score: number, hasError?: boolean) {
   return 'text-red-700 border-red-200 bg-red-50/80';
 }
 
+function SatelliteModuleSkeleton() {
+  return (
+    <Card className="border border-dashed border-primary-200/80 bg-white shadow-md">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+          <Sparkles className="h-5 w-5 shrink-0 animate-pulse text-primary-600" />
+          <span className="inline-block h-6 w-56 rounded-md bg-slate-200/90 animate-pulse" />
+        </CardTitle>
+        <div className="h-4 max-w-md rounded bg-slate-100 animate-pulse" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-[4.5rem] rounded-lg bg-gradient-to-br from-slate-100 to-slate-50 animate-pulse"
+              style={{ animationDelay: `${i * 120}ms` }}
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-16 rounded-lg border border-slate-100 bg-slate-50/80 animate-pulse"
+              style={{ animationDelay: `${i * 80}ms` }}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-primary-100 bg-primary-50/50 px-3 py-2 text-xs text-primary-800">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary-600" />
+          <span>Generando resumen de herramientas del sitio (AEO)… Esto puede tardar hasta un minuto.</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SatelliteToolDetailPanel({
+  label,
+  detail,
+}: {
+  label: string;
+  detail?: Record<string, unknown>;
+}) {
+  if (!detail || Object.keys(detail).length === 0) {
+    return (
+      <p className="text-left text-xs text-muted-foreground">
+        No hay detalle guardado para {label}. Usá &quot;Ver análisis técnico completo&quot; o un diagnóstico nuevo
+        para ver el panel detallado.
+      </p>
+    );
+  }
+
+  const truncated = detail._truncated === true;
+  const note = typeof detail._note === 'string' ? detail._note : null;
+  const suggestions = Array.isArray(detail.suggestions) ? detail.suggestions : null;
+  const err = typeof detail.error === 'string' ? detail.error : null;
+
+  return (
+    <div className="space-y-3 text-left">
+      {err && (
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+          {err}
+        </p>
+      )}
+      {truncated && note && <p className="text-xs text-amber-800">{note}</p>}
+      {suggestions && suggestions.length > 0 && (
+        <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+          {suggestions.slice(0, 12).map((s: unknown, i: number) => {
+            const item = s as { message?: string; priority?: string; detail?: string };
+            const line = [item.priority, item.message, item.detail].filter(Boolean).join(' · ');
+            return line ? <li key={i}>{line}</li> : null;
+          })}
+        </ul>
+      )}
+      <details className="group">
+        <summary className="cursor-pointer text-xs font-medium text-primary-700 hover:underline">
+          Ver datos técnicos (JSON)
+        </summary>
+        <pre className="mt-2 max-h-64 overflow-auto rounded-md border border-slate-200 bg-slate-950 p-3 text-[10px] leading-relaxed text-emerald-100">
+          {JSON.stringify(detail, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 function SatelliteModuleCard({
   module,
   siteUrl,
@@ -701,6 +799,7 @@ function SatelliteModuleCard({
   module: PublicDiagnosticSatelliteModule;
   siteUrl: string;
 }) {
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const satelliteAppBase = (process.env.NEXT_PUBLIC_SATELLITE_APP_URL || '').replace(/\/$/, '');
   const detailHref =
     siteUrl && satelliteAppBase
@@ -756,25 +855,47 @@ function SatelliteModuleCard({
 
         <div>
           <p className="text-sm font-medium text-foreground mb-2">Resumen por herramienta</p>
+          <p className="text-xs text-muted-foreground mb-2">Tocá una tarjeta para ver sugerencias y datos técnicos.</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
             {SATELLITE_TOOL_ROWS.map(({ key, label }, idx) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
               const hasErr = Boolean(t?.error);
+              const open = expandedKey === key;
               return (
                 <div
                   key={key}
-                  className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-left ${satelliteScoreStyles(score, hasErr)}`}
+                  className={cn(
+                    'flex flex-col rounded-lg border text-left transition-shadow',
+                    satelliteScoreStyles(score, hasErr),
+                    open && 'ring-2 ring-primary-500/40 shadow-md'
+                  )}
                 >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/80 text-[10px] font-bold text-foreground shadow-sm">
-                    {idx + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-medium leading-tight text-foreground/90 line-clamp-2">
-                      {label}
-                    </p>
-                    <p className="text-sm font-bold tabular-nums">{Math.round(score)}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedKey((k) => (k === key ? null : key))}
+                    className="flex w-full items-center gap-2 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-lg"
+                    aria-expanded={open}
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/80 text-[10px] font-bold text-foreground shadow-sm">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-medium leading-tight text-foreground/90 line-clamp-2">
+                        {label}
+                      </p>
+                      <p className="text-sm font-bold tabular-nums">{Math.round(score)}</p>
+                    </div>
+                    <ChevronDown
+                      className={cn('h-4 w-4 shrink-0 text-foreground/60 transition-transform', open && 'rotate-180')}
+                      aria-hidden
+                    />
+                  </button>
+                  {open && (
+                    <div className="border-t border-black/5 bg-white/60 px-2 py-3">
+                      <SatelliteToolDetailPanel label={label} detail={t?.detail} />
+                    </div>
+                  )}
                 </div>
               );
             })}

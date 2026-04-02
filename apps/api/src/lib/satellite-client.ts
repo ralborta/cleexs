@@ -32,7 +32,9 @@ export type SatelliteModuleResult = {
   status: 'completed' | 'failed' | 'timeout' | 'skipped';
   targetUrl?: string;
   overallScore: number;
-  tools: Partial<Record<SatelliteToolKey, { score: number; error?: string }>>;
+  tools: Partial<
+    Record<SatelliteToolKey, { score: number; error?: string; detail?: Record<string, unknown> }>
+  >;
   actions: Array<{
     priority: string;
     source: string;
@@ -61,6 +63,25 @@ function normalizePriority(value: string | undefined): string {
   const p = value.trim().toLowerCase();
   if (['critica', 'alta', 'media', 'baja', 'info'].includes(p)) return p;
   return 'info';
+}
+
+/** Serializa el objeto tool completo para el desplegable en MIS (con tope de tamaño). */
+function toolDetailForStorage(t: SatelliteToolResult): Record<string, unknown> | undefined {
+  try {
+    const plain = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
+    const str = JSON.stringify(plain);
+    const max = 120_000;
+    if (str.length <= max) return plain;
+    return {
+      score: plain.score,
+      error: plain.error,
+      suggestions: plain.suggestions,
+      _truncated: true,
+      _note: 'Respuesta muy grande; abrí Cleexs Tools para el detalle completo.',
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 function buildActions(payload: SatelliteAnalyzeAllResponse): SatelliteModuleResult['actions'] {
@@ -129,9 +150,11 @@ export async function runSatelliteAnalysis(
     for (const key of TOOL_KEYS) {
       const t = payload[key];
       if (!t) continue;
+      const detail = toolDetailForStorage(t);
       tools[key] = {
         score: typeof t.score === 'number' ? t.score : 0,
         ...(typeof t.error === 'string' && t.error ? { error: t.error } : {}),
+        ...(detail ? { detail } : {}),
       };
     }
 
