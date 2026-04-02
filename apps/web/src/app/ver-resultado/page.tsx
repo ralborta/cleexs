@@ -724,13 +724,55 @@ function humanizeDetailKey(key: string) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatDetailPrimitive(value: unknown): string | null {
+/** Claves que nunca mostramos en el resumen (contenido crudo, HTML, cuerpos de respuesta). */
+function normalizeDetailKeyForFilter(key: string) {
+  return key.trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function shouldOmitDetailFieldKey(key: string): boolean {
+  const n = normalizeDetailKeyForFilter(key);
+  const omitExact = new Set([
+    'raw_content',
+    'rawcontent',
+    'raw_html',
+    'raw_html_body',
+    'response_body',
+    'response_text',
+    'payload',
+  ]);
+  if (omitExact.has(n)) return true;
+  if (n.includes('raw') && (n.includes('content') || n.includes('body'))) return true;
+  return false;
+}
+
+const MAX_DETAIL_STRING_LEN = 420;
+
+function looksLikeRawMarkup(text: string): boolean {
+  const t = text.trimStart().toLowerCase();
+  return (
+    t.startsWith('<!doctype') ||
+    t.startsWith('<html') ||
+    t.startsWith('<?xml') ||
+    (t.includes('<head') && t.includes('<body')) ||
+    (t.startsWith('<') && t.length > 200 && /<\/[a-z]+>/i.test(t))
+  );
+}
+
+function formatDetailPrimitive(key: string | undefined, value: unknown): string | null {
+  if (key !== undefined && shouldOmitDetailFieldKey(key)) return null;
   if (value === null || value === undefined) return null;
   if (typeof value === 'boolean') return value ? 'Sí' : 'No';
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string') {
     const t = value.trim();
-    return t.length ? t : null;
+    if (!t.length) return null;
+    if (looksLikeRawMarkup(t)) {
+      return 'La respuesta parece HTML/XML (no es texto plano tipo robots.txt). Para el contenido completo, usá «Ver análisis técnico completo».';
+    }
+    if (t.length > MAX_DETAIL_STRING_LEN) {
+      return `Texto muy largo (${t.length} caracteres). Ver el contenido completo en Cleexs Tools.`;
+    }
+    return t;
   }
   return null;
 }
@@ -772,7 +814,8 @@ function SatelliteDetailExtraRows({ detail }: { detail: Record<string, unknown> 
 
   for (const [k, v] of Object.entries(detail)) {
     if (skip.has(k)) continue;
-    const prim = formatDetailPrimitive(v);
+    if (shouldOmitDetailFieldKey(k)) continue;
+    const prim = formatDetailPrimitive(k, v);
     if (prim !== null) {
       rows.push({ label: humanizeDetailKey(k), value: prim });
       continue;
@@ -780,7 +823,8 @@ function SatelliteDetailExtraRows({ detail }: { detail: Record<string, unknown> 
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       const sub: string[] = [];
       for (const [sk, sv] of Object.entries(v as Record<string, unknown>)) {
-        const p = formatDetailPrimitive(sv);
+        if (shouldOmitDetailFieldKey(sk)) continue;
+        const p = formatDetailPrimitive(sk, sv);
         if (p) sub.push(`${humanizeDetailKey(sk)}: ${p}`);
       }
       if (sub.length) rows.push({ label: humanizeDetailKey(k), value: sub.join(' · ') });
@@ -830,7 +874,7 @@ function SatelliteModuleSkeleton() {
             />
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 md:[&>*:last-child:nth-child(3n+1)]:col-start-2">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
@@ -1007,7 +1051,7 @@ function SatelliteModuleCard({
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
             Tocá una tarjeta para expandir sugerencias y métricas resumidas.
           </p>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 md:[&>*:last-child:nth-child(3n+1)]:col-start-2">
             {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
@@ -1017,9 +1061,10 @@ function SatelliteModuleCard({
                 <div
                   key={key}
                   className={cn(
-                    'flex flex-col overflow-hidden rounded-xl border text-left shadow-sm transition-shadow',
+                    'flex min-w-0 flex-col overflow-hidden rounded-xl border text-left shadow-sm transition-shadow',
                     satelliteScoreStyles(score, hasErr),
-                    open && 'ring-2 ring-primary-500/35 shadow-md'
+                    open && 'ring-2 ring-primary-500/35 shadow-md',
+                    open && 'col-span-full'
                   )}
                 >
                   <button
