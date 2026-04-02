@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Dashboard from "@/components/Dashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export default function Home() {
+function HomeContent() {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [history, setHistory] = useState<any[]>([]);
+  const searchParams = useSearchParams();
+  const autostartConsumed = useRef(false);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -30,23 +33,7 @@ export default function Home() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const loadPastAnalysis = async (id: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const resp = await fetch(`${API_URL}/api/history/${id}`);
-      if (resp.ok) {
-        const item = await resp.json();
-        setData(item.results);
-      }
-    } catch {
-      setError("Error al cargar analisis");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAnalyze = async (inputUrl: string) => {
+  const handleAnalyze = useCallback(async (inputUrl: string) => {
     setLoading(true);
     setError(null);
     setData(null);
@@ -63,9 +50,37 @@ export default function Home() {
       }
       const result = await resp.json();
       setData(result);
-      fetchHistory(); // Refresh history after new analysis
+      fetchHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de conexion");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchHistory]);
+
+  /** Desde MIS u otros: ?url=https://sitio.com&autostart=1 */
+  useEffect(() => {
+    const qUrl = searchParams.get("url")?.trim() ?? "";
+    if (!qUrl) return;
+    setUrl(qUrl);
+    const auto = searchParams.get("autostart");
+    if (auto !== "1" && auto !== "true") return;
+    if (autostartConsumed.current) return;
+    autostartConsumed.current = true;
+    void handleAnalyze(qUrl);
+  }, [searchParams, handleAnalyze]);
+
+  const loadPastAnalysis = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch(`${API_URL}/api/history/${id}`);
+      if (resp.ok) {
+        const item = await resp.json();
+        setData(item.results);
+      }
+    } catch {
+      setError("Error al cargar analisis");
     } finally {
       setLoading(false);
     }
@@ -73,7 +88,7 @@ export default function Home() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) handleAnalyze(url.trim());
+    if (url.trim()) void handleAnalyze(url.trim());
   };
 
   return (
@@ -198,5 +213,22 @@ export default function Home() {
         </p>
       </footer>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col">
+          <Navbar />
+          <main className="flex-1 flex items-center justify-center text-[var(--text-muted)]">
+            Cargando…
+          </main>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }

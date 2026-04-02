@@ -20,7 +20,16 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
-import { Loader2, LogIn, FileCheck, AlertCircle, Lock, LayoutDashboard, Sparkles } from 'lucide-react';
+import {
+  Loader2,
+  LogIn,
+  FileCheck,
+  AlertCircle,
+  Lock,
+  LayoutDashboard,
+  Sparkles,
+  ExternalLink,
+} from 'lucide-react';
 import { ReporteModerno } from './reporte-moderno';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
@@ -508,6 +517,11 @@ function VerResultadoContent() {
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
   const satelliteModule = diagnostic.satelliteModule;
+  const satelliteSiteUrl =
+    satelliteModule != null
+      ? satelliteModule.targetUrl ||
+        (!diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '')
+      : '';
   const tieneGemini = !!runResultGemini;
   const runResultToShow: PublicDiagnosticRunResult | null = runResult
     ? vistaModelo === 'consolidado' && runResultGemini
@@ -556,7 +570,7 @@ function VerResultadoContent() {
                   diagnostic.showFullReport ? (
                     <div className="space-y-8">
                       {satelliteModule && (
-                        <SatelliteModuleCard module={satelliteModule} />
+                        <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                       )}
                       {tieneGemini && (
                         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
@@ -659,7 +673,40 @@ function VerResultadoContent() {
   );
 }
 
-function SatelliteModuleCard({ module }: { module: PublicDiagnosticSatelliteModule }) {
+/** Orden alineado con el dashboard CleexsTools37 */
+const SATELLITE_TOOL_ROWS: Array<{ key: string; label: string }> = [
+  { key: 'crawlability', label: 'Crawlability' },
+  { key: 'robots_sitemap', label: 'Robots & Sitemap' },
+  { key: 'schema', label: 'Schema' },
+  { key: 'axp', label: 'AXP' },
+  { key: 'ai_presence', label: 'AI Presence' },
+  { key: 'citations', label: 'Citations' },
+  { key: 'alerts', label: 'Alerts' },
+  { key: 'freshness', label: 'Freshness' },
+  { key: 'ai_overview', label: 'AI Overview' },
+  { key: 'duplicates', label: 'Duplicados' },
+];
+
+function satelliteScoreStyles(score: number, hasError?: boolean) {
+  if (hasError) return 'text-destructive border-destructive/30 bg-destructive/5';
+  if (score >= 80) return 'text-emerald-700 border-emerald-200 bg-emerald-50/80';
+  if (score >= 50) return 'text-amber-700 border-amber-200 bg-amber-50/80';
+  return 'text-red-700 border-red-200 bg-red-50/80';
+}
+
+function SatelliteModuleCard({
+  module,
+  siteUrl,
+}: {
+  module: PublicDiagnosticSatelliteModule;
+  siteUrl: string;
+}) {
+  const satelliteAppBase = (process.env.NEXT_PUBLIC_SATELLITE_APP_URL || '').replace(/\/$/, '');
+  const detailHref =
+    siteUrl && satelliteAppBase
+      ? `${satelliteAppBase}/?url=${encodeURIComponent(siteUrl)}&autostart=1`
+      : null;
+
   const statusLabel =
     module.status === 'completed'
       ? 'Completado'
@@ -687,7 +734,8 @@ function SatelliteModuleCard({ module }: { module: PublicDiagnosticSatelliteModu
           Herramientas adicionales
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
-          Módulo satélite AEO integrado al mismo diagnóstico por URL.
+          Resumen por herramienta. Para ver el mismo panel detallado que Cleexs Tools, abrí el análisis técnico
+          completo.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -705,6 +753,48 @@ function SatelliteModuleCard({ module }: { module: PublicDiagnosticSatelliteModu
             <p className="text-2xl font-semibold">{statusLabel}</p>
           </div>
         </div>
+
+        <div>
+          <p className="text-sm font-medium text-foreground mb-2">Resumen por herramienta</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+            {SATELLITE_TOOL_ROWS.map(({ key, label }, idx) => {
+              const t = module.tools[key];
+              const score = t?.score ?? 0;
+              const hasErr = Boolean(t?.error);
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-left ${satelliteScoreStyles(score, hasErr)}`}
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/80 text-[10px] font-bold text-foreground shadow-sm">
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium leading-tight text-foreground/90 line-clamp-2">
+                      {label}
+                    </p>
+                    <p className="text-sm font-bold tabular-nums">{Math.round(score)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {detailHref ? (
+          <Button asChild className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700">
+            <a href={detailHref} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Ver análisis técnico completo
+            </a>
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Para el enlace al detalle, configurá{' '}
+            <span className="font-mono">NEXT_PUBLIC_SATELLITE_APP_URL</span> en el frontend (URL pública del satélite,
+            sin barra final).
+          </p>
+        )}
 
         {topActions.length > 0 ? (
           <div className="rounded-lg border border-border bg-slate-50/80 p-4">
