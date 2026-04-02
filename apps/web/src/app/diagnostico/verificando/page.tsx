@@ -41,7 +41,8 @@ function VerificandoContent() {
   const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
   const [captchaChecked, setCaptchaChecked] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [captchaPopupOpen, setCaptchaPopupOpen] = useState(false);
+  /** Al entrar a la página el usuario debe verificar antes de usar el correo. */
+  const [captchaPopupOpen, setCaptchaPopupOpen] = useState(true);
   const emailFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -153,27 +154,26 @@ function VerificandoContent() {
           </h1>
         </div>
 
-        {/* Two-column layout */}
-        <div className="grid gap-5 lg:grid-cols-5">
-
-          {/* LEFT: Steps (3/5) */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Dos columnas: pasos angostos a la izquierda; correo centrado en el resto */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-10 xl:gap-14">
+          {/* Izquierda: lista de pasos (ancho acotado al contenido) */}
+          <div className="w-full shrink-0 lg:max-w-[min(100%,18.5rem)] xl:max-w-[20rem]">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden w-full">
               <div className="h-0.5 w-full bg-slate-100">
                 <div
                   className="h-full bg-primary-600 transition-all duration-700 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <div className="p-5 space-y-4">
-                <ul className="space-y-1">
+              <div className="p-4 space-y-3">
+                <ul className="space-y-0.5">
                   {steps.length > 0 ? (
                     steps.map((step, idx) => {
                       const isActive = !step.completed && steps.findIndex((s) => !s.completed) === idx;
                       return (
                         <li
                           key={step.id}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 ${
+                          className={`flex items-center gap-2.5 rounded-lg px-2 py-2 transition-all duration-200 ${
                             step.completed
                               ? 'bg-primary-50/60'
                               : isActive
@@ -209,7 +209,7 @@ function VerificandoContent() {
                       );
                     })
                   ) : (
-                    <li className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-primary-50 border border-primary-100">
+                    <li className="flex items-center gap-2.5 rounded-lg px-2 py-2 bg-primary-50 border border-primary-100">
                       <div className="h-7 w-7 rounded-full border-2 border-primary-600 bg-white flex items-center justify-center shrink-0">
                         <PulsingDots />
                       </div>
@@ -237,9 +237,9 @@ function VerificandoContent() {
             </div>
           </div>
 
-          {/* RIGHT: Email form (2/5) */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 h-full flex flex-col">
+          {/* Derecha: correo centrado en la mitad derecha de la pantalla */}
+          <div className="flex min-w-0 flex-1 justify-center">
+            <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
               {emailSent ? (
                 emailSendFailed ? (
                   <div className="space-y-2">
@@ -273,19 +273,36 @@ function VerificandoContent() {
                       Ingresá tu correo y te lo enviamos cuando el análisis esté listo.
                     </p>
                   </div>
+                  {!captchaVerified && !captchaPopupOpen && (
+                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+                      <p className="font-medium">Verificación pendiente</p>
+                      <p className="mt-0.5 text-amber-800/90">
+                        Completá la verificación para habilitar el envío por correo.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full border-amber-300 bg-white text-amber-950 hover:bg-amber-50"
+                        onClick={() => setCaptchaPopupOpen(true)}
+                      >
+                        Abrir verificación
+                      </Button>
+                    </div>
+                  )}
                   <form ref={emailFormRef} onSubmit={handleEmailSubmit} className="flex flex-col gap-3 flex-1">
                     <input
                       type="email"
                       placeholder="tu@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 transition-colors"
-                      disabled={emailLoading}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={emailLoading || !captchaVerified}
                     />
                     <Button
                       type="submit"
                       className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm"
-                      disabled={emailLoading || !email.trim()}
+                      disabled={emailLoading || !email.trim() || !captchaVerified}
                     >
                       {emailLoading ? 'Enviando…' : (
                         <Fragment>
@@ -371,7 +388,6 @@ function VerificandoContent() {
                   if (!captchaChecked) return;
                   setCaptchaVerified(true);
                   setCaptchaPopupOpen(false);
-                  emailFormRef.current?.requestSubmit();
                 }}
               >
                 Desbloquear
