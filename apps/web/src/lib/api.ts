@@ -315,6 +315,21 @@ export interface PublicDiagnosticTrendPoint {
   date: string;
 }
 
+export interface PublicDiagnosticSatelliteModule {
+  status: 'completed' | 'failed' | 'timeout' | 'skipped';
+  targetUrl?: string;
+  overallScore: number;
+  tools: Record<string, { score: number; error?: string }>;
+  actions: Array<{
+    priority: string;
+    source: string;
+    message: string;
+    detail?: string;
+    action?: string;
+  }>;
+  error?: string;
+}
+
 export interface PublicDiagnostic {
   id: string;
   domain: string;
@@ -331,6 +346,7 @@ export interface PublicDiagnostic {
   runResultGemini?: PublicDiagnosticRunResult;
   analysisJson?: DiagnosticAnalysisJson | null;
   trendData?: PublicDiagnosticTrendPoint[];
+  satelliteModule?: PublicDiagnosticSatelliteModule | null;
 }
 
 export const publicDiagnosticApi = {

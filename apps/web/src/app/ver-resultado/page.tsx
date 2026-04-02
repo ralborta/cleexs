@@ -16,6 +16,7 @@ import {
 import {
   publicDiagnosticApi,
   type PublicDiagnostic,
+  type PublicDiagnosticSatelliteModule,
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
@@ -506,6 +507,7 @@ function VerResultadoContent() {
   const isFailed = diagnostic.status === 'failed';
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
+  const satelliteModule = diagnostic.satelliteModule;
   const tieneGemini = !!runResultGemini;
   const runResultToShow: PublicDiagnosticRunResult | null = runResult
     ? vistaModelo === 'consolidado' && runResultGemini
@@ -553,6 +555,9 @@ function VerResultadoContent() {
                 {runResult ? (
                   diagnostic.showFullReport ? (
                     <div className="space-y-8">
+                      {satelliteModule && (
+                        <SatelliteModuleCard module={satelliteModule} />
+                      )}
                       {tieneGemini && (
                         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                           <span className="mr-1 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
@@ -651,6 +656,74 @@ function VerResultadoContent() {
         </div>
       </main>
     </div>
+  );
+}
+
+function SatelliteModuleCard({ module }: { module: PublicDiagnosticSatelliteModule }) {
+  const statusLabel =
+    module.status === 'completed'
+      ? 'Completado'
+      : module.status === 'timeout'
+      ? 'Timeout'
+      : module.status === 'skipped'
+      ? 'Omitido'
+      : 'No disponible';
+
+  const statusClass =
+    module.status === 'completed'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : module.status === 'timeout'
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
+      : 'border-slate-200 bg-slate-50 text-slate-700';
+
+  const topActions = module.actions.slice(0, 3);
+  const totalTools = Object.keys(module.tools || {}).length;
+
+  return (
+    <Card className="border-transparent bg-white shadow-md">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+          <Sparkles className="h-5 w-5 text-primary-600" />
+          Herramientas adicionales
+        </CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
+          Módulo satélite AEO integrado al mismo diagnóstico por URL.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-border bg-primary-50/70 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Score módulo satélite</p>
+            <p className="text-2xl font-semibold text-foreground">{module.overallScore.toFixed(0)}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-primary-50/70 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Tools procesadas</p>
+            <p className="text-2xl font-semibold text-foreground">{totalTools}</p>
+          </div>
+          <div className={`rounded-lg border p-3 ${statusClass}`}>
+            <p className="text-xs font-medium">Estado</p>
+            <p className="text-2xl font-semibold">{statusLabel}</p>
+          </div>
+        </div>
+
+        {topActions.length > 0 ? (
+          <div className="rounded-lg border border-border bg-slate-50/80 p-4">
+            <p className="text-sm font-medium text-foreground mb-2">Acciones prioritarias</p>
+            <div className="space-y-2">
+              {topActions.map((action, idx) => (
+                <p key={`${action.source}-${idx}`} className="text-sm text-muted-foreground">
+                  - {action.message}
+                </p>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No hay acciones adicionales para este módulo en esta corrida.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

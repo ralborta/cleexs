@@ -6,6 +6,7 @@ import { executeRun, executeRunGemini } from '../lib/run-executor';
 import { determineMarketProfileForBrand, fetchSearchEvidence, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
+import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satellite-client';
 
 /** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
 const GENERIC_TLDS = new Set(['com', 'net', 'org', 'info', 'biz', 'edu', 'gov', 'int', 'io', 'ai', 'app']);
@@ -242,6 +243,44 @@ function deriveBrandIfLooksLikeDomain(value: string): string | null {
   return null;
 }
 
+function buildAnalysisWithSatellite(
+  analysis: object | null,
+  satellite: SatelliteModuleResult | null
+): object | null {
+  if (!analysis && !satellite) return null;
+  if (!satellite) return analysis;
+
+  if (analysis && typeof analysis === 'object' && !Array.isArray(analysis)) {
+    const base = analysis as Record<string, unknown>;
+    const currentExternal =
+      base.externalModules && typeof base.externalModules === 'object' && !Array.isArray(base.externalModules)
+        ? (base.externalModules as Record<string, unknown>)
+        : {};
+    return {
+      ...base,
+      externalModules: {
+        ...currentExternal,
+        satelliteAeo: satellite,
+      },
+    };
+  }
+
+  return {
+    externalModules: {
+      satelliteAeo: satellite,
+    },
+  };
+}
+
+function extractSatelliteModuleFromAnalysis(analysisJson: unknown): SatelliteModuleResult | null {
+  if (!analysisJson || typeof analysisJson !== 'object' || Array.isArray(analysisJson)) return null;
+  const externalModules = (analysisJson as { externalModules?: unknown }).externalModules;
+  if (!externalModules || typeof externalModules !== 'object' || Array.isArray(externalModules)) return null;
+  const satellite = (externalModules as { satelliteAeo?: unknown }).satelliteAeo;
+  if (!satellite || typeof satellite !== 'object' || Array.isArray(satellite)) return null;
+  return satellite as SatelliteModuleResult;
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -313,6 +352,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       setImmediate(async () => {
       try {
+        const satellitePromise = trimmedUrl ? runSatelliteAnalysis(trimmedUrl) : Promise.resolve(null);
         // 1. País: por TLD del dominio si aplica (nike.com.co → Colombia), sino por búsqueda web + IA
         const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
         let searchEvidence = '';
@@ -448,6 +488,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
         let analysisJson: object | null = null;
+        let satelliteModule: SatelliteModuleResult | null = null;
         try {
           const fullRun = await prisma.run.findUnique({
             where: { id: run.id },
@@ -486,11 +527,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');
         }
 
-        if (analysisJson != null) {
+        try {
+          satelliteModule = await satellitePromise;
+        } catch (satErr) {
+          fastify.log.warn({ err: satErr, diagnosticId: diagnostic.id }, 'Módulo satélite no disponible');
+        }
+
+        const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
+        if (persistedAnalysis != null) {
           await prisma.publicDiagnostic.update({
             where: { id: diagnostic.id },
-            data: { analysisJson: analysisJson as object },
+            data: { analysisJson: persistedAnalysis as object },
           });
+          analysisJson = persistedAnalysis;
         }
 
         const current = await prisma.publicDiagnostic.findUnique({
@@ -644,6 +693,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
       analysisJson?: object | null;
+      satelliteModule?: SatelliteModuleResult | null;
       runResult?: RunResultType;
       runResultGemini?: RunResultType;
       trendData?: Array<{ label: string; score: number; date: string }>;
@@ -658,6 +708,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       showFullReport,
       runId: diagnostic.runId,
     };
+
+    if (diagnostic.analysisJson) {
+      base.satelliteModule = extractSatelliteModuleFromAnalysis(diagnostic.analysisJson);
+    }
 
     // 11 pasos fijos del análisis (todos deben cumplirse en el proceso)
     const DIAGNOSTIC_STEP_LABELS = [
