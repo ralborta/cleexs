@@ -46,6 +46,9 @@ import {
   ShieldAlert,
   Gauge,
   CircleDot,
+  BarChart2,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
@@ -713,6 +716,14 @@ const SATELLITE_TOOL_ROWS: Array<{ key: string; label: string; Icon: LucideIcon 
   { key: 'duplicates', label: 'Duplicados', Icon: Copy },
 ];
 
+function satelliteScoreColor(score: number, hasError?: boolean) {
+  if (hasError) return { border: 'border-l-red-400', icon: 'bg-red-50 text-red-500', bar: 'bg-red-400', text: 'text-red-600' };
+  if (score >= 80) return { border: 'border-l-emerald-400', icon: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-400', text: 'text-emerald-700' };
+  if (score >= 50) return { border: 'border-l-amber-400', icon: 'bg-amber-50 text-amber-600', bar: 'bg-amber-400', text: 'text-amber-700' };
+  return { border: 'border-l-red-400', icon: 'bg-red-50 text-red-500', bar: 'bg-red-400', text: 'text-red-600' };
+}
+
+// kept for backward compat (used nowhere else but just in case)
 function satelliteScoreStyles(score: number, hasError?: boolean) {
   if (hasError) return 'text-destructive border-destructive/30 bg-destructive/5';
   if (score >= 80) return 'text-emerald-700 border-emerald-200 bg-emerald-50/80';
@@ -834,19 +845,19 @@ function SatelliteDetailExtraRows({ detail }: { detail: Record<string, unknown> 
   if (rows.length === 0) return null;
 
   return (
-    <div className="space-y-2.5">
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        <ClipboardList className="h-4 w-4 text-primary-600" aria-hidden />
+    <div className="space-y-3">
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <ClipboardList className="h-3.5 w-3.5 text-primary-500" aria-hidden />
         Resumen
       </p>
-      <dl className="space-y-2">
+      <dl className="grid gap-2 sm:grid-cols-2">
         {rows.map((r) => (
           <div
             key={r.label}
-            className="rounded-lg border border-slate-100/90 bg-gradient-to-br from-slate-50/90 to-white px-3 py-2.5 shadow-sm"
+            className="rounded-lg border border-slate-100 bg-white px-3 py-2.5"
           >
-            <dt className="text-[11px] font-semibold text-muted-foreground">{r.label}</dt>
-            <dd className="mt-0.5 text-sm leading-snug text-foreground">{r.value}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{r.label}</dt>
+            <dd className="mt-0.5 text-sm font-medium leading-snug text-slate-900">{r.value}</dd>
           </div>
         ))}
       </dl>
@@ -915,71 +926,61 @@ function SatelliteToolDetailPanel({
   const err = typeof detail.error === 'string' ? detail.error : null;
 
   return (
-    <div className="space-y-4 text-left font-sans">
+    <div className="space-y-5 text-left font-sans">
       {err && (
-        <div
-          className="flex gap-2.5 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
-          role="alert"
-        >
+        <div className="flex gap-2.5 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-sm text-destructive" role="alert">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <p className="leading-snug">{err}</p>
         </div>
       )}
       {truncated && note && (
-        <div className="flex gap-2.5 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 to-orange-50/50 px-3 py-2.5 text-sm text-amber-950">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+        <div className="flex gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
           <p className="leading-snug">{note}</p>
         </div>
       )}
+
       {suggestions && suggestions.length > 0 && (
-        <div className="space-y-2.5">
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Lightbulb className="h-4 w-4 text-amber-500" aria-hidden />
+        <div className="space-y-3">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
+            <Lightbulb className="h-3.5 w-3.5 text-amber-500" aria-hidden />
             Sugerencias
           </p>
           <ul className="space-y-2">
             {suggestions.slice(0, 12).map((s: unknown, i: number) => {
-              const item = s as {
-                message?: string;
-                priority?: string;
-                detail?: string;
-                action?: string;
-              };
+              const item = s as { message?: string; priority?: string; detail?: string; action?: string };
               const message = (item.message || '').trim();
               if (!message) return null;
               const p = (item.priority || 'info').trim().toLowerCase();
               const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
               const PriIcon = meta.Icon;
               return (
-                <li
-                  key={i}
-                  className={cn(
-                    'rounded-xl border px-3 py-2.5 shadow-sm',
-                    'text-sm leading-snug',
-                    meta.box
-                  )}
-                >
-                  <div className="mb-1 flex items-center gap-2">
-                    <PriIcon className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                <li key={i} className={cn('rounded-lg border px-3 py-3', meta.box)}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <PriIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className={cn(
+                      'text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5',
+                      meta.box
+                    )}>
                       {meta.short}
                     </span>
                   </div>
-                  <p className="font-medium">{message}</p>
-                  {item.detail ? (
-                    <p className="mt-1.5 text-xs leading-relaxed opacity-85">{item.detail}</p>
-                  ) : null}
-                  {item.action ? (
-                    <p className="mt-1.5 text-xs font-semibold leading-relaxed opacity-90">
-                      Acción: {item.action}
+                  <p className="text-sm font-semibold leading-snug">{message}</p>
+                  {item.detail && (
+                    <p className="mt-1.5 text-xs leading-relaxed text-current/70">{item.detail}</p>
+                  )}
+                  {item.action && (
+                    <p className="mt-1.5 text-xs font-semibold leading-relaxed">
+                      → {item.action}
                     </p>
-                  ) : null}
+                  )}
                 </li>
               );
             })}
           </ul>
         </div>
       )}
+
       <SatelliteDetailExtraRows detail={detail} />
     </div>
   );
@@ -1000,97 +1001,117 @@ function SatelliteModuleCard({
       : null;
 
   const statusLabel =
-    module.status === 'completed'
-      ? 'Completado'
-      : module.status === 'timeout'
-      ? 'Timeout'
-      : module.status === 'skipped'
-      ? 'Omitido'
-      : 'No disponible';
+    module.status === 'completed' ? 'Completado'
+    : module.status === 'timeout' ? 'Timeout'
+    : module.status === 'skipped' ? 'Omitido'
+    : 'No disponible';
 
-  const statusClass =
-    module.status === 'completed'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : module.status === 'timeout'
-      ? 'border-amber-200 bg-amber-50 text-amber-700'
-      : 'border-slate-200 bg-slate-50 text-slate-700';
+  const statusIconClass =
+    module.status === 'completed' ? 'bg-emerald-50 text-emerald-600'
+    : module.status === 'timeout' ? 'bg-amber-50 text-amber-600'
+    : 'bg-slate-100 text-slate-500';
 
   const topActions = module.actions.slice(0, 3);
   const totalTools = Object.keys(module.tools || {}).length;
 
   return (
-    <Card className="border-transparent bg-white shadow-md">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl text-foreground">
-          <Sparkles className="h-5 w-5 text-primary-600" />
+    <Card className="border border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-4 border-b border-slate-100">
+        <CardTitle className="flex items-center gap-2.5 text-base font-semibold text-slate-900">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50">
+            <Sparkles className="h-4 w-4 text-primary-600" />
+          </span>
           Herramientas adicionales
         </CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Resumen por herramienta. Para ver el mismo panel detallado que Cleexs Tools, abrí el análisis técnico
-          completo.
+        <CardDescription className="text-sm text-slate-500 mt-1">
+          Resumen por herramienta. Para ver el panel detallado completo, abrí el análisis técnico.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+
+      <CardContent className="space-y-6 pt-5">
+
+        {/* ── Stats row ── */}
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-border bg-primary-50/70 p-3">
-            <p className="text-xs font-medium text-muted-foreground">Score módulo satélite</p>
-            <p className="text-2xl font-semibold text-foreground">{module.overallScore.toFixed(0)}</p>
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50">
+              <BarChart2 className="h-5 w-5 text-primary-600" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Score satélite</p>
+              <p className="text-2xl font-bold text-slate-900 leading-tight">{module.overallScore.toFixed(0)}</p>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-primary-50/70 p-3">
-            <p className="text-xs font-medium text-muted-foreground">Tools procesadas</p>
-            <p className="text-2xl font-semibold text-foreground">{totalTools}</p>
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+              <Layers className="h-5 w-5 text-slate-500" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Tools procesadas</p>
+              <p className="text-2xl font-bold text-slate-900 leading-tight">{totalTools}</p>
+            </div>
           </div>
-          <div className={`rounded-lg border p-3 ${statusClass}`}>
-            <p className="text-xs font-medium">Estado</p>
-            <p className="text-2xl font-semibold">{statusLabel}</p>
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+            <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', statusIconClass)}>
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Estado</p>
+              <p className="text-2xl font-bold text-slate-900 leading-tight">{statusLabel}</p>
+            </div>
           </div>
         </div>
 
+        {/* ── Tool cards grid ── */}
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground mb-1">Resumen por herramienta</p>
-          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Tocá una tarjeta para expandir sugerencias y métricas resumidas.
-          </p>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 md:[&>*:last-child:nth-child(3n+1)]:col-start-2">
+          <p className="text-sm font-semibold text-slate-900 mb-0.5">Resumen por herramienta</p>
+          <p className="text-xs text-slate-400 mb-3">Tocá una tarjeta para expandir sugerencias y métricas.</p>
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-3 md:[&>*:last-child:nth-child(3n+1)]:col-start-2">
             {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
               const hasErr = Boolean(t?.error);
               const open = expandedKey === key;
+              const colors = satelliteScoreColor(score, hasErr);
+
               return (
                 <div
                   key={key}
                   className={cn(
-                    'flex min-w-0 flex-col overflow-hidden rounded-xl border text-left shadow-sm transition-shadow',
-                    satelliteScoreStyles(score, hasErr),
-                    open && 'ring-2 ring-primary-500/35 shadow-md',
-                    open && 'col-span-full'
+                    'flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 border-l-4 bg-white text-left shadow-sm transition-all duration-200',
+                    colors.border,
+                    open && 'col-span-full ring-2 ring-primary-200 shadow-md'
                   )}
                 >
                   <button
                     type="button"
                     onClick={() => setExpandedKey((k) => (k === key ? null : key))}
-                    className="flex w-full items-center gap-2.5 px-2.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl"
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                     aria-expanded={open}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/95 text-current shadow-sm ring-1 ring-black/[0.06]">
-                      <ToolIcon className="h-[18px] w-[18px] opacity-90" aria-hidden />
+                    <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', colors.icon)}>
+                      <ToolIcon className="h-[18px] w-[18px]" aria-hidden />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold leading-tight text-foreground line-clamp-2 tracking-tight">
-                        {label}
+                      <p className="text-xs font-semibold text-slate-800 line-clamp-1 tracking-tight">{label}</p>
+                      <p className={cn('text-xl font-bold leading-tight tabular-nums', colors.text)}>
+                        {Math.round(score)}
                       </p>
-                      <p className="mt-0.5 text-[11px] font-medium text-current/75 tabular-nums">
-                        Score <span className="text-base font-bold text-foreground">{Math.round(score)}</span>
-                      </p>
+                      <div className="mt-1 h-1 w-full rounded-full bg-slate-100">
+                        <div
+                          className={cn('h-1 rounded-full transition-all duration-500', colors.bar)}
+                          style={{ width: `${Math.min(score, 100)}%` }}
+                        />
+                      </div>
                     </div>
                     <ChevronDown
-                      className={cn('h-4 w-4 shrink-0 text-foreground/55 transition-transform', open && 'rotate-180')}
+                      className={cn('h-4 w-4 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')}
                       aria-hidden
                     />
                   </button>
+
                   {open && (
-                    <div className="border-t border-black/[0.06] bg-gradient-to-b from-slate-50/50 via-white to-white px-3 py-3.5">
+                    <div className="border-t border-slate-100 bg-slate-50 px-4 py-4">
                       <SatelliteToolDetailPanel label={label} detail={t?.detail} />
                     </div>
                   )}
@@ -1100,6 +1121,7 @@ function SatelliteModuleCard({
           </div>
         </div>
 
+        {/* ── CTA ── */}
         {detailHref ? (
           <Button asChild className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700">
             <a href={detailHref} target="_blank" rel="noopener noreferrer">
@@ -1110,27 +1132,33 @@ function SatelliteModuleCard({
         ) : (
           <p className="text-xs text-muted-foreground">
             Para el enlace al detalle, configurá{' '}
-            <span className="font-mono">NEXT_PUBLIC_SATELLITE_APP_URL</span> en el frontend (URL pública del satélite,
-            sin barra final).
+            <span className="font-mono">NEXT_PUBLIC_SATELLITE_APP_URL</span>.
           </p>
         )}
 
+        {/* ── Acciones prioritarias ── */}
         {topActions.length > 0 ? (
-          <div className="rounded-lg border border-border bg-slate-50/80 p-4">
-            <p className="text-sm font-medium text-foreground mb-2">Acciones prioritarias</p>
-            <div className="space-y-2">
-              {topActions.map((action, idx) => (
-                <p key={`${action.source}-${idx}`} className="text-sm text-muted-foreground">
-                  - {action.message}
-                </p>
-              ))}
-            </div>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-slate-900">Acciones prioritarias</p>
+            {topActions.map((action, idx) => (
+              <div
+                key={`${action.source}-${idx}`}
+                className={cn(
+                  'flex items-start gap-3 rounded-lg border px-3 py-3',
+                  idx === 0
+                    ? 'border-l-4 border-amber-200 border-l-amber-400 bg-amber-50'
+                    : 'border-slate-100 bg-white'
+                )}
+              >
+                <AlertCircle className={cn('mt-0.5 h-4 w-4 shrink-0', idx === 0 ? 'text-amber-500' : 'text-slate-400')} aria-hidden />
+                <p className="text-sm text-slate-700 leading-snug">{action.message}</p>
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            No hay acciones adicionales para este módulo en esta corrida.
-          </p>
+          <p className="text-sm text-muted-foreground">No hay acciones adicionales para este módulo.</p>
         )}
+
       </CardContent>
     </Card>
   );
