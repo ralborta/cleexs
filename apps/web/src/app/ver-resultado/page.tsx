@@ -20,6 +20,7 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
+import type { LucideIcon } from 'lucide-react';
 import {
   Loader2,
   LogIn,
@@ -30,6 +31,21 @@ import {
   Sparkles,
   ExternalLink,
   ChevronDown,
+  Globe,
+  FileSearch,
+  Braces,
+  Zap,
+  Quote,
+  AlertTriangle,
+  Clock,
+  LayoutTemplate,
+  Copy,
+  Lightbulb,
+  Info,
+  ClipboardList,
+  ShieldAlert,
+  Gauge,
+  CircleDot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
@@ -684,17 +700,17 @@ function VerResultadoContent() {
 }
 
 /** Orden alineado con el dashboard CleexsTools37 */
-const SATELLITE_TOOL_ROWS: Array<{ key: string; label: string }> = [
-  { key: 'crawlability', label: 'Crawlability' },
-  { key: 'robots_sitemap', label: 'Robots & Sitemap' },
-  { key: 'schema', label: 'Schema' },
-  { key: 'axp', label: 'AXP' },
-  { key: 'ai_presence', label: 'AI Presence' },
-  { key: 'citations', label: 'Citations' },
-  { key: 'alerts', label: 'Alerts' },
-  { key: 'freshness', label: 'Freshness' },
-  { key: 'ai_overview', label: 'AI Overview' },
-  { key: 'duplicates', label: 'Duplicados' },
+const SATELLITE_TOOL_ROWS: Array<{ key: string; label: string; Icon: LucideIcon }> = [
+  { key: 'crawlability', label: 'Crawlability', Icon: Globe },
+  { key: 'robots_sitemap', label: 'Robots & Sitemap', Icon: FileSearch },
+  { key: 'schema', label: 'Schema', Icon: Braces },
+  { key: 'axp', label: 'AXP', Icon: Zap },
+  { key: 'ai_presence', label: 'AI Presence', Icon: Sparkles },
+  { key: 'citations', label: 'Citations', Icon: Quote },
+  { key: 'alerts', label: 'Alerts', Icon: AlertTriangle },
+  { key: 'freshness', label: 'Freshness', Icon: Clock },
+  { key: 'ai_overview', label: 'AI Overview', Icon: LayoutTemplate },
+  { key: 'duplicates', label: 'Duplicados', Icon: Copy },
 ];
 
 function satelliteScoreStyles(score: number, hasError?: boolean) {
@@ -702,6 +718,96 @@ function satelliteScoreStyles(score: number, hasError?: boolean) {
   if (score >= 80) return 'text-emerald-700 border-emerald-200 bg-emerald-50/80';
   if (score >= 50) return 'text-amber-700 border-amber-200 bg-amber-50/80';
   return 'text-red-700 border-red-200 bg-red-50/80';
+}
+
+function humanizeDetailKey(key: string) {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDetailPrimitive(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t.length ? t : null;
+  }
+  return null;
+}
+
+const SUGGESTION_PRIORITY_META: Record<
+  string,
+  { box: string; Icon: LucideIcon; short: string }
+> = {
+  critica: {
+    box: 'border-red-200/80 bg-red-50/90 text-red-900',
+    Icon: ShieldAlert,
+    short: 'Crítica',
+  },
+  alta: {
+    box: 'border-amber-200/80 bg-amber-50/90 text-amber-900',
+    Icon: AlertTriangle,
+    short: 'Alta',
+  },
+  media: {
+    box: 'border-sky-200/80 bg-sky-50/90 text-sky-900',
+    Icon: Gauge,
+    short: 'Media',
+  },
+  baja: {
+    box: 'border-slate-200/80 bg-slate-50/95 text-slate-800',
+    Icon: CircleDot,
+    short: 'Baja',
+  },
+  info: {
+    box: 'border-emerald-200/80 bg-emerald-50/90 text-emerald-900',
+    Icon: Info,
+    short: 'Info',
+  },
+};
+
+function SatelliteDetailExtraRows({ detail }: { detail: Record<string, unknown> }) {
+  const skip = new Set(['_truncated', '_note', 'error', 'suggestions', 'score']);
+  const rows: { label: string; value: string }[] = [];
+
+  for (const [k, v] of Object.entries(detail)) {
+    if (skip.has(k)) continue;
+    const prim = formatDetailPrimitive(v);
+    if (prim !== null) {
+      rows.push({ label: humanizeDetailKey(k), value: prim });
+      continue;
+    }
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const sub: string[] = [];
+      for (const [sk, sv] of Object.entries(v as Record<string, unknown>)) {
+        const p = formatDetailPrimitive(sv);
+        if (p) sub.push(`${humanizeDetailKey(sk)}: ${p}`);
+      }
+      if (sub.length) rows.push({ label: humanizeDetailKey(k), value: sub.join(' · ') });
+    }
+  }
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="space-y-2.5">
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <ClipboardList className="h-4 w-4 text-primary-600" aria-hidden />
+        Resumen
+      </p>
+      <dl className="space-y-2">
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className="rounded-lg border border-slate-100/90 bg-gradient-to-br from-slate-50/90 to-white px-3 py-2.5 shadow-sm"
+          >
+            <dt className="text-[11px] font-semibold text-muted-foreground">{r.label}</dt>
+            <dd className="mt-0.5 text-sm leading-snug text-foreground">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 function SatelliteModuleSkeleton() {
@@ -751,9 +857,10 @@ function SatelliteToolDetailPanel({
 }) {
   if (!detail || Object.keys(detail).length === 0) {
     return (
-      <p className="text-left text-xs text-muted-foreground">
-        No hay detalle guardado para {label}. Usá &quot;Ver análisis técnico completo&quot; o un diagnóstico nuevo
-        para ver el panel detallado.
+      <p className="text-left text-sm leading-relaxed text-muted-foreground">
+        No hay detalle guardado para <span className="font-medium text-foreground">{label}</span>. Abrí{' '}
+        <span className="font-medium text-foreground">&quot;Ver análisis técnico completo&quot;</span> o generá un
+        diagnóstico nuevo para ver el panel detallado.
       </p>
     );
   }
@@ -764,30 +871,72 @@ function SatelliteToolDetailPanel({
   const err = typeof detail.error === 'string' ? detail.error : null;
 
   return (
-    <div className="space-y-3 text-left">
+    <div className="space-y-4 text-left font-sans">
       {err && (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-          {err}
-        </p>
+        <div
+          className="flex gap-2.5 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+          role="alert"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p className="leading-snug">{err}</p>
+        </div>
       )}
-      {truncated && note && <p className="text-xs text-amber-800">{note}</p>}
+      {truncated && note && (
+        <div className="flex gap-2.5 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 to-orange-50/50 px-3 py-2.5 text-sm text-amber-950">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+          <p className="leading-snug">{note}</p>
+        </div>
+      )}
       {suggestions && suggestions.length > 0 && (
-        <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-          {suggestions.slice(0, 12).map((s: unknown, i: number) => {
-            const item = s as { message?: string; priority?: string; detail?: string };
-            const line = [item.priority, item.message, item.detail].filter(Boolean).join(' · ');
-            return line ? <li key={i}>{line}</li> : null;
-          })}
-        </ul>
+        <div className="space-y-2.5">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Lightbulb className="h-4 w-4 text-amber-500" aria-hidden />
+            Sugerencias
+          </p>
+          <ul className="space-y-2">
+            {suggestions.slice(0, 12).map((s: unknown, i: number) => {
+              const item = s as {
+                message?: string;
+                priority?: string;
+                detail?: string;
+                action?: string;
+              };
+              const message = (item.message || '').trim();
+              if (!message) return null;
+              const p = (item.priority || 'info').trim().toLowerCase();
+              const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
+              const PriIcon = meta.Icon;
+              return (
+                <li
+                  key={i}
+                  className={cn(
+                    'rounded-xl border px-3 py-2.5 shadow-sm',
+                    'text-sm leading-snug',
+                    meta.box
+                  )}
+                >
+                  <div className="mb-1 flex items-center gap-2">
+                    <PriIcon className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                      {meta.short}
+                    </span>
+                  </div>
+                  <p className="font-medium">{message}</p>
+                  {item.detail ? (
+                    <p className="mt-1.5 text-xs leading-relaxed opacity-85">{item.detail}</p>
+                  ) : null}
+                  {item.action ? (
+                    <p className="mt-1.5 text-xs font-semibold leading-relaxed opacity-90">
+                      Acción: {item.action}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
-      <details className="group">
-        <summary className="cursor-pointer text-xs font-medium text-primary-700 hover:underline">
-          Ver datos técnicos (JSON)
-        </summary>
-        <pre className="mt-2 max-h-64 overflow-auto rounded-md border border-slate-200 bg-slate-950 p-3 text-[10px] leading-relaxed text-emerald-100">
-          {JSON.stringify(detail, null, 2)}
-        </pre>
-      </details>
+      <SatelliteDetailExtraRows detail={detail} />
     </div>
   );
 }
@@ -854,10 +1003,12 @@ function SatelliteModuleCard({
         </div>
 
         <div>
-          <p className="text-sm font-medium text-foreground mb-2">Resumen por herramienta</p>
-          <p className="text-xs text-muted-foreground mb-2">Tocá una tarjeta para ver sugerencias y datos técnicos.</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-            {SATELLITE_TOOL_ROWS.map(({ key, label }, idx) => {
+          <p className="text-sm font-semibold tracking-tight text-foreground mb-1">Resumen por herramienta</p>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Tocá una tarjeta para expandir sugerencias y métricas resumidas.
+          </p>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-5">
+            {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
               const hasErr = Boolean(t?.error);
@@ -866,33 +1017,35 @@ function SatelliteModuleCard({
                 <div
                   key={key}
                   className={cn(
-                    'flex flex-col rounded-lg border text-left transition-shadow',
+                    'flex flex-col overflow-hidden rounded-xl border text-left shadow-sm transition-shadow',
                     satelliteScoreStyles(score, hasErr),
-                    open && 'ring-2 ring-primary-500/40 shadow-md'
+                    open && 'ring-2 ring-primary-500/35 shadow-md'
                   )}
                 >
                   <button
                     type="button"
                     onClick={() => setExpandedKey((k) => (k === key ? null : key))}
-                    className="flex w-full items-center gap-2 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-lg"
+                    className="flex w-full items-center gap-2.5 px-2.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl"
                     aria-expanded={open}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/80 text-[10px] font-bold text-foreground shadow-sm">
-                      {idx + 1}
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/95 text-current shadow-sm ring-1 ring-black/[0.06]">
+                      <ToolIcon className="h-[18px] w-[18px] opacity-90" aria-hidden />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-medium leading-tight text-foreground/90 line-clamp-2">
+                      <p className="text-xs font-semibold leading-tight text-foreground line-clamp-2 tracking-tight">
                         {label}
                       </p>
-                      <p className="text-sm font-bold tabular-nums">{Math.round(score)}</p>
+                      <p className="mt-0.5 text-[11px] font-medium text-current/75 tabular-nums">
+                        Score <span className="text-base font-bold text-foreground">{Math.round(score)}</span>
+                      </p>
                     </div>
                     <ChevronDown
-                      className={cn('h-4 w-4 shrink-0 text-foreground/60 transition-transform', open && 'rotate-180')}
+                      className={cn('h-4 w-4 shrink-0 text-foreground/55 transition-transform', open && 'rotate-180')}
                       aria-hidden
                     />
                   </button>
                   {open && (
-                    <div className="border-t border-black/5 bg-white/60 px-2 py-3">
+                    <div className="border-t border-black/[0.06] bg-gradient-to-b from-slate-50/50 via-white to-white px-3 py-3.5">
                       <SatelliteToolDetailPanel label={label} detail={t?.detail} />
                     </div>
                   )}
