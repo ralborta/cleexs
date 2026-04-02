@@ -894,9 +894,24 @@ function SatelliteModuleSkeleton() {
             />
           ))}
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-primary-100 bg-primary-50/50 px-3 py-2 text-xs text-primary-800">
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary-600" />
-          <span>Generando resumen de herramientas del sitio (AEO)… Esto puede tardar hasta un minuto.</span>
+        <div
+          className="flex items-start gap-3 rounded-xl border-2 border-primary-200/90 bg-gradient-to-br from-primary-100/95 via-primary-50 to-sky-50/80 px-4 py-4 shadow-md shadow-primary-900/5 sm:items-center sm:gap-4"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Loader2
+            className="h-6 w-6 shrink-0 animate-spin text-primary-700 sm:h-7 sm:w-7"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">
+              Generando resumen de herramientas del sitio (AEO)
+            </p>
+            <p className="text-xs leading-relaxed text-primary-900/85 sm:text-sm">
+              Esto puede tardar hasta un minuto. Podés esperar en esta pantalla.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
