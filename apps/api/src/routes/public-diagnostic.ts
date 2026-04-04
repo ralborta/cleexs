@@ -281,6 +281,62 @@ function extractSatelliteModuleFromAnalysis(analysisJson: unknown): SatelliteMod
   return satellite as SatelliteModuleResult;
 }
 
+/** Evita respuestas de varios MB en GET /diagnostic/:id (polling + JSON gigante desde Postgres). */
+const MAX_PUBLIC_RESPONSE_TEXT_CHARS = 14_000;
+const MAX_SATELLITE_TOOL_DETAIL_JSON_CHARS = 8_000;
+
+function truncatePromptResponseText(text: string | null | undefined): string | undefined {
+  if (text == null || text === '') return undefined;
+  if (text.length <= MAX_PUBLIC_RESPONSE_TEXT_CHARS) return text;
+  return `${text.slice(0, MAX_PUBLIC_RESPONSE_TEXT_CHARS)}… [truncado]`;
+}
+
+/** Recorta `detail` por herramienta del módulo satélite en la respuesta HTTP (no altera lo guardado en DB). */
+function sanitizeAnalysisJsonForPublicGet(json: unknown): object {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return json as object;
+  const o = json as Record<string, unknown>;
+  const ext = o.externalModules;
+  if (!ext || typeof ext !== 'object' || Array.isArray(ext)) return o as object;
+  const em = { ...(ext as Record<string, unknown>) };
+  const sat = em.satelliteAeo;
+  if (!sat || typeof sat !== 'object' || Array.isArray(sat)) return { ...o, externalModules: em } as object;
+  const satObj = sat as Record<string, unknown>;
+  const tools = satObj.tools;
+  if (!tools || typeof tools !== 'object' || Array.isArray(tools)) return { ...o, externalModules: em } as object;
+  const newTools: Record<string, unknown> = {};
+  for (const [key, tool] of Object.entries(tools)) {
+    if (!tool || typeof tool !== 'object' || Array.isArray(tool)) {
+      newTools[key] = tool;
+      continue;
+    }
+    const t = tool as Record<string, unknown>;
+    const d = t.detail;
+    if (d === undefined) {
+      newTools[key] = t;
+      continue;
+    }
+    try {
+      const s = JSON.stringify(d);
+      if (s.length > MAX_SATELLITE_TOOL_DETAIL_JSON_CHARS) {
+        newTools[key] = {
+          ...t,
+          detail: {
+            _truncated: true,
+            _note: 'Detalle recortado en la API por tamaño; usá el análisis técnico o Cleexs Tools.',
+            score: t.score,
+          },
+        };
+      } else {
+        newTools[key] = t;
+      }
+    } catch {
+      newTools[key] = { ...t, detail: { _truncated: true } };
+    }
+  }
+  em.satelliteAeo = { ...satObj, tools: newTools };
+  return { ...o, externalModules: em } as object;
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -652,12 +708,38 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /api/public/diagnostic/:id — estado, steps (industria, competidores, prompts) y resultado con Cleexs Score
   fastify.get<{ Params: { id: string }; Querystring: { tier?: string } }>('/diagnostic/:id', async (request, reply) => {
-    const diagnostic = await prisma.publicDiagnostic.findUnique({
-      where: { id: request.params.id },
+    const id = request.params.id;
+    // No cargar analysis_json (puede ser MB) mientras corre el job; reduce carga en Postgres y tiempo de respuesta.
+    const row = await prisma.publicDiagnostic.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        domain: true,
+        brandName: true,
+        industry: true,
+        status: true,
+        tier: true,
+        runId: true,
+        runGeminiId: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    if (!diagnostic) {
+    if (!row) {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
+
+    let analysisJson: unknown = null;
+    if (row.status === 'completed') {
+      const jsonOnly = await prisma.publicDiagnostic.findUnique({
+        where: { id },
+        select: { analysisJson: true },
+      });
+      analysisJson = jsonOnly?.analysisJson ?? null;
+    }
+
+    const diagnostic = { ...row, analysisJson };
 
     const tier =
       request.query?.tier === 'gold' || (diagnostic.tier ?? 'freemium') === 'gold' ? 'gold' : 'freemium';
@@ -761,7 +843,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       base.progressPercent = progressPercent;
 
       if (diagnostic.status === 'completed' && showFullReport && diagnostic.analysisJson && typeof diagnostic.analysisJson === 'object' && !Array.isArray(diagnostic.analysisJson)) {
-        base.analysisJson = diagnostic.analysisJson as object;
+        base.analysisJson = sanitizeAnalysisJsonForPublicGet(diagnostic.analysisJson);
       }
 
       if (run && diagnostic.status === 'completed' && run.priaReports[0]) {
@@ -792,7 +874,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
                   category: pr.prompt?.category?.name ?? 'General',
                   score: pr.score,
                   promptText: pr.prompt?.promptText ?? '',
-                  responseText: pr.responseText,
+                  responseText: truncatePromptResponseText(pr.responseText),
                   top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
                   flags: (pr.flags as Record<string, boolean>) ?? {},
                 }))
@@ -836,7 +918,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
                 category: pr.prompt?.category?.name ?? 'General',
                 score: pr.score,
                 promptText: pr.prompt?.promptText ?? '',
-                responseText: pr.responseText,
+                responseText: truncatePromptResponseText(pr.responseText),
                 top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
                 flags: (pr.flags as Record<string, boolean>) ?? {},
               })),
