@@ -18,9 +18,23 @@ if env_path.exists():
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Vacío = Pro→Flash en ai_engines. Ej: gemini-2.5-pro
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "").strip()
 
 # SERP API
 SERP_API_KEY = os.getenv("SERP_API_KEY", "")
+
+# Desactivar motores opcionales (valores: 1/true/yes = activo; 0/false/no = desactivado)
+# Útil si solo usas OpenAI + Gemini y quieres evitar llamadas a Perplexity / SerpAPI.
+def _env_flag(name: str, default: bool = True) -> bool:
+    v = os.getenv(name)
+    if v is None or v.strip() == "":
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+ENABLE_PERPLEXITY = _env_flag("ENABLE_PERPLEXITY", True)
+ENABLE_SERP = _env_flag("ENABLE_SERP", True)
 
 # MySQL Database
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")

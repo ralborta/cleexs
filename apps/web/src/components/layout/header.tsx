@@ -77,6 +77,12 @@ export function Header() {
             >
               Configuración
             </Link>
+            <Link
+              href="/facturas"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Facturas
+            </Link>
           </nav>
 
           <div className="flex items-center gap-4">

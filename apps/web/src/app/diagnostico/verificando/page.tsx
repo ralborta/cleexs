@@ -143,21 +143,20 @@ function VerificandoContent() {
   const isRunning = diagnostic?.status === 'running';
 
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-
+    <main className="flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
         {/* Page header */}
-        <div className="mb-6">
+        <div className="mb-6 shrink-0">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 mb-1">Análisis en curso</p>
           <h1 className="text-xl font-bold text-slate-900">
             {brandLabel ? `${brandLabel} & competidores` : 'Procesando diagnóstico…'}
           </h1>
         </div>
 
-        {/* Dos columnas: pasos angostos a la izquierda; correo centrado en el resto */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-10 xl:gap-14">
+        {/* Dos columnas: pasos arriba/izquierda; correo centrado en el espacio restante (horizontal y vertical) */}
+        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-10 xl:gap-14">
           {/* Izquierda: lista de pasos (ancho acotado al contenido) */}
-          <div className="w-full shrink-0 lg:max-w-[min(100%,18.5rem)] xl:max-w-[20rem]">
+          <div className="w-full shrink-0 lg:max-w-[min(100%,18.5rem)] xl:max-w-[20rem] lg:self-start">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden w-full">
               <div className="h-0.5 w-full bg-slate-100">
                 <div
@@ -237,8 +236,8 @@ function VerificandoContent() {
             </div>
           </div>
 
-          {/* Derecha: correo centrado en la mitad derecha de la pantalla */}
-          <div className="flex min-w-0 flex-1 justify-center">
+          {/* Derecha: correo centrado en el eje vertical y horizontal del área disponible */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center py-4 lg:py-0">
             <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
               {emailSent ? (
                 emailSendFailed ? (
@@ -322,7 +321,7 @@ function VerificandoContent() {
 
         </div>
 
-        <p className="mt-5 text-center text-xs text-slate-400">
+        <p className="mt-6 shrink-0 text-center text-xs text-slate-400">
           El análisis puede demorar entre 30 y 90 segundos.
         </p>
       </div>
