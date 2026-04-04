@@ -504,7 +504,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             where: { runId: run.id },
             orderBy: { createdAt: 'desc' },
           });
-          if (fullRun && priaReport) {
+          // PRIA puede faltar en carreras muy raras; buildRunContext tolera priaReport null (score 0).
+          if (fullRun) {
             const ctx = buildRunContext({
               run: fullRun,
               priaReport,

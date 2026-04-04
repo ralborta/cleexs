@@ -39,43 +39,83 @@ ${ANALYSIS_JSON_SCHEMA}
 
 REGLAS: comentariosPorIntencion con las intenciones de los datos (Urgencia, Consideración, Calidad, Precio). Scores deben coincidir con los datos. Fortalezas, debilidades, sugerencias: oraciones completas. Todo en español. No uses markdown (**).`;
 
-/** Extrae JSON de respuestas LLM con fences ```json … ``` o texto alrededor. */
-function extractJsonStringFromLlm(content: string): string {
+/** Primer objeto `{ … }` balanceado respetando strings JSON (no cortar en `}` dentro de texto). */
+function extractBalancedJsonObject(s: string): string | null {
+  const start = s.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < s.length; ) {
+    const c = s[i];
+    if (inString) {
+      if (c === '\\') {
+        i += 2;
+        continue;
+      }
+      if (c === '"') inString = false;
+      i++;
+      continue;
+    }
+    if (c === '"') {
+      inString = true;
+      i++;
+      continue;
+    }
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      if (depth === 0) return s.slice(start, i + 1);
+    }
+    i++;
+  }
+  return null;
+}
+
+function stripTrailingCommasInJsonText(s: string): string {
+  return s.replace(/,(\s*[}\]])/g, '$1');
+}
+
+function parseAnalysisResponse(content: string): DiagnosticAnalysisSingle | null {
   let t = content.trim();
   const block = t.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (block) t = block[1].trim();
   else t = t.replace(/^```(?:json)?\s*|\s*```$/gim, '').trim();
+
+  /** Orden: texto completo → objeto balanceado → recorte naive (último recurso). */
+  const balanced = extractBalancedJsonObject(t);
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
-  if (start !== -1 && end > start) return t.slice(start, end + 1);
-  return t;
-}
+  const naive =
+    start !== -1 && end > start ? t.slice(start, end + 1) : null;
+  const variants = [...new Set([t, balanced, naive].filter((x): x is string => typeof x === 'string' && x.length > 0))];
 
-function parseAnalysisResponse(content: string): DiagnosticAnalysisSingle | null {
-  try {
-    const cleaned = extractJsonStringFromLlm(content).replace(/,(\s*[}\]])/g, '$1');
-    const parsed = JSON.parse(cleaned);
-    if (!parsed.resumenEjecutivo || !Array.isArray(parsed.fortalezas)) return null;
-    return {
-      resumenEjecutivo: String(parsed.resumenEjecutivo || ''),
-      contextoCompetitivo: typeof parsed.contextoCompetitivo === 'string' ? parsed.contextoCompetitivo.trim() : undefined,
-      comentariosPorIntencion: Array.isArray(parsed.comentariosPorIntencion)
-        ? parsed.comentariosPorIntencion.map((c: { intencion?: string; comentario?: string; score?: number; interpretacion?: string }) => ({
-            intencion: String(c.intencion || ''),
-            comentario: String(c.comentario || ''),
-            score: Number(c.score) || 0,
-            interpretacion: typeof c.interpretacion === 'string' ? c.interpretacion.trim() : undefined,
-          }))
-        : [],
-      aspectosAdicionales: typeof parsed.aspectosAdicionales === 'string' ? parsed.aspectosAdicionales.trim() : undefined,
-      fortalezas: Array.isArray(parsed.fortalezas) ? parsed.fortalezas.map(String).filter(Boolean) : [],
-      debilidades: Array.isArray(parsed.debilidades) ? parsed.debilidades.map(String).filter(Boolean) : [],
-      sugerencias: Array.isArray(parsed.sugerencias) ? parsed.sugerencias.map(String).filter(Boolean) : [],
-      proximosPasos: Array.isArray(parsed.proximosPasos) ? parsed.proximosPasos.map(String).filter(Boolean) : [],
-    };
-  } catch {
-    return null;
+  for (const raw of variants) {
+    try {
+      const cleaned = stripTrailingCommasInJsonText(raw);
+      const parsed = JSON.parse(cleaned);
+      if (!parsed.resumenEjecutivo || !Array.isArray(parsed.fortalezas)) continue;
+      return {
+        resumenEjecutivo: String(parsed.resumenEjecutivo || ''),
+        contextoCompetitivo: typeof parsed.contextoCompetitivo === 'string' ? parsed.contextoCompetitivo.trim() : undefined,
+        comentariosPorIntencion: Array.isArray(parsed.comentariosPorIntencion)
+          ? parsed.comentariosPorIntencion.map((c: { intencion?: string; comentario?: string; score?: number; interpretacion?: string }) => ({
+              intencion: String(c.intencion || ''),
+              comentario: String(c.comentario || ''),
+              score: Number(c.score) || 0,
+              interpretacion: typeof c.interpretacion === 'string' ? c.interpretacion.trim() : undefined,
+            }))
+          : [],
+        aspectosAdicionales: typeof parsed.aspectosAdicionales === 'string' ? parsed.aspectosAdicionales.trim() : undefined,
+        fortalezas: Array.isArray(parsed.fortalezas) ? parsed.fortalezas.map(String).filter(Boolean) : [],
+        debilidades: Array.isArray(parsed.debilidades) ? parsed.debilidades.map(String).filter(Boolean) : [],
+        sugerencias: Array.isArray(parsed.sugerencias) ? parsed.sugerencias.map(String).filter(Boolean) : [],
+        proximosPasos: Array.isArray(parsed.proximosPasos) ? parsed.proximosPasos.map(String).filter(Boolean) : [],
+      };
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 export async function generateWithOpenAI(
