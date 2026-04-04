@@ -39,9 +39,21 @@ ${ANALYSIS_JSON_SCHEMA}
 
 REGLAS: comentariosPorIntencion con las intenciones de los datos (Urgencia, Consideración, Calidad, Precio). Scores deben coincidir con los datos. Fortalezas, debilidades, sugerencias: oraciones completas. Todo en español. No uses markdown (**).`;
 
+/** Extrae JSON de respuestas LLM con fences ```json … ``` o texto alrededor. */
+function extractJsonStringFromLlm(content: string): string {
+  let t = content.trim();
+  const block = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (block) t = block[1].trim();
+  else t = t.replace(/^```(?:json)?\s*|\s*```$/gim, '').trim();
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start !== -1 && end > start) return t.slice(start, end + 1);
+  return t;
+}
+
 function parseAnalysisResponse(content: string): DiagnosticAnalysisSingle | null {
   try {
-    const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    const cleaned = extractJsonStringFromLlm(content).replace(/,(\s*[}\]])/g, '$1');
     const parsed = JSON.parse(cleaned);
     if (!parsed.resumenEjecutivo || !Array.isArray(parsed.fortalezas)) return null;
     return {
@@ -102,13 +114,11 @@ export async function generateWithOpenAI(
   }
 }
 
-// Orden de modelos a probar: el primero que responda se usa. gemini-3-flash-preview es el de la doc actual de Google.
+// Orden de modelos a probar (sin gemini-2.0-*: Google suele devolver 404 a cuentas nuevas).
 const GEMINI_MODELS_TO_TRY = [
-  'gemini-3-flash-preview',
   'gemini-2.5-flash',
   'gemini-2.5-pro',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-001',
+  'gemini-3-flash-preview',
 ];
 
 export async function generateWithGemini(

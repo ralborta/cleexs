@@ -142,13 +142,22 @@ export async function runSatelliteAnalysis(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const base = baseUrl.replace(/\/$/, '');
 
+  /** Espera sin acumular listeners en AbortSignal (evita MaxListenersExceededWarning en polling largo). */
   const sleep = (ms: number) =>
     new Promise<void>((resolve, reject) => {
-      const t = setTimeout(resolve, ms);
-      controller.signal.addEventListener('abort', () => {
+      if (controller.signal.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'));
+        return;
+      }
+      const t = setTimeout(() => {
+        controller.signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      const onAbort = () => {
         clearTimeout(t);
         reject(new DOMException('Aborted', 'AbortError'));
-      });
+      };
+      controller.signal.addEventListener('abort', onAbort);
     });
 
   try {
