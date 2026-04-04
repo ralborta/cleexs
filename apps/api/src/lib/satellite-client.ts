@@ -45,6 +45,17 @@ export type SatelliteModuleResult = {
   error?: string;
 };
 
+/** Debe alinearse con el tiempo razonable de analyze-all en el satélite (p. ej. 120–130s). */
+const DEFAULT_SATELLITE_TIMEOUT_MS = 130_000;
+
+function parseSatelliteTimeoutMs(): number {
+  const raw = process.env.SATELLITE_TIMEOUT_MS?.trim();
+  if (raw === undefined || raw === '') return DEFAULT_SATELLITE_TIMEOUT_MS;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_SATELLITE_TIMEOUT_MS;
+  return Math.floor(n);
+}
+
 const TOOL_KEYS: SatelliteToolKey[] = [
   'crawlability',
   'robots_sitemap',
@@ -123,7 +134,7 @@ export async function runSatelliteAnalysis(
     };
   }
 
-  const timeoutMs = Number(process.env.SATELLITE_TIMEOUT_MS || 60000);
+  const timeoutMs = parseSatelliteTimeoutMs();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
