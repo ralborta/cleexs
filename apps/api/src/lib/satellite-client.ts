@@ -84,7 +84,8 @@ function toolDetailForStorage(t: SatelliteToolResult): Record<string, unknown> |
   try {
     const plain = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
     const str = JSON.stringify(plain);
-    const max = 120_000;
+    /** Tope por herramienta al persistir (10 tools × esto + análisis IA debe caber en un UPDATE estable). */
+    const max = 28_000;
     if (str.length <= max) return plain;
     return {
       score: plain.score,

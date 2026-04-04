@@ -337,6 +337,134 @@ function sanitizeAnalysisJsonForPublicGet(json: unknown): object {
   return { ...o, externalModules: em } as object;
 }
 
+/** Límite blando del JSON completo al hacer UPDATE en Postgres (evita conexiones largas / resets). */
+const MAX_DB_ANALYSIS_JSON_STRING_CHARS = 1_400_000;
+const MAX_DB_SATELLITE_TOOL_DETAIL_CHARS = 12_000;
+
+/**
+ * Recorta análisis + satélite antes de persistir en `analysis_json`.
+ * Un JSON de varios MB en un solo UPDATE suele provocar timeouts y "Connection reset by peer" en el pool.
+ */
+function shrinkAnalysisJsonForPersistence(input: object): object {
+  let o: Record<string, unknown>;
+  try {
+    o = JSON.parse(JSON.stringify(input)) as Record<string, unknown>;
+  } catch {
+    return input;
+  }
+
+  const trimStr = (s: unknown, max: number): unknown =>
+    typeof s === 'string' && s.length > max ? `${s.slice(0, max)}… [truncado al guardar]` : s;
+
+  if (o.tier === 'gold') {
+    const ao = o.analisisOpenAI as Record<string, unknown> | undefined;
+    const ag = o.analisisGemini as Record<string, unknown> | undefined;
+    if (ao) {
+      ao.resumenEjecutivo = trimStr(ao.resumenEjecutivo, 48_000);
+      ao.contextoCompetitivo = trimStr(ao.contextoCompetitivo, 16_000);
+      ao.aspectosAdicionales = trimStr(ao.aspectosAdicionales, 16_000);
+    }
+    if (ag) {
+      ag.resumenEjecutivo = trimStr(ag.resumenEjecutivo, 48_000);
+      ag.contextoCompetitivo = trimStr(ag.contextoCompetitivo, 16_000);
+      ag.aspectosAdicionales = trimStr(ag.aspectosAdicionales, 16_000);
+    }
+    o.perspectivaAmbos = trimStr(o.perspectivaAmbos, 12_000);
+  } else {
+    o.resumenEjecutivo = trimStr(o.resumenEjecutivo, 64_000);
+    o.contextoCompetitivo = trimStr(o.contextoCompetitivo, 20_000);
+    o.aspectosAdicionales = trimStr(o.aspectosAdicionales, 20_000);
+  }
+
+  const ext = o.externalModules;
+  if (ext && typeof ext === 'object' && !Array.isArray(ext)) {
+    const em = ext as Record<string, unknown>;
+    const sat = em.satelliteAeo;
+    if (sat && typeof sat === 'object' && !Array.isArray(sat)) {
+      const so = { ...(sat as Record<string, unknown>) };
+      const tools = so.tools;
+      if (tools && typeof tools === 'object' && !Array.isArray(tools)) {
+        const nt: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(tools)) {
+          if (!v || typeof v !== 'object' || Array.isArray(v)) {
+            nt[k] = v;
+            continue;
+          }
+          const t = v as Record<string, unknown>;
+          const d = t.detail;
+          if (d !== undefined) {
+            try {
+              const ds = JSON.stringify(d);
+              if (ds.length > MAX_DB_SATELLITE_TOOL_DETAIL_CHARS) {
+                nt[k] = {
+                  score: t.score,
+                  error: t.error,
+                  detail: {
+                    _truncated: true,
+                    _note: 'Recortado al guardar por tamaño.',
+                  },
+                };
+              } else {
+                nt[k] = t;
+              }
+            } catch {
+              nt[k] = { score: t.score, error: t.error };
+            }
+          } else {
+            nt[k] = t;
+          }
+        }
+        so.tools = nt;
+      }
+      if (Array.isArray(so.actions) && so.actions.length > 150) {
+        so.actions = so.actions.slice(0, 150);
+      }
+      em.satelliteAeo = so;
+      o.externalModules = em;
+    }
+  }
+
+  let str = JSON.stringify(o);
+  if (str.length > MAX_DB_ANALYSIS_JSON_STRING_CHARS) {
+    console.warn(
+      `[public-diagnostic] analysis_json ~${str.length} chars; stripping satellite tool details for DB UPDATE`
+    );
+    const ext2 = o.externalModules;
+    if (ext2 && typeof ext2 === 'object' && !Array.isArray(ext2)) {
+      const em = ext2 as Record<string, unknown>;
+      const sat = em.satelliteAeo;
+      if (sat && typeof sat === 'object' && !Array.isArray(sat)) {
+        const so = { ...(sat as Record<string, unknown>) };
+        const tools = so.tools;
+        if (tools && typeof tools === 'object' && !Array.isArray(tools)) {
+          const nt: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(tools)) {
+            if (!v || typeof v !== 'object' || Array.isArray(v)) {
+              nt[k] = v;
+              continue;
+            }
+            const t = v as Record<string, unknown>;
+            nt[k] = {
+              score: t.score,
+              error: t.error,
+              ...(t.detail ? { detail: { _omitted: true } } : {}),
+            };
+          }
+          so.tools = nt;
+        }
+        em.satelliteAeo = so;
+        o.externalModules = em;
+      }
+    }
+    str = JSON.stringify(o);
+    if (str.length > MAX_DB_ANALYSIS_JSON_STRING_CHARS) {
+      o._persistNote = 'Payload recortado agresivamente por tamaño.';
+    }
+  }
+
+  return o as object;
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -592,11 +720,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
         const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
         if (persistedAnalysis != null) {
+          const safeForDb = shrinkAnalysisJsonForPersistence(persistedAnalysis);
           await prisma.publicDiagnostic.update({
             where: { id: diagnostic.id },
-            data: { analysisJson: persistedAnalysis as object },
+            data: { analysisJson: safeForDb },
           });
-          analysisJson = persistedAnalysis;
+          analysisJson = safeForDb;
         }
 
         const current = await prisma.publicDiagnostic.findUnique({
