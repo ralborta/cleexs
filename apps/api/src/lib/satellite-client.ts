@@ -45,8 +45,11 @@ export type SatelliteModuleResult = {
   error?: string;
 };
 
-/** Debe alinearse con el tiempo razonable de analyze-all en el satélite (p. ej. 120–130s). */
-const DEFAULT_SATELLITE_TIMEOUT_MS = 130_000;
+/**
+ * Tiempo máximo de espera al resultado (incluye polling). El análisis completo puede tardar varios minutos.
+ * El POST largo a /api/analyze-all suele cortarlo el proxy (~60s); el satélite expone /start + GET /jobs.
+ */
+const DEFAULT_SATELLITE_TIMEOUT_MS = 600_000;
 
 function parseSatelliteTimeoutMs(): number {
   const raw = process.env.SATELLITE_TIMEOUT_MS?.trim();
@@ -137,26 +140,103 @@ export async function runSatelliteAnalysis(
   const timeoutMs = parseSatelliteTimeoutMs();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const base = baseUrl.replace(/\/$/, '');
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, ms);
+      controller.signal.addEventListener('abort', () => {
+        clearTimeout(t);
+        reject(new DOMException('Aborted', 'AbortError'));
+      });
+    });
 
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/analyze-all`, {
+    const startResp = await fetch(`${base}/api/analyze-all/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
       signal: controller.signal,
     });
 
-    if (!response.ok) {
+    let payload: SatelliteAnalyzeAllResponse;
+
+    if (startResp.status === 202) {
+      const startJson = (await startResp.json()) as { job_id?: string };
+      const jobId = startJson.job_id;
+      if (!jobId) {
+        return {
+          status: 'failed',
+          overallScore: 0,
+          tools: {},
+          actions: [],
+          error: 'Satellite: respuesta /start sin job_id',
+        };
+      }
+      for (;;) {
+        const jobResp = await fetch(`${base}/api/analyze-all/jobs/${jobId}`, {
+          signal: controller.signal,
+        });
+        if (!jobResp.ok) {
+          return {
+            status: 'failed',
+            overallScore: 0,
+            tools: {},
+            actions: [],
+            error: `Satellite HTTP ${jobResp.status}`,
+          };
+        }
+        const job = (await jobResp.json()) as {
+          job_status?: string;
+          error?: string;
+          overall_score?: number;
+          target_url?: string;
+        } & Record<string, unknown>;
+        if (job.job_status === 'completed') {
+          const { job_status: _js, ...rest } = job;
+          payload = rest as SatelliteAnalyzeAllResponse;
+          break;
+        }
+        if (job.job_status === 'failed') {
+          return {
+            status: 'failed',
+            overallScore: 0,
+            tools: {},
+            actions: [],
+            error: typeof job.error === 'string' ? job.error : 'Error en análisis satélite',
+          };
+        }
+        await sleep(2000);
+      }
+    } else if (startResp.status === 404) {
+      // Satélite antiguo sin /start: un solo POST (puede cortar el proxy si tarda mucho).
+      const response = await fetch(`${base}/api/analyze-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        return {
+          status: 'failed',
+          overallScore: 0,
+          tools: {},
+          actions: [],
+          error: `Satellite HTTP ${response.status}`,
+        };
+      }
+
+      payload = (await response.json()) as SatelliteAnalyzeAllResponse;
+    } else {
       return {
         status: 'failed',
         overallScore: 0,
         tools: {},
         actions: [],
-        error: `Satellite HTTP ${response.status}`,
+        error: `Satellite /api/analyze-all/start HTTP ${startResp.status}`,
       };
     }
-
-    const payload = (await response.json()) as SatelliteAnalyzeAllResponse;
     const tools: SatelliteModuleResult['tools'] = {};
     for (const key of TOOL_KEYS) {
       const t = payload[key];
