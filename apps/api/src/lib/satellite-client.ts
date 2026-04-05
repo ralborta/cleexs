@@ -46,10 +46,11 @@ export type SatelliteModuleResult = {
 };
 
 /**
- * Tiempo máximo de espera al resultado (incluye polling). El análisis completo puede tardar varios minutos.
+ * Tiempo máximo de espera al resultado (incluye polling). El análisis completo puede tardar varios minutos
+ * (herramientas en serie + IAs). Si SATELLITE_TIMEOUT_MS es bajo en prod, verás timeout con 0 tools.
  * El POST largo a /api/analyze-all suele cortarlo el proxy (~60s); el satélite expone /start + GET /jobs.
  */
-const DEFAULT_SATELLITE_TIMEOUT_MS = 600_000;
+const DEFAULT_SATELLITE_TIMEOUT_MS = 900_000;
 
 function parseSatelliteTimeoutMs(): number {
   const raw = process.env.SATELLITE_TIMEOUT_MS?.trim();

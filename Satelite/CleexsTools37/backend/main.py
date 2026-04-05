@@ -61,11 +61,11 @@ TOOL_TIMEOUT_SEC = {
     "schema": 22,
     "axp": 22,
     "ai_presence": 36,
-    "alerts": 48,
+    "alerts": 40,
     "crawlability": 38,
     "robots_sitemap": 45,
     "freshness": 38,
-    "citations": 72,
+    "citations": 52,
     "ai_overview": 30,
     "duplicates": 34,
 }
@@ -109,10 +109,21 @@ async def run_analyze_all_impl(url: str) -> dict:
     for name, result in zip(fast_names, fast_results):
         output[name] = _process_result(name, result)
 
-    # Phase 2 — crawling tools ONE AT A TIME to avoid server overload
+    # Crawl + robots en paralelo (ahorra ~30–40s vs en serie).
+    cr, rb = await asyncio.gather(
+        _run_tool_budgeted(
+            "crawlability",
+            SiteCrawler(max_pages=FAST_MAX_PAGES["crawlability"], max_depth=2).crawl(url),
+        ),
+        _run_tool_budgeted(
+            "robots_sitemap",
+            SiteAnalyzer(max_crawl_pages=FAST_MAX_PAGES["robots_sitemap"]).analyze(url),
+        ),
+    )
+    output["crawlability"] = _process_result("crawlability", cr)
+    output["robots_sitemap"] = _process_result("robots_sitemap", rb)
+
     crawl_tools = [
-        ("crawlability", SiteCrawler(max_pages=FAST_MAX_PAGES["crawlability"], max_depth=2).crawl(url)),
-        ("robots_sitemap", SiteAnalyzer(max_crawl_pages=FAST_MAX_PAGES["robots_sitemap"]).analyze(url)),
         ("freshness", ContentFreshnessChecker(max_pages=FAST_MAX_PAGES["freshness"]).check(url)),
         ("citations", QueryCitationTracker(max_pages=FAST_MAX_PAGES["citations"]).analyze(url)),
         ("ai_overview", AIOverviewChecker(max_pages=FAST_MAX_PAGES["ai_overview"]).check(url)),
