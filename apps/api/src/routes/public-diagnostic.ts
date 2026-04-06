@@ -536,7 +536,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       setImmediate(async () => {
       try {
-        const satellitePromise = trimmedUrl ? runSatelliteAnalysis(trimmedUrl) : Promise.resolve(null);
+        // Evitar competencia de cuota/latencia con OpenAI durante el core del diagnóstico.
+        // El satélite se ejecuta al final para que no degrade la corrida principal.
         // 1. País: por TLD del dominio si aplica (nike.com.co → Colombia), sino por búsqueda web + IA
         const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
         let searchEvidence = '';
@@ -712,10 +713,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');
         }
 
-        try {
-          satelliteModule = await satellitePromise;
-        } catch (satErr) {
-          fastify.log.warn({ err: satErr, diagnosticId: diagnostic.id }, 'Módulo satélite no disponible');
+        if (trimmedUrl) {
+          try {
+            satelliteModule = await runSatelliteAnalysis(trimmedUrl);
+          } catch (satErr) {
+            fastify.log.warn({ err: satErr, diagnosticId: diagnostic.id }, 'Módulo satélite no disponible');
+          }
         }
 
         const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
