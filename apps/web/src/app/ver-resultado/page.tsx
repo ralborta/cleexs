@@ -597,10 +597,6 @@ function VerResultadoContent() {
                 {runResult ? (
                   diagnostic.showFullReport ? (
                     <div className="space-y-8">
-                      {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
-                      {satelliteModule && (
-                        <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
-                      )}
                       {tieneGemini && (
                         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                           <span className="mr-1 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
@@ -657,6 +653,14 @@ function VerResultadoContent() {
                           trendData={diagnostic.trendData}
                           runResultChatGPT={tieneGemini ? runResult : undefined}
                           runResultGemini={tieneGemini ? runResultGemini : undefined}
+                          satelliteBlock={
+                            <>
+                              {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
+                              {satelliteModule && (
+                                <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
+                              )}
+                            </>
+                          }
                         />
                       )}
                     </div>

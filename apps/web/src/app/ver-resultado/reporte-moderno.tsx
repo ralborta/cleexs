@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -331,12 +332,14 @@ export function ReporteModerno({
   trendData,
   runResultChatGPT,
   runResultGemini,
+  satelliteBlock,
 }: {
   runResult: PublicDiagnosticRunResult;
   brandName: string;
   trendData?: PublicDiagnosticTrendPoint[];
   runResultChatGPT?: PublicDiagnosticRunResult;
   runResultGemini?: PublicDiagnosticRunResult;
+  satelliteBlock?: ReactNode;
 }) {
   const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
   const [resumenExpanded, setResumenExpanded] = useState<Set<string>>(new Set());
@@ -954,29 +957,8 @@ export function ReporteModerno({
         </Card>
       </div>
 
-      {/* Resumen ejecutivo y 3 acciones prioritarias */}
-      <Card className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
-            <Award className="h-4 w-4 text-primary-500" />
-            Resumen y próximos pasos
-          </CardTitle>
-          <CardDescription>Resumen ejecutivo y acciones prioritarias derivadas de los datos.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed text-slate-600">{resumenEjecutivo}</p>
-          {top3Acciones.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm font-semibold text-slate-700 mb-2">3 acciones prioritarias</p>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-slate-600">
-                {top3Acciones.map((acc, i) => (
-                  <li key={i}>{acc}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Bloque satélite inyectado desde la página principal */}
+      {satelliteBlock ? <>{satelliteBlock}</> : null}
 
       {/* Calidad de datos: Consistencia y Completitud */}
       {(runResultChatGPT && runResultGemini) || totalEntries > 0 ? (
@@ -1307,6 +1289,30 @@ export function ReporteModerno({
               </button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Resumen ejecutivo y 3 acciones prioritarias */}
+      <Card className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+            <Award className="h-4 w-4 text-primary-500" />
+            Resumen y próximos pasos
+          </CardTitle>
+          <CardDescription>Resumen ejecutivo y acciones prioritarias derivadas de los datos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-relaxed text-slate-600">{resumenEjecutivo}</p>
+          {top3Acciones.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-slate-700 mb-2">3 acciones prioritarias</p>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-slate-600">
+                {top3Acciones.map((acc, i) => (
+                  <li key={i}>{acc}</li>
+                ))}
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
 
