@@ -444,24 +444,23 @@ function ReporteCompleto({
 function VerResultadoContent() {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
+  const tierFromQuery = searchParams.get('tier') === 'gold' ? 'gold' : undefined;
   const [diagnostic, setDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
 
   useEffect(() => {
-    const id = searchParams.get('diagnosticId');
-    const tierParam = searchParams.get('tier');
+    const id = diagnosticId;
     if (!id) {
       setLoading(false);
       setError('Falta el ID del diagnóstico.');
       return;
     }
-    const tier = tierParam === 'gold' ? 'gold' : undefined;
     let cancelled = false;
     (async () => {
       try {
-        const data = await publicDiagnosticApi.get(id, tier);
+        const data = await publicDiagnosticApi.get(id, tierFromQuery);
         if (!cancelled) setDiagnostic(data);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagnóstico.');
@@ -470,12 +469,11 @@ function VerResultadoContent() {
       }
     })();
     return () => { cancelled = true; };
-  }, [diagnosticId, searchParams]);
+  }, [diagnosticId, tierFromQuery]);
 
   // Si está completado y debería tener análisis pero aún no llegó (se genera en background), hacer polling
   useEffect(() => {
     const id = diagnosticId;
-    const tier = searchParams.get('tier') === 'gold' ? 'gold' : undefined;
     if (
       !id ||
       !diagnostic ||
@@ -485,27 +483,34 @@ function VerResultadoContent() {
     ) {
       return;
     }
-    const maxAttempts = 23;
-    const intervalMs = 4000;
-    let attempts = 0;
-    const timer = setInterval(async () => {
-      attempts += 1;
-      if (attempts > maxAttempts) {
-        clearInterval(timer);
-        return;
-      }
+    const pollIntervalMs = 4000;
+    const maxWaitMs = 16 * 60 * 1000;
+    const startedAt = Date.now();
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const poll = async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt >= maxWaitMs) return;
       try {
-        const data = await publicDiagnosticApi.get(id, tier);
-        if (data.analysisJson != null) {
-          setDiagnostic(data);
-          clearInterval(timer);
+        const data = await publicDiagnosticApi.get(id, tierFromQuery);
+        if (cancelled) return;
+        setDiagnostic(data);
+        if (data.status === 'failed' || data.analysisJson != null) {
+          return;
         }
       } catch {
-        // ignorar errores de polling
+        // ignorar errores transitorios de polling
       }
-    }, intervalMs);
-    return () => clearInterval(timer);
-  }, [diagnosticId, diagnostic, searchParams]);
+      if (!cancelled) timer = setTimeout(poll, pollIntervalMs);
+    };
+
+    timer = setTimeout(poll, pollIntervalMs);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [diagnosticId, diagnostic, tierFromQuery]);
 
   if (loading) {
     return (

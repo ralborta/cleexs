@@ -368,5 +368,8 @@ export const publicDiagnosticApi = {
       }
     ),
   get: (id: string, tier?: 'gold' | 'freemium') =>
-    api<PublicDiagnostic>(`/api/public/diagnostic/${id}${tier ? `?tier=${tier}` : ''}`),
+    api<PublicDiagnostic>(
+      `/api/public/diagnostic/${id}${tier ? `?tier=${tier}` : ''}${tier ? '&' : '?'}_=${Date.now()}`,
+      { cache: 'no-store' }
+    ),
 };
