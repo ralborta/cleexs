@@ -141,6 +141,10 @@ function VerificandoContent() {
   const progress = diagnostic?.progressPercent ?? 0;
   const brandLabel = diagnostic?.brandName ?? null;
   const isRunning = diagnostic?.status === 'running';
+  const allStepsCompleted = steps.length > 0 && steps.every((step) => step.completed);
+  const isFinalizingReport = isRunning && allStepsCompleted;
+  const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6; // 92 → 98 para indicar actividad
+  const visibleBottomProgress = isFinalizingReport ? finalizingWave : Math.min(progress, 100);
 
   return (
     <main className="flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
@@ -390,6 +394,30 @@ function VerificandoContent() {
             </div>
           </div>
 
+        </div>
+
+        <div className="mt-6 shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {isFinalizingReport ? 'Armando reporte final' : 'Progreso general'}
+            </p>
+            <span className="text-xs font-semibold text-slate-700">
+              {isFinalizingReport ? `${Math.round(visibleBottomProgress)}%` : `${Math.min(progress, 100)}%`}
+            </span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                isFinalizingReport ? 'bg-gradient-to-r from-primary-500 via-primary-400 to-primary-600 animate-pulse' : 'bg-primary-600'
+              }`}
+              style={{ width: `${visibleBottomProgress}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            {isFinalizingReport
+              ? 'Los checks terminaron; estamos consolidando y preparando la vista final.'
+              : 'Avance visible del diagnóstico en tiempo real.'}
+          </p>
         </div>
 
         <p className="mt-6 shrink-0 text-center text-xs text-slate-400">

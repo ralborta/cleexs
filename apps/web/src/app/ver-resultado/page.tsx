@@ -608,18 +608,6 @@ function VerResultadoContent() {
                           <div className="flex flex-wrap gap-3">
                             <button
                               type="button"
-                              onClick={() => setVistaModelo('consolidado')}
-                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                                vistaModelo === 'consolidado'
-                                  ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
-                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
-                              }`}
-                            >
-                              <LayoutDashboard className="h-4 w-4 shrink-0" />
-                              Consolidado
-                            </button>
-                            <button
-                              type="button"
                               onClick={() => setVistaModelo('chatgpt')}
                               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                                 vistaModelo === 'chatgpt'
@@ -641,6 +629,18 @@ function VerResultadoContent() {
                             >
                               <CleexsMark className="h-[18px] w-[18px] shrink-0" />
                               Gemini
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setVistaModelo('consolidado')}
+                              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                                vistaModelo === 'consolidado'
+                                  ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                  : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                              }`}
+                            >
+                              <LayoutDashboard className="h-4 w-4 shrink-0" />
+                              Consolidado
                             </button>
                           </div>
                         </div>
