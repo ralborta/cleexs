@@ -1147,7 +1147,7 @@ function SatelliteModuleCard({
         {/* ── Tool cards grid ── */}
         <div>
           <p className="text-sm font-semibold text-slate-900 mb-0.5">Resumen por herramienta</p>
-          <p className="text-xs text-slate-400 mb-4">Tocá "Ver detalle" en cada tarjeta para expandir sugerencias y métricas.</p>
+          <p className="text-xs text-slate-400 mb-4">Tocá &quot;Ver detalle&quot; en cada tarjeta para expandir sugerencias y métricas.</p>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
             {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
