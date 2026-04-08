@@ -957,9 +957,6 @@ export function ReporteModerno({
         </Card>
       </div>
 
-      {/* Bloque satélite inyectado desde la página principal */}
-      {satelliteBlock ? <>{satelliteBlock}</> : null}
-
       {/* Calidad de datos: Consistencia y Completitud */}
       {(runResultChatGPT && runResultGemini) || totalEntries > 0 ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1291,6 +1288,9 @@ export function ReporteModerno({
           </div>
         </CardContent>
       </Card>
+
+      {/* Bloque satélite inyectado desde la página principal */}
+      {satelliteBlock ? <>{satelliteBlock}</> : null}
 
       {/* Resumen ejecutivo y 3 acciones prioritarias */}
       <Card className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

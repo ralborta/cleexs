@@ -39,7 +39,6 @@ function VerificandoContent() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailSendFailed, setEmailSendFailed] = useState(false);
   const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
-  const [captchaChecked, setCaptchaChecked] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
   /** Al entrar a la página el usuario debe verificar antes de usar el correo. */
   const [captchaPopupOpen, setCaptchaPopupOpen] = useState(true);
@@ -325,15 +324,13 @@ function VerificandoContent() {
 
               {captchaPopupOpen && (
                 <div
-                  className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-white/95 p-3"
-                  onClick={() => setCaptchaPopupOpen(false)}
+                  className="absolute inset-x-0 -top-8 z-20 px-2"
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="captcha-title"
                 >
                   <div
                     className="w-full rounded-xl border border-slate-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex flex-col items-center text-center">
                       <Lock className="h-8 w-8 text-[#BBBBBB] mb-4" aria-hidden />
@@ -348,8 +345,12 @@ function VerificandoContent() {
                       <label className="flex cursor-pointer items-center gap-3 flex-1 min-w-0">
                         <input
                           type="checkbox"
-                          checked={captchaChecked}
-                          onChange={(e) => setCaptchaChecked(e.target.checked)}
+                          checked={captchaVerified}
+                          onChange={(e) => {
+                            if (!e.target.checked) return;
+                            setCaptchaVerified(true);
+                            setCaptchaPopupOpen(false);
+                          }}
                           className="h-5 w-5 rounded border-2 border-[#CCCCCC] bg-white text-[#333333] focus:ring-2 focus:ring-[#999999] focus:ring-offset-0"
                           disabled={emailLoading}
                         />
@@ -366,28 +367,6 @@ function VerificandoContent() {
                       {' '}y consentís al uso de tu información según nuestra{' '}
                       <a href="/privacidad" className="underline text-[#333333] hover:text-black">Política de Privacidad</a>.
                     </p>
-                    <div className="mt-6 flex gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 border-[#CCCCCC] text-[#555555] hover:bg-[#F5F5F5]"
-                        onClick={() => setCaptchaPopupOpen(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="button"
-                        className="flex-1 bg-[#333333] hover:bg-[#222222] text-white"
-                        disabled={!captchaChecked}
-                        onClick={() => {
-                          if (!captchaChecked) return;
-                          setCaptchaVerified(true);
-                          setCaptchaPopupOpen(false);
-                        }}
-                      >
-                        Desbloquear
-                      </Button>
-                    </div>
                   </div>
                 </div>
               )}

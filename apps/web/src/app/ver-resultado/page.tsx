@@ -29,7 +29,6 @@ import {
   Lock,
   LayoutDashboard,
   Sparkles,
-  ExternalLink,
   ChevronDown,
   Globe,
   FileSearch,
@@ -1069,11 +1068,6 @@ function SatelliteModuleCard({
   siteUrl: string;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const satelliteAppBase = (process.env.NEXT_PUBLIC_SATELLITE_APP_URL || '').replace(/\/$/, '');
-  const detailHref =
-    siteUrl && satelliteAppBase
-      ? `${satelliteAppBase}/?url=${encodeURIComponent(siteUrl)}&autostart=1`
-      : null;
 
   const statusLabel =
     module.status === 'completed' ? 'Completado'
@@ -1153,7 +1147,7 @@ function SatelliteModuleCard({
         {/* ── Tool cards grid ── */}
         <div>
           <p className="text-sm font-semibold text-slate-900 mb-0.5">Resumen por herramienta</p>
-          <p className="text-xs text-slate-400 mb-4">Tocá una tarjeta para expandir sugerencias y métricas.</p>
+          <p className="text-xs text-slate-400 mb-4">Tocá "Ver detalle" en cada tarjeta para expandir sugerencias y métricas.</p>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
             {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
@@ -1190,6 +1184,9 @@ function SatelliteModuleCard({
                     <p className={cn('text-2xl font-black leading-none tabular-nums', colors.text)}>
                       {score > 0 ? Math.round(score) : '—'}
                     </p>
+                    <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      {open ? 'Ocultar detalle' : 'Ver detalle'}
+                    </span>
                     <ChevronDown
                       className={cn('h-4 w-4 text-slate-300 transition-transform', open && 'rotate-180')}
                       aria-hidden
@@ -1206,20 +1203,6 @@ function SatelliteModuleCard({
             })}
           </div>
         </div>
-
-        {/* ── CTA ── */}
-        {detailHref ? (
-          <Button asChild className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700">
-            <a href={detailHref} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Ver análisis técnico completo
-            </a>
-          </Button>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Configurá <span className="font-mono">NEXT_PUBLIC_SATELLITE_APP_URL</span> para habilitar el enlace.
-          </p>
-        )}
 
         {/* ── Acciones prioritarias ── */}
         {topActions.length > 0 && (
