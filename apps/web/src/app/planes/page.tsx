@@ -108,7 +108,7 @@ export default function PlanesPage() {
                   ))}
                 </ul>
 
-                <Link href={plan.href} className="block">
+                <Link href={`/planes/pago?plan=${plan.id}&billing=${billingMode}`} className="block">
                   <Button
                     className={`w-full ${plan.highlighted ? 'bg-primary-600 text-white hover:bg-primary-700' : ''}`}
                     variant={plan.highlighted ? 'default' : 'outline'}

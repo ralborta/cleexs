@@ -11,7 +11,6 @@ export interface PlanDefinition {
   engines: string[];
   features: string[];
   cta: string;
-  href: string;
   highlighted?: boolean;
   badge?: string;
 }
@@ -34,7 +33,6 @@ export const APP_PLANS: PlanDefinition[] = [
       'Reporte mensual',
     ],
     cta: 'Comenzar gratis',
-    href: '/diagnostico/crear',
   },
   {
     id: 'crecimiento',
@@ -55,7 +53,6 @@ export const APP_PLANS: PlanDefinition[] = [
       'Google Analytics conectado',
     ],
     cta: 'Elegir crecimiento',
-    href: '/diagnostico/crear',
     highlighted: true,
     badge: 'Más elegido',
   },
@@ -78,7 +75,6 @@ export const APP_PLANS: PlanDefinition[] = [
       'Reportes personalizados',
     ],
     cta: 'Hablar con ventas',
-    href: '/diagnostico/crear',
   },
 ];
 
