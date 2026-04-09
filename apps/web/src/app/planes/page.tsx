@@ -1,14 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, Sparkles } from 'lucide-react';
-import { APP_PLANS, getAnnualPrice, type BillingMode } from '@/lib/plans';
+import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
+import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
 
 export default function PlanesPage() {
+  const router = useRouter();
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const [pagoOpen, setPagoOpen] = useState(false);
+  const [planForPago, setPlanForPago] = useState<PlanDefinition['id']>('crecimiento');
   const plansToRender = useMemo(() => APP_PLANS, []);
 
   const renderPrice = (monthlyPrice: number | null) => {
@@ -108,15 +113,18 @@ export default function PlanesPage() {
                   ))}
                 </ul>
 
-                <Link href={`/planes/pago?plan=${plan.id}&billing=${billingMode}`} className="block">
-                  <Button
-                    className={`w-full ${plan.highlighted ? 'bg-primary-600 text-white hover:bg-primary-700' : ''}`}
-                    variant={plan.highlighted ? 'default' : 'outline'}
-                    size="lg"
-                  >
-                    {plan.cta}
-                  </Button>
-                </Link>
+                <Button
+                  type="button"
+                  className={`w-full ${plan.highlighted ? 'bg-primary-600 text-white hover:bg-primary-700' : ''}`}
+                  variant={plan.highlighted ? 'default' : 'outline'}
+                  size="lg"
+                  onClick={() => {
+                    setPlanForPago(plan.id);
+                    setPagoOpen(true);
+                  }}
+                >
+                  {plan.cta}
+                </Button>
               </CardContent>
             </Card>
           ))}
@@ -129,6 +137,14 @@ export default function PlanesPage() {
           </Link>
         </p>
       </div>
+
+      <PlanPaymentModal
+        open={pagoOpen}
+        onOpenChange={setPagoOpen}
+        planId={planForPago}
+        billingMode={billingMode}
+        onConfirm={() => router.push('/diagnostico/crear')}
+      />
     </main>
   );
 }

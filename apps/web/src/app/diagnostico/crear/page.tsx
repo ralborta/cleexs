@@ -149,9 +149,9 @@ export default function CrearDiagnosticoPage() {
 
   if (autostart && hasAutostartInput && !error && (autoStartRunning || loading)) {
     return (
-      <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
+      <main className="min-h-[calc(100vh-72px)] bg-slate-100 px-6 py-16">
         <div className="mx-auto max-w-lg">
-          <Card className="border-transparent bg-white shadow-md">
+          <Card className="border border-slate-200/80 bg-white shadow-lg shadow-slate-200/50">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">Iniciando diagnóstico</CardTitle>
               <CardDescription>
@@ -178,12 +178,12 @@ export default function CrearDiagnosticoPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-br from-background via-white to-primary-50 px-6 py-16">
+    <main className="min-h-[calc(100vh-72px)] bg-slate-100 px-6 py-16">
       <div className="mx-auto max-w-lg">
-        <Card className="border-transparent bg-white shadow-md">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl">Diagnóstico de recomendación</CardTitle>
-            <CardDescription>
+        <Card className="border border-slate-200/80 bg-white shadow-lg shadow-slate-200/50">
+          <CardHeader className="pb-2 text-center">
+            <CardTitle className="text-2xl font-bold text-slate-900">Diagnóstico de recomendación</CardTitle>
+            <CardDescription className="text-base leading-relaxed text-slate-600">
               Ingresá tu marca o la URL de tu sitio (o ambos). Determinamos tu industria, competidores y generamos tu Cleexs Score.
             </CardDescription>
           </CardHeader>
@@ -233,7 +233,7 @@ export default function CrearDiagnosticoPage() {
               )}
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-primary-600 text-white shadow-sm hover:bg-primary-700"
                 disabled={loading || (!brandName.trim() && !url.trim())}
               >
                 {loading ? (
