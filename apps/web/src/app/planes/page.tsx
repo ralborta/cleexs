@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Check, Sparkles } from 'lucide-react';
 import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
+import { CLEEXS_MARKETING_WWW_URL } from '@/lib/site';
 
 export default function PlanesPage() {
   const router = useRouter();
@@ -132,7 +133,12 @@ export default function PlanesPage() {
 
         <p className="text-center text-sm text-muted-foreground mt-10">
           ¿Necesitás medir tu marca?{' '}
-          <Link href="/diagnostico/crear" className="font-medium text-primary-600 hover:underline">
+          <Link
+            href={CLEEXS_MARKETING_WWW_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary-600 hover:underline"
+          >
             Diagnóstico gratuito
           </Link>
         </p>
