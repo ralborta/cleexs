@@ -35,6 +35,14 @@ async function bootstrap() {
   const isNivel41Origin = (o: string) =>
     o.endsWith('.nivel41.com') || o === 'https://nivel41.com' || o === 'http://nivel41.com';
 
+  /** app.cleexs.net, www.cleexs.net, cleexs.net y subdominios */
+  const isCleexsOrigin = (o: string) =>
+    o === 'https://cleexs.net' ||
+    o === 'http://cleexs.net' ||
+    o === 'https://www.cleexs.net' ||
+    o === 'http://www.cleexs.net' ||
+    o.endsWith('.cleexs.net');
+
   log('4/7 Registrando CORS...');
   await server.register(cors, {
     origin: (origin, cb) => {
@@ -43,6 +51,7 @@ async function bootstrap() {
       if (allowedOrigins.includes('*')) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
       if (isVercelOrigin(origin)) return cb(null, true);
+      if (isCleexsOrigin(origin)) return cb(null, true);
       if (isNivel41Origin(origin)) return cb(null, true);
       if (origin === RAILWAY_HEALTHCHECK || origin === 'http://healthcheck.railway.app')
         return cb(null, true);
