@@ -89,7 +89,7 @@ export default function Home() {
                 Dashboard
               </CardTitle>
               <CardDescription>
-                Visualizá rankings, tendencias y Cleexs Score con estilo ejecutivo.
+                Visualizá estadísticas internas de corridas, tendencias diarias e industrias en tiempo real.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
@@ -101,10 +101,10 @@ export default function Home() {
               </Link>
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted-foreground">
                 <div className="rounded-lg border border-border bg-primary-50 px-3 py-2">
-                  Ranking vs competidores
+                  Corridas por día
                 </div>
                 <div className="rounded-lg border border-border bg-primary-50 px-3 py-2">
-                  Tendencia mensual
+                  Top industrias
                 </div>
               </div>
             </CardContent>

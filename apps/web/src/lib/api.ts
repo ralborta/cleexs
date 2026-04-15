@@ -226,6 +226,7 @@ export const reportsApi = {
   },
   getBrandDashboard: (brandId: string) =>
     api<BrandDashboard>(`/api/reports/brand-dashboard?brandId=${brandId}`),
+  getPlatformDashboard: () => api<PlatformDashboard>('/api/reports/platform-dashboard'),
 };
 
 export interface BrandDashboardComparisonRow {
@@ -243,6 +244,47 @@ export interface BrandDashboard {
   comparison: BrandDashboardComparisonRow[];
   latestRun: { id: string; periodStart: string; periodEnd: string } | null;
   trend: PRIAReport[];
+}
+
+export interface PlatformDashboardSummary {
+  totalRuns: number;
+  runsToday: number;
+  completedRuns: number;
+  failedRuns: number;
+  runningRuns: number;
+  pendingRuns: number;
+  successRate: number;
+  averageCleexsScore: number;
+}
+
+export interface PlatformDashboardDailyRun {
+  date: string;
+  runs: number;
+  avgScore: number;
+}
+
+export interface PlatformDashboardIndustryRow {
+  industry: string;
+  runs: number;
+  avgScore: number;
+}
+
+export interface PlatformDashboardLatestRun {
+  id: string;
+  brandName: string;
+  industry: string | null;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  createdAt: string;
+  periodStart: string;
+  periodEnd: string;
+  score: number | null;
+}
+
+export interface PlatformDashboard {
+  summary: PlatformDashboardSummary;
+  dailyRuns: PlatformDashboardDailyRun[];
+  industries: PlatformDashboardIndustryRow[];
+  latestRuns: PlatformDashboardLatestRun[];
 }
 
 // Diagnóstico público (flujo sin login)

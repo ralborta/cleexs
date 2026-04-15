@@ -245,6 +245,144 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     return ranking;
   });
 
+  // GET /reports/platform-dashboard — métricas internas globales (piloto)
+  fastify.get('/platform-dashboard', async () => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOf30Days = new Date(now);
+    startOf30Days.setDate(startOf30Days.getDate() - 29);
+    startOf30Days.setHours(0, 0, 0, 0);
+
+    const [totalRuns, runsToday, statusGroups, avgPria, recentRuns] = await Promise.all([
+      prisma.run.count(),
+      prisma.run.count({
+        where: {
+          createdAt: {
+            gte: startOfToday,
+          },
+        },
+      }),
+      prisma.run.groupBy({
+        by: ['status'],
+        _count: {
+          _all: true,
+        },
+      }),
+      prisma.pRIAReport.aggregate({
+        _avg: {
+          priaTotal: true,
+        },
+      }),
+      prisma.run.findMany({
+        include: {
+          brand: {
+            select: {
+              name: true,
+              industry: true,
+            },
+          },
+          priaReports: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1000,
+      }),
+    ]);
+
+    const statusCount = {
+      pending: 0,
+      running: 0,
+      completed: 0,
+      failed: 0,
+    };
+    for (const group of statusGroups) {
+      statusCount[group.status] = group._count._all;
+    }
+
+    const successRate = totalRuns > 0 ? (statusCount.completed / totalRuns) * 100 : 0;
+
+    const dailyMap = new Map<string, { date: string; runs: number; scoreSum: number; scoreCount: number }>();
+    for (let i = 0; i < 30; i += 1) {
+      const d = new Date(startOf30Days);
+      d.setDate(startOf30Days.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      dailyMap.set(key, { date: key, runs: 0, scoreSum: 0, scoreCount: 0 });
+    }
+
+    const industryMap = new Map<string, { industry: string; runs: number; scoreSum: number; scoreCount: number }>();
+    for (const run of recentRuns) {
+      const createdAtKey = run.createdAt.toISOString().slice(0, 10);
+      const day = dailyMap.get(createdAtKey);
+      const score = run.priaReports[0]?.priaTotal;
+
+      if (day) {
+        day.runs += 1;
+        if (typeof score === 'number') {
+          day.scoreSum += score;
+          day.scoreCount += 1;
+        }
+      }
+
+      const industryLabel = (run.brand.industry || 'Sin industria').trim() || 'Sin industria';
+      const currentIndustry = industryMap.get(industryLabel) || {
+        industry: industryLabel,
+        runs: 0,
+        scoreSum: 0,
+        scoreCount: 0,
+      };
+      currentIndustry.runs += 1;
+      if (typeof score === 'number') {
+        currentIndustry.scoreSum += score;
+        currentIndustry.scoreCount += 1;
+      }
+      industryMap.set(industryLabel, currentIndustry);
+    }
+
+    const dailyRuns = Array.from(dailyMap.values()).map((row) => ({
+      date: row.date,
+      runs: row.runs,
+      avgScore: row.scoreCount > 0 ? row.scoreSum / row.scoreCount : 0,
+    }));
+
+    const industries = Array.from(industryMap.values())
+      .map((row) => ({
+        industry: row.industry,
+        runs: row.runs,
+        avgScore: row.scoreCount > 0 ? row.scoreSum / row.scoreCount : 0,
+      }))
+      .sort((a, b) => b.runs - a.runs)
+      .slice(0, 10);
+
+    const latestRuns = recentRuns.slice(0, 12).map((run) => ({
+      id: run.id,
+      brandName: run.brand.name,
+      industry: run.brand.industry || null,
+      status: run.status,
+      createdAt: run.createdAt,
+      periodStart: run.periodStart,
+      periodEnd: run.periodEnd,
+      score: run.priaReports[0]?.priaTotal ?? null,
+    }));
+
+    return {
+      summary: {
+        totalRuns,
+        runsToday,
+        completedRuns: statusCount.completed,
+        failedRuns: statusCount.failed,
+        runningRuns: statusCount.running,
+        pendingRuns: statusCount.pending,
+        successRate,
+        averageCleexsScore: avgPria._avg.priaTotal ?? 0,
+      },
+      dailyRuns,
+      industries,
+      latestRuns,
+    };
+  });
+
   // GET /reports/brand-dashboard?brandId=... — dashboard centrado en una marca
   fastify.get<{
     Querystring: { brandId: string };
