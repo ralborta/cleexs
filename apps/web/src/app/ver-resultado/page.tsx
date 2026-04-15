@@ -450,7 +450,7 @@ function VerResultadoContent() {
   const [diagnostic, setDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('consolidado');
+  const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('chatgpt');
 
   useEffect(() => {
     const id = diagnosticId;
