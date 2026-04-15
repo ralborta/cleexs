@@ -253,7 +253,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     startOf30Days.setDate(startOf30Days.getDate() - 29);
     startOf30Days.setHours(0, 0, 0, 0);
 
-    const [totalRuns, runsToday, statusGroups, avgPria, recentRuns] = await Promise.all([
+    const [totalRuns, runsToday, statusGroups, avgPria, recentRuns, trackedDiagnostics] = await Promise.all([
       prisma.run.count(),
       prisma.run.count({
         where: {
@@ -288,6 +288,22 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
         },
         orderBy: { createdAt: 'desc' },
         take: 1000,
+      }),
+      prisma.publicDiagnostic.findMany({
+        where: {
+          OR: [{ refCode: { not: null } }, { utmSource: { not: null } }],
+        },
+        select: {
+          refCode: true,
+          utmSource: true,
+          utmMedium: true,
+          utmCampaign: true,
+          status: true,
+          email: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5000,
       }),
     ]);
 
@@ -366,6 +382,59 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       score: run.priaReports[0]?.priaTotal ?? null,
     }));
 
+    const refMap = new Map<
+      string,
+      {
+        refCode: string;
+        visits: number;
+        completedDiagnostics: number;
+        capturedEmails: number;
+        latestAt: Date;
+        topSource: string;
+      }
+    >();
+    const sourceMap = new Map<string, number>();
+    for (const row of trackedDiagnostics) {
+      const source = (row.utmSource || 'directo').trim() || 'directo';
+      sourceMap.set(source, (sourceMap.get(source) || 0) + 1);
+
+      if (!row.refCode) continue;
+      const ref = row.refCode.trim().toLowerCase();
+      if (!ref) continue;
+      const current = refMap.get(ref) || {
+        refCode: ref,
+        visits: 0,
+        completedDiagnostics: 0,
+        capturedEmails: 0,
+        latestAt: row.createdAt,
+        topSource: source,
+      };
+      current.visits += 1;
+      if (row.status === 'completed') current.completedDiagnostics += 1;
+      if (row.email) current.capturedEmails += 1;
+      if (row.createdAt > current.latestAt) current.latestAt = row.createdAt;
+      current.topSource = source;
+      refMap.set(ref, current);
+    }
+
+    const topReferrers = Array.from(refMap.values())
+      .map((row) => ({
+        refCode: row.refCode,
+        visits: row.visits,
+        completedDiagnostics: row.completedDiagnostics,
+        capturedEmails: row.capturedEmails,
+        completionRate: row.visits > 0 ? (row.completedDiagnostics / row.visits) * 100 : 0,
+        latestAt: row.latestAt,
+        topSource: row.topSource,
+      }))
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 15);
+
+    const topSources = Array.from(sourceMap.entries())
+      .map(([source, visits]) => ({ source, visits }))
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 10);
+
     return {
       summary: {
         totalRuns,
@@ -380,6 +449,11 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       dailyRuns,
       industries,
       latestRuns,
+      referrals: {
+        totalTrackedDiagnostics: trackedDiagnostics.length,
+        topReferrers,
+        topSources,
+      },
     };
   });
 

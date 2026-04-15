@@ -204,6 +204,82 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
             </Table>
           </CardContent>
         </Card>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-foreground">Embajadores (ref)</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Diagnósticos con código referido detectado: {data.referrals.totalTrackedDiagnostics}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-primary-50/80 border-b border-border">
+                    <TableHead className="text-muted-foreground font-semibold">Ref</TableHead>
+                    <TableHead className="text-right text-muted-foreground font-semibold">Visitas</TableHead>
+                    <TableHead className="text-right text-muted-foreground font-semibold">Completados</TableHead>
+                    <TableHead className="text-right text-muted-foreground font-semibold">% cierre</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.referrals.topReferrers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                        Aún no hay datos de `ref`. Probá con `?ref=ana23`.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    data.referrals.topReferrers.slice(0, 10).map((row) => (
+                      <TableRow key={row.refCode}>
+                        <TableCell className="font-medium text-foreground">{row.refCode}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{row.visits}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{row.completedDiagnostics}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{row.completionRate.toFixed(1)}%</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-foreground">Fuentes UTM</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Distribución por `utm_source` capturada en el flujo público.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-primary-50/80 border-b border-border">
+                    <TableHead className="text-muted-foreground font-semibold">Fuente</TableHead>
+                    <TableHead className="text-right text-muted-foreground font-semibold">Visitas</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.referrals.topSources.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="py-8 text-center text-muted-foreground">
+                        Aún no hay datos de UTM.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    data.referrals.topSources.map((row) => (
+                      <TableRow key={row.source}>
+                        <TableCell className="font-medium text-foreground">{row.source}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{row.visits}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

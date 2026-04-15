@@ -318,6 +318,10 @@ model PublicDiagnostic {
   brandName   String   @map("brand_name") // marca ingresada por el usuario (obligatoria)
   domain      String   // dominio normalizado; múltiples corridas permitidas (Fase 3 Freemium)
   industry    String?  @map("industry") // determinado por IA antes del run
+  refCode     String?  @map("ref_code") // código de embajador/referido (ej: ana23)
+  utmSource   String?  @map("utm_source")
+  utmMedium   String?  @map("utm_medium")
+  utmCampaign String?  @map("utm_campaign")
   tier        String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
   email       String?  // capturado al final del flujo (para enviar resultado)
   status      String   @default("pending") // pending | running | completed | failed
@@ -328,6 +332,8 @@ model PublicDiagnostic {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([domain])
+  @@index([refCode])
+  @@index([utmSource])
   @@index([status])
   @@map("public_diagnostics")
 }

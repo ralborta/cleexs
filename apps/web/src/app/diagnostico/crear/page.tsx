@@ -32,6 +32,10 @@ export default function CrearDiagnosticoPage() {
   const tierParam = searchParams.get('tier');
   const autostartParam = searchParams.get('autostart');
   const manualParam = searchParams.get('manual');
+  const refParam = searchParams.get('ref') ?? searchParams.get('ref_code') ?? '';
+  const utmSourceParam = searchParams.get('utm_source') ?? '';
+  const utmMediumParam = searchParams.get('utm_medium') ?? '';
+  const utmCampaignParam = searchParams.get('utm_campaign') ?? '';
   const tier = tierParam === 'gold' ? 'gold' as const : undefined;
   const hasAutostartInput = Boolean(
     (urlParam || '').trim() || (brandParam || '').trim() || (qParam || '').trim()
@@ -95,6 +99,12 @@ export default function CrearDiagnosticoPage() {
     return `https://${trimmed}`;
   }
 
+  function normalizeTrackingValue(input: string): string | undefined {
+    const cleaned = input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    if (!cleaned) return undefined;
+    return cleaned.slice(0, 120);
+  }
+
   async function startDiagnostic(nextBrandName: string, nextUrl: string, fromAutoStart = false) {
     setError(null);
     const trimmedBrand = nextBrandName.trim();
@@ -106,7 +116,12 @@ export default function CrearDiagnosticoPage() {
     setLoading(true);
     try {
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const createPromise = publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier);
+      const createPromise = publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier, {
+        refCode: normalizeTrackingValue(refParam),
+        utmSource: normalizeTrackingValue(utmSourceParam),
+        utmMedium: normalizeTrackingValue(utmMediumParam),
+        utmCampaign: normalizeTrackingValue(utmCampaignParam),
+      });
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );

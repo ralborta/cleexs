@@ -470,13 +470,31 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/public/diagnostic — marca y/o url (al menos uno obligatorio) + tier (freemium|gold)
   fastify.post<{
-    Body: { brandName?: string; url?: string; tier?: 'freemium' | 'gold' };
+    Body: {
+      brandName?: string;
+      url?: string;
+      tier?: 'freemium' | 'gold';
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
   }>('/diagnostic', async (request, reply) => {
     try {
+      const trackingField = z
+        .string()
+        .trim()
+        .max(120)
+        .regex(/^[a-zA-Z0-9_-]+$/, 'Formato inválido')
+        .optional();
       const schema = z.object({
         brandName: z.string().max(200).optional(),
         url: z.union([z.string().max(500), z.undefined()]).optional(),
         tier: z.enum(['freemium', 'gold']).optional(),
+        refCode: trackingField,
+        utmSource: trackingField,
+        utmMedium: trackingField,
+        utmCampaign: trackingField,
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -484,7 +502,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
         });
       }
-      const { brandName, url, tier: requestedTier } = parsed.data;
+      const { brandName, url, tier: requestedTier, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
       const trimmedBrand = (brandName ?? '').trim();
       const trimmedUrl = (url ?? '').trim();
 
@@ -531,6 +549,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           domain,
           status: 'running',
           tier,
+          ...(refCode ? { refCode: refCode.toLowerCase() } : {}),
+          ...(utmSource ? { utmSource: utmSource.toLowerCase() } : {}),
+          ...(utmMedium ? { utmMedium: utmMedium.toLowerCase() } : {}),
+          ...(utmCampaign ? { utmCampaign: utmCampaign.toLowerCase() } : {}),
         },
       });
 

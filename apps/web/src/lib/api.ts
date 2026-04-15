@@ -285,6 +285,22 @@ export interface PlatformDashboard {
   dailyRuns: PlatformDashboardDailyRun[];
   industries: PlatformDashboardIndustryRow[];
   latestRuns: PlatformDashboardLatestRun[];
+  referrals: {
+    totalTrackedDiagnostics: number;
+    topReferrers: Array<{
+      refCode: string;
+      visits: number;
+      completedDiagnostics: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
+      topSource: string;
+    }>;
+    topSources: Array<{
+      source: string;
+      visits: number;
+    }>;
+  };
 }
 
 // Diagnóstico público (flujo sin login)
@@ -392,13 +408,27 @@ export interface PublicDiagnostic {
 }
 
 export const publicDiagnosticApi = {
-  create: (brandName?: string, url?: string, tier?: 'gold' | 'freemium') =>
+  create: (
+    brandName?: string,
+    url?: string,
+    tier?: 'gold' | 'freemium',
+    tracking?: {
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    }
+  ) =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
       body: JSON.stringify({
         ...(brandName != null && brandName !== '' && { brandName }),
         ...(url != null && url !== '' && { url }),
         ...(tier === 'gold' && { tier: 'gold' as const }),
+        ...(tracking?.refCode ? { refCode: tracking.refCode } : {}),
+        ...(tracking?.utmSource ? { utmSource: tracking.utmSource } : {}),
+        ...(tracking?.utmMedium ? { utmMedium: tracking.utmMedium } : {}),
+        ...(tracking?.utmCampaign ? { utmCampaign: tracking.utmCampaign } : {}),
       }),
     }),
   setEmail: (id: string, email: string) =>
