@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink } from '../lib/email';
+import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
 import { determineMarketProfileForBrand, fetchSearchEvidence, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
@@ -766,6 +766,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
                 baseUrl,
                 analysisJson ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail) : null
               );
+              try {
+                await sendShareCleexsFollowUpEmail(current.email, diagnostic.id, baseUrl, current.brandName);
+              } catch (shareErr) {
+                fastify.log.error({ err: shareErr, diagnosticId: diagnostic.id }, 'Error al enviar email de compartir');
+              }
               fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
             }
           } catch (mailErr) {
@@ -833,6 +838,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               ? (fresh.analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
               : null;
           await sendDiagnosticLink(email, id, baseUrl, analysis);
+          try {
+            await sendShareCleexsFollowUpEmail(email, id, baseUrl, diagnostic.brandName);
+          } catch (shareErr) {
+            fastify.log.error({ err: shareErr, diagnosticId: id }, 'Error al enviar email de compartir');
+          }
           emailSent = true;
         } else {
           emailSent = false;

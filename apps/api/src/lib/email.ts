@@ -386,3 +386,62 @@ export async function sendDiagnosticLink(
     `,
   });
 }
+
+/** Código ref estable para atribuir compartidos desde este diagnóstico (solo [a-zA-Z0-9_-]). */
+export function shareRefFromDiagnosticId(diagnosticId: string): string {
+  return 'd' + diagnosticId.replace(/-/g, '').slice(0, 12);
+}
+
+/**
+ * Segundo correo: link para compartir el flujo de diagnóstico con ref propio (embajador espontáneo).
+ * Se envía tras el mail de resultados; asunto distinto para filtrar en bandeja.
+ */
+export async function sendShareCleexsFollowUpEmail(
+  to: string,
+  diagnosticId: string,
+  baseUrl: string,
+  brandLabel?: string | null
+): Promise<void> {
+  if (isEmailDisabled()) return;
+  if (!isEmailConfigured()) return;
+  if (process.env.DISABLE_SHARE_FOLLOWUP_EMAIL === 'true') return;
+
+  const ref = shareRefFromDiagnosticId(diagnosticId);
+  const origin = baseUrl.replace(/\/$/, '');
+  const shareUrl = `${origin}/diagnostico/crear?ref=${encodeURIComponent(ref)}&utm_source=email&utm_medium=followup&utm_campaign=compartir_cleexs`;
+  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
+  const fromName = process.env.SMTP_FROM_NAME;
+  const from = fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
+  const label = brandLabel?.trim() || 'tu marca';
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: 'Tu link para compartir Cleexs',
+    text:
+      `Gracias por usar Cleexs.\n\n` +
+      `Si querés que otras personas hagan el mismo diagnóstico con tu referencia, usá este link:\n\n` +
+      `${shareUrl}\n\n` +
+      `Cada visita con ese link quedará asociada a tu código (${ref}).\n`,
+    html: `
+      <div style="margin:0;padding:0;background:#f1f5f9;">
+        <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;">
+          <div style="background:linear-gradient(135deg,#0f2d8f 0%,#2563eb 100%);padding:24px 28px;color:#fff;">
+            <p style="margin:0 0 8px 0;font-size:12px;letter-spacing:2px;font-weight:700;opacity:0.9;">CLEEXS</p>
+            <h1 style="margin:0;font-size:22px;line-height:1.25;font-weight:800;">Compartí el diagnóstico</h1>
+          </div>
+          <div style="padding:24px 28px;color:#334155;font-size:16px;line-height:1.6;">
+            <p style="margin:0 0 16px 0;">Gracias por completar el diagnóstico para <strong>${escapeHtml(label)}</strong>.</p>
+            <p style="margin:0 0 20px 0;">Si querés que otras personas empiecen el mismo flujo y quede registrada tu referencia, compartí este enlace:</p>
+            <p style="margin:0 0 20px 0;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;">Abrir link para compartir</a>
+            </p>
+            <p style="margin:0 0 8px 0;font-size:13px;color:#64748b;">Si el botón no funciona, copiá esta URL:</p>
+            <p style="margin:0;word-break:break-all;font-size:13px;color:#475569;">${escapeHtml(shareUrl)}</p>
+            <p style="margin:20px 0 0 0;font-size:13px;color:#64748b;">Código de referencia: <strong>${escapeHtml(ref)}</strong></p>
+          </div>
+        </div>
+      </div>
+    `,
+  });
+}
