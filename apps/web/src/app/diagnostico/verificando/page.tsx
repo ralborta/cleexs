@@ -7,7 +7,6 @@ import { Check, Mail, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { CLEEXS_MARKETING_URL } from '@/lib/site';
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -116,7 +115,7 @@ function VerificandoContent() {
       <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
         <div className="text-center space-y-3">
           <p className="text-sm text-muted-foreground">Faltan datos del diagnóstico.</p>
-          <Link href={CLEEXS_MARKETING_URL}>
+          <Link href="/diagnostico/crear">
             <Button variant="outline" size="sm">Volver al diagnóstico</Button>
           </Link>
         </div>
@@ -129,7 +128,7 @@ function VerificandoContent() {
       <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
         <div className="text-center space-y-3">
           <p className="text-sm text-destructive">{error}</p>
-          <Link href={CLEEXS_MARKETING_URL}>
+          <Link href="/diagnostico/crear">
             <Button variant="outline" size="sm">Volver al diagnóstico</Button>
           </Link>
         </div>

@@ -3,7 +3,7 @@
 /**
  * Página pública de diagnóstico (entrada para pruebas).
  * URL: /diagnostico/crear o /prueba-gratuita
- * Query desde WP (cleexs.net):
+ * Query desde marketing (cleexs.net) o enlaces directos (app.cleexs.net):
  *   ?url=dominio.com   → prefill URL
  *   ?brand=NombreMarca → prefill marca
  *   ?q=valor           → si parece dominio (ej. tiene punto) prefill URL, sino prefill marca

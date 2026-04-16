@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { Upload, Bell, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-import { CLEEXS_MARKETING_URL } from '@/lib/site';
 
 /** Rutas con header mínimo: solo logo, sin menú completo */
 const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];
@@ -27,7 +26,7 @@ export function Header() {
     return (
       <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
         <div className="container mx-auto flex h-full items-center px-6">
-          <Link href={CLEEXS_MARKETING_URL} className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
+          <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
               <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
             </div>
@@ -41,7 +40,7 @@ export function Header() {
     <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
       <div className="container mx-auto flex h-full items-center justify-between px-6">
         <div className="flex items-center">
-          <Link href={CLEEXS_MARKETING_URL} className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
+          <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
               <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
             </div>

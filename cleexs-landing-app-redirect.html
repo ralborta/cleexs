@@ -1,0 +1,194 @@
+<!--
+  CLEEXS LANDING – REDIRECT A APP (diagnostico/crear?q=...)
+  =========================================================
+  Uso: en WordPress, widget HTML de Elementor. Reemplazá todo el contenido
+  del widget por este archivo.
+
+  Si tenés el HTML COMPLETO de la landing (con todas las secciones: hero,
+  shot frame, stats, video, pricing, opportunity scrolly, faq, CTA final,
+  y el bloque <style> completo), pegá esas secciones y el <style> aquí
+  y conservá solo el <script> de abajo (con handleSubmit que redirige a la app).
+-->
+<div id="cleexs-landing-v2">
+  <div class="cx-page">
+    <div class="cx-bg cx-bg-1"></div>
+    <div class="cx-bg cx-bg-2"></div>
+    <div class="cx-bg cx-bg-3"></div>
+    <div class="cx-grid"></div>
+
+    <section class="cx-hero" id="inicio">
+      <div class="cx-hero-main">
+        <h1 class="cx-title cx-reveal">
+          ¿Tu marca es la <br/>
+          <span class="cx-underline">favorita</span> de las IAs?
+        </h1>
+
+        <div class="cx-logo-marquee cx-reveal" aria-label="Motores de IA">
+          <div class="cx-logo-marquee-inner">
+            <div class="cx-logo-track">
+              <div class="cx-logo-item cx-logo-openai">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/openai.svg" alt="ChatGPT">
+                <span>ChatGPT</span>
+              </div>
+              <div class="cx-logo-item cx-logo-gemini">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlegemini.svg" alt="Gemini">
+                <span>Gemini</span>
+              </div>
+              <div class="cx-logo-item cx-logo-perplexity">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/perplexity.svg" alt="Perplexity">
+                <span>Perplexity</span>
+              </div>
+              <div class="cx-logo-item cx-logo-claude">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/anthropic.svg" alt="Claude">
+                <span>Claude</span>
+              </div>
+              <div class="cx-logo-item cx-logo-aioverviews">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/google.svg" alt="AI Overviews">
+                <span>AI Overviews</span>
+              </div>
+              <div class="cx-logo-item cx-logo-googleai">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/google.svg" alt="Google AI">
+                <span>Google AI</span>
+              </div>
+            </div>
+            <div class="cx-logo-track" aria-hidden="true">
+              <div class="cx-logo-item cx-logo-openai">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/openai.svg" alt="">
+                <span>ChatGPT</span>
+              </div>
+              <div class="cx-logo-item cx-logo-aioverviews">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/google.svg" alt="">
+                <span>AI Overviews</span>
+              </div>
+              <div class="cx-logo-item cx-logo-perplexity">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/perplexity.svg" alt="">
+                <span>Perplexity</span>
+              </div>
+              <div class="cx-logo-item cx-logo-claude">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/anthropic.svg" alt="">
+                <span>Claude</span>
+              </div>
+              <div class="cx-logo-item cx-logo-googleai">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/google.svg" alt="">
+                <span>Google AI</span>
+              </div>
+              <div class="cx-logo-item cx-logo-gemini">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlegemini.svg" alt="">
+                <span>Gemini</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="cx-subtitle cx-reveal">¡Puede serlo!</h2>
+      </div>
+
+      <div class="cx-hero-action">
+        <div class="cx-action-head cx-reveal">
+          <p class="cx-lead">Primer paso (gratis, en 30"): <br/>averigua qué dice la IA de <span class="cx-highlight">tu marca hoy</span>:</p>
+        </div>
+
+        <div class="cx-search-wrap cx-reveal">
+          <div class="cx-search" role="search">
+            <span class="cx-search-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Z" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M2.5 12h19" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M12 2c2.7 2.9 4.1 6.2 4.1 10S14.7 19.1 12 22c-2.7-2.9-4.1-6.2-4.1-10S9.3 4.9 12 2Z" stroke="currentColor" stroke-width="1.7"/>
+              </svg>
+            </span>
+
+            <input
+              id="cx-domain"
+              type="text"
+              inputmode="url"
+              autocomplete="off"
+              placeholder="Ingresá tu dominio (ej. tumarca.com)"
+              aria-label="Ingresá tu dominio o nombre de marca"
+            />
+
+            <button id="cx-check-btn" type="button">
+              <span>Checkear visibilidad</span>
+              <svg class="cx-btn-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="cx-mini-wrap cx-reveal">
+          <h3 class="cx-mini-title">Aprendé gratis en 1 minuto:</h3>
+          <div class="cx-mini-features">
+            <div class="cx-mini-item">
+              <span class="cx-mini-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span>Cómo rankeás</span>
+            </div>
+            <div class="cx-mini-item">
+              <span class="cx-mini-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span>Qué dice de tu marca</span>
+            </div>
+            <div class="cx-mini-item">
+              <span class="cx-mini-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span>Qué competidores aparecen</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Si tenés el HTML completo de la landing (stats, pricing, faq, CTA final, etc.),
+         pegá esas secciones aquí dentro de .cx-page y añadí el bloque <style> completo arriba. -->
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.getElementById('cleexs-landing-v2');
+  if (!root) return;
+
+  var APP_CLEEXS_URL = 'https://app.cleexs.net';
+
+  var input = root.querySelector('#cx-domain');
+  var btn = root.querySelector('#cx-check-btn');
+  var search = root.querySelector('.cx-search');
+
+  function showError() {
+    if (!search) return;
+    search.classList.remove('is-error');
+    void search.offsetWidth;
+    search.classList.add('is-error');
+    setTimeout(function() { search.classList.remove('is-error'); }, 380);
+    if (input) input.focus();
+  }
+
+  function handleSubmit() {
+    if (!input) return;
+    var value = (input.value || '').trim();
+    if (!value) {
+      showError();
+      return;
+    }
+    window.location.href = APP_CLEEXS_URL + '/diagnostico/crear?q=' + encodeURIComponent(value);
+  }
+
+  if (btn) btn.addEventListener('click', handleSubmit);
+  if (input) input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); }
+  });
+})();
+</script>

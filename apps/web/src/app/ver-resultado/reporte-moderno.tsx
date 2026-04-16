@@ -4,7 +4,6 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -82,7 +81,7 @@ function DetailPopup({
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Link
-              href={CLEEXS_MARKETING_URL}
+              href="/"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 ring-1 ring-slate-200 hover:opacity-90"
               aria-label="Cleexs"
             >

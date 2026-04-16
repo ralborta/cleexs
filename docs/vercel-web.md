@@ -27,6 +27,7 @@ La app **web** (Next.js en `apps/web`) **no usa Prisma** en tiempo de build. Si 
 | Variable | Obligatoria | Descripción |
 |----------|-------------|-------------|
 | **NEXT_PUBLIC_API_URL** | ✅ | URL de la API en producción (ej. `https://tu-api.railway.app`). |
+| **NEXT_PUBLIC_APP_URL** | Recomendada | URL canónica del producto (ej. `https://app.cleexs.net`). Enlaces en código y docs; si no está, se usa `https://app.cleexs.net` por defecto. |
 | NEXT_PUBLIC_LOGO_DEV_TOKEN | Opcional | Logo.dev para avatares de marcas (5k gratis/día). |
 
-Flujo: GitHub → Vercel (web) + Railway (API). En Railway definí `FRONTEND_URL` con la URL de Vercel.
+Flujo: GitHub → Vercel (web) + Railway (API). En Railway definí `FRONTEND_URL` con la misma URL pública del front (ej. `https://app.cleexs.net`) para emails y CORS.
