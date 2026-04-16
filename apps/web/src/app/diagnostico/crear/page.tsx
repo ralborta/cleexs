@@ -105,6 +105,73 @@ export default function CrearDiagnosticoPage() {
     return cleaned.slice(0, 120);
   }
 
+  const ATTRIBUTION_STORAGE_KEY = 'cleexs_diagnostic_attribution';
+
+  /** ref/utm desde URL real + respaldo en sessionStorage (useSearchParams a veces llega tarde o se pierde). */
+  function getAttributionForCreate(): {
+    refCode?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+  } {
+    let ref = refParam || '';
+    let utmSrc = utmSourceParam;
+    let utmMed = utmMediumParam;
+    let utmCamp = utmCampaignParam;
+
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      ref = sp.get('ref') || sp.get('ref_code') || refParam || '';
+      utmSrc = sp.get('utm_source') || utmSourceParam || '';
+      utmMed = sp.get('utm_medium') || utmMediumParam || '';
+      utmCamp = sp.get('utm_campaign') || utmCampaignParam || '';
+      try {
+        const raw = sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY);
+        if (raw) {
+          const j = JSON.parse(raw) as {
+            ref?: string;
+            utm_source?: string;
+            utm_medium?: string;
+            utm_campaign?: string;
+          };
+          if (!ref) ref = j.ref || '';
+          if (!utmSrc) utmSrc = j.utm_source || '';
+          if (!utmMed) utmMed = j.utm_medium || '';
+          if (!utmCamp) utmCamp = j.utm_campaign || '';
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return {
+      refCode: normalizeTrackingValue(ref),
+      utmSource: normalizeTrackingValue(utmSrc),
+      utmMedium: normalizeTrackingValue(utmMed),
+      utmCampaign: normalizeTrackingValue(utmCamp),
+    };
+  }
+
+  // Guardar atribución en cuanto exista en la URL (para el POST y por si cambia la ruta).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    const ref = sp.get('ref') || sp.get('ref_code') || '';
+    const utm_source = sp.get('utm_source') || '';
+    const utm_medium = sp.get('utm_medium') || '';
+    const utm_campaign = sp.get('utm_campaign') || '';
+    if (ref || utm_source || utm_medium || utm_campaign) {
+      try {
+        sessionStorage.setItem(
+          ATTRIBUTION_STORAGE_KEY,
+          JSON.stringify({ ref, utm_source, utm_medium, utm_campaign })
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [refParam, utmSourceParam, utmMediumParam, utmCampaignParam]);
+
   async function startDiagnostic(nextBrandName: string, nextUrl: string, fromAutoStart = false) {
     setError(null);
     const trimmedBrand = nextBrandName.trim();
@@ -116,12 +183,8 @@ export default function CrearDiagnosticoPage() {
     setLoading(true);
     try {
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
-      const createPromise = publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier, {
-        refCode: normalizeTrackingValue(refParam),
-        utmSource: normalizeTrackingValue(utmSourceParam),
-        utmMedium: normalizeTrackingValue(utmMediumParam),
-        utmCampaign: normalizeTrackingValue(utmCampaignParam),
-      });
+      const attribution = getAttributionForCreate();
+      const createPromise = publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier, attribution);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );

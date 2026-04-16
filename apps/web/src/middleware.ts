@@ -52,7 +52,7 @@ export function middleware(request: NextRequest) {
     if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
       url.pathname = '/diagnostico/crear';
-      url.search = '';
+      // No borrar url.search: conserva ?ref=, utm_*, etc.
       return NextResponse.redirect(url);
     }
   }
