@@ -64,7 +64,9 @@ En el servicio API en Railway → **Variables**:
 | **DATABASE_URL** | ✅ | Connection string de PostgreSQL (Postgres de Railway → referencia la variable del servicio DB). |
 | **OPENAI_API_KEY** | ✅ | Para análisis Freemium y Gold. Sin esto no hay análisis con IA. |
 | **GOOGLE_AI_API_KEY** | Plan Gold | Para análisis Gemini. Sin esto, Gold usa solo OpenAI. Alternativa: `GEMINI_API_KEY`. |
-| **FRONTEND_URL** | ✅ | URL del front (ej. `https://tu-app.vercel.app`) para links en emails y CORS. |
+| **FRONTEND_URL** | ✅ | CORS/orígenes permitidos (puede ser preview/staging). |
+| **CLEEXS_APP_URL** | Recomendada | URL canónica del producto para **enlaces en correos** (`https://app.cleexs.net`). Si no está, se usa **NEXT_PUBLIC_APP_URL**; si tampoco, **localhost** vía `FRONTEND_URL` solo en desarrollo; en producción el fallback es `https://app.cleexs.net` (evita que los mails usen un dominio de staging). |
+| **NEXT_PUBLIC_APP_URL** | Opcional (API) | Misma URL pública de la app; la API puede repetirla si no definís `CLEEXS_APP_URL`. |
 | **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASS** | Envío de emails | Para el correo del diagnóstico público. Sin esto, no se envía el link. |
 | SMTP_FROM, SMTP_FROM_NAME, SMTP_SECURE | Opcional | Remitente y TLS. |
 

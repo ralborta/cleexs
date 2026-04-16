@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
+import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
 import { determineMarketProfileForBrand, fetchSearchEvidence, getTop5Competitors } from '../lib/diagnostic-ai';
@@ -757,7 +758,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           where: { id: diagnostic.id },
         });
         if (current?.email) {
-          const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          const baseUrl = getAppBaseUrlForPublicLinks();
           try {
             if (!isEmailDisabled() && isEmailConfigured()) {
               await sendDiagnosticLink(
@@ -820,7 +821,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     let emailSent: boolean | null = null;
     let emailError: 'provider_rejected' | 'send_failed' | undefined;
     if (diagnostic.status === 'completed') {
-      const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = getAppBaseUrlForPublicLinks();
       try {
         if (!isEmailDisabled() && isEmailConfigured()) {
           const fresh = await prisma.publicDiagnostic.findUnique({
