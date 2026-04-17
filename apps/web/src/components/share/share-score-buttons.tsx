@@ -1,13 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, Copy, Linkedin, Mail, MessageCircle, Send } from 'lucide-react';
 
-function siteOrigin(): string {
-  if (typeof window === 'undefined') return '';
-  return window.location.origin;
-}
+const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
 
 export function ShareScoreButtons({
   path,
@@ -19,7 +16,19 @@ export function ShareScoreButtons({
   summary: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const url = `${siteOrigin()}${path.startsWith('/') ? path : `/${path}`}`;
+  const [origin, setOrigin] = useState(PUBLIC_SITE_URL);
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  useEffect(() => {
+    if (PUBLIC_SITE_URL) {
+      setOrigin(PUBLIC_SITE_URL);
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
+  const url = origin ? `${origin}${normalizedPath}` : normalizedPath;
   const encodedUrl = encodeURIComponent(url);
   const bodyText = `${summary}\n\n${url}`;
   const wa = `https://wa.me/?text=${encodeURIComponent(`${title}\n${url}`)}`;

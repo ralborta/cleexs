@@ -542,6 +542,12 @@ function VerResultadoContent() {
   const isCompleted = diagnostic.status === 'completed';
   const isPending = diagnostic.status === 'pending' || diagnostic.status === 'running';
   const isFailed = diagnostic.status === 'failed';
+  const publicSiteBase =
+    (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')).replace(
+      /\/$/,
+      ''
+    );
+  const sharePublicUrl = diagnostic.shareSlug ? `${publicSiteBase}/score/${diagnostic.shareSlug}` : null;
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
   const satelliteModule = diagnostic.satelliteModule;
@@ -602,7 +608,7 @@ function VerResultadoContent() {
                     href={`/score/${diagnostic.shareSlug}`}
                     className="font-medium text-primary-600 underline break-all hover:text-primary-700"
                   >
-                    /score/{diagnostic.shareSlug}
+                    {sharePublicUrl || `/score/${diagnostic.shareSlug}`}
                   </Link>
                 </p>
               </div>

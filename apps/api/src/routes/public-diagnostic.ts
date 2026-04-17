@@ -488,17 +488,28 @@ async function ensureShareSlug(diagnosticId: string): Promise<string | null> {
     select: { id: true, domain: true, brandName: true, shareSlug: true },
   });
   if (!row) return null;
-  if (row.shareSlug) return row.shareSlug;
+  const currentSlug = row.shareSlug?.toLowerCase().trim();
+  const isWeakCurrentSlug =
+    !!currentSlug &&
+    (GENERIC_TLDS.has(currentSlug) || currentSlug.length < 4 || !/^[a-z0-9-]+$/.test(currentSlug));
+  if (currentSlug && !isWeakCurrentSlug) return currentSlug;
 
   const rawBase = row.domain.startsWith('brand-')
     ? slugify(row.brandName) || 'marca'
     : row.domain.replace(/^www\./i, '').replace(/\./g, '-');
+  const brandBase = slugify(row.brandName) || 'marca';
   let base = rawBase
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 72);
+  if (GENERIC_TLDS.has(base) || base.length < 4) {
+    base = `${brandBase}-${base || 'score'}-${row.id.slice(0, 5)}`
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 72);
+  }
   if (!base) base = `score-${row.id.slice(0, 8)}`;
 
   for (let i = 0; i < 80; i++) {
