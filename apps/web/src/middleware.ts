@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   '/ver-resultado',
   '/prueba-gratuita',
   '/planes',
+  '/score',
 ];
 
 /**
@@ -26,6 +27,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname === '/planes') return true;
   if (pathname.startsWith('/diagnostico/verificando')) return true;
   if (pathname.startsWith('/ver-resultado')) return true;
+  if (pathname.startsWith('/score')) return true;
   return false;
 }
 
@@ -34,6 +36,7 @@ function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(path)) return true;
   if (path.startsWith('/diagnostico/verificando')) return true;
   if (path.startsWith('/ver-resultado')) return true;
+  if (path.startsWith('/score')) return true;
   return false;
 }
 
@@ -48,7 +51,8 @@ export function middleware(request: NextRequest) {
       pathname === '/prueba-gratuita' ||
       pathname === '/planes' ||
       pathname.startsWith('/diagnostico/verificando') ||
-      pathname.startsWith('/ver-resultado');
+      pathname.startsWith('/ver-resultado') ||
+      pathname.startsWith('/score');
     if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
       url.pathname = '/diagnostico/crear';

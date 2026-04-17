@@ -13,6 +13,7 @@ const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
 function isPublicDiagnosticPath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname.startsWith('/planes')) return true;
+  if (pathname.startsWith('/score')) return true;
   if (MINIMAL_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'))) return true;
   if (pathname.startsWith(VERIFYING_PATH_PREFIX)) return true;
   return false;

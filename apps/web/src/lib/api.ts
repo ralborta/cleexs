@@ -398,6 +398,7 @@ export interface PublicDiagnostic {
   isFirstRun?: boolean;
   showFullReport?: boolean;
   runId?: string | null;
+  shareSlug?: string | null;
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;
   runResult?: PublicDiagnosticRunResult;
@@ -405,6 +406,33 @@ export interface PublicDiagnostic {
   analysisJson?: DiagnosticAnalysisJson | null;
   trendData?: PublicDiagnosticTrendPoint[];
   satelliteModule?: PublicDiagnosticSatelliteModule | null;
+}
+
+export interface PublicDiagnosticShareUnlock {
+  goldUnlocked: boolean;
+  viralUnlocked: boolean;
+  uniqueVisitCount: number;
+  visitsNeeded: number;
+  viralUnlockMin: number;
+}
+
+export interface PublicDiagnosticShareResponse {
+  slug: string;
+  diagnosticId: string;
+  brandName: string;
+  industry?: string | null;
+  domain: string;
+  status: string;
+  tier: 'gold' | 'freemium';
+  cleexsScore: number | null;
+  resumenTeaser: string;
+  unlock: PublicDiagnosticShareUnlock;
+  shareFullUnlocked: boolean;
+  analysisJson?: DiagnosticAnalysisJson | null;
+  satelliteModule?: PublicDiagnosticSatelliteModule | null;
+  runResult?: PublicDiagnosticRunResult;
+  runResultGemini?: PublicDiagnosticRunResult;
+  trendData?: PublicDiagnosticTrendPoint[];
 }
 
 export const publicDiagnosticApi = {
@@ -444,4 +472,23 @@ export const publicDiagnosticApi = {
       `/api/public/diagnostic/${id}${tier ? `?tier=${tier}` : ''}${tier ? '&' : '?'}_=${Date.now()}`,
       { cache: 'no-store' }
     ),
+};
+
+export const publicDiagnosticShareApi = {
+  get: (slug: string) =>
+    api<PublicDiagnosticShareResponse>(
+      `/api/public/diagnostic/share/${encodeURIComponent(slug)}`,
+      { cache: 'no-store' }
+    ),
+  registerVisit: (slug: string, visitorId: string) =>
+    api<{
+      ok: boolean;
+      uniqueVisitCount: number;
+      viralUnlocked: boolean;
+      shareFullUnlocked: boolean;
+      visitsNeeded: number;
+    }>(`/api/public/diagnostic/share/${encodeURIComponent(slug)}/visit`, {
+      method: 'POST',
+      body: JSON.stringify({ visitorId }),
+    }),
 };

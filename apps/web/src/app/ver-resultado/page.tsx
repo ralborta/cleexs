@@ -52,6 +52,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 
 const normalizeName = (value: string) =>
   value
@@ -580,6 +581,32 @@ function VerResultadoContent() {
               {diagnostic.industry && ` · ${diagnostic.industry}`}
               {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
             </CardDescription>
+            {isCompleted && diagnostic.shareSlug && (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 p-4">
+                <p className="text-sm font-semibold text-slate-900">Compartir reporte</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-3">
+                  Vista pública con resumen y score. El detalle completo en esa página se desbloquea con plan Gold o
+                  cuando varias personas distintas abran el enlace.
+                </p>
+                <ShareScoreButtons
+                  path={`/score/${diagnostic.shareSlug}`}
+                  title={`Cleexs Score — ${diagnostic.brandName}`}
+                  summary={
+                    diagnostic.runResult
+                      ? `Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
+                      : diagnostic.brandName
+                  }
+                />
+                <p className="mt-3 text-xs">
+                  <Link
+                    href={`/score/${diagnostic.shareSlug}`}
+                    className="font-medium text-primary-600 underline break-all hover:text-primary-700"
+                  >
+                    /score/{diagnostic.shareSlug}
+                  </Link>
+                </p>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {isPending && (

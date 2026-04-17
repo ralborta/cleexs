@@ -328,12 +328,29 @@ model PublicDiagnostic {
   runId       String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
   runGeminiId String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
   analysisJson Json?   @map("analysis_json") // análisis detallado con IA (Fase 2)
+  shareSlug   String?  @unique @map("share_slug") // URL pública /score/{slug}
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+
+  shareVisits PublicDiagnosticShareVisit[]
 
   @@index([domain])
   @@index([refCode])
   @@index([utmSource])
   @@index([status])
   @@map("public_diagnostics")
+}
+
+// Visitas únicas al enlace compartido (desbloqueo viral tras N visitas).
+model PublicDiagnosticShareVisit {
+  id             String   @id @default(uuid())
+  diagnosticId   String   @map("diagnostic_id")
+  visitorId      String   @map("visitor_id") // UUID estable en el navegador del visitante
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  diagnostic     PublicDiagnostic @relation(fields: [diagnosticId], references: [id], onDelete: Cascade)
+
+  @@unique([diagnosticId, visitorId])
+  @@index([diagnosticId])
+  @@map("public_diagnostic_share_visits")
 }

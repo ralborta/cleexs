@@ -466,6 +466,63 @@ function shrinkAnalysisJsonForPersistence(input: object): object {
   return o as object;
 }
 
+const VIRAL_UNLOCK_MIN = Math.max(1, Number(process.env.PUBLIC_SHARE_VIRAL_UNLOCK_MIN ?? '5') || 5);
+
+function extractResumenTeaser(analysisJson: unknown): string {
+  if (!analysisJson || typeof analysisJson !== 'object' || Array.isArray(analysisJson)) return '';
+  const j = analysisJson as Record<string, unknown>;
+  let text = '';
+  if (typeof j.resumenEjecutivo === 'string') text = j.resumenEjecutivo;
+  else if (j.analisisOpenAI && typeof j.analisisOpenAI === 'object' && !Array.isArray(j.analisisOpenAI)) {
+    const ao = j.analisisOpenAI as Record<string, unknown>;
+    if (typeof ao.resumenEjecutivo === 'string') text = ao.resumenEjecutivo;
+  }
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (t.length <= 520) return t;
+  return `${t.slice(0, 517)}…`;
+}
+
+async function ensureShareSlug(diagnosticId: string): Promise<string | null> {
+  const row = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: { id: true, domain: true, brandName: true, shareSlug: true },
+  });
+  if (!row) return null;
+  if (row.shareSlug) return row.shareSlug;
+
+  const rawBase = row.domain.startsWith('brand-')
+    ? slugify(row.brandName) || 'marca'
+    : row.domain.replace(/^www\./i, '').replace(/\./g, '-');
+  let base = rawBase
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 72);
+  if (!base) base = `score-${row.id.slice(0, 8)}`;
+
+  for (let i = 0; i < 80; i++) {
+    const candidate = i === 0 ? base : `${base}-${i}`;
+    const clash = await prisma.publicDiagnostic.findFirst({
+      where: { shareSlug: candidate, NOT: { id: row.id } },
+      select: { id: true },
+    });
+    if (!clash) {
+      await prisma.publicDiagnostic.update({
+        where: { id: row.id },
+        data: { shareSlug: candidate },
+      });
+      return candidate;
+    }
+  }
+  const fallback = `s-${row.id.slice(0, 12)}`;
+  await prisma.publicDiagnostic.update({
+    where: { id: row.id },
+    data: { shareSlug: fallback },
+  });
+  return fallback;
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -754,6 +811,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           analysisJson = safeForDb;
         }
 
+        void ensureShareSlug(diagnostic.id).catch((err) =>
+          fastify.log.warn({ err, diagnosticId: diagnostic.id }, 'No se pudo asignar share_slug')
+        );
+
         const current = await prisma.publicDiagnostic.findUnique({
           where: { id: diagnostic.id },
         });
@@ -871,6 +932,283 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     return !!firstCompleted && firstCompleted.id === diagnosticId;
   }
 
+  type ShareRunResult = {
+    brandId: string;
+    brandName: string;
+    cleexsScore: number;
+    competitors: string[];
+    brandAliases: string[];
+    promptResults: Array<{
+      category: string;
+      score: number;
+      promptText?: string;
+      responseText?: string;
+      top3Json?: Array<{ position: number; name: string; type: string; reason?: string }>;
+      flags?: Record<string, boolean>;
+    }>;
+  };
+
+  async function buildShareUnlockedPayload(diagnostic: {
+    id: string;
+    domain: string;
+    runId: string | null;
+    runGeminiId: string | null;
+    status: string;
+    analysisJson: unknown;
+  }): Promise<{
+    analysisJson?: object | null;
+    satelliteModule?: SatelliteModuleResult | null;
+    runResult?: ShareRunResult;
+    runResultGemini?: ShareRunResult;
+    trendData?: Array<{ label: string; score: number; date: string }>;
+  }> {
+    const out: {
+      analysisJson?: object | null;
+      satelliteModule?: SatelliteModuleResult | null;
+      runResult?: ShareRunResult;
+      runResultGemini?: ShareRunResult;
+      trendData?: Array<{ label: string; score: number; date: string }>;
+    } = {};
+    if (diagnostic.analysisJson) {
+      out.satelliteModule = extractSatelliteModuleFromAnalysis(diagnostic.analysisJson);
+    }
+    if (diagnostic.status !== 'completed' || !diagnostic.runId) {
+      return out;
+    }
+    if (diagnostic.analysisJson && typeof diagnostic.analysisJson === 'object' && !Array.isArray(diagnostic.analysisJson)) {
+      out.analysisJson = sanitizeAnalysisJsonForPublicGet(diagnostic.analysisJson);
+    }
+
+    const runPeek = await prisma.run.findUnique({
+      where: { id: diagnostic.runId },
+      include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+    });
+    if (runPeek?.priaReports[0]) {
+      const fullRun = await prisma.run.findUnique({
+        where: { id: diagnostic.runId },
+        include: {
+          promptResults: {
+            include: { prompt: { include: { category: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+          brand: { include: { competitors: true, aliases: true } },
+        },
+      });
+      if (fullRun) {
+        out.runResult = {
+          brandId: fullRun.brand.id,
+          brandName: fullRun.brand.name,
+          cleexsScore: runPeek.priaReports[0].priaTotal,
+          competitors: fullRun.brand.competitors.map((c) => c.name),
+          brandAliases: fullRun.brand.aliases.map((a) => a.alias),
+          promptResults: fullRun.promptResults.map((pr) => ({
+            category: pr.prompt?.category?.name ?? 'General',
+            score: pr.score,
+            promptText: pr.prompt?.promptText ?? '',
+            responseText: truncatePromptResponseText(pr.responseText),
+            top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
+            flags: (pr.flags as Record<string, boolean>) ?? {},
+          })),
+        };
+      }
+    }
+
+    if (diagnostic.runGeminiId) {
+      const runGemini = await prisma.run.findUnique({
+        where: { id: diagnostic.runGeminiId },
+        include: {
+          promptResults: { select: { promptId: true }, orderBy: { createdAt: 'asc' } },
+          priaReports: { take: 1, orderBy: { createdAt: 'desc' } },
+        },
+      });
+      if (runGemini?.status === 'completed' && runGemini.priaReports[0]) {
+        const fullRunGemini = await prisma.run.findUnique({
+          where: { id: diagnostic.runGeminiId },
+          include: {
+            promptResults: {
+              include: { prompt: { include: { category: true } } },
+              orderBy: { createdAt: 'asc' },
+            },
+            brand: { include: { competitors: true, aliases: true } },
+          },
+        });
+        if (fullRunGemini) {
+          out.runResultGemini = {
+            brandId: fullRunGemini.brand.id,
+            brandName: fullRunGemini.brand.name,
+            cleexsScore: runGemini.priaReports[0].priaTotal,
+            competitors: fullRunGemini.brand.competitors.map((c) => c.name),
+            brandAliases: fullRunGemini.brand.aliases.map((a) => a.alias),
+            promptResults: fullRunGemini.promptResults.map((pr) => ({
+              category: pr.prompt?.category?.name ?? 'General',
+              score: pr.score,
+              promptText: pr.prompt?.promptText ?? '',
+              responseText: truncatePromptResponseText(pr.responseText),
+              top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
+              flags: (pr.flags as Record<string, boolean>) ?? {},
+            })),
+          };
+        }
+      }
+    }
+
+    if (diagnostic.domain) {
+      const lastDiagnostics = await prisma.publicDiagnostic.findMany({
+        where: { domain: diagnostic.domain, status: 'completed', runId: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        select: { id: true, runId: true, createdAt: true },
+      });
+      const runIds = lastDiagnostics.map((d) => d.runId).filter(Boolean) as string[];
+      if (runIds.length > 0) {
+        const runs = await prisma.run.findMany({
+          where: { id: { in: runIds } },
+          include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+        });
+        const scoreByRunId = new Map<string | null, number>();
+        runs.forEach((r) => {
+          const score = r.priaReports[0]?.priaTotal;
+          if (score != null) scoreByRunId.set(r.id, score);
+        });
+        const chronological = [...lastDiagnostics].reverse();
+        out.trendData = chronological
+          .filter((d) => d.runId && scoreByRunId.has(d.runId))
+          .map((d, idx) => ({
+            label: `Corrida ${idx + 1}`,
+            score: scoreByRunId.get(d.runId!) ?? 0,
+            date: d.createdAt.toISOString(),
+          }));
+      }
+    }
+
+    return out;
+  }
+
+  // GET /api/public/diagnostic/share/:slug — vista pública (teaser o reporte completo si gold o desbloqueo viral)
+  fastify.get<{ Params: { slug: string } }>('/diagnostic/share/:slug', async (request, reply) => {
+    const slug = request.params.slug.toLowerCase().trim();
+    if (!slug || slug.length > 96 || !/^[a-z0-9-]+$/.test(slug)) {
+      return reply.code(400).send({ error: 'Enlace inválido.' });
+    }
+    const row = await prisma.publicDiagnostic.findFirst({
+      where: { shareSlug: slug },
+      select: {
+        id: true,
+        domain: true,
+        brandName: true,
+        industry: true,
+        status: true,
+        tier: true,
+        runId: true,
+        runGeminiId: true,
+      },
+    });
+    if (!row) {
+      return reply.code(404).send({ error: 'Enlace no encontrado.' });
+    }
+
+    const visitCount = await prisma.publicDiagnosticShareVisit.count({
+      where: { diagnosticId: row.id },
+    });
+    const tier = row.tier === 'gold' ? 'gold' : 'freemium';
+    const goldUnlocked = tier === 'gold';
+    const viralUnlocked = visitCount >= VIRAL_UNLOCK_MIN;
+    const shareFullUnlocked = goldUnlocked || viralUnlocked;
+
+    let analysisJson: unknown = null;
+    if (row.status === 'completed') {
+      const j = await prisma.publicDiagnostic.findUnique({
+        where: { id: row.id },
+        select: { analysisJson: true },
+      });
+      analysisJson = j?.analysisJson ?? null;
+    }
+
+    const resumenTeaser = extractResumenTeaser(analysisJson);
+    let cleexsScore: number | null = null;
+    if (row.runId && row.status === 'completed') {
+      const pria = await prisma.pRIAReport.findFirst({
+        where: { runId: row.runId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (pria) cleexsScore = pria.priaTotal;
+    }
+
+    const payload: Record<string, unknown> = {
+      slug,
+      diagnosticId: row.id,
+      brandName: row.brandName,
+      industry: row.industry,
+      domain: row.domain,
+      status: row.status,
+      tier,
+      cleexsScore,
+      resumenTeaser,
+      unlock: {
+        goldUnlocked,
+        viralUnlocked,
+        uniqueVisitCount: visitCount,
+        visitsNeeded: Math.max(0, VIRAL_UNLOCK_MIN - visitCount),
+        viralUnlockMin: VIRAL_UNLOCK_MIN,
+      },
+      shareFullUnlocked,
+    };
+
+    if (shareFullUnlocked && row.status === 'completed') {
+      const extra = await buildShareUnlockedPayload({
+        ...row,
+        analysisJson,
+      });
+      Object.assign(payload, extra);
+    }
+
+    return payload;
+  });
+
+  fastify.post<{ Params: { slug: string }; Body: { visitorId?: string } }>(
+    '/diagnostic/share/:slug/visit',
+    async (request, reply) => {
+      const slug = request.params.slug.toLowerCase().trim();
+      const visitorSchema = z.object({ visitorId: z.string().uuid() });
+      const parsed = visitorSchema.safeParse(request.body ?? {});
+      if (!slug || !parsed.success) {
+        return reply.code(400).send({ error: 'visitorId UUID requerido.' });
+      }
+      const { visitorId } = parsed.data;
+
+      const row = await prisma.publicDiagnostic.findFirst({
+        where: { shareSlug: slug },
+        select: { id: true, tier: true },
+      });
+      if (!row) {
+        return reply.code(404).send({ error: 'Enlace no encontrado.' });
+      }
+
+      await prisma.publicDiagnosticShareVisit.upsert({
+        where: {
+          diagnosticId_visitorId: { diagnosticId: row.id, visitorId },
+        },
+        create: { diagnosticId: row.id, visitorId },
+        update: {},
+      });
+
+      const uniqueVisitCount = await prisma.publicDiagnosticShareVisit.count({
+        where: { diagnosticId: row.id },
+      });
+      const tier = row.tier === 'gold' ? 'gold' : 'freemium';
+      const viralUnlocked = uniqueVisitCount >= VIRAL_UNLOCK_MIN;
+      const shareFullUnlocked = tier === 'gold' || viralUnlocked;
+
+      return {
+        ok: true,
+        uniqueVisitCount,
+        viralUnlocked,
+        shareFullUnlocked,
+        visitsNeeded: Math.max(0, VIRAL_UNLOCK_MIN - uniqueVisitCount),
+      };
+    }
+  );
+
   // GET /api/public/diagnostic/:id — estado, steps (industria, competidores, prompts) y resultado con Cleexs Score
   fastify.get<{ Params: { id: string }; Querystring: { tier?: string } }>('/diagnostic/:id', async (request, reply) => {
     const id = request.params.id;
@@ -889,6 +1227,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         email: true,
         createdAt: true,
         updatedAt: true,
+        shareSlug: true,
       },
     });
     if (!row) {
@@ -928,6 +1267,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     };
     type RunResultType = typeof runResultShape;
 
+    let shareSlugOut: string | null = row.shareSlug ?? null;
+    if (row.status === 'completed') {
+      shareSlugOut = (await ensureShareSlug(row.id)) ?? shareSlugOut;
+    }
+
     const base: {
       id: string;
       domain: string;
@@ -938,6 +1282,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       isFirstRun: boolean;
       showFullReport: boolean;
       runId?: string | null;
+      shareSlug?: string | null;
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
       analysisJson?: object | null;
@@ -955,6 +1300,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       isFirstRun,
       showFullReport,
       runId: diagnostic.runId,
+      shareSlug: shareSlugOut,
     };
 
     if (diagnostic.analysisJson) {
