@@ -754,11 +754,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               status: 'pending',
             },
           });
-          await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
           await prisma.publicDiagnostic.update({
             where: { id: diagnostic.id },
             data: { runGeminiId: runGemini.id },
           });
+          await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
         } catch (geminiErr) {
           fastify.log.warn(
             { err: geminiErr, diagnosticId: diagnostic.id },
@@ -1128,6 +1128,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const goldUnlocked = tier === 'gold';
     const viralUnlocked = visitCount >= VIRAL_UNLOCK_MIN;
     const shareFullUnlocked = goldUnlocked || viralUnlocked;
+    let geminiStatus: 'ready' | 'running' | 'not_available' = 'not_available';
 
     let analysisJson: unknown = null;
     if (row.status === 'completed') {
@@ -1140,12 +1141,79 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
     const resumenTeaser = extractResumenTeaser(analysisJson);
     let cleexsScore: number | null = null;
+    let preview:
+      | {
+          totalPrompts: number;
+          avgPromptScore: number;
+          topCategory: string | null;
+          brandTop3PresencePct: number;
+          competitorCount: number;
+          geminiStatus: 'ready' | 'running' | 'not_available';
+        }
+      | null = null;
     if (row.runId && row.status === 'completed') {
       const pria = await prisma.pRIAReport.findFirst({
         where: { runId: row.runId },
         orderBy: { createdAt: 'desc' },
       });
       if (pria) cleexsScore = pria.priaTotal;
+
+      const runForPreview = await prisma.run.findUnique({
+        where: { id: row.runId },
+        include: {
+          promptResults: {
+            include: { prompt: { include: { category: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+          brand: { include: { competitors: true } },
+        },
+      });
+
+      if (row.runGeminiId) {
+        const runGemini = await prisma.run.findUnique({
+          where: { id: row.runGeminiId },
+          select: { status: true },
+        });
+        if (runGemini?.status === 'completed') geminiStatus = 'ready';
+        else if (runGemini?.status === 'pending' || runGemini?.status === 'running') geminiStatus = 'running';
+      }
+
+      if (runForPreview) {
+        const promptResults = runForPreview.promptResults;
+        const totalPrompts = promptResults.length;
+        const avgPromptScore = totalPrompts
+          ? promptResults.reduce((acc, pr) => acc + (pr.score || 0), 0) / totalPrompts
+          : 0;
+        const categoryTotals = new Map<string, { sum: number; count: number }>();
+        let brandTop3Count = 0;
+
+        promptResults.forEach((pr) => {
+          const categoryName = pr.prompt?.category?.name ?? 'General';
+          const current = categoryTotals.get(categoryName) ?? { sum: 0, count: 0 };
+          categoryTotals.set(categoryName, { sum: current.sum + (pr.score || 0), count: current.count + 1 });
+          const entries = (pr.top3Json as Array<{ type?: string }> | null) ?? [];
+          if (entries.some((e) => e?.type === 'brand')) brandTop3Count += 1;
+        });
+
+        let topCategory: string | null = null;
+        let bestCategoryAvg = -1;
+        categoryTotals.forEach((v, k) => {
+          const avg = v.count ? v.sum / v.count : 0;
+          if (avg > bestCategoryAvg) {
+            bestCategoryAvg = avg;
+            topCategory = k;
+          }
+        });
+
+        preview = {
+          totalPrompts,
+          avgPromptScore,
+          topCategory,
+          brandTop3PresencePct: totalPrompts ? (brandTop3Count / totalPrompts) * 100 : 0,
+          competitorCount: runForPreview.brand.competitors.length,
+          geminiStatus,
+        };
+      }
     }
 
     const payload: Record<string, unknown> = {
@@ -1166,6 +1234,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         viralUnlockMin: VIRAL_UNLOCK_MIN,
       },
       shareFullUnlocked,
+      ...(preview ? { preview } : {}),
     };
 
     if (shareFullUnlocked && row.status === 'completed') {

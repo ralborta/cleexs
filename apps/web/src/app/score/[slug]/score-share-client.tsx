@@ -13,7 +13,7 @@ import {
   type PublicDiagnosticRunResult,
 } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
-import { LayoutDashboard, Loader2, Lock, LogIn, Sparkles } from 'lucide-react';
+import { Bot, Gauge, LayoutDashboard, Layers, Loader2, Lock, LogIn, Sparkles, Target, Users } from 'lucide-react';
 
 function buildRunResultAmbos(a: PublicDiagnosticRunResult, b: PublicDiagnosticRunResult): PublicDiagnosticRunResult {
   const prA = a.promptResults || [];
@@ -31,6 +31,84 @@ function buildRunResultAmbos(a: PublicDiagnosticRunResult, b: PublicDiagnosticRu
     brandAliases: a.brandAliases ?? [],
     promptResults,
   };
+}
+
+function PreviewCards({
+  cleexsScore,
+  preview,
+}: {
+  cleexsScore: number | null;
+  preview: NonNullable<PublicDiagnosticShareResponse['preview']>;
+}) {
+  const geminiLabel =
+    preview.geminiStatus === 'ready'
+      ? 'Listo'
+      : preview.geminiStatus === 'running'
+        ? 'Procesando'
+        : 'No activo';
+
+  const cards = [
+    {
+      label: 'Cleexs Score',
+      value: cleexsScore != null ? Math.round(cleexsScore).toString() : '—',
+      hint: '0-100',
+      Icon: Gauge,
+    },
+    {
+      label: 'Prompts evaluados',
+      value: preview.totalPrompts.toString(),
+      hint: 'Muestra analizada',
+      Icon: Layers,
+    },
+    {
+      label: 'Promedio por prompt',
+      value: `${Math.round(preview.avgPromptScore)}`,
+      hint: 'Score medio',
+      Icon: Target,
+    },
+    {
+      label: 'Top categoria',
+      value: preview.topCategory || 'General',
+      hint: 'Mayor rendimiento',
+      Icon: Sparkles,
+    },
+    {
+      label: 'Marca en Top 3',
+      value: `${Math.round(preview.brandTop3PresencePct)}%`,
+      hint: 'Presencia promedio',
+      Icon: Users,
+    },
+    {
+      label: 'Estado Gemini',
+      value: geminiLabel,
+      hint: 'Segundo modelo',
+      Icon: Bot,
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-900">Preview del reporte</p>
+        <span className="text-[11px] text-slate-500">Primeras 6 tarjetas</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {cards.map(({ label, value, hint, Icon }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_0_rgba(15,23,42,0.02)]"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium text-slate-500">{label}</p>
+              <Icon className="h-4 w-4 text-primary-600" />
+            </div>
+            <p className="mt-2 text-2xl font-bold leading-tight text-slate-900">{value}</p>
+            <p className="mt-1 text-xs text-slate-500">{hint}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function ScoreShareClient({ slug }: { slug: string }) {
@@ -178,6 +256,10 @@ export function ScoreShareClient({ slug }: { slug: string }) {
                 <p className="text-sm font-semibold text-slate-900 mb-2">Resumen</p>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{data.resumenTeaser}</p>
               </div>
+            )}
+
+            {data.status === 'completed' && !data.shareFullUnlocked && data.preview && (
+              <PreviewCards cleexsScore={data.cleexsScore} preview={data.preview} />
             )}
 
             {data.status === 'completed' && !data.shareFullUnlocked && (

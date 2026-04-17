@@ -398,6 +398,7 @@ export interface PublicDiagnostic {
   isFirstRun?: boolean;
   showFullReport?: boolean;
   runId?: string | null;
+  runGeminiId?: string | null;
   shareSlug?: string | null;
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;
@@ -428,6 +429,14 @@ export interface PublicDiagnosticShareResponse {
   resumenTeaser: string;
   unlock: PublicDiagnosticShareUnlock;
   shareFullUnlocked: boolean;
+  preview?: {
+    totalPrompts: number;
+    avgPromptScore: number;
+    topCategory: string | null;
+    brandTop3PresencePct: number;
+    competitorCount: number;
+    geminiStatus: 'ready' | 'running' | 'not_available';
+  };
   analysisJson?: DiagnosticAnalysisJson | null;
   satelliteModule?: PublicDiagnosticSatelliteModule | null;
   runResult?: PublicDiagnosticRunResult;

@@ -514,6 +514,48 @@ function VerResultadoContent() {
     };
   }, [diagnosticId, diagnostic, tierFromQuery]);
 
+  // Si Gemini fue iniciado pero aún no terminó, seguir refrescando para mostrarlo al completar.
+  useEffect(() => {
+    const id = diagnosticId;
+    if (
+      !id ||
+      !diagnostic ||
+      diagnostic.status !== 'completed' ||
+      !diagnostic.showFullReport ||
+      !diagnostic.runGeminiId ||
+      diagnostic.runResultGemini
+    ) {
+      return;
+    }
+    const pollIntervalMs = 5000;
+    const maxWaitMs = 12 * 60 * 1000;
+    const startedAt = Date.now();
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const poll = async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt >= maxWaitMs) return;
+      try {
+        const data = await publicDiagnosticApi.get(id, tierFromQuery);
+        if (cancelled) return;
+        setDiagnostic(data);
+        if (data.status === 'failed' || data.runResultGemini) {
+          return;
+        }
+      } catch {
+        // ignorar errores transitorios de polling
+      }
+      if (!cancelled) timer = setTimeout(poll, pollIntervalMs);
+    };
+
+    timer = setTimeout(poll, pollIntervalMs);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [diagnosticId, diagnostic, tierFromQuery]);
+
   if (loading) {
     return (
       <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
@@ -557,6 +599,7 @@ function VerResultadoContent() {
         (!diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '')
       : '';
   const tieneGemini = !!runResultGemini;
+  const geminiEnProceso = !!diagnostic.runGeminiId && !runResultGemini;
   /** Mientras el backend termina de guardar analysisJson (incluye módulo satélite), mostramos placeholder animado. */
   const showSatelliteSkeleton =
     isCompleted &&
@@ -588,11 +631,18 @@ function VerResultadoContent() {
               {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
             </CardDescription>
             {isCompleted && diagnostic.shareSlug && (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 p-4">
-                <p className="text-sm font-semibold text-slate-900">Compartir reporte</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">
-                  Vista pública con resumen y score. El detalle completo en esa página se desbloquea con plan Gold o
-                  cuando varias personas distintas abran el enlace.
+              <div className="mt-4 rounded-xl border border-primary-200/70 bg-gradient-to-r from-primary-50 via-white to-indigo-50 p-4 shadow-sm">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-primary-100">
+                    <Sparkles className="h-3.5 w-3.5 text-primary-600" />
+                    <p className="text-sm font-semibold text-slate-900">Compartir reporte</p>
+                  </div>
+                  <span className="rounded-full bg-primary-600/10 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                    URL pública
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mb-3">
+                  Compartí este resultado por WhatsApp, LinkedIn, email o copiando el link.
                 </p>
                 <ShareScoreButtons
                   path={`/score/${diagnostic.shareSlug}`}
@@ -603,7 +653,9 @@ function VerResultadoContent() {
                       : diagnostic.brandName
                   }
                 />
-                <p className="mt-3 text-xs">
+                <p className="mt-3 text-xs text-slate-600">
+                  Enlace:
+                  {' '}
                   <Link
                     href={`/score/${diagnostic.shareSlug}`}
                     className="font-medium text-primary-600 underline break-all hover:text-primary-700"
@@ -682,7 +734,11 @@ function VerResultadoContent() {
                       {!tieneGemini && (
                         <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-3 text-sm text-amber-800">
                           <p className="font-medium">Solo consolidado (ChatGPT)</p>
-                          <p className="mt-0.5">Para ver también Gemini hacé un diagnóstico nuevo con la API key de Gemini configurada.</p>
+                          <p className="mt-0.5">
+                            {geminiEnProceso
+                              ? 'Gemini está procesándose en segundo plano. Esta vista se actualizará automáticamente cuando esté listo.'
+                              : 'Gemini no está disponible en este diagnóstico. Si querés verlo, revisá la configuración de GEMINI_API_KEY en la API y corré uno nuevo.'}
+                          </p>
                         </div>
                       )}
                       {runResultToShow && (
