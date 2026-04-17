@@ -724,8 +724,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
         await executeRun(run.id, { promptVersionId: promptVersion.id });
 
-        // Run Gemini con los mismos prompts (score y métricas para Gemini)
-        let runGeminiId: string | null = null;
+        // Marcar completado apenas termina OpenAI para no bloquear UX.
+        // Gemini (si existe) se calcula luego en segundo plano.
+        await prisma.publicDiagnostic.update({
+          where: { id: diagnostic.id },
+          data: { status: 'completed' },
+        });
+
+        // Run Gemini con los mismos prompts (score y métricas para Gemini), no bloqueante para la UI.
         try {
           const runGemini = await prisma.run.create({
             data: {
@@ -738,19 +744,16 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             },
           });
           await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
-          runGeminiId = runGemini.id;
+          await prisma.publicDiagnostic.update({
+            where: { id: diagnostic.id },
+            data: { runGeminiId: runGemini.id },
+          });
         } catch (geminiErr) {
           fastify.log.warn(
             { err: geminiErr, diagnosticId: diagnostic.id },
             'Run Gemini no ejecutado (sin key o error). Solo se muestra score OpenAI.'
           );
         }
-
-        // Marcar completado de inmediato para que la UI redirija (el análisis IA va después)
-        await prisma.publicDiagnostic.update({
-          where: { id: diagnostic.id },
-          data: { status: 'completed', ...(runGeminiId && { runGeminiId }) },
-        });
 
         let analysisJson: object | null = null;
         let satelliteModule: SatelliteModuleResult | null = null;
