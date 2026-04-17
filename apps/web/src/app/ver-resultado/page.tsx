@@ -599,7 +599,6 @@ function VerResultadoContent() {
         (!diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '')
       : '';
   const tieneGemini = !!runResultGemini;
-  const geminiEnProceso = !!diagnostic.runGeminiId && !runResultGemini;
   /** Mientras el backend termina de guardar analysisJson (incluye módulo satélite), mostramos placeholder animado. */
   const showSatelliteSkeleton =
     isCompleted &&
@@ -729,16 +728,6 @@ function VerResultadoContent() {
                               Consolidado
                             </button>
                           </div>
-                        </div>
-                      )}
-                      {!tieneGemini && (
-                        <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-3 text-sm text-amber-800">
-                          <p className="font-medium">Solo consolidado (ChatGPT)</p>
-                          <p className="mt-0.5">
-                            {geminiEnProceso
-                              ? 'Gemini está procesándose en segundo plano. Esta vista se actualizará automáticamente cuando esté listo.'
-                              : 'Gemini no está disponible en este diagnóstico. Si querés verlo, revisá la configuración de GEMINI_API_KEY en la API y corré uno nuevo.'}
-                          </p>
                         </div>
                       )}
                       {runResultToShow && (
