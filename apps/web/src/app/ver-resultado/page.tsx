@@ -48,6 +48,7 @@ import {
   BarChart2,
   Layers,
   CheckCircle2,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
@@ -629,42 +630,6 @@ function VerResultadoContent() {
               {diagnostic.industry && ` · ${diagnostic.industry}`}
               {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
             </CardDescription>
-            {isCompleted && diagnostic.shareSlug && (
-              <div className="mt-4 rounded-xl border border-primary-200/70 bg-gradient-to-r from-primary-50 via-white to-indigo-50 p-4 shadow-sm">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-primary-100">
-                    <Sparkles className="h-3.5 w-3.5 text-primary-600" />
-                    <p className="text-sm font-semibold text-slate-900">Compartir con tu equipo</p>
-                  </div>
-                  <span className="rounded-full bg-primary-600/10 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
-                    URL pública
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 mb-3">
-                  Pasá este enlace a marketing, agencia o compañeros para ver el mismo resultado y alinear la
-                  estrategia. También podés compartirlo por WhatsApp, LinkedIn, email o copiando el link.
-                </p>
-                <ShareScoreButtons
-                  path={`/score/${diagnostic.shareSlug}`}
-                  title={`Cleexs Score — ${diagnostic.brandName}`}
-                  summary={
-                    diagnostic.runResult
-                      ? `Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
-                      : diagnostic.brandName
-                  }
-                />
-                <p className="mt-3 text-xs text-slate-600">
-                  Enlace:
-                  {' '}
-                  <Link
-                    href={`/score/${diagnostic.shareSlug}`}
-                    className="font-medium text-primary-600 underline break-all hover:text-primary-700"
-                  >
-                    {sharePublicUrl || `/score/${diagnostic.shareSlug}`}
-                  </Link>
-                </p>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {isPending && (
@@ -756,6 +721,87 @@ function VerResultadoContent() {
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
                     <p className="font-medium">Diagnóstico listo</p>
                     <p className="text-sm mt-1">Cargando detalle del reporte…</p>
+                  </div>
+                )}
+
+                {isCompleted && (diagnostic.shareSlug || (diagnostic.showFullReport && diagnostic.id)) && (
+                  <div className="space-y-4 pt-6 mt-6 border-t border-slate-200/80">
+                    {diagnostic.shareSlug && (
+                      <div className="rounded-xl border border-primary-200/70 bg-gradient-to-r from-primary-50 via-white to-indigo-50 p-4 shadow-sm">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-primary-100">
+                            <Sparkles className="h-3.5 w-3.5 text-primary-600" />
+                            <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
+                          </div>
+                          <span className="rounded-full bg-primary-600/10 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                            Vista pública · resumida
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 mb-3">
+                          Enlace a la página pública del Cleexs Score: pensado para redes, email o difusión. Muestra el
+                          score y un resumen; no reemplaza el informe detallado de abajo.
+                        </p>
+                        <ShareScoreButtons
+                          path={`/score/${diagnostic.shareSlug}`}
+                          title={`Cleexs Score — ${diagnostic.brandName}`}
+                          summary={
+                            diagnostic.runResult
+                              ? `Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
+                              : diagnostic.brandName
+                          }
+                        />
+                        <p className="mt-3 text-xs text-slate-600">
+                          Enlace:
+                          {' '}
+                          <Link
+                            href={`/score/${diagnostic.shareSlug}`}
+                            className="font-medium text-primary-600 underline break-all hover:text-primary-700"
+                          >
+                            {sharePublicUrl || `/score/${diagnostic.shareSlug}`}
+                          </Link>
+                        </p>
+                      </div>
+                    )}
+
+                    {diagnostic.showFullReport && diagnostic.id && (
+                      <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-primary-50/40 p-4 shadow-sm">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-slate-200">
+                            <Users className="h-3.5 w-3.5 text-primary-600" />
+                            <p className="text-sm font-semibold text-slate-900">Invitar a tu equipo</p>
+                          </div>
+                          <span className="rounded-full bg-slate-600/10 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                            Informe detallado
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 mb-3">
+                          Compartí este enlace con marketing, agencia o personas internas: verán el mismo informe
+                          extenso que vos (métricas, comparativas y análisis). Si quieren seguir con más diagnósticos,
+                          pueden crear cuenta en Cleexs desde la web.
+                        </p>
+                        <ShareScoreButtons
+                          path={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                          title={`Informe Cleexs — ${diagnostic.brandName}`}
+                          summary={
+                            diagnostic.runResult
+                              ? `Informe detallado · Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
+                              : `Informe detallado · ${diagnostic.brandName}`
+                          }
+                        />
+                        <p className="mt-3 text-xs text-slate-600">
+                          Enlace:
+                          {' '}
+                          <Link
+                            href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                            className="font-medium text-primary-600 underline break-all hover:text-primary-700"
+                          >
+                            {publicSiteBase
+                              ? `${publicSiteBase}/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`
+                              : `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                          </Link>
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
