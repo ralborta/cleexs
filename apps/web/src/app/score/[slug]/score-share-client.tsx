@@ -232,8 +232,11 @@ export function ScoreShareClient({ slug }: { slug: string }) {
                   {!data.domain.startsWith('brand-') ? ` · ${data.domain}` : ''}
                 </CardDescription>
               </div>
-              <div className="shrink-0 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Compartir</p>
+              <div className="shrink-0 space-y-2 max-w-[min(100%,280px)]">
+                <p className="text-xs font-semibold text-slate-800">Compartir con tu equipo</p>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  Mismo enlace para alinear marketing, agencia o compañeros.
+                </p>
                 <ShareScoreButtons path={path} title={shareTitle} summary={shareSummary} />
               </div>
             </div>

@@ -634,14 +634,15 @@ function VerResultadoContent() {
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-primary-100">
                     <Sparkles className="h-3.5 w-3.5 text-primary-600" />
-                    <p className="text-sm font-semibold text-slate-900">Compartir reporte</p>
+                    <p className="text-sm font-semibold text-slate-900">Compartir con tu equipo</p>
                   </div>
                   <span className="rounded-full bg-primary-600/10 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
                     URL pública
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mb-3">
-                  Compartí este resultado por WhatsApp, LinkedIn, email o copiando el link.
+                  Pasá este enlace a marketing, agencia o compañeros para ver el mismo resultado y alinear la
+                  estrategia. También podés compartirlo por WhatsApp, LinkedIn, email o copiando el link.
                 </p>
                 <ShareScoreButtons
                   path={`/score/${diagnostic.shareSlug}`}
