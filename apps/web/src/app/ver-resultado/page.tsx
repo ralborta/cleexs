@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
+import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
 
 const normalizeName = (value: string) =>
   value
@@ -590,7 +591,32 @@ function VerResultadoContent() {
       /\/$/,
       ''
     );
-  const sharePublicUrl = diagnostic.shareSlug ? `${publicSiteBase}/score/${diagnostic.shareSlug}` : null;
+  const scoreTrackingQuery =
+    diagnostic.shareSlug && diagnostic.id
+      ? buildShareTrackingQuery({
+          kind: 'public_score',
+          shareSlug: diagnostic.shareSlug,
+          diagnosticId: diagnostic.id,
+        })
+      : '';
+  const scoreSharePath =
+    diagnostic.shareSlug && scoreTrackingQuery
+      ? appendQueryToPath(`/score/${diagnostic.shareSlug}`, scoreTrackingQuery)
+      : null;
+  const teamTrackingQuery = diagnostic.id
+    ? buildShareTrackingQuery({
+        kind: 'invite_team',
+        shareSlug: diagnostic.shareSlug,
+        diagnosticId: diagnostic.id,
+      })
+    : '';
+  const teamInvitePath = diagnostic.id
+    ? appendQueryToPath(`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`, teamTrackingQuery)
+    : null;
+  const sharePublicFullUrl =
+    publicSiteBase && scoreSharePath ? `${publicSiteBase}${scoreSharePath}` : scoreSharePath;
+  const teamInviteFullUrl =
+    publicSiteBase && teamInvitePath ? `${publicSiteBase}${teamInvitePath}` : teamInvitePath;
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
   const satelliteModule = diagnostic.satelliteModule;
@@ -747,7 +773,7 @@ function VerResultadoContent() {
                           score y un resumen; no reemplaza el informe detallado de abajo.
                         </p>
                         <ShareScoreButtons
-                          path={`/score/${diagnostic.shareSlug}`}
+                          path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
                           title={`Cleexs Score — ${diagnostic.brandName}`}
                           summary={
                             diagnostic.runResult
@@ -760,10 +786,10 @@ function VerResultadoContent() {
                           <span className="font-medium text-slate-500">Enlace</span>
                           {' '}
                           <Link
-                            href={`/score/${diagnostic.shareSlug}`}
+                            href={scoreSharePath || `/score/${diagnostic.shareSlug}`}
                             className="font-medium text-indigo-600 underline break-all hover:text-indigo-700"
                           >
-                            {sharePublicUrl || `/score/${diagnostic.shareSlug}`}
+                            {sharePublicFullUrl || scoreSharePath || `/score/${diagnostic.shareSlug}`}
                           </Link>
                         </p>
                       </div>
@@ -791,7 +817,7 @@ function VerResultadoContent() {
                           pueden crear cuenta en Cleexs desde la web.
                         </p>
                         <ShareScoreButtons
-                          path={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                          path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
                           title={`Informe Cleexs — ${diagnostic.brandName}`}
                           summary={
                             diagnostic.runResult
@@ -804,12 +830,12 @@ function VerResultadoContent() {
                           <span className="font-medium text-slate-500">Enlace</span>
                           {' '}
                           <Link
-                            href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                            href={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
                             className="font-medium text-teal-700 underline break-all hover:text-teal-800"
                           >
-                            {publicSiteBase
-                              ? `${publicSiteBase}/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`
-                              : `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                            {teamInviteFullUrl ||
+                              teamInvitePath ||
+                              `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
                           </Link>
                         </p>
                       </div>

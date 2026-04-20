@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
@@ -13,6 +14,7 @@ import {
   type PublicDiagnosticRunResult,
 } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
+import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
 import { Bot, Gauge, LayoutDashboard, Layers, Loader2, Lock, LogIn, Sparkles, Target, Users } from 'lucide-react';
 
 function buildRunResultAmbos(a: PublicDiagnosticRunResult, b: PublicDiagnosticRunResult): PublicDiagnosticRunResult {
@@ -112,6 +114,9 @@ function PreviewCards({
 }
 
 export function ScoreShareClient({ slug }: { slug: string }) {
+  const searchParams = useSearchParams();
+  const crearHref =
+    searchParams.toString().length > 0 ? `/diagnostico/crear?${searchParams.toString()}` : '/diagnostico/crear';
   const [data, setData] = useState<PublicDiagnosticShareResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,14 +195,29 @@ export function ScoreShareClient({ slug }: { slug: string }) {
         <div className="mx-auto max-w-lg text-center">
           <p className="text-muted-foreground">{error || 'Enlace no encontrado.'}</p>
           <Button asChild className="mt-4">
-            <Link href="/diagnostico/crear">Hacer un diagnóstico</Link>
+            <Link href={crearHref}>Hacer un diagnóstico</Link>
           </Button>
         </div>
       </main>
     );
   }
 
-  const path = `/score/${encodeURIComponent(data.slug)}`;
+  const path = appendQueryToPath(
+    `/score/${encodeURIComponent(data.slug)}`,
+    buildShareTrackingQuery({
+      kind: 'public_score',
+      shareSlug: data.slug,
+      diagnosticId: data.diagnosticId,
+    })
+  );
+  const verResultadoHref = appendQueryToPath(
+    `/ver-resultado?diagnosticId=${encodeURIComponent(data.diagnosticId)}`,
+    buildShareTrackingQuery({
+      kind: 'invite_team',
+      shareSlug: data.slug,
+      diagnosticId: data.diagnosticId,
+    })
+  );
   const shareTitle = `Cleexs Score — ${data.brandName}`;
   const shareSummary =
     data.cleexsScore != null
@@ -290,9 +310,7 @@ export function ScoreShareClient({ slug }: { slug: string }) {
                       </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                      <Link href={`/ver-resultado?diagnosticId=${encodeURIComponent(data.diagnosticId)}`}>
-                        Ya hice el diagnóstico
-                      </Link>
+                      <Link href={verResultadoHref}>Ya hice el diagnóstico</Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -357,7 +375,7 @@ export function ScoreShareClient({ slug }: { slug: string }) {
 
             <p className="text-center text-xs text-muted-foreground">
               Análisis generado con Cleexs ·{' '}
-              <Link href="/diagnostico/crear" className="underline hover:text-foreground">
+              <Link href={crearHref} className="underline hover:text-foreground">
                 Hacé tu diagnóstico
               </Link>
             </p>
