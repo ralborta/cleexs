@@ -10,10 +10,13 @@ export function ShareScoreButtons({
   path,
   title,
   summary,
+  /** `team`: solo canales directos (copiar, WhatsApp, email); sin redes públicas. */
+  intent = 'social',
 }: {
   path: string;
   title: string;
   summary: string;
+  intent?: 'social' | 'team';
 }) {
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState(PUBLIC_SITE_URL);
@@ -35,6 +38,7 @@ export function ShareScoreButtons({
   const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(bodyText)}`;
   const linkedin = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
   const x = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${title} — Cleexs Score`)}&url=${encodedUrl}`;
+  const showSocialNetworks = intent === 'social';
 
   async function copyLink() {
     try {
@@ -64,18 +68,22 @@ export function ShareScoreButtons({
           Email
         </a>
       </Button>
-      <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
-        <a href={linkedin} target="_blank" rel="noopener noreferrer">
-          <Linkedin className="h-4 w-4" />
-          LinkedIn
-        </a>
-      </Button>
-      <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
-        <a href={x} target="_blank" rel="noopener noreferrer">
-          <Send className="h-4 w-4" />
-          X
-        </a>
-      </Button>
+      {showSocialNetworks && (
+        <>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+            <a href={linkedin} target="_blank" rel="noopener noreferrer">
+              <Linkedin className="h-4 w-4" />
+              LinkedIn
+            </a>
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+            <a href={x} target="_blank" rel="noopener noreferrer">
+              <Send className="h-4 w-4" />
+              X
+            </a>
+          </Button>
+        </>
+      )}
     </div>
   );
 }

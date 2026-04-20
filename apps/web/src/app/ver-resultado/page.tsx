@@ -727,17 +727,22 @@ function VerResultadoContent() {
                 {isCompleted && (diagnostic.shareSlug || (diagnostic.showFullReport && diagnostic.id)) && (
                   <div className="space-y-4 pt-6 mt-6 border-t border-slate-200/80">
                     {diagnostic.shareSlug && (
-                      <div className="rounded-xl border border-primary-200/70 bg-gradient-to-r from-primary-50 via-white to-indigo-50 p-4 shadow-sm">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-primary-100">
-                            <Sparkles className="h-3.5 w-3.5 text-primary-600" />
-                            <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
+                      <div className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/60 p-5 shadow-md shadow-indigo-950/[0.06] ring-1 ring-indigo-100/80">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 shadow-inner">
+                              <Sparkles className="h-5 w-5" />
+                            </span>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
+                              <p className="text-[11px] text-indigo-700/80">Difusión · página pública</p>
+                            </div>
                           </div>
-                          <span className="rounded-full bg-primary-600/10 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                          <span className="rounded-full bg-indigo-600/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
                             Vista pública · resumida
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 mb-3">
+                        <p className="text-xs leading-relaxed text-slate-600 mb-4">
                           Enlace a la página pública del Cleexs Score: pensado para redes, email o difusión. Muestra el
                           score y un resumen; no reemplaza el informe detallado de abajo.
                         </p>
@@ -749,13 +754,14 @@ function VerResultadoContent() {
                               ? `Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
                               : diagnostic.brandName
                           }
+                          intent="social"
                         />
-                        <p className="mt-3 text-xs text-slate-600">
-                          Enlace:
+                        <p className="mt-4 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-slate-600 ring-1 ring-indigo-100/60">
+                          <span className="font-medium text-slate-500">Enlace</span>
                           {' '}
                           <Link
                             href={`/score/${diagnostic.shareSlug}`}
-                            className="font-medium text-primary-600 underline break-all hover:text-primary-700"
+                            className="font-medium text-indigo-600 underline break-all hover:text-indigo-700"
                           >
                             {sharePublicUrl || `/score/${diagnostic.shareSlug}`}
                           </Link>
@@ -764,17 +770,22 @@ function VerResultadoContent() {
                     )}
 
                     {diagnostic.showFullReport && diagnostic.id && (
-                      <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-primary-50/40 p-4 shadow-sm">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-2.5 py-1 ring-1 ring-slate-200">
-                            <Users className="h-3.5 w-3.5 text-primary-600" />
-                            <p className="text-sm font-semibold text-slate-900">Invitar a tu equipo</p>
+                      <div className="overflow-hidden rounded-2xl border border-slate-200/90 border-l-[4px] border-l-teal-500 bg-gradient-to-b from-stone-50 to-slate-100/70 p-5 shadow-sm">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-teal-200/80 bg-teal-50 text-teal-700">
+                              <Users className="h-5 w-5" />
+                            </span>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">Invitar a tu equipo</p>
+                              <p className="text-[11px] text-teal-800/80">Uso interno · mismo informe que ves acá</p>
+                            </div>
                           </div>
-                          <span className="rounded-full bg-slate-600/10 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                          <span className="rounded-md border border-teal-200/70 bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-900">
                             Informe detallado
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 mb-3">
+                        <p className="text-xs leading-relaxed text-slate-600 mb-4">
                           Compartí este enlace con marketing, agencia o personas internas: verán el mismo informe
                           extenso que vos (métricas, comparativas y análisis). Si quieren seguir con más diagnósticos,
                           pueden crear cuenta en Cleexs desde la web.
@@ -787,13 +798,14 @@ function VerResultadoContent() {
                               ? `Informe detallado · Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
                               : `Informe detallado · ${diagnostic.brandName}`
                           }
+                          intent="team"
                         />
-                        <p className="mt-3 text-xs text-slate-600">
-                          Enlace:
+                        <p className="mt-4 rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-xs text-slate-600">
+                          <span className="font-medium text-slate-500">Enlace</span>
                           {' '}
                           <Link
                             href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                            className="font-medium text-primary-600 underline break-all hover:text-primary-700"
+                            className="font-medium text-teal-700 underline break-all hover:text-teal-800"
                           >
                             {publicSiteBase
                               ? `${publicSiteBase}/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`
