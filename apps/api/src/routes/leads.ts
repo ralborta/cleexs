@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { findBrandPosition, type Top3Entry } from '@cleexs/shared';
+import { scrapeEmailsForDomain } from '../lib/firecrawl-emails';
 
 const leadsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /leads?tenantId=...
@@ -307,30 +308,10 @@ async function enrichContacts(domain: string, leadSourceId: string) {
   const firecrawlKey = process.env.FIRECRAWL_API_KEY;
   if (firecrawlKey) {
     try {
-      const response = await fetch('https://api.firecrawl.dev/v2/extract', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${firecrawlKey}`,
-        },
-        body: JSON.stringify({
-          urls: [`https://${domain}/*`],
-          prompt: 'Extrae todos los emails visibles de la web. Devuelve una lista de emails.',
-          schema: {
-            type: 'object',
-            properties: {
-              emails: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-            },
-            required: ['emails'],
-          },
-        }),
-      });
-      const payload = (await response.json()) as any;
-      const emails = payload?.data?.emails || [];
-      for (const email of emails) {
+      // Usamos /v2/scrape (sincronico) via helper. /v2/extract gasta creditos
+      // sin devolver emails (es async y requiere polling del jobId).
+      const scrapeResult = await scrapeEmailsForDomain(domain, firecrawlKey);
+      for (const email of scrapeResult.emails) {
         const contact = await prisma.leadContact.upsert({
           where: { leadSourceId_email: { leadSourceId, email } },
           create: {
@@ -341,6 +322,12 @@ async function enrichContacts(domain: string, leadSourceId: string) {
           update: {},
         });
         foundContacts.push(contact);
+      }
+      if (scrapeResult.error) {
+        fastifyLog(
+          `Firecrawl sin emails para ${domain} (ultimo error: ${scrapeResult.error})`,
+          null
+        );
       }
     } catch (error) {
       fastifyLog('Firecrawl error', error);
