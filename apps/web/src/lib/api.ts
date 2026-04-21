@@ -137,6 +137,7 @@ export interface LeadSource {
   competitorName: string;
   competitorDomain?: string;
   evidenceJson?: Record<string, unknown>;
+  brand?: { id: string; name: string; domain?: string };
   contacts: LeadContact[];
   emails: LeadEmail[];
   createdAt: string;

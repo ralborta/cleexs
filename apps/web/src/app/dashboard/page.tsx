@@ -38,6 +38,33 @@ function statusBadge(status: 'pending' | 'running' | 'completed' | 'failed') {
 }
 
 function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
+  const [tenantId, setTenantId] = useState('');
+  const [leads, setLeads] = useState<LeadSource[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [leadsNotice, setLeadsNotice] = useState<string | null>(null);
+  const [leadDomain, setLeadDomain] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const tenant = await tenantsApi.getByCode('000');
+        if (cancelled) return;
+        setTenantId(tenant.id);
+        const leadData = await leadsApi.list(tenant.id);
+        if (!cancelled) {
+          setLeads(leadData);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error cargando leads globales:', err);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const withRuns = data.dailyRuns.filter((row) => row.runs > 0);
   const peakDay = withRuns.reduce((acc, row) => (row.runs > acc.runs ? row : acc), {
     date: '-',
@@ -283,6 +310,113 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-transparent bg-white shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl text-foreground">Outreach global</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Leads detectados por dominio (sin necesidad de entrar a una marca).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={leadDomain}
+                onChange={(event) => setLeadDomain(event.target.value)}
+                placeholder="Dominio del competidor (ej: rgsport.com.ar)"
+                className="w-full md:w-80 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                onClick={async () => {
+                  if (!tenantId) return;
+                  setLeadsLoading(true);
+                  setLeadsNotice(null);
+                  try {
+                    await leadsApi.discover({
+                      tenantId,
+                      domain: leadDomain || undefined,
+                      enrich: false,
+                    });
+                    const leadData = await leadsApi.list(tenantId);
+                    setLeads(leadData);
+                    setLeadsNotice('Leads actualizados.');
+                  } catch (err) {
+                    setLeadsNotice('No se pudieron actualizar los leads.');
+                  } finally {
+                    setLeadsLoading(false);
+                  }
+                }}
+                disabled={leadsLoading || !leadDomain}
+              >
+                {leadsLoading ? 'Buscando…' : 'Detectar leads'}
+              </Button>
+              <Button
+                variant="outline"
+                className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                onClick={async () => {
+                  if (!tenantId) return;
+                  setLeadsLoading(true);
+                  setLeadsNotice(null);
+                  try {
+                    await leadsApi.discover({
+                      tenantId,
+                      domain: leadDomain || undefined,
+                      enrich: true,
+                    });
+                    const leadData = await leadsApi.list(tenantId);
+                    setLeads(leadData);
+                    setLeadsNotice('Emails enriquecidos.');
+                  } catch (err) {
+                    setLeadsNotice('No se pudieron enriquecer emails.');
+                  } finally {
+                    setLeadsLoading(false);
+                  }
+                }}
+                disabled={leadsLoading || !leadDomain}
+              >
+                Buscar emails
+              </Button>
+            </div>
+            {leadsNotice && <p className="text-sm text-gray-600">{leadsNotice}</p>}
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/80 border-b border-border">
+                  <TableHead className="text-muted-foreground font-semibold">Marca</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Competidor</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Dominio</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Emails</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                      No hay leads todavía.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  leads.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {lead.brand?.name || '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{lead.competitorName}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {lead.competitorDomain || '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{lead.contacts?.length || 0}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {lead.emails?.[0]?.status || 'sin email'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -9,6 +9,9 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
     const leads = await prisma.leadSource.findMany({
       where: { tenantId: request.query.tenantId },
       include: {
+        brand: {
+          select: { id: true, name: true, domain: true },
+        },
         contacts: true,
         emails: true,
       },
