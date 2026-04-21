@@ -193,46 +193,87 @@ export async function runOutreachForRun(
     const domain = source.competitorDomain;
     if (!domain) continue;
 
-    // Firecrawl
+    // Firecrawl: scrapeamos paginas candidatas (home, /contact, /contacto, /about,
+    // /about-us, /nosotros) y extraemos emails con regex sobre el markdown.
+    // Usamos /v2/scrape (sincronico) en lugar de /v2/extract (async, no devuelve
+    // emails sin polling y gasta creditos sin resultado). Es mas barato y directo.
     if (firecrawlKey) {
-      try {
-        const response = await fetch('https://api.firecrawl.dev/v2/extract', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${firecrawlKey}`,
-          },
-          body: JSON.stringify({
-            urls: [`https://${domain}/*`],
-            prompt: 'Extrae todos los emails visibles de la web. Devuelve una lista de emails.',
-            schema: {
-              type: 'object',
-              properties: {
-                emails: { type: 'array', items: { type: 'string' } },
-              },
-              required: ['emails'],
+      const candidatePaths = ['', '/contact', '/contacto', '/about', '/about-us', '/nosotros'];
+      const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+      const genericLocals = new Set([
+        'example',
+        'sentry',
+        'noreply',
+        'no-reply',
+        'do-not-reply',
+        'donotreply',
+        'postmaster',
+      ]);
+      const foundEmails = new Set<string>();
+      let firecrawlError: string | undefined;
+
+      for (const path of candidatePaths) {
+        const url = `https://${domain}${path}`;
+        try {
+          const response = await fetch('https://api.firecrawl.dev/v2/scrape', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${firecrawlKey}`,
             },
-          }),
-        });
-        const payload = (await response.json()) as { data?: { emails?: string[] } };
-        const emails = payload?.data?.emails || [];
-        for (const email of emails) {
-          await prisma.leadContact.upsert({
-            where: { leadSourceId_email: { leadSourceId: source.id, email } },
-            create: {
-              leadSourceId: source.id,
-              email,
-              source: 'firecrawl',
-            },
-            update: {},
+            body: JSON.stringify({
+              url,
+              formats: ['markdown'],
+              onlyMainContent: false,
+              timeout: 20000,
+            }),
           });
-          result.contactsCreated += 1;
-          result.firecrawl.count += 1;
+          if (!response.ok) {
+            // 404 o bloqueo: seguimos con la siguiente ruta, no rompemos.
+            if (!firecrawlError) firecrawlError = `HTTP ${response.status} en ${url}`;
+            continue;
+          }
+          const payload = (await response.json()) as {
+            success?: boolean;
+            data?: { markdown?: string; html?: string };
+          };
+          const content = payload?.data?.markdown || payload?.data?.html || '';
+          if (!content) continue;
+          const matches = content.match(emailRegex) || [];
+          for (const match of matches) {
+            const email = match.toLowerCase();
+            const [local] = email.split('@');
+            if (genericLocals.has(local)) continue;
+            if (email.endsWith('.png') || email.endsWith('.jpg') || email.endsWith('.svg')) continue;
+            foundEmails.add(email);
+          }
+        } catch (err) {
+          if (!firecrawlError) {
+            firecrawlError = err instanceof Error ? err.message : String(err);
+          }
         }
+      }
+
+      for (const email of foundEmails) {
+        await prisma.leadContact.upsert({
+          where: { leadSourceId_email: { leadSourceId: source.id, email } },
+          create: {
+            leadSourceId: source.id,
+            email,
+            source: 'firecrawl',
+          },
+          update: {},
+        });
+        result.contactsCreated += 1;
+        result.firecrawl.count += 1;
+      }
+      if (foundEmails.size > 0) {
         result.firecrawl.ok = true;
-      } catch (err) {
-        result.firecrawl.error = err instanceof Error ? err.message : String(err);
-        logger?.warn?.({ domain, err: result.firecrawl.error }, 'Firecrawl fallo');
+      } else if (firecrawlError) {
+        result.firecrawl.error = firecrawlError;
+        logger?.warn?.({ domain, err: firecrawlError }, 'Firecrawl sin emails');
+      } else {
+        result.firecrawl.ok = true; // scrape exitoso pero sin emails en paginas visitadas
       }
     }
 
