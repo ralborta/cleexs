@@ -152,7 +152,7 @@ function VerificandoContent() {
         <div className="mb-6 shrink-0">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 mb-1">Análisis en curso</p>
           <h1 className="text-xl font-bold text-slate-900">
-            {brandLabel ? `${brandLabel} & competidores` : 'Procesando diagnóstico…'}
+            {brandLabel ? brandLabel : 'Procesando diagnóstico…'}
           </h1>
         </div>
 
