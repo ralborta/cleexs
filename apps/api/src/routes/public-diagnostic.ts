@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
+import { runOutreachForRun } from '../lib/outreach';
 import { determineMarketProfileForBrand, fetchSearchEvidence, getTop5Competitors } from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
@@ -740,6 +741,24 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { status: 'completed' },
+        });
+
+        // Outreach automatico: detecta competidores que ganan + busca contactos con Firecrawl y Hunter.
+        // Fire-and-forget para no bloquear la UX. No envia correos, solo persiste LeadSource + LeadContact.
+        setImmediate(() => {
+          runOutreachForRun(rootTenant.id, run.id, { enrich: true, logger: fastify.log })
+            .then((outreach) => {
+              fastify.log.info(
+                { diagnosticId: diagnostic.id, runId: run.id, outreach },
+                'Outreach automatico completado'
+              );
+            })
+            .catch((err) => {
+              fastify.log.warn(
+                { err, diagnosticId: diagnostic.id, runId: run.id },
+                'Outreach automatico fallo'
+              );
+            });
         });
 
         // Run Gemini con los mismos prompts (score y métricas para Gemini), no bloqueante para la UI.
