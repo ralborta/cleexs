@@ -10,6 +10,11 @@ export interface CompetitorsResult {
   competitors: string[];
 }
 
+export interface CompetitorDomainResolution {
+  name: string;
+  domain: string | null;
+}
+
 export interface CountryResult {
   country: string;
 }
@@ -313,5 +318,82 @@ export async function determineMarketProfileForBrand(
       industry: fallbackIndustry,
       confidence: countryFixed ? 90 : 0,
     };
+  }
+}
+
+function sanitizeDomain(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = `${raw}`
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/.*$/, '')
+    .replace(/[^a-z0-9.-]/g, '');
+  if (!cleaned || !cleaned.includes('.')) return null;
+  return cleaned;
+}
+
+/**
+ * Resuelve el dominio oficial de una lista de marcas/competidores.
+ * Útil para enriquecer competidores detectados (que solo tienen nombre) con su sitio web oficial
+ * y habilitar scraping/lookup de contactos (Firecrawl, Hunter.io).
+ */
+export async function resolveCompetitorDomains(
+  names: string[],
+  country?: string,
+  industry?: string
+): Promise<CompetitorDomainResolution[]> {
+  const unique = Array.from(
+    new Set(
+      names
+        .map((n) => `${n || ''}`.trim())
+        .filter((n) => n.length > 0)
+    )
+  );
+  if (unique.length === 0) return [];
+
+  const contextParts: string[] = [];
+  if (country) contextParts.push(`País/mercado: ${country}.`);
+  if (industry) contextParts.push(`Industria: ${industry}.`);
+  const context = contextParts.length ? ' ' + contextParts.join(' ') : '';
+
+  const content = await callOpenAI([
+    {
+      role: 'system',
+      content:
+        'Respondé SOLO con JSON válido. Ejemplo: {"resolved":[{"name":"McDonald\'s","domain":"mcdonalds.com.ar"}]}. ' +
+        'Reglas: ' +
+        '1) Para cada marca entregada, devolvé el dominio OFICIAL más probable (sin "https://", sin "www.", sin rutas). ' +
+        '2) Preferí el dominio del país/mercado indicado (ej. mcdonalds.com.ar para Argentina). Si no existe uno local claro, devolvé el dominio global. ' +
+        '3) Si no estás seguro de qué dominio oficial usa la marca, devolvé null en domain (no inventes). ' +
+        '4) Respetá exactamente los nombres recibidos en el campo name.',
+    },
+    {
+      role: 'user',
+      content:
+        `Marcas:${context}\n` +
+        unique.map((n, i) => `${i + 1}. ${n}`).join('\n') +
+        '\n\nDevolvé solo JSON con la forma {"resolved":[{"name":"...","domain":"..."|null}, ...]}',
+    },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as {
+      resolved?: Array<{ name?: string; domain?: string | null }>;
+    };
+    const resolved = Array.isArray(parsed.resolved) ? parsed.resolved : [];
+    const byName = new Map<string, string | null>();
+    for (const entry of resolved) {
+      const name = `${entry?.name || ''}`.trim();
+      if (!name) continue;
+      byName.set(name.toLowerCase(), sanitizeDomain(entry?.domain));
+    }
+    return unique.map((name) => ({
+      name,
+      domain: byName.get(name.toLowerCase()) ?? null,
+    }));
+  } catch {
+    return unique.map((name) => ({ name, domain: null }));
   }
 }

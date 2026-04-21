@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { findBrandPosition, type Top3Entry } from '@cleexs/shared';
+import { resolveCompetitorDomains } from './diagnostic-ai';
 
 export interface OutreachToolResult {
   ok: boolean;
@@ -135,6 +136,50 @@ export async function runOutreachForRun(
 
   if (!enrich || persistedSources.length === 0) {
     return result;
+  }
+
+  // Fallback: si algun LeadSource no tiene competitorDomain, intentar resolverlo con OpenAI
+  // (habilita runs historicos que se guardaron sin dominio). Persistimos la resolucion.
+  const missingDomainLeads = persistedSources.filter((s) => !s.competitorDomain);
+  if (missingDomainLeads.length > 0) {
+    try {
+      const leadsById = new Map(persistedSources.map((s) => [s.id, s]));
+      const missingNames: string[] = [];
+      for (const lead of missingDomainLeads) {
+        const source = await prisma.leadSource.findUnique({
+          where: { id: lead.id },
+          select: { competitorName: true },
+        });
+        if (source?.competitorName) missingNames.push(source.competitorName);
+      }
+      if (missingNames.length > 0) {
+        const resolved = await resolveCompetitorDomains(
+          missingNames,
+          run.brand.country || undefined,
+          run.brand.industry || undefined
+        );
+        const byName = new Map(resolved.map((r) => [r.name.toLowerCase(), r.domain]));
+        for (const lead of missingDomainLeads) {
+          const source = await prisma.leadSource.findUnique({
+            where: { id: lead.id },
+            select: { competitorName: true },
+          });
+          const domain = source?.competitorName
+            ? byName.get(source.competitorName.toLowerCase()) ?? null
+            : null;
+          if (domain) {
+            await prisma.leadSource.update({
+              where: { id: lead.id },
+              data: { competitorDomain: domain },
+            });
+            const entry = leadsById.get(lead.id);
+            if (entry) entry.competitorDomain = domain;
+          }
+        }
+      }
+    } catch (err) {
+      logger?.warn?.({ err, runId: run.id }, 'Fallback de resolucion de dominios fallo');
+    }
   }
 
   // Enriquecer con Firecrawl + Hunter

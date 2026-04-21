@@ -5,7 +5,12 @@ import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
 import { runOutreachForRun } from '../lib/outreach';
-import { determineMarketProfileForBrand, fetchSearchEvidence, getTop5Competitors } from '../lib/diagnostic-ai';
+import {
+  determineMarketProfileForBrand,
+  fetchSearchEvidence,
+  getTop5Competitors,
+  resolveCompetitorDomains,
+} from '../lib/diagnostic-ai';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satellite-client';
@@ -678,9 +683,38 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           },
         });
 
+        // 3a. Resolver dominio oficial de cada competidor para habilitar outreach automatico
+        // (Firecrawl/Hunter requieren dominio). Si OpenAI no lo sabe, domain queda null.
+        let competitorDomainMap = new Map<string, string | null>();
+        try {
+          const resolved = await resolveCompetitorDomains(competitors, marketCountry, industry);
+          for (const entry of resolved) {
+            competitorDomainMap.set(entry.name.toLowerCase(), entry.domain);
+          }
+          fastify.log.info(
+            {
+              diagnosticId: diagnostic.id,
+              resolved: resolved.map((r) => ({ name: r.name, domain: r.domain })),
+            },
+            'Dominios de competidores resueltos'
+          );
+        } catch (err) {
+          fastify.log.warn(
+            { err, diagnosticId: diagnostic.id },
+            'No se pudieron resolver dominios de competidores (se guardan sin domain)'
+          );
+        }
+
         for (const name of competitors) {
+          const cleanName = name.trim() || 'Competidor';
+          const domain = competitorDomainMap.get(cleanName.toLowerCase()) ?? null;
           await prisma.competitor.create({
-            data: { brandId: brand.id, name: name.trim() || 'Competidor' },
+            data: {
+              brandId: brand.id,
+              name: cleanName,
+              domain,
+              autoDetected: true,
+            },
           });
         }
 
