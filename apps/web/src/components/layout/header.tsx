@@ -74,6 +74,12 @@ export function Header() {
               Reportes
             </Link>
             <Link
+              href="/outreach"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Outreach
+            </Link>
+            <Link
               href="/settings"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
