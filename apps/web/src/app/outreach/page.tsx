@@ -198,14 +198,34 @@ function LeadCard({ lead }: { lead: LeadSource }) {
   );
 }
 
+function pickDefaultBrandId(brands: Brand[], leads: LeadSource[]): string {
+  // 1) Si hay leads, preferimos la marca del lead mas reciente (el diagnostico
+  //    recien completado ya genero LeadSources para esa marca).
+  const sortedLeads = [...leads].sort((a, b) => {
+    const ta = new Date(a.createdAt || 0).getTime();
+    const tb = new Date(b.createdAt || 0).getTime();
+    return tb - ta;
+  });
+  for (const lead of sortedLeads) {
+    if (lead.brandId && brands.some((b) => b.id === lead.brandId)) {
+      return lead.brandId;
+    }
+  }
+  // 2) Si no hay leads todavia, usamos la primera marca (el backend las ordena desc).
+  return brands[0]?.id || '';
+}
+
 export default function OutreachPage() {
   const [tenantId, setTenantId] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState('');
+  const [userPickedBrand, setUserPickedBrand] = useState(false);
   const [leads, setLeads] = useState<LeadSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<null | 'discover' | 'enrich' | 'refresh'>(null);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null);
+  const [autoRefreshing, setAutoRefreshing] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,14 +235,14 @@ export default function OutreachPage() {
         const tenant = await tenantsApi.getByCode('000');
         if (cancelled) return;
         setTenantId(tenant.id);
-        const brandList = await brandsApi.list(tenant.id);
+        const [brandList, leadList] = await Promise.all([
+          brandsApi.list(tenant.id),
+          leadsApi.list(tenant.id),
+        ]);
         if (cancelled) return;
         setBrands(brandList);
-        if (brandList.length > 0) {
-          setSelectedBrandId(brandList[0].id);
-        }
-        const leadList = await leadsApi.list(tenant.id);
-        if (!cancelled) setLeads(leadList);
+        setLeads(leadList);
+        setSelectedBrandId(pickDefaultBrandId(brandList, leadList));
       } catch (err) {
         if (!cancelled) {
           setNotice({
@@ -238,6 +258,43 @@ export default function OutreachPage() {
       cancelled = true;
     };
   }, []);
+
+  // Auto-polling: cada 8s durante 2 minutos refresca leads por si el outreach
+  // automatico del diagnostico recien disparado aun esta en curso en el backend.
+  useEffect(() => {
+    if (!tenantId) return;
+    let elapsed = 0;
+    const maxMs = 120_000;
+    const intervalMs = 8_000;
+    setAutoRefreshing(true);
+    const interval = setInterval(async () => {
+      elapsed += intervalMs;
+      try {
+        const leadList = await leadsApi.list(tenantId);
+        setLeads((prev) => {
+          // Si llegan leads nuevos y el usuario todavia no eligio marca manualmente,
+          // saltamos a la marca del lead mas reciente.
+          if (!userPickedBrand && leadList.length > prev.length) {
+            setSelectedBrandId((currentId) => {
+              const candidate = pickDefaultBrandId(brands, leadList);
+              return candidate || currentId;
+            });
+          }
+          return leadList;
+        });
+      } catch {
+        // silencioso: seguimos intentando
+      }
+      if (elapsed >= maxMs) {
+        clearInterval(interval);
+        setAutoRefreshing(false);
+      }
+    }, intervalMs);
+    return () => {
+      clearInterval(interval);
+      setAutoRefreshing(false);
+    };
+  }, [tenantId, brands, userPickedBrand]);
 
   const filteredLeads = useMemo(
     () => (selectedBrandId ? leads.filter((l) => l.brandId === selectedBrandId) : leads),
@@ -329,23 +386,28 @@ export default function OutreachPage() {
           <p className="text-sm font-medium text-primary-700">Outreach</p>
           <h1 className="text-3xl font-bold text-foreground">Competidores detectados y contactos</h1>
           <p className="text-muted-foreground">
-            Vista temporal para revisar qué encuentra cada herramienta. No envía correos; solo muestra lo que trae Firecrawl y Hunter.
+            Los resultados se generan <strong>automáticamente</strong> al terminar cada diagnóstico.
+            Esta pantalla muestra los competidores que te ganan en el Top 3 junto a los contactos que
+            trae Firecrawl (scraping del sitio) y Hunter.io (búsqueda por dominio).
           </p>
         </div>
 
-        {/* Controles */}
+        {/* Selector de marca + estado */}
         <Card className="border-transparent bg-white shadow-md">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-foreground">Marca a analizar</CardTitle>
+            <CardTitle className="text-lg text-foreground">Marca</CardTitle>
             <CardDescription>
-              Se usa la última corrida completada de la marca para detectar competidores que rankean por encima tuyo.
+              Mostramos por defecto la marca del último diagnóstico. Podés cambiar si querés revisar otra.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
               <select
                 value={selectedBrandId}
-                onChange={(e) => setSelectedBrandId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedBrandId(e.target.value);
+                  setUserPickedBrand(true);
+                }}
                 className="w-full md:w-80 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 {brands.length === 0 && <option>Sin marcas cargadas</option>}
@@ -364,38 +426,23 @@ export default function OutreachPage() {
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
                   <AlertCircle className="h-3 w-3" />
-                  Marca sin dominio. Cargalo en Settings.
+                  Marca sin dominio
                 </span>
               )}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => runDiscovery(false)}
-                disabled={!selectedBrand?.domain || !!actionLoading}
-                className="bg-primary-600 text-white hover:bg-primary-700"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                {actionLoading === 'discover' ? 'Detectando…' : 'Detectar competidores'}
-              </Button>
-              <Button
-                onClick={() => runDiscovery(true)}
-                disabled={!selectedBrand?.domain || !!actionLoading}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                {actionLoading === 'enrich'
-                  ? 'Buscando contactos…'
-                  : 'Buscar contactos (Firecrawl + Hunter)'}
-              </Button>
-              <Button
-                variant="outline"
+              {autoRefreshing && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+                  Actualizando automáticamente
+                </span>
+              )}
+              <button
+                type="button"
                 onClick={refreshLeads}
                 disabled={!!actionLoading}
-                className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                className="ml-auto text-xs font-medium text-slate-500 hover:text-slate-700"
               >
-                {actionLoading === 'refresh' ? 'Refrescando…' : 'Refrescar'}
-              </Button>
+                {actionLoading === 'refresh' ? 'Refrescando…' : 'Refrescar ahora'}
+              </button>
             </div>
 
             {notice && (
@@ -411,6 +458,41 @@ export default function OutreachPage() {
                 {notice.text}
               </div>
             )}
+
+            {/* Acciones manuales (avanzado) — solo por si el automatico fallo */}
+            <div className="border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="text-xs font-medium text-slate-500 hover:text-slate-700"
+              >
+                {showAdvanced ? '− Ocultar controles manuales' : '+ Forzar ejecución manual (avanzado)'}
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => runDiscovery(false)}
+                    disabled={!selectedBrand?.domain || !!actionLoading}
+                    variant="outline"
+                    className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    {actionLoading === 'discover' ? 'Detectando…' : 'Detectar competidores'}
+                  </Button>
+                  <Button
+                    onClick={() => runDiscovery(true)}
+                    disabled={!selectedBrand?.domain || !!actionLoading}
+                    variant="outline"
+                    className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    {actionLoading === 'enrich'
+                      ? 'Buscando contactos…'
+                      : 'Buscar contactos (Firecrawl + Hunter)'}
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -448,15 +530,15 @@ export default function OutreachPage() {
             <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
               <Sparkles className="h-10 w-10 text-primary-600" />
               <p className="text-lg font-semibold text-foreground">
-                Todavía no hay competidores detectados
+                Todavía no hay resultados para esta marca
               </p>
               <p className="max-w-md text-sm text-muted-foreground">
-                Seleccioná una marca con dominio y corré &ldquo;Detectar competidores&rdquo;. Vas a ver
-                quiénes aparecen ganándote en el Top 3. Después, con &ldquo;Buscar contactos&rdquo;
-                corremos Firecrawl + Hunter.io sobre cada uno.
+                {autoRefreshing
+                  ? 'Si acabás de lanzar un diagnóstico, Firecrawl y Hunter pueden tardar entre 30 y 90 segundos. La pantalla se actualiza sola.'
+                  : 'Corré un diagnóstico para esta marca y los competidores con sus contactos van a aparecer acá automáticamente.'}
               </p>
-              <Link href="/settings" className="text-sm font-medium text-primary-600 hover:text-primary-700">
-                Ir a Settings →
+              <Link href="/diagnostico" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+                Ir a Diagnóstico →
               </Link>
             </CardContent>
           </Card>
