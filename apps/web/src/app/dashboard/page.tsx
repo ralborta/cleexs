@@ -8,8 +8,11 @@ import { CleexsTrendCard } from '@/components/dashboard/cleexs-trend-card';
 import { CompetitorComparisonCard } from '@/components/dashboard/competitor-comparison-card';
 import { BrandPerceptionCard } from '@/components/dashboard/brand-perception-card';
 import {
+  leadsApi,
   reportsApi,
+  tenantsApi,
   type BrandDashboard,
+  type LeadSource,
   type PlatformDashboard,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -291,6 +294,10 @@ function DashboardContent() {
 
   const [brandData, setBrandData] = useState<BrandDashboard | null>(null);
   const [platformData, setPlatformData] = useState<PlatformDashboard | null>(null);
+  const [tenantId, setTenantId] = useState('');
+  const [leads, setLeads] = useState<LeadSource[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [leadsNotice, setLeadsNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -324,6 +331,29 @@ function DashboardContent() {
     };
   }, [brandIdParam]);
 
+  useEffect(() => {
+    if (!brandData) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const tenant = await tenantsApi.getByCode('000');
+        if (cancelled) return;
+        setTenantId(tenant.id);
+        const leadData = await leadsApi.list(tenant.id);
+        if (!cancelled) {
+          setLeads(leadData);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error cargando leads:', err);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [brandData]);
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 flex items-center justify-center">
@@ -354,6 +384,7 @@ function DashboardContent() {
   }
 
   const data = brandData as BrandDashboard;
+  const filteredLeads = leads.filter((lead) => lead.brandId === data.brand.id);
 
   // Convertir comparison a RankingEntry para BrandRankingCard (marca + competidores con "score" = share)
   const sortedComparison = [...data.comparison].sort((a, b) => b.share - a.share);
@@ -397,6 +428,171 @@ function DashboardContent() {
             <BrandPerceptionCard />
           </div>
         </div>
+
+        <Card className="border-transparent bg-white shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl text-foreground">Outreach a competidores</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Leads detectados cuando competidores rankean mejor que {data.brand.name}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                onClick={async () => {
+                  if (!tenantId || !data.latestRun?.id) return;
+                  setLeadsLoading(true);
+                  setLeadsNotice(null);
+                  try {
+                    await leadsApi.discover({ tenantId, runId: data.latestRun.id, enrich: false });
+                    const leadData = await leadsApi.list(tenantId);
+                    setLeads(leadData);
+                    setLeadsNotice('Leads actualizados.');
+                  } catch (err) {
+                    setLeadsNotice('No se pudieron actualizar los leads.');
+                  } finally {
+                    setLeadsLoading(false);
+                  }
+                }}
+                disabled={leadsLoading || !data.latestRun}
+              >
+                {leadsLoading ? 'Buscando…' : 'Detectar leads'}
+              </Button>
+              <Button
+                variant="outline"
+                className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                onClick={async () => {
+                  if (!tenantId || !data.latestRun?.id) return;
+                  setLeadsLoading(true);
+                  setLeadsNotice(null);
+                  try {
+                    await leadsApi.discover({ tenantId, runId: data.latestRun.id, enrich: true });
+                    const leadData = await leadsApi.list(tenantId);
+                    setLeads(leadData);
+                    setLeadsNotice('Emails enriquecidos.');
+                  } catch (err) {
+                    setLeadsNotice('No se pudieron enriquecer emails.');
+                  } finally {
+                    setLeadsLoading(false);
+                  }
+                }}
+                disabled={leadsLoading || !data.latestRun}
+              >
+                Buscar emails
+              </Button>
+              <Link href="/runs">
+                <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50">
+                  Ver corridas
+                </Button>
+              </Link>
+              {!data.latestRun && (
+                <span className="text-sm text-amber-600">Primero ejecutá una corrida.</span>
+              )}
+            </div>
+            {leadsNotice && <p className="text-sm text-gray-600">{leadsNotice}</p>}
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/80 border-b border-border">
+                  <TableHead className="text-muted-foreground font-semibold">Competidor</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Dominio</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Emails</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Estado</TableHead>
+                  <TableHead className="text-muted-foreground font-semibold">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                      No hay leads todavía. Ejecutá una corrida y detectá competidores.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLeads.map((lead) => {
+                    const firstContact = lead.contacts?.[0];
+                    const lastEmail = lead.emails?.[0];
+                    return (
+                      <TableRow key={lead.id}>
+                        <TableCell className="font-medium text-foreground">
+                          {lead.competitorName}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {lead.competitorDomain || 'Sin dominio'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {lead.contacts?.length || 0}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {lastEmail?.status || 'sin email'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                              onClick={async () => {
+                                if (!tenantId || !data.latestRun?.id) return;
+                                setLeadsLoading(true);
+                                setLeadsNotice(null);
+                                try {
+                                  await leadsApi.discover({
+                                    tenantId,
+                                    runId: data.latestRun.id,
+                                    enrich: true,
+                                  });
+                                  const leadData = await leadsApi.list(tenantId);
+                                  setLeads(leadData);
+                                  setLeadsNotice('Emails enriquecidos.');
+                                } catch (err) {
+                                  setLeadsNotice('No se pudieron enriquecer emails.');
+                                } finally {
+                                  setLeadsLoading(false);
+                                }
+                              }}
+                              disabled={leadsLoading}
+                            >
+                              Enriquecer
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                              onClick={async () => {
+                                if (!firstContact) {
+                                  setLeadsNotice('Este lead todavía no tiene contactos.');
+                                  return;
+                                }
+                                setLeadsLoading(true);
+                                setLeadsNotice(null);
+                                try {
+                                  await leadsApi.generateEmail({
+                                    leadSourceId: lead.id,
+                                    leadContactId: firstContact.id,
+                                  });
+                                  const leadData = await leadsApi.list(tenantId);
+                                  setLeads(leadData);
+                                  setLeadsNotice('Email generado en borrador.');
+                                } catch (err) {
+                                  setLeadsNotice('No se pudo generar el email.');
+                                } finally {
+                                  setLeadsLoading(false);
+                                }
+                              }}
+                              disabled={!firstContact || leadsLoading}
+                            >
+                              Generar email
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

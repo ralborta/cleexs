@@ -108,6 +108,40 @@ export interface RankingEntry {
   periodEnd: string;
 }
 
+export interface LeadContact {
+  id: string;
+  name?: string;
+  email: string;
+  role?: string;
+  source: string;
+  score?: number;
+  verified: boolean;
+  status: string;
+}
+
+export interface LeadEmail {
+  id: string;
+  subject: string;
+  body: string;
+  provider?: string;
+  status: string;
+  sentAt?: string;
+}
+
+export interface LeadSource {
+  id: string;
+  tenantId: string;
+  brandId?: string;
+  runId?: string;
+  promptId?: string;
+  competitorName: string;
+  competitorDomain?: string;
+  evidenceJson?: Record<string, unknown>;
+  contacts: LeadContact[];
+  emails: LeadEmail[];
+  createdAt: string;
+}
+
 // API calls
 export const tenantsApi = {
   get: (id: string) => api<Tenant>(`/api/tenants/${id}`),
@@ -227,6 +261,17 @@ export const reportsApi = {
   getBrandDashboard: (brandId: string) =>
     api<BrandDashboard>(`/api/reports/brand-dashboard?brandId=${brandId}`),
   getPlatformDashboard: () => api<PlatformDashboard>('/api/reports/platform-dashboard'),
+};
+
+export const leadsApi = {
+  list: (tenantId: string) => api<LeadSource[]>(`/api/leads?tenantId=${tenantId}`),
+  discover: (data: { tenantId: string; runId: string; enrich?: boolean }) =>
+    api<{ leads: LeadSource[] }>(`/api/leads/discover`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  generateEmail: (data: { leadSourceId: string; leadContactId: string }) =>
+    api<LeadEmail>(`/api/leads/email`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export interface BrandDashboardComparisonRow {
