@@ -298,6 +298,7 @@ function DashboardContent() {
   const [leads, setLeads] = useState<LeadSource[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadsNotice, setLeadsNotice] = useState<string | null>(null);
+  const [leadDomain, setLeadDomain] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -438,14 +439,25 @@ function DashboardContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={leadDomain}
+                onChange={(event) => setLeadDomain(event.target.value)}
+                placeholder="Dominio del competidor (ej: rgsport.com.ar)"
+                className="w-full md:w-80 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
               <Button
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
                 onClick={async () => {
-                  if (!tenantId || !data.latestRun?.id) return;
+                  if (!tenantId) return;
                   setLeadsLoading(true);
                   setLeadsNotice(null);
                   try {
-                    await leadsApi.discover({ tenantId, runId: data.latestRun.id, enrich: false });
+                    await leadsApi.discover({
+                      tenantId,
+                      runId: leadDomain ? undefined : data.latestRun?.id,
+                      domain: leadDomain || undefined,
+                      enrich: false,
+                    });
                     const leadData = await leadsApi.list(tenantId);
                     setLeads(leadData);
                     setLeadsNotice('Leads actualizados.');
@@ -463,11 +475,16 @@ function DashboardContent() {
                 variant="outline"
                 className="border-gray-200 text-gray-700 hover:bg-gray-50"
                 onClick={async () => {
-                  if (!tenantId || !data.latestRun?.id) return;
+                  if (!tenantId) return;
                   setLeadsLoading(true);
                   setLeadsNotice(null);
                   try {
-                    await leadsApi.discover({ tenantId, runId: data.latestRun.id, enrich: true });
+                    await leadsApi.discover({
+                      tenantId,
+                      runId: leadDomain ? undefined : data.latestRun?.id,
+                      domain: leadDomain || undefined,
+                      enrich: true,
+                    });
                     const leadData = await leadsApi.list(tenantId);
                     setLeads(leadData);
                     setLeadsNotice('Emails enriquecidos.');
@@ -486,8 +503,8 @@ function DashboardContent() {
                   Ver corridas
                 </Button>
               </Link>
-              {!data.latestRun && (
-                <span className="text-sm text-amber-600">Primero ejecutá una corrida.</span>
+              {!leadDomain && !data.latestRun && (
+                <span className="text-sm text-amber-600">Primero ejecutá una corrida o ingresa un dominio.</span>
               )}
             </div>
             {leadsNotice && <p className="text-sm text-gray-600">{leadsNotice}</p>}

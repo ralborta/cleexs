@@ -265,7 +265,7 @@ export const reportsApi = {
 
 export const leadsApi = {
   list: (tenantId: string) => api<LeadSource[]>(`/api/leads?tenantId=${tenantId}`),
-  discover: (data: { tenantId: string; runId: string; enrich?: boolean }) =>
+  discover: (data: { tenantId: string; runId?: string; domain?: string; enrich?: boolean }) =>
     api<{ leads: LeadSource[] }>(`/api/leads/discover`, {
       method: 'POST',
       body: JSON.stringify(data),

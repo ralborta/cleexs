@@ -21,7 +21,8 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /leads/discover
   const discoverSchema = z.object({
     tenantId: z.string().uuid(),
-    runId: z.string().uuid(),
+    runId: z.string().uuid().optional(),
+    domain: z.string().optional(),
     enrich: z.boolean().optional().default(true),
     competitorDomains: z
       .array(
@@ -37,25 +38,74 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof discoverSchema> }>('/discover', async (request, reply) => {
     const data = discoverSchema.parse(request.body);
 
-    const run = await prisma.run.findUnique({
-      where: { id: data.runId },
-      include: {
-        brand: {
-          include: {
-            aliases: true,
-            competitors: true,
+    if (!data.runId && !data.domain) {
+      return reply.code(400).send({ error: 'Debes enviar runId o domain' });
+    }
+
+    const normalizedDomain = data.domain
+      ? data.domain
+          .replace(/^https?:\/\//i, '')
+          .replace(/^www\./i, '')
+          .split('/')[0]
+          .trim()
+          .toLowerCase()
+      : null;
+
+    let run = null;
+    if (data.runId) {
+      run = await prisma.run.findUnique({
+        where: { id: data.runId },
+        include: {
+          brand: {
+            include: {
+              aliases: true,
+              competitors: true,
+            },
+          },
+          promptResults: {
+            include: {
+              prompt: true,
+            },
           },
         },
-        promptResults: {
-          include: {
-            prompt: true,
+      });
+    } else if (normalizedDomain) {
+      const brand = await prisma.brand.findFirst({
+        where: {
+          tenantId: data.tenantId,
+          domain: normalizedDomain,
+        },
+      });
+
+      if (!brand) {
+        return reply.code(404).send({ error: 'No se encontró una marca con ese dominio' });
+      }
+
+      run = await prisma.run.findFirst({
+        where: {
+          tenantId: data.tenantId,
+          brandId: brand.id,
+          status: 'completed',
+        },
+        orderBy: { periodEnd: 'desc' },
+        include: {
+          brand: {
+            include: {
+              aliases: true,
+              competitors: true,
+            },
+          },
+          promptResults: {
+            include: {
+              prompt: true,
+            },
           },
         },
-      },
-    });
+      });
+    }
 
     if (!run || run.tenantId !== data.tenantId) {
-      return reply.code(404).send({ error: 'Run no encontrado' });
+      return reply.code(404).send({ error: 'Run no encontrado para ese dominio' });
     }
 
     const brandAliases = run.brand.aliases.map((a) => a.alias);
