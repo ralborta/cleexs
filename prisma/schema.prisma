@@ -47,6 +47,7 @@ model Tenant {
   promptVersions  PromptVersion[]
   promptCategories PromptCategory[]
   runs            Run[]
+  leadSources     LeadSource[]
 
   @@index([parentTenantId])
   @@index([tenantCode])
@@ -131,6 +132,7 @@ model Brand {
   competitors Competitor[]
   runs        Run[]
   priaReports PRIAReport[]
+  leadSources LeadSource[]
 
   @@index([tenantId])
   @@index([runSchedule])
@@ -218,6 +220,7 @@ model Prompt {
   promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
   category        PromptCategory? @relation(fields: [categoryId], references: [id])
   promptResults   PromptResult[]
+  leadSources     LeadSource[]
 
   @@index([promptVersionId])
   @@index([categoryId])
@@ -255,6 +258,7 @@ model Run {
   brand       Brand       @relation(fields: [brandId], references: [id])
   promptResults PromptResult[]
   priaReports PRIAReport[]
+  leadSources LeadSource[]
 
   @@index([tenantId])
   @@index([brandId])
@@ -353,4 +357,77 @@ model PublicDiagnosticShareVisit {
   @@unique([diagnosticId, visitorId])
   @@index([diagnosticId])
   @@map("public_diagnostic_share_visits")
+}
+
+// ============================================
+// LEADS (outreach a competidores)
+// ============================================
+
+model LeadSource {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  brandId          String?  @map("brand_id")
+  runId            String?  @map("run_id")
+  promptId         String?  @map("prompt_id")
+  competitorName   String   @map("competitor_name")
+  competitorDomain String?  @map("competitor_domain")
+  evidenceJson     Json?    @map("evidence_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  brand            Brand?   @relation(fields: [brandId], references: [id])
+  run              Run?     @relation(fields: [runId], references: [id])
+  prompt           Prompt?  @relation(fields: [promptId], references: [id])
+  contacts         LeadContact[]
+  emails           LeadEmail[]
+
+  @@index([tenantId])
+  @@index([brandId])
+  @@index([runId])
+  @@index([competitorName])
+  @@map("lead_sources")
+}
+
+model LeadContact {
+  id           String   @id @default(uuid())
+  leadSourceId String   @map("lead_source_id")
+  name         String?
+  email        String
+  role         String?
+  source       String   // firecrawl | hunter | browserbase
+  score        Float?   @default(0)
+  verified     Boolean  @default(false)
+  status       String   @default("new") // new | queued | sent | ignored
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  leadSource   LeadSource @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+  emails       LeadEmail[]
+
+  @@unique([leadSourceId, email])
+  @@index([email])
+  @@map("lead_contacts")
+}
+
+model LeadEmail {
+  id           String   @id @default(uuid())
+  leadSourceId String   @map("lead_source_id")
+  leadContactId String  @map("lead_contact_id")
+  subject      String
+  body         String   @db.Text
+  provider     String?  // resend | sendgrid | manual
+  status       String   @default("draft") // draft | queued | sent | failed
+  sentAt       DateTime? @map("sent_at")
+  metaJson     Json?    @map("meta_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  leadSource   LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+  leadContact  LeadContact @relation(fields: [leadContactId], references: [id], onDelete: Cascade)
+
+  @@index([leadSourceId])
+  @@index([leadContactId])
+  @@map("lead_emails")
 }
