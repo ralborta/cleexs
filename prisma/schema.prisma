@@ -112,6 +112,24 @@ enum RunSchedule {
   mensual
 }
 
+enum BusinessType {
+  brand
+  retailer_multibrand
+  distributor
+  importer
+  marketplace
+  service
+  saas
+  unknown
+}
+
+enum SizeSegment {
+  premium
+  mid
+  value
+  unknown
+}
+
 model Brand {
   id           String       @id @default(uuid())
   tenantId     String       @map("tenant_id")
@@ -122,6 +140,14 @@ model Brand {
   country      String?
   objective    String?
   description  String?      @db.Text
+  // Clasificacion automatica por dominio
+  businessType BusinessType? @default(unknown) @map("business_type")
+  category     String?      @map("category")
+  subcategory  String?      @map("subcategory")
+  geoMarket    String?      @map("geo_market")
+  sizeSegment  SizeSegment? @default(unknown) @map("size_segment")
+  autoDetected Boolean      @default(false) @map("auto_detected")
+  classifierMeta Json?      @map("classifier_meta")
   runSchedule  RunSchedule? @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
@@ -136,6 +162,8 @@ model Brand {
 
   @@index([tenantId])
   @@index([runSchedule])
+  @@index([domain])
+  @@index([businessType])
   @@map("brands")
 }
 
@@ -157,7 +185,16 @@ model Competitor {
   id        String   @id @default(uuid())
   brandId   String   @map("brand_id")
   name      String
+  domain    String?
   aliases   Json?    // Array de strings como JSON
+  // Clasificacion coherente con la marca medida
+  businessType BusinessType? @default(unknown) @map("business_type")
+  category     String?       @map("category")
+  subcategory  String?       @map("subcategory")
+  geoMarket    String?       @map("geo_market")
+  autoDetected Boolean       @default(false) @map("auto_detected")
+  validated    Boolean       @default(false) @map("validated")
+  discoveryReason String?    @db.Text @map("discovery_reason")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -165,6 +202,7 @@ model Competitor {
   brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([brandId])
+  @@index([domain])
   @@map("competitors")
 }
 

@@ -88,6 +88,22 @@ export default function SettingsPage() {
   const [executingRun, setExecutingRun] = useState(false);
   const router = useRouter();
 
+  const [autoDomain, setAutoDomain] = useState('');
+  const [autoLoading, setAutoLoading] = useState(false);
+  const [autoResult, setAutoResult] = useState<{
+    brandName: string;
+    businessType: string;
+    category: string;
+    subcategory: string;
+    geoMarket: string;
+    confidence: number;
+    reasoning: string;
+    competitorsCreated: number;
+    competitorsRejected: Array<{ domain: string; name: string; reason?: string }>;
+    candidates: Array<{ domain: string; name: string; reason: string }>;
+    promptsCreated: number;
+  } | null>(null);
+
   const [configStep, setConfigStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [updatingScheduleBrandId, setUpdatingScheduleBrandId] = useState<string | null>(null);
   const STEPS = [
@@ -463,6 +479,54 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAutoCreate = async () => {
+    if (!tenantId) {
+      pushToast('error', 'Tenant no disponible', 'Reintentá en unos segundos.');
+      return;
+    }
+    const domain = autoDomain.trim();
+    if (!domain) {
+      pushToast('info', 'Falta dominio', 'Ingresá la URL o dominio del negocio.');
+      return;
+    }
+    setAutoLoading(true);
+    setAutoResult(null);
+    try {
+      const res = await brandsApi.autoCreate({ tenantId, domain });
+      const updated = await brandsApi.list(tenantId);
+      setBrands(updated);
+      const versions = await promptsApi.getVersions(tenantId);
+      setPromptVersions(versions);
+      const newestVersion = versions[0];
+      if (newestVersion) setSelectedVersionId(newestVersion.id);
+      setAutoResult({
+        brandName: res.classification.brandName,
+        businessType: res.classification.businessType,
+        category: res.classification.category,
+        subcategory: res.classification.subcategory,
+        geoMarket: res.classification.geoMarket,
+        confidence: res.classification.confidence,
+        reasoning: res.classification.reasoning,
+        competitorsCreated: res.competitorsCreated,
+        competitorsRejected: res.competitorsRejected,
+        candidates: res.competitorCandidates,
+        promptsCreated: res.promptsCreated,
+      });
+      setSelectedBrandId(res.brand.id);
+      setRunBrandId(res.brand.id);
+      setAutoDomain('');
+      pushToast(
+        'success',
+        'Marca lista',
+        `${res.classification.brandName} con ${res.competitorsCreated} competidores y ${res.promptsCreated} prompts.`
+      );
+    } catch (error: any) {
+      pushToast('error', 'No pudimos analizar el dominio', error?.message);
+    } finally {
+      setAutoLoading(false);
+    }
+  };
+
   const handleRunScheduleChange = async (brandId: string, runSchedule: RunScheduleType | null) => {
     setUpdatingScheduleBrandId(brandId);
     try {
@@ -591,10 +655,79 @@ export default function SettingsPage() {
           <div className="space-y-6">
             {/* Paso 1: Marca */}
             {configStep === 1 && (
+              <>
+              <Card className="border-transparent bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-white">Analisis automatico desde el dominio</CardTitle>
+                  <CardDescription className="text-white/80">
+                    Ingresa solo la URL. Cleexs detecta la marca, el tipo de negocio, la vertical, los competidores y genera los prompts.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col gap-2 md:flex-row">
+                    <input
+                      value={autoDomain}
+                      onChange={(e) => setAutoDomain(e.target.value)}
+                      disabled={autoLoading}
+                      placeholder="https://tienda.fila.com.ar"
+                      className="flex-1 rounded-md bg-white/95 px-3 py-2 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                    />
+                    <Button
+                      onClick={handleAutoCreate}
+                      disabled={autoLoading}
+                      className="bg-white text-blue-700 hover:bg-white/90"
+                    >
+                      {autoLoading ? 'Analizando...' : 'Analizar y crear'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-white/70">
+                    Se clasifica el negocio (marca / retail multimarca / distribuidor / importador / marketplace / service / saas),
+                    se descubren competidores del mismo tipo + categoria + mercado,
+                    y se generan 10 prompts contextualizados.
+                  </p>
+                  {autoResult && (
+                    <div className="rounded-lg bg-white/10 border border-white/20 p-4 text-sm space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-white">{autoResult.brandName}</span>
+                        <span className="text-xs rounded-full bg-white/20 px-2 py-0.5">
+                          {Math.round(autoResult.confidence * 100)}% confianza
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-white/90">
+                        <div><span className="text-white/60">Tipo:</span> {autoResult.businessType}</div>
+                        <div><span className="text-white/60">Mercado:</span> {autoResult.geoMarket}</div>
+                        <div className="col-span-2"><span className="text-white/60">Categoria:</span> {autoResult.category}{autoResult.subcategory ? ` > ${autoResult.subcategory}` : ''}</div>
+                      </div>
+                      {autoResult.reasoning && (
+                        <p className="text-xs text-white/80 italic">{autoResult.reasoning}</p>
+                      )}
+                      <div className="flex gap-4 text-xs text-white/90 pt-2 border-t border-white/20">
+                        <span>{autoResult.competitorsCreated} competidores validados</span>
+                        <span>{autoResult.promptsCreated} prompts generados</span>
+                      </div>
+                      {autoResult.competitorsRejected.length > 0 && (
+                        <details className="text-xs text-white/70">
+                          <summary className="cursor-pointer">
+                            {autoResult.competitorsRejected.length} competidores descartados
+                          </summary>
+                          <ul className="mt-2 space-y-1">
+                            {autoResult.competitorsRejected.map((c) => (
+                              <li key={c.domain}>
+                                <span className="font-medium">{c.name}</span> ({c.domain}): {c.reason || 'no matchea criterios'}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="border-transparent bg-white shadow-md">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-xl text-foreground">Tu marca</CardTitle>
-                  <CardDescription>Creá tu marca principal. Industria y tipo de producto se usan para sugerir competidores.</CardDescription>
+                  <CardTitle className="text-xl text-foreground">Configuracion manual (avanzado)</CardTitle>
+                  <CardDescription>Si preferis configurar todo a mano. Recomendado usar el analisis automatico de arriba.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -675,6 +808,7 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+              </>
             )}
 
             {/* Paso 2: Competidores */}

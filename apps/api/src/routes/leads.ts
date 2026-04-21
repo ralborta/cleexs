@@ -112,9 +112,21 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const brandAliases = run.brand.aliases.map((a) => a.alias);
-    const domainMap = new Map(
-      data.competitorDomains.map((entry) => [entry.name.toLowerCase(), entry.domain])
-    );
+    const domainMap = new Map<string, string>();
+    // Primary: dominios guardados en cada competidor de la marca (auto-detectados)
+    for (const competitor of run.brand.competitors) {
+      if (competitor.domain) {
+        domainMap.set(competitor.name.toLowerCase(), competitor.domain);
+        const aliases = (competitor.aliases as string[]) || [];
+        for (const alias of aliases) {
+          domainMap.set(alias.toLowerCase(), competitor.domain);
+        }
+      }
+    }
+    // Override/fallback: los que vengan en el body
+    for (const entry of data.competitorDomains) {
+      domainMap.set(entry.name.toLowerCase(), entry.domain);
+    }
 
     const leadSources: Array<{
       competitorName: string;

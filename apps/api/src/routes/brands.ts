@@ -1,6 +1,14 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import {
+  classifyDomain,
+  discoverCompetitors,
+  validateCompetitors,
+  generatePrompts,
+  normalizeDomain,
+} from '../lib/classifier';
 
 const normalizeSuggestion = (value: string) =>
   value
@@ -136,7 +144,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         tenantId: data.tenantId,
         name: data.name,
-        domain: data.domain,
+        domain: data.domain ? normalizeDomain(data.domain) : null,
         industry: data.industry,
         productType: data.productType,
         country: data.country,
@@ -190,6 +198,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /brands/:id/competitors
   const addCompetitorSchema = z.object({
     name: z.string().min(1),
+    domain: z.string().optional(),
     aliases: z.array(z.string()).optional(),
   });
 
@@ -202,6 +211,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           brandId: request.params.id,
           name: data.name,
+          domain: data.domain ? normalizeDomain(data.domain) : null,
           aliases: data.aliases || [],
         },
       });
@@ -209,6 +219,156 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(201).send(competitor);
     }
   );
+
+  // POST /brands/auto-create
+  // Crea marca + competidores + prompt version + prompts a partir de UN dominio.
+  const autoCreateSchema = z.object({
+    tenantId: z.string().uuid(),
+    domain: z.string().min(3),
+    promptCount: z.number().min(3).max(20).optional().default(10),
+    versionName: z.string().optional(),
+  });
+
+  fastify.post<{ Body: z.infer<typeof autoCreateSchema> }>(
+    '/auto-create',
+    async (request, reply) => {
+      if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+        return reply.code(500).send({ error: 'No hay API key de clasificacion configurada' });
+      }
+
+      const data = autoCreateSchema.parse(request.body);
+      const normalizedDomain = normalizeDomain(data.domain);
+
+      // 1. Clasificar el dominio (marca, tipo, categoria, vertical, mercado)
+      let classification;
+      try {
+        classification = await classifyDomain(normalizedDomain);
+      } catch (err: any) {
+        return reply.code(500).send({ error: err?.message || 'Error clasificando dominio' });
+      }
+
+      if (classification.confidence < 0.25) {
+        return reply.code(422).send({
+          error: 'No pudimos identificar el negocio con suficiente certeza. Probá con otro dominio o creá la marca manualmente.',
+          classification,
+        });
+      }
+
+      // 2. Descubrir competidores del mismo tipo/categoria/mercado
+      const candidates = await discoverCompetitors(classification);
+
+      // 3. Validar cada competidor re-clasificandolo
+      const validated = await validateCompetitors(classification, candidates);
+      const validCompetitors = validated.filter((c) => c.valid);
+
+      // 4. Generar prompts contextualizados
+      const generatedPrompts = await generatePrompts(classification, data.promptCount);
+
+      // 5. Persistir todo en una transaccion
+      const brand = await prisma.$transaction(async (tx) => {
+        const createdBrand = await tx.brand.create({
+          data: {
+            tenantId: data.tenantId,
+            name: classification.brandName,
+            domain: classification.domain,
+            industry: classification.category,
+            productType: classification.subcategory || null,
+            country: classification.geoMarket,
+            businessType: classification.businessType as any,
+            category: classification.category,
+            subcategory: classification.subcategory || null,
+            geoMarket: classification.geoMarket,
+            sizeSegment: classification.sizeSegment as any,
+            autoDetected: true,
+            classifierMeta: classification as unknown as Prisma.InputJsonValue,
+            aliases: {
+              create: (classification.aliases || []).map((alias) => ({ alias })),
+            },
+            competitors: {
+              create: validCompetitors.map((c) => ({
+                name: c.name,
+                domain: c.domain,
+                aliases: [],
+                businessType: c.classification?.businessType as any,
+                category: c.classification?.category,
+                subcategory: c.classification?.subcategory || null,
+                geoMarket: c.classification?.geoMarket || classification.geoMarket,
+                autoDetected: true,
+                validated: true,
+                discoveryReason: c.reason,
+              })),
+            },
+          },
+          include: { aliases: true, competitors: true },
+        });
+
+        if (generatedPrompts.length > 0) {
+          const versionName =
+            data.versionName ||
+            `Auto-${classification.brandName.slice(0, 20)}-${new Date()
+              .toISOString()
+              .slice(0, 10)}`;
+
+          // Aseguramos uniqueness de (tenantId, versionName)
+          let finalVersionName = versionName;
+          let suffix = 1;
+          // Best-effort: si ya existe, sumar sufijo
+          // eslint-disable-next-line no-constant-condition
+          while (true) {
+            const existing = await tx.promptVersion.findFirst({
+              where: { tenantId: data.tenantId, name: finalVersionName },
+            });
+            if (!existing) break;
+            suffix += 1;
+            finalVersionName = `${versionName}-${suffix}`;
+          }
+
+          await tx.promptVersion.create({
+            data: {
+              tenantId: data.tenantId,
+              name: finalVersionName,
+              active: true,
+              prompts: {
+                create: generatedPrompts.map((p) => ({
+                  name: p.name,
+                  promptText: p.text,
+                  active: true,
+                })),
+              },
+            },
+          });
+        }
+
+        return createdBrand;
+      });
+
+      return reply.code(201).send({
+        brand,
+        classification,
+        competitorCandidates: candidates,
+        competitorsCreated: validCompetitors.length,
+        competitorsRejected: validated.filter((c) => !c.valid).map((c) => ({
+          domain: c.domain,
+          name: c.name,
+          reason: c.rejectionReason,
+        })),
+        promptsCreated: generatedPrompts.length,
+      });
+    }
+  );
+
+  // POST /brands/classify-preview  -> preview sin persistir (para debug UI)
+  fastify.post<{ Body: { domain: string } }>('/classify-preview', async (request, reply) => {
+    const domain = normalizeDomain(String(request.body?.domain || ''));
+    if (!domain) return reply.code(400).send({ error: 'domain requerido' });
+    try {
+      const classification = await classifyDomain(domain);
+      const candidates = await discoverCompetitors(classification);
+      return { classification, candidates };
+    } catch (err: any) {
+      return reply.code(500).send({ error: err?.message || 'Error' });
+    }
+  });
 
   // POST /brands/:id/competitor-suggestions
   const suggestSchema = z.object({

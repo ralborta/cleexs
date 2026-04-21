@@ -154,6 +154,28 @@ export const tenantsApi = {
     }>(`/api/tenants/${id}/usage${year && month ? `?year=${year}&month=${month}` : ''}`),
 };
 
+export interface BrandAutoCreateResponse {
+  brand: Brand;
+  classification: {
+    domain: string;
+    brandName: string;
+    businessType: string;
+    category: string;
+    subcategory: string;
+    geoMarket: string;
+    sizeSegment: string;
+    aliases: string[];
+    description: string;
+    confidence: number;
+    knownEntity: boolean;
+    reasoning: string;
+  };
+  competitorCandidates: Array<{ domain: string; name: string; reason: string }>;
+  competitorsCreated: number;
+  competitorsRejected: Array<{ domain: string; name: string; reason?: string }>;
+  promptsCreated: number;
+}
+
 export const brandsApi = {
   list: (tenantId: string) => api<Brand[]>(`/api/brands?tenantId=${tenantId}`),
   get: (id: string) => api<Brand>(`/api/brands/${id}`),
@@ -168,7 +190,20 @@ export const brandsApi = {
     description?: string;
   }) =>
     api<Brand>('/api/brands', { method: 'POST', body: JSON.stringify(data) }),
-  addCompetitor: (brandId: string, data: { name: string; aliases?: string[] }) =>
+  autoCreate: (data: { tenantId: string; domain: string; promptCount?: number; versionName?: string }) =>
+    api<BrandAutoCreateResponse>('/api/brands/auto-create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  classifyPreview: (domain: string) =>
+    api<{
+      classification: BrandAutoCreateResponse['classification'];
+      candidates: BrandAutoCreateResponse['competitorCandidates'];
+    }>('/api/brands/classify-preview', {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    }),
+  addCompetitor: (brandId: string, data: { name: string; domain?: string; aliases?: string[] }) =>
     api(`/api/brands/${brandId}/competitors`, { method: 'POST', body: JSON.stringify(data) }),
   suggestCompetitors: (
     brandId: string,
