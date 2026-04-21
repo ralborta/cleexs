@@ -1,46 +1,35 @@
 /**
  * Helper compartido para extraer emails de un dominio via Firecrawl.
- * Usa /v2/scrape (sincronico) que devuelve markdown/html/links en la misma llamada.
  *
- * IMPORTANTE: No uses /v2/extract para esto: es async y requiere polling del
- * jobId. Si llamas POST y lees la respuesta directo, recibis el jobId pero
- * Firecrawl igual cobra creditos por el trabajo que dispara en background.
+ * Estrategia en dos pasos (docs oficiales Firecrawl v2):
+ * 1) POST /v2/map  -> descubre URLs REALES del sitio (1 credito total).
+ *    Con `search: 'contact'` los devuelve ordenados por relevancia.
+ * 2) POST /v2/scrape (sincronico) sobre las URLs mas probables y extraemos
+ *    emails de markdown + HTML (href="mailto:...") + array de links.
+ *
+ * IMPORTANTE: NO uses /v2/extract para esto. Es asincrono y requiere polling
+ * del jobId. Si haces POST y lees la respuesta directo, recibis el jobId pero
+ * Firecrawl igual cobra creditos por el trabajo que queda corriendo solo.
  */
 
-// Rutas candidatas para buscar contactos. Ordenadas por probabilidad de tener emails.
-const CANDIDATE_PATHS = [
+// Patron para rankear URLs candidatas. Mas rutas = mas cobertura. Case-insensitive.
+const RELEVANT_URL_REGEX =
+  /(contact|contacto|contactanos|kontakt|press|prensa|media|about|nosotros|quienes|soporte|support|ayuda|help|inversor|investor|legal|privacidad|privacy|denuncia|prensa|corporativo)/i;
+
+// Fallback para dominios en los que /v2/map no devuelve nada util.
+const FALLBACK_PATHS = [
   '',
   '/contact',
   '/contacto',
-  '/contactos',
-  '/contact-us',
   '/contactanos',
   '/about',
-  '/about-us',
   '/nosotros',
-  '/soporte',
-  '/support',
-  '/ayuda',
-  '/help',
   '/prensa',
   '/press',
-  '/media',
-  '/inversores',
-  '/investors',
-  '/ir',
-  '/legal',
-  '/privacy',
-  '/privacidad',
 ] as const;
 
-// Regex robusto para emails. Case-insensitive.
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
-
-// Regex para extraer emails de href="mailto:..." en el HTML crudo.
-// Captura incluso emails ofuscados con entidades HTML (&#x40; etc) si Firecrawl los normaliza.
 const MAILTO_HREF_REGEX = /href\s*=\s*["']?mailto:([^"'?\s>]+)/gi;
-
-// Regex para detectar emails "ofuscados" con (at)/(dot) comunes en sitios anti-spam.
 const OBFUSCATED_REGEX =
   /([A-Z0-9._%+-]+)\s*(?:\(at\)|\[at\]|\{at\}|\s+at\s+)\s*([A-Z0-9.-]+)\s*(?:\(dot\)|\[dot\]|\{dot\}|\s+dot\s+)\s*([A-Z]{2,})/gi;
 
@@ -60,8 +49,18 @@ const GENERIC_LOCALS = new Set([
 
 const ASSET_SUFFIXES = ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp', '.ico', '.bmp'];
 
+const MAX_PAGES_TO_SCRAPE = 8;
+const FIRECRAWL_BASE = 'https://api.firecrawl.dev/v2';
+
 export interface FirecrawlEmailsResult {
   emails: string[];
+  map: {
+    ok: boolean;
+    totalLinks: number;
+    relevantLinks: number;
+    error?: string;
+    urlsScraped: string[];
+  };
   attempts: Array<{
     url: string;
     ok: boolean;
@@ -82,68 +81,156 @@ function isValidEmail(email: string): boolean {
   const [local] = email.split('@');
   if (!local) return false;
   if (GENERIC_LOCALS.has(local)) return false;
-  if (ASSET_SUFFIXES.some((suffix) => email.endsWith(suffix))) return false;
-  // Descartamos emails con caracteres que suelen ser basura de parseo.
+  if (ASSET_SUFFIXES.some((s) => email.endsWith(s))) return false;
   if (email.includes('..') || email.startsWith('.') || email.endsWith('.')) return false;
   return true;
 }
 
 function collectFromText(text: string, target: Set<string>): number {
-  let matchCount = 0;
+  let count = 0;
   const matches = text.match(EMAIL_REGEX) || [];
   for (const raw of matches) {
     const email = raw.toLowerCase().trim();
-    if (!isValidEmail(email)) continue;
-    target.add(email);
-    matchCount += 1;
-  }
-  // Emails ofuscados con (at)/(dot).
-  let m: RegExpExecArray | null;
-  OBFUSCATED_REGEX.lastIndex = 0;
-  while ((m = OBFUSCATED_REGEX.exec(text)) !== null) {
-    const email = `${m[1]}@${m[2]}.${m[3]}`.toLowerCase();
-    if (isValidEmail(email)) {
+    if (isValidEmail(email) && !target.has(email)) {
       target.add(email);
-      matchCount += 1;
+      count += 1;
     }
   }
-  return matchCount;
+  OBFUSCATED_REGEX.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = OBFUSCATED_REGEX.exec(text)) !== null) {
+    const email = `${m[1]}@${m[2]}.${m[3]}`.toLowerCase();
+    if (isValidEmail(email) && !target.has(email)) {
+      target.add(email);
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function collectFromHrefs(html: string, target: Set<string>): number {
-  let matchCount = 0;
-  let m: RegExpExecArray | null;
+  let count = 0;
   MAILTO_HREF_REGEX.lastIndex = 0;
+  let m: RegExpExecArray | null;
   while ((m = MAILTO_HREF_REGEX.exec(html)) !== null) {
     const email = decodeURIComponent(m[1] || '').toLowerCase().trim();
-    if (isValidEmail(email)) {
+    if (isValidEmail(email) && !target.has(email)) {
       target.add(email);
-      matchCount += 1;
+      count += 1;
     }
   }
-  return matchCount;
+  return count;
 }
 
 function collectFromLinks(links: string[], target: Set<string>): number {
-  let matchCount = 0;
+  let count = 0;
   for (const link of links) {
     if (!link) continue;
     const lower = link.toLowerCase();
     if (!lower.startsWith('mailto:')) continue;
     const raw = lower.replace(/^mailto:/, '').split('?')[0].trim();
-    if (isValidEmail(raw)) {
+    if (isValidEmail(raw) && !target.has(raw)) {
       target.add(raw);
-      matchCount += 1;
+      count += 1;
     }
   }
-  return matchCount;
+  return count;
 }
 
 /**
- * Recorre varias rutas del dominio y junta todos los emails visibles.
- * Busca en: markdown plano, href="mailto:..." del HTML, array de links
- * devuelto por Firecrawl, y patrones ofuscados (at)/(dot).
+ * Paso 1: /v2/map -> lista de URLs reales del dominio, ordenadas por relevancia
+ * cuando pasamos `search`. 1 credito por llamada (vs 1 credito por /scrape).
  */
+async function mapDomain(
+  domain: string,
+  apiKey: string
+): Promise<{ links: Array<{ url: string; title?: string }>; error?: string }> {
+  try {
+    const response = await fetch(`${FIRECRAWL_BASE}/map`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        url: `https://${domain}`,
+        search: 'contact',
+        limit: 200,
+        includeSubdomains: true,
+        ignoreQueryParameters: true,
+      }),
+    });
+    if (!response.ok) {
+      return { links: [], error: `map HTTP ${response.status}` };
+    }
+    const payload = (await response.json()) as {
+      success?: boolean;
+      links?: Array<{ url: string; title?: string; description?: string }>;
+    };
+    return { links: payload?.links || [] };
+  } catch (err) {
+    return { links: [], error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Paso 2: /v2/scrape de UNA url. Formatos: markdown + html + links.
+ */
+async function scrapeUrl(
+  url: string,
+  apiKey: string,
+  timeout: number
+): Promise<{
+  markdown: string;
+  html: string;
+  links: string[];
+  status: number;
+  error?: string;
+}> {
+  try {
+    const response = await fetch(`${FIRECRAWL_BASE}/scrape`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['markdown', 'html', 'links'],
+        onlyMainContent: false,
+        timeout,
+      }),
+    });
+    const status = response.status;
+    if (!response.ok) {
+      return { markdown: '', html: '', links: [], status, error: `HTTP ${status}` };
+    }
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: {
+        markdown?: string;
+        html?: string;
+        rawHtml?: string;
+        links?: string[];
+      };
+    };
+    return {
+      markdown: payload?.data?.markdown || '',
+      html: payload?.data?.html || payload?.data?.rawHtml || '',
+      links: payload?.data?.links || [],
+      status,
+    };
+  } catch (err) {
+    return {
+      markdown: '',
+      html: '',
+      links: [],
+      status: 0,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 export async function scrapeEmailsForDomain(
   domain: string,
   apiKey: string,
@@ -152,66 +239,63 @@ export async function scrapeEmailsForDomain(
   const timeout = opts.timeoutMs ?? 20_000;
   const found = new Set<string>();
   const attempts: FirecrawlEmailsResult['attempts'] = [];
-  let firstError: string | undefined;
 
-  for (const path of CANDIDATE_PATHS) {
-    const url = `https://${domain}${path}`;
-    const attempt: FirecrawlEmailsResult['attempts'][number] = { url, ok: false };
-    try {
-      const response = await fetch('https://api.firecrawl.dev/v2/scrape', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          url,
-          // Pedimos markdown + html + links. Los mailto suelen venir en <a href="mailto:...">
-          // y en el array de links, que el markdown no preserva.
-          formats: ['markdown', 'html', 'links'],
-          onlyMainContent: false,
-          timeout,
-        }),
-      });
-      attempt.status = response.status;
-      if (!response.ok) {
-        attempt.error = `HTTP ${response.status}`;
-        if (!firstError) firstError = attempt.error;
-        attempts.push(attempt);
-        continue;
-      }
-      const payload = (await response.json()) as {
-        success?: boolean;
-        data?: {
-          markdown?: string;
-          html?: string;
-          rawHtml?: string;
-          links?: string[];
-        };
-      };
-      const markdown = payload?.data?.markdown || '';
-      const html = payload?.data?.html || payload?.data?.rawHtml || '';
-      const links = payload?.data?.links || [];
-      attempt.markdownLength = markdown.length;
-      attempt.htmlLength = html.length;
-      attempt.linksCount = links.length;
+  // 1) MAP: obtenemos URLs reales del sitio ordenadas por relevancia para 'contact'.
+  const mapResult = await mapDomain(domain, apiKey);
+  const allLinks = mapResult.links;
 
-      const textMatches = collectFromText(markdown, found);
-      const linkMatches = collectFromLinks(links, found);
-      const mailtoMatches = collectFromHrefs(html, found);
-      attempt.matches = textMatches;
-      attempt.linkMatches = linkMatches;
-      attempt.mailtoMatches = mailtoMatches;
-      attempt.ok = true;
-    } catch (err) {
-      attempt.error = err instanceof Error ? err.message : String(err);
-      if (!firstError) firstError = attempt.error;
+  // Filtramos los que tengan palabras clave relevantes para contactos.
+  // Priorizamos tambien URLs cortas (menos probable que sean articulos de blog).
+  const relevantUrls = allLinks
+    .map((l) => l.url)
+    .filter((u) => typeof u === 'string' && u.startsWith('http'))
+    .filter((u) => RELEVANT_URL_REGEX.test(u))
+    .sort((a, b) => a.length - b.length);
+
+  // Si no hay URLs relevantes o el map fallo, caemos a rutas "adivinadas".
+  const urlsToScrape: string[] =
+    relevantUrls.length > 0
+      ? [`https://${domain}`, ...relevantUrls].slice(0, MAX_PAGES_TO_SCRAPE)
+      : FALLBACK_PATHS.map((p) => `https://${domain}${p}`).slice(0, MAX_PAGES_TO_SCRAPE);
+
+  // Deduplicar.
+  const uniqueUrls = Array.from(new Set(urlsToScrape));
+
+  let firstError: string | undefined = mapResult.error;
+
+  // 2) SCRAPE: cada URL, juntando emails de texto, mailto y array de links.
+  for (const url of uniqueUrls) {
+    const result = await scrapeUrl(url, apiKey, timeout);
+    const attempt: FirecrawlEmailsResult['attempts'][number] = {
+      url,
+      ok: false,
+      status: result.status,
+    };
+    if (result.error) {
+      attempt.error = result.error;
+      if (!firstError) firstError = result.error;
+      attempts.push(attempt);
+      continue;
     }
+    attempt.markdownLength = result.markdown.length;
+    attempt.htmlLength = result.html.length;
+    attempt.linksCount = result.links.length;
+    attempt.matches = collectFromText(result.markdown, found);
+    attempt.linkMatches = collectFromLinks(result.links, found);
+    attempt.mailtoMatches = collectFromHrefs(result.html, found);
+    attempt.ok = true;
     attempts.push(attempt);
   }
 
   return {
     emails: Array.from(found),
+    map: {
+      ok: !mapResult.error,
+      totalLinks: allLinks.length,
+      relevantLinks: relevantUrls.length,
+      error: mapResult.error,
+      urlsScraped: uniqueUrls,
+    },
     attempts,
     error: found.size === 0 ? firstError : undefined,
   };

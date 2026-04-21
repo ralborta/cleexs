@@ -194,18 +194,21 @@ export async function runOutreachForRun(
     const domain = source.competitorDomain;
     if (!domain) continue;
 
-    // Firecrawl: usa /v2/scrape (sincronico) via helper compartido.
+    // Firecrawl: helper usa /v2/map + /v2/scrape.
     if (firecrawlKey) {
       const scrapeResult = await scrapeEmailsForDomain(domain, firecrawlKey);
       logger?.info?.(
         {
           domain,
           emails: scrapeResult.emails.length,
+          map: scrapeResult.map,
           attempts: scrapeResult.attempts.map((a) => ({
             url: a.url,
             ok: a.ok,
             status: a.status,
             matches: a.matches,
+            mailto: a.mailtoMatches,
+            linkMatches: a.linkMatches,
           })),
         },
         'Firecrawl scrape terminado'
