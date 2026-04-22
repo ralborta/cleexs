@@ -774,13 +774,9 @@ function VerResultadoContent() {
                         </p>
                         <ShareScoreButtons
                           path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                          title={`Cleexs Score — ${diagnostic.brandName}`}
-                          summary={
-                            diagnostic.runResult
-                              ? `Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
-                              : diagnostic.brandName
-                          }
                           intent="social"
+                          brandName={diagnostic.brandName}
+                          domain={diagnostic.domain}
                         />
                         <p className="mt-4 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-slate-600 ring-1 ring-indigo-100/60">
                           <span className="font-medium text-slate-500">Enlace</span>
@@ -818,13 +814,9 @@ function VerResultadoContent() {
                         </p>
                         <ShareScoreButtons
                           path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                          title={`Informe Cleexs — ${diagnostic.brandName}`}
-                          summary={
-                            diagnostic.runResult
-                              ? `Informe detallado · Score ${Math.round(diagnostic.runResult.cleexsScore)} · ${diagnostic.industry || diagnostic.brandName}`
-                              : `Informe detallado · ${diagnostic.brandName}`
-                          }
                           intent="team"
+                          brandName={diagnostic.brandName}
+                          domain={diagnostic.domain}
                         />
                         <p className="mt-4 rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-xs text-slate-600">
                           <span className="font-medium text-slate-500">Enlace</span>

@@ -23,6 +23,10 @@ export interface MarketProfileResult {
   country: string;
   industry: string;
   confidence: number;
+  /** Qué hace el negocio y nicho (ancla competidores). */
+  verticalSummary?: string;
+  /** Segmento de cliente inferido. */
+  customerSegment?: 'B2B' | 'B2C' | 'B2B2C' | 'mixto' | 'desconocido';
 }
 
 interface WebsiteEvidence {
@@ -33,7 +37,11 @@ interface WebsiteEvidence {
   sourceUrl?: string;
 }
 
-async function callOpenAI(messages: Array<{ role: string; content: string }>, JsonSchema?: object): Promise<string> {
+async function callOpenAI(
+  messages: Array<{ role: string; content: string }>,
+  JsonSchema?: object,
+  maxTokens = 500
+): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -43,7 +51,7 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>, Js
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       temperature: 0.2,
-      max_tokens: 500,
+      max_tokens: maxTokens,
       messages: messages.map((m) => ({ role: m.role as 'system' | 'user', content: m.content })),
       ...(JsonSchema && {
         response_format: { type: 'json_schema', json_schema: JsonSchema as object },
@@ -179,16 +187,29 @@ export async function determineIndustry(
 export async function getTop5Competitors(
   brandName: string,
   industry: string,
-  country?: string
+  country?: string,
+  niche?: { verticalSummary?: string; customerSegment?: string }
 ): Promise<CompetitorsResult> {
   const marketContext = country ? ` País/mercado: ${country}.` : '';
+  const nicheBlock = [
+    niche?.verticalSummary?.trim()
+      ? `Qué hace el negocio (según sitio / análisis): ${niche.verticalSummary.trim()}`
+      : '',
+    niche?.customerSegment?.trim()
+      ? `Tipo de cliente principal: ${niche.customerSegment.trim()}.`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
   const content = await callOpenAI([
     {
       role: 'system',
       content:
         'Respondé SOLO con un JSON válido. Ejemplo: {"competitors": ["Marca A", "Marca B", "Marca C", "Marca D", "Marca E"]}. ' +
         'Reglas estrictas: ' +
-        '1) Solo marcas/empresas que sean competidores DIRECTOS (misma industria, mismo mercado). ' +
+        '1) Solo marcas/empresas que sean competidores DIRECTOS: misma sub-vertical / mismo tipo de oferta y mismo tipo de cliente (B2B vs B2C) que la marca medida. ' +
+        '   No mezcles rubros (ej. logística 3PL no compite con banca retail). ' +
         '2) NO incluyas productos, servicios o submarcas de la misma empresa (ej. si la marca es una operadora, no incluyas su billetera móvil; si es un banco, no incluyas su app de pagos). ' +
         '3) NO inventes marcas. Solo listá empresas que existan realmente en ese país. Si no estás seguro de que exista, no la incluyas. ' +
         '4) Solo nombres de marcas/empresas, nunca URLs ni dominios.',
@@ -196,8 +217,9 @@ export async function getTop5Competitors(
     {
       role: 'user',
       content:
-        `Marca: ${brandName}. Industria: ${industry}.${marketContext}\n\n` +
-        `Listá exactamente 5 competidores directos (empresas reales de ese país). Solo marcas que existan. Respuesta (solo JSON):`,
+        `Marca: ${brandName}. Industria: ${industry}.${marketContext}\n` +
+        (nicheBlock ? `${nicheBlock}\n` : '') +
+        `\nListá exactamente 5 competidores directos (empresas reales de ese país). Solo marcas que existan. Respuesta (solo JSON):`,
     },
   ]);
 
@@ -255,7 +277,8 @@ export async function determineMarketProfileForBrand(
   fallbackIndustry = 'General',
   websiteUrl?: string,
   searchEvidence?: string,
-  knownCountry?: string
+  knownCountry?: string,
+  firecrawlSiteMarkdown?: string
 ): Promise<MarketProfileResult> {
   const evidence = await fetchWebsiteEvidence(websiteUrl);
   const websiteEvidenceText = evidence
@@ -273,36 +296,59 @@ export async function determineMarketProfileForBrand(
   const hasSearchEvidence = searchEvidence?.trim().length ? true : false;
   const countryFixed = knownCountry?.trim();
 
+  const fcBlock =
+    firecrawlSiteMarkdown?.trim().length ?
+      `\n\nContenido principal del sitio (Firecrawl; prioridad máxima para rubro y vertical):\n${firecrawlSiteMarkdown.trim().slice(0, 16_000)}`
+    : '';
+
   const evidenceBlock =
     [
       countryFixed ? `País/mercado ya determinado: ${countryFixed}. Solo inferí industria y confidence.` : '',
-      `Evidencia website:\n${websiteEvidenceText}`,
+      `Evidencia website (HTML liviano):\n${websiteEvidenceText}`,
+      fcBlock,
       hasSearchEvidence ? `\n${searchEvidence!.trim()}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
 
-  const systemPrompt =
-    'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Telecomunicaciones móviles","confidence":88}. ' +
-    (countryFixed
-      ? `El país es ${countryFixed}; devolvé ese mismo valor en country. Inferí solo industria y confidence (0-100). `
-      : 'Inferí país/mercado principal e industria de la marca priorizando la evidencia (website y/o resultados de búsqueda). ') +
-    'Industria: debe ser el SECTOR PRINCIPAL de negocio (2-5 palabras en español), al nivel donde se comparan competidores directos. ' +
-    'Ejemplos correctos: "Telecomunicaciones móviles", "Supermercados", "Bancos", "Cafeterías", "Restaurantes", "Operadores de telecomunicaciones". ' +
-    'Evitá rubros de producto/servicio específico (ej. no "billeteras móviles" si la marca es una operadora; usá "Telecomunicaciones móviles"). ' +
-    'No inventes rubro que contradiga la evidencia. Si no es claro, usá los fallbacks y baja confidence.';
+  const hasFirecrawl = Boolean(firecrawlSiteMarkdown?.trim().length);
 
-  const content = await callOpenAI([
-    { role: 'system', content: systemPrompt },
-    {
-      role: 'user',
-      content:
-        `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n\n${evidenceBlock}\n\nDevolvé solo JSON con claves: country, industry, confidence.`,
-    },
-  ]);
+  const systemPrompt =
+    'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Logística 3PL B2B","confidence":88,"verticalSummary":"Operador de transporte y almacenaje para empresas.","customerSegment":"B2B"}. ' +
+    (countryFixed
+      ? `El país es ${countryFixed}; devolvé ese mismo valor en country. Inferí industria, confidence (0-100), verticalSummary y customerSegment. `
+      : 'Inferí país/mercado principal e industria de la marca priorizando la evidencia (website y/o resultados de búsqueda). ') +
+    (hasFirecrawl ?
+      'Si hay bloque Firecrawl, la industria y verticalSummary DEBEN alinearse con ese texto; no inventes otro rubro (ej. no "banca" si el sitio habla de logística o transporte). '
+    : '') +
+    'Industria: SECTOR donde compiten pares directos (2-7 palabras en español), lo más específico posible sin ser un producto aislado. ' +
+    'Ejemplos: "Logística y transporte de carga B2B", "Telecomunicaciones móviles", "Banca retail", "Supermercados". ' +
+    'verticalSummary: 1-3 frases en español describiendo qué vende y a quién. ' +
+    'customerSegment: exactamente uno de: B2B, B2C, B2B2C, mixto, desconocido. ' +
+    'Si no es claro, usá fallbacks y baja confidence.';
+
+  const content = await callOpenAI(
+    [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content:
+          `Marca: ${brandName}. Fallback país: ${fallbackCountry}. Fallback industria: ${fallbackIndustry}.\n\n${evidenceBlock}\n\n` +
+          'Devolvé solo JSON con claves: country, industry, confidence, verticalSummary, customerSegment.',
+      },
+    ],
+    undefined,
+    900
+  );
 
   try {
-    const parsed = JSON.parse(content) as { country?: string; industry?: string; confidence?: number | string };
+    const parsed = JSON.parse(content) as {
+      country?: string;
+      industry?: string;
+      confidence?: number | string;
+      verticalSummary?: string;
+      customerSegment?: string;
+    };
     const country = countryFixed
       ? countryFixed
       : `${parsed.country || fallbackCountry}`.trim() || fallbackCountry;
@@ -311,7 +357,23 @@ export async function determineMarketProfileForBrand(
     const confidence = Number.isFinite(rawConfidence)
       ? Math.max(0, Math.min(100, Math.round(rawConfidence)))
       : 50;
-    return { country, industry, confidence };
+    const verticalSummary = `${parsed.verticalSummary || ''}`.trim().slice(0, 600) || undefined;
+    const seg = `${parsed.customerSegment || ''}`.trim().toLowerCase();
+    const segMap: Record<string, NonNullable<MarketProfileResult['customerSegment']>> = {
+      b2b: 'B2B',
+      b2c: 'B2C',
+      b2b2c: 'B2B2C',
+      mixto: 'mixto',
+      desconocido: 'desconocido',
+    };
+    const customerSegment = segMap[seg];
+    return {
+      country,
+      industry,
+      confidence,
+      ...(verticalSummary ? { verticalSummary } : {}),
+      ...(customerSegment ? { customerSegment } : {}),
+    };
   } catch {
     return {
       country: countryFixed || fallbackCountry,
@@ -342,7 +404,8 @@ function sanitizeDomain(raw: string | null | undefined): string | null {
 export async function resolveCompetitorDomains(
   names: string[],
   country?: string,
-  industry?: string
+  industry?: string,
+  verticalSummary?: string
 ): Promise<CompetitorDomainResolution[]> {
   const unique = Array.from(
     new Set(
@@ -356,6 +419,7 @@ export async function resolveCompetitorDomains(
   const contextParts: string[] = [];
   if (country) contextParts.push(`País/mercado: ${country}.`);
   if (industry) contextParts.push(`Industria: ${industry}.`);
+  if (verticalSummary?.trim()) contextParts.push(`Qué hace la marca medida: ${verticalSummary.trim().slice(0, 400)}`);
   const context = contextParts.length ? ' ' + contextParts.join(' ') : '';
 
   const content = await callOpenAI([

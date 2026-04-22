@@ -179,7 +179,8 @@ async function mapDomain(
 async function scrapeUrl(
   url: string,
   apiKey: string,
-  timeout: number
+  timeout: number,
+  onlyMainContent = false
 ): Promise<{
   markdown: string;
   html: string;
@@ -197,7 +198,7 @@ async function scrapeUrl(
       body: JSON.stringify({
         url,
         formats: ['markdown', 'html', 'links'],
-        onlyMainContent: false,
+        onlyMainContent,
         timeout,
       }),
     });
@@ -265,7 +266,7 @@ export async function scrapeEmailsForDomain(
 
   // 2) SCRAPE: cada URL, juntando emails de texto, mailto y array de links.
   for (const url of uniqueUrls) {
-    const result = await scrapeUrl(url, apiKey, timeout);
+    const result = await scrapeUrl(url, apiKey, timeout, false);
     const attempt: FirecrawlEmailsResult['attempts'][number] = {
       url,
       ok: false,
@@ -298,5 +299,23 @@ export async function scrapeEmailsForDomain(
     },
     attempts,
     error: found.size === 0 ? firstError : undefined,
+  };
+}
+
+/** Scrape sincronico de una URL (markdown + links). Reutilizable fuera del flujo de emails. */
+export async function firecrawlScrapePage(
+  url: string,
+  apiKey: string,
+  opts?: { timeoutMs?: number; onlyMainContent?: boolean }
+): Promise<{ ok: boolean; markdown: string; links: string[]; status: number; error?: string }> {
+  const timeout = opts?.timeoutMs ?? 25_000;
+  const onlyMainContent = opts?.onlyMainContent ?? true;
+  const r = await scrapeUrl(url, apiKey, timeout, onlyMainContent);
+  return {
+    ok: !r.error && Boolean(r.markdown?.trim()),
+    markdown: r.markdown,
+    links: r.links,
+    status: r.status,
+    error: r.error,
   };
 }

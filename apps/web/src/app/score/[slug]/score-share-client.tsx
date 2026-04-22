@@ -218,12 +218,6 @@ export function ScoreShareClient({ slug }: { slug: string }) {
       diagnosticId: data.diagnosticId,
     })
   );
-  const shareTitle = `Cleexs Score — ${data.brandName}`;
-  const shareSummary =
-    data.cleexsScore != null
-      ? `Score ${Math.round(data.cleexsScore)} · ${data.industry || 'Marca'}`
-      : `Diagnóstico Cleexs · ${data.brandName}`;
-
   const runResult = data.runResult;
   const runGemini = data.runResultGemini;
   const tieneGemini = !!runGemini;
@@ -254,7 +248,7 @@ export function ScoreShareClient({ slug }: { slug: string }) {
               </div>
               <div className="shrink-0 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Compartir</p>
-                <ShareScoreButtons path={path} title={shareTitle} summary={shareSummary} />
+                <ShareScoreButtons path={path} intent="social" brandName={data.brandName} domain={data.domain} />
               </div>
             </div>
           </CardHeader>
