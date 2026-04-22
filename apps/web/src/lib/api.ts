@@ -480,6 +480,8 @@ export interface PublicDiagnostic {
   showFullReport?: boolean;
   runId?: string | null;
   runGeminiId?: string | null;
+  /** Estado del segundo run (Gemini), si existe `runGeminiId`. */
+  geminiRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
   shareSlug?: string | null;
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;

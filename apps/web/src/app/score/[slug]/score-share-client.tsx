@@ -178,6 +178,20 @@ export function ScoreShareClient({ slug }: { slug: string }) {
     })();
   }, [data, slug, load]);
 
+  useEffect(() => {
+    if (!slug || !data?.shareFullUnlocked) return;
+    if (data.runResultGemini) return;
+    if (data.preview?.geminiStatus !== 'running') return;
+    const t = setInterval(() => void load(), 5000);
+    return () => clearInterval(t);
+  }, [slug, data?.shareFullUnlocked, data?.preview?.geminiStatus, data?.runResultGemini, load]);
+
+  useEffect(() => {
+    if (!data?.runResultGemini && data?.shareFullUnlocked) {
+      setVistaModelo((v) => (v === 'gemini' || v === 'consolidado' ? 'chatgpt' : v));
+    }
+  }, [data?.runResultGemini, data?.shareFullUnlocked]);
+
   if (loading) {
     return (
       <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
@@ -221,6 +235,13 @@ export function ScoreShareClient({ slug }: { slug: string }) {
   const runResult = data.runResult;
   const runGemini = data.runResultGemini;
   const tieneGemini = !!runGemini;
+  const geminiEnCola =
+    data.shareFullUnlocked &&
+    !runGemini &&
+    data.preview?.geminiStatus === 'running';
+  const mostrarTabsModelo =
+    data.shareFullUnlocked &&
+    (tieneGemini || data.preview?.geminiStatus === 'running' || data.preview?.geminiStatus === 'ready');
   const runResultToShow: PublicDiagnosticRunResult | null = runResult
     ? vistaModelo === 'consolidado' && runGemini
       ? buildRunResultAmbos(runResult, runGemini)
@@ -313,47 +334,72 @@ export function ScoreShareClient({ slug }: { slug: string }) {
 
             {data.status === 'completed' && data.shareFullUnlocked && runResultToShow && (
               <div className="space-y-6">
-                {tieneGemini && (
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                    <span className="mr-1 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setVistaModelo('chatgpt')}
-                        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                          vistaModelo === 'chatgpt'
-                            ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
-                            : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <CleexsMark className="h-[18px] w-[18px] shrink-0" />
-                        ChatGPT
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVistaModelo('gemini')}
-                        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                          vistaModelo === 'gemini'
-                            ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
-                            : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <CleexsMark className="h-[18px] w-[18px] shrink-0" />
-                        Gemini
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVistaModelo('consolidado')}
-                        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                          vistaModelo === 'consolidado'
-                            ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
-                            : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <LayoutDashboard className="h-4 w-4 shrink-0" />
-                        Consolidado
-                      </button>
+                {mostrarTabsModelo && (
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="mr-1 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setVistaModelo('chatgpt')}
+                          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                            vistaModelo === 'chatgpt'
+                              ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                              : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <CleexsMark className="h-[18px] w-[18px] shrink-0" />
+                          ChatGPT
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!runGemini}
+                          title={
+                            geminiEnCola
+                              ? 'Generando resultados con Gemini…'
+                              : 'Ver métricas según respuestas de Gemini'
+                          }
+                          onClick={() => runGemini && setVistaModelo('gemini')}
+                          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-55 ${
+                            vistaModelo === 'gemini' && runGemini
+                              ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                              : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {geminiEnCola ? (
+                            <Loader2 className="h-[18px] w-[18px] shrink-0 animate-spin text-primary-600" />
+                          ) : (
+                            <CleexsMark className="h-[18px] w-[18px] shrink-0" />
+                          )}
+                          Gemini
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!runGemini}
+                          title={
+                            geminiEnCola ? 'Disponible cuando termine Gemini.' : 'Promedio ChatGPT + Gemini'
+                          }
+                          onClick={() => runGemini && setVistaModelo('consolidado')}
+                          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-55 ${
+                            vistaModelo === 'consolidado' && runGemini
+                              ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                              : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {geminiEnCola ? (
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary-600" />
+                          ) : (
+                            <LayoutDashboard className="h-4 w-4 shrink-0" />
+                          )}
+                          Consolidado
+                        </button>
+                      </div>
                     </div>
+                    {geminiEnCola && (
+                      <p className="text-xs text-slate-600 pl-0 sm:pl-[11.5rem]">
+                        ChatGPT ya está listo. Esta página se actualiza sola cuando termine Gemini.
+                      </p>
+                    )}
                   </div>
                 )}
                 <ReporteModerno

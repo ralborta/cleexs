@@ -1459,6 +1459,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       isFirstRun: boolean;
       showFullReport: boolean;
       runId?: string | null;
+      runGeminiId?: string | null;
+      /** Estado del run Gemini (si existe); útil para pestañas y polling en el cliente. */
+      geminiRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
       shareSlug?: string | null;
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
@@ -1477,6 +1480,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       isFirstRun,
       showFullReport,
       runId: diagnostic.runId,
+      runGeminiId: diagnostic.runGeminiId ?? null,
       shareSlug: shareSlugOut,
     };
 
@@ -1580,6 +1584,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             priaReports: { take: 1, orderBy: { createdAt: 'desc' } },
           },
         });
+        base.geminiRunStatus = runGemini?.status ?? null;
         if (runGemini?.status === 'completed' && runGemini.priaReports[0]) {
           const fullRunGemini = await prisma.run.findUnique({
             where: { id: diagnostic.runGeminiId },
