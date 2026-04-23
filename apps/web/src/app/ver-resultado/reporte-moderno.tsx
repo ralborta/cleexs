@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -48,6 +49,11 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  Mail,
+  Copy,
+  FileText,
+  Users,
+  Rocket,
 } from 'lucide-react';
 
 type DetailCardId = 'ranking' | 'cleexs' | 'intention' | 'metrics' | 'comparisons';
@@ -496,7 +502,506 @@ export function ReporteModerno({
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
   }));
 
+  // Función auxiliar para etiqueta de score
+  const scoreLabel = (score: number) => {
+    if (score >= 80) return 'Excelente';
+    if (score >= 60) return 'Bueno';
+    if (score >= 40) return 'Regular';
+    if (score >= 20) return 'Bajo';
+    return 'Muy bajo';
+  };
+
   // Resumen ejecutivo y 3 acciones prioritarias (derivado de datos)
+  const gapToLeader = competitorLeader && brandRow ? Math.max(0, (competitorLeader.share || 0) - (brandRow.share || 0)) : 0;
+  const resumenEjecutivo =
+    brandRow && leaderRow
+      ? `${brandName} tiene ${brandRow.share.toFixed(1)}% de presencia en el Top 3 de las recomendaciones de IA.`
+        + (leaderRow.name !== brandRow.name ? ` El líder es ${leaderRow.name} con ${leaderRow.share.toFixed(1)}%.` : '')
+        + ` Cleexs Score: ${Math.round(displayScore)} (nivel ${scoreLabel(displayScore)}).`
+        + (strongestIntention && weakestIntention
+          ? ` Mejor desempeño en ${INTENTION_LABELS[strongestIntention.key]?.label ?? strongestIntention.key} (${Math.round(strongestIntention.score)}%), menor en ${INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key} (${Math.round(weakestIntention.score)}%).`
+          : '')
+      : `${brandName}: no hay suficientes datos para un resumen. Completá más prompts para obtener métricas comparables.`;
+
+  const accionesPrioritarias: string[] = [];
+  if (bottleneckMetric && bottleneckMetric.value < 70) {
+    accionesPrioritarias.push(`Mejorar ${bottleneckMetric.label.toLowerCase()} (actual: ${bottleneckMetric.value}%)`);
+  }
+  if (weakestIntention && weakestIntention.score < 50) {
+    accionesPrioritarias.push(`Reforzar presencia en consultas de ${INTENTION_LABELS[weakestIntention.key]?.label ?? weakestIntention.key} (${Math.round(weakestIntention.score)}%)`);
+  }
+  if (gapToLeader > 0 && competitorLeader) {
+    accionesPrioritarias.push(`Reducir distancia con ${competitorLeader.name} (brecha actual: ${gapToLeader.toFixed(1)} pts en Top 3)`);
+  }
+  if (accionesPrioritarias.length === 0) {
+    accionesPrioritarias.push('Mantener el nivel actual de posicionamiento');
+    if (top1Rate < 50) accionesPrioritarias.push('Aumentar apariciones en posición #1');
+  }
+  const top3Acciones = accionesPrioritarias.slice(0, 3);
+
+  // Datos para Radar (Tu marca vs líder por intención)
+  const leaderName = leaderRow?.name ?? '';
+  const radarData =
+    intentionScores.length > 0 && Object.keys(intentionMatrixPct).length > 0
+      ? Object.keys(intentionMatrixPct).map((intKey) => {
+          const meta = INTENTION_LABELS[intKey];
+          const brandKey = Object.keys(intentionMatrixPct[intKey]!).find((k) => isBrandEntry(k, brandName, brandAliases));
+          const brandVal = brandKey ? intentionMatrixPct[intKey]![brandKey]! : 0;
+          const leaderVal = leaderName ? (intentionMatrixPct[intKey]![leaderName] ?? 0) : 0;
+          return {
+            intencion: meta?.label ?? intKey,
+            tuMarca: Math.round(brandVal),
+            lider: Math.round(leaderVal),
+            fullMark: 100,
+          };
+        })
+      : [];
+
+  // Datos para Bubble (X=% Top 3, Y=% #1 por marca)
+  const top1ByBrand = new Map<string, number>();
+  results.forEach((r) => {
+    (r.top3Json || []).forEach((e) => {
+      if (e.position === 1 && e.name) {
+        const key = normalizeName(e.name);
+        top1ByBrand.set(key, (top1ByBrand.get(key) ?? 0) + 1);
+      }
+    });
+  });
+  const bubbleData = comparisonSummary.slice(0, 6).map((row) => {
+    const isBrand = row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases);
+    const count1 = isBrand ? results.filter((r) => r.top3Json?.some((e) => e.position === 1 && isBrandEntry(e.name, brandName, brandAliases))).length : (top1ByBrand.get(normalizeName(row.name)) ?? 0);
+    const pct1 = totalPrompts ? (count1 / totalPrompts) * 100 : 0;
+    return {
+      name: isBrand ? 'Tu marca' : row.name,
+      x: row.share,
+      y: pct1,
+      z: row.appearances,
+      isBrand,
+    };
+  });
+
+  // Datos para Treemap (cuota de voz)
+  const treemapData = comparisonSummary.slice(0, 6).map((row) => ({
+    name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
+    size: row.share,
+    isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
+  }));
+
+  // Datos para Barras apiladas por intención (Tu marca vs líder)
+  const stackedData =
+    Object.keys(intentionMatrixPct).length > 0
+      ? Object.entries(intentionMatrixPct).map(([intKey, row]) => {
+          const meta = INTENTION_LABELS[intKey];
+          const brandKey = Object.keys(row).find((k) => isBrandEntry(k, brandName, brandAliases));
+          const brandVal = brandKey ? row[brandKey]! : 0;
+          const leaderVal = leaderName ? (row[leaderName] ?? 0) : 0;
+          return {
+            intencion: meta?.label ?? intKey,
+            tuMarca: Math.round(brandVal),
+            lider: Math.round(leaderVal),
+          };
+        })
+      : [];
+
+  return (
+    <div className="space-y-8">
+      {/* 1️⃣ RESUMEN EJECUTIVO */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm font-bold">1</div>
+          <h2 className="text-xl font-bold text-slate-900">Resumen ejecutivo</h2>
+        </div>
+        <Card className="overflow-hidden border-0 shadow-lg">
+          <CardContent className="p-8">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              {/* Gauge + Score grande */}
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <GaugeScore value={displayScore} size={200} />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-slate-600 uppercase tracking-wide">Cleexs Score</p>
+                  <p className="text-4xl font-bold text-slate-900">{Math.round(displayScore)}</p>
+                </div>
+              </div>
+              
+              {/* Texto + KPIs secundarios */}
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">#{comparisonSummary.findIndex((r) => isBrandEntry(r.name, brandName, brandAliases)) + 1 || '?'} en ranking · líder: {leaderRow?.name || '—'} {leaderRow?.share.toFixed(1) || '—'}%</p>
+                  <p className="mt-1 text-xs text-slate-500">Mejor intención: {strongestIntention ? `${INTENTION_LABELS[strongestIntention.key]?.label || strongestIntention.key} ${Math.round(strongestIntention.score)}%` : '—'}</p>
+                </div>
+              </div>
+
+              {/* Gráfico de tendencia simple */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Tendencia</p>
+                {trendData && trendData.length >= 1 ? (
+                  <ResponsiveContainer width="100%" height={120}>
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#64748b" />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" />
+                      <Line type="monotone" dataKey="score" stroke="rgb(139, 92, 246)" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-xs text-slate-500 py-8 text-center">Sin datos</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 2️⃣ KPIs CLAVE */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white text-sm font-bold">2</div>
+          <h2 className="text-xl font-bold text-slate-900">KPIs clave</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {/* KPI 1: Cleexs Score */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100">
+                  <Award className="h-5 w-5 text-violet-600" />
+                </div>
+                <p className="text-xs font-medium text-slate-600 uppercase">Cleexs Score</p>
+              </div>
+              <p className="text-3xl font-bold text-slate-900">{Math.round(displayScore)}</p>
+              <p className="text-xs text-slate-500 mt-1">{scoreLabel(displayScore)}</p>
+            </CardContent>
+          </Card>
+
+          {/* KPI 2: Ranking */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+                  <Trophy className="h-5 w-5 text-blue-600" />
+                </div>
+                <p className="text-xs font-medium text-slate-600 uppercase">Ranking</p>
+              </div>
+              <p className="text-3xl font-bold text-slate-900">#{comparisonSummary.findIndex((r) => isBrandEntry(r.name, brandName, brandAliases)) + 1 || '?'}</p>
+              <p className="text-xs text-slate-500 mt-1">de {comparisonSummary.length} marcas</p>
+            </CardContent>
+          </Card>
+
+          {/* KPI 3: Brecha vs líder */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100">
+                  <TrendingUp className="h-5 w-5 text-amber-600" />
+                </div>
+                <p className="text-xs font-medium text-slate-600 uppercase">Brecha vs líder</p>
+              </div>
+              <p className="text-3xl font-bold text-slate-900">{gapToLeader > 0 ? '-' : ''}{gapToLeader.toFixed(1)}</p>
+              <p className="text-xs text-slate-500 mt-1">pts vs {leaderRow?.name || 'líder'}</p>
+            </CardContent>
+          </Card>
+
+          {/* KPI 4: Mejor intención */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
+                  <Zap className="h-5 w-5 text-emerald-600" />
+                </div>
+                <p className="text-xs font-medium text-slate-600 uppercase">Mejor intención</p>
+              </div>
+              <p className="text-2xl font-bold text-slate-900">{strongestIntention ? `${Math.round(strongestIntention.score)}%` : '—'}</p>
+              <p className="text-xs text-slate-500 mt-1">{strongestIntention ? INTENTION_LABELS[strongestIntention.key]?.label : '—'}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* 3️⃣ COMPARATIVA PRINCIPAL */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-sm font-bold">3</div>
+          <h2 className="text-xl font-bold text-slate-900">Comparativa principal</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Gráfico 1: Tu marca vs competidores */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-base font-bold text-slate-800">Tu marca vs competidores</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {barData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={barData} layout="vertical" margin={{ top: 8, right: 24, left: 100, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" />
+                    <YAxis type="category" dataKey="name" width={95} tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, '% Top 3']} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                      {barData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.isBrand ? 'rgb(59, 130, 246)' : 'rgb(148, 163, 184)'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-500">Sin datos</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico 2: Por intención */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-base font-bold text-slate-800">Por intención</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {stackedData.length > 0 && leaderName ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={stackedData} margin={{ top: 8, right: 24, left: 100, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" unit="%" />
+                    <YAxis dataKey="intencion" type="category" width={95} tick={{ fontSize: 11 }} stroke="#64748b" />
+                    <Tooltip formatter={(v: number) => [`${v}%`, '']} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="tuMarca" fill="rgb(59, 130, 246)" name="Tu marca" />
+                    <Bar dataKey="lider" fill="rgb(100, 116, 139)" name={leaderName || 'Líder'} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-500">Sin datos</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* 4️⃣ TOP 3 ACCIONES PRIORITARIAS */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white text-sm font-bold">4</div>
+          <h2 className="text-xl font-bold text-slate-900">Top 3 acciones prioritarias</h2>
+          <span className="ml-auto text-xs font-medium text-slate-500">Acciones sugeridas para mejorar tu Cleexs Score</span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {top3Acciones.map((accion, idx) => (
+            <Card key={idx} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold">
+                    {idx + 1}
+                  </div>
+                  <p className="text-sm font-medium text-slate-700 leading-relaxed">{accion}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* 5️⃣ MÉTRICAS DEL ANÁLISIS (Collapsible) */}
+      <div className="space-y-4">
+        <details className="group">
+          <summary className="flex items-center gap-3 cursor-pointer">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-sm font-bold">5</div>
+            <h2 className="text-xl font-bold text-slate-900">Métricas del análisis</h2>
+            <span className="ml-auto text-xs font-medium text-slate-500 group-open:hidden">collapsible / secundario</span>
+            <ChevronDown className="ml-auto h-5 w-5 text-slate-400 group-open:rotate-180 transition-transform" />
+          </summary>
+          <Card className="border-0 shadow-sm mt-4">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
+                {metrics.map((m, idx) => (
+                  <div key={m.label} className="space-y-2">
+                    <p className="text-sm font-medium text-slate-700">{m.label}</p>
+                    <p className="text-3xl font-bold text-slate-900">{m.value}%</p>
+                    <ProgressBar value={m.value} />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </details>
+      </div>
+
+      {/* 6️⃣ VISUALIZACIONES ADICIONALES (Collapsible) */}
+      <div className="space-y-4">
+        <details className="group">
+          <summary className="flex items-center gap-3 cursor-pointer">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-pink-600 text-white text-sm font-bold">6</div>
+            <h2 className="text-xl font-bold text-slate-900">Visualizaciones adicionales</h2>
+            <span className="ml-auto text-xs font-medium text-slate-500 group-open:hidden">collapsible / secundario</span>
+            <ChevronDown className="ml-auto h-5 w-5 text-slate-400 group-open:rotate-180 transition-transform" />
+          </summary>
+          <div className="space-y-6 mt-4">
+            {/* Visualizaciones avanzadas aquí */}
+            {radarData.length > 0 && leaderName && (
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-2 pt-6">
+                  <CardTitle className="text-base font-bold text-slate-800">Radar: Tu marca vs líder</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <RadarChart data={radarData}>
+                      <PolarGrid stroke="#e2e8f0" />
+                      <PolarAngleAxis dataKey="intencion" tick={{ fontSize: 11 }} />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
+                      <Radar name="Tu marca" dataKey="tuMarca" stroke="rgb(59, 130, 246)" fill="rgb(59, 130, 246)" fillOpacity={0.45} />
+                      <Radar name={leaderName} dataKey="lider" stroke="rgb(100, 116, 139)" fill="rgb(100, 116, 139)" fillOpacity={0.35} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </details>
+      </div>
+
+      {/* 7️⃣ COMPARTIR E INVITAR */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white text-sm font-bold">7</div>
+          <h2 className="text-xl font-bold text-slate-900">Compartir e invitar</h2>
+        </div>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" className="gap-2">
+                <Copy className="h-4 w-4" />
+                Copiar enlace
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <FileText className="h-4 w-4" />
+                WhatsApp
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <Mail className="h-4 w-4" />
+                Email
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <Users className="h-4 w-4" />
+                LinkedIn
+              </Button>
+              <Button variant="outline" className="gap-2 ml-auto">
+                <Users className="h-4 w-4" />
+                Invitar a tu equipo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 8️⃣ CTA COMERCIAL */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white text-sm font-bold">8</div>
+          <h2 className="text-xl font-bold text-slate-900">CTA comercial</h2>
+        </div>
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-slate-900">Desbloqueá el reporte completo</p>
+                <p className="text-sm text-slate-600">Acceso a todas las métricas, análisis detallado y recomendaciones personalizadas.</p>
+              </div>
+              <div className="flex gap-3">
+                <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                  <Link href="/planes">Ver planes</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/diagnostico/crear">Otro diagnóstico</Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bloque satélite inyectado */}
+      {satelliteBlock ? <>{satelliteBlock}</> : null}
+    </div>
+  );
+}
+  runResult,
+  brandName,
+  trendData,
+  runResultChatGPT,
+  runResultGemini,
+  satelliteBlock,
+}: {
+  runResult: PublicDiagnosticRunResult;
+  brandName: string;
+  trendData?: PublicDiagnosticTrendPoint[];
+  runResultChatGPT?: PublicDiagnosticRunResult;
+  runResultGemini?: PublicDiagnosticRunResult;
+  satelliteBlock?: ReactNode;
+}) {
+  // ESTA FUNCIÓN CONTIENE EL CÓDIGO ANTIGUO - SE ELIMINA AL LIMPIAR
+  const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
+  const [resumenExpanded, setResumenExpanded] = useState<Set<string>>(new Set());
+  const toggleResumen = (id: string) => {
+    setResumenExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const closeDetail = () => setDetailOpen(null);
+
+  const results = runResult.promptResults || [];
+  const brandAliases = runResult.brandAliases || [];
+  const totalPrompts = results.length;
+  const examplePromptText = results[0]?.promptText ?? undefined;
+
+  const parseableCount = results.filter((r) => r.top3Json && r.top3Json.length > 0).length;
+  const mentionCount = results.filter((r) => isBrandMentioned(r.responseText ?? '', brandName, brandAliases)).length;
+  const top3Count = results.filter((r) =>
+    r.top3Json?.some((e) => isBrandEntry(e.name, brandName, brandAliases))
+  ).length;
+  const top1Count = results.filter((r) =>
+    r.top3Json?.some((e) => e.position === 1 && isBrandEntry(e.name, brandName, brandAliases))
+  ).length;
+
+  const formatConfidence = totalPrompts ? Math.round((parseableCount / totalPrompts) * 100) : 0;
+  const mentionRate = totalPrompts ? Math.round((mentionCount / totalPrompts) * 100) : 0;
+  const top3Rate = totalPrompts ? Math.round((top3Count / totalPrompts) * 100) : 0;
+  const top1Rate = totalPrompts ? Math.round((top1Count / totalPrompts) * 100) : 0;
+
+  const intentionBuckets: Record<string, { scores: number[]; weight: number }> = {};
+  results.forEach((result) => {
+    const extracted = extractIntention(result.promptText || '');
+    if (!extracted) return;
+    const key = normalizeIntentionKey(extracted.name);
+    if (!key) return;
+    if (!intentionBuckets[key]) intentionBuckets[key] = { scores: [], weight: extracted.weight };
+    intentionBuckets[key].scores.push((result.score || 0) * 100);
+  });
+  const intentionScores = Object.entries(intentionBuckets).map(([key, data]) => ({
+    key,
+    score: data.scores.length ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length : 0,
+    weight: data.weight,
+  }));
+  const weightSum = intentionScores.reduce((s, i) => s + i.weight, 0) || 1;
+  const cleexsScoreByIntention = intentionScores.reduce(
+    (s, i) => s + i.score * (i.weight / weightSum),
+    0
+  );
+  const fallbackScore =
+    results.length > 0
+      ? (results.reduce((s, r) => s + (r.score || 0), 0) / results.length) * 100
+      : 0;
+  const displayScore = intentionScores.length > 0 ? cleexsScoreByIntention : fallbackScore;
+
+  const scoreLabel = (score: number) => {
+    if (score >= 80) return 'Excelente';
+    if (score >= 60) return 'Bueno';
+    if (score >= 40) return 'Regular';
+    if (score >= 20) return 'Bajo';
+    return 'Muy bajo';
+  };
+
   const gapToLeader = competitorLeader && brandRow ? Math.max(0, (competitorLeader.share || 0) - (brandRow.share || 0)) : 0;
   const resumenEjecutivo =
     brandRow && leaderRow
