@@ -1,19 +1,21 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { useId, type ReactNode } from 'react';
 import type {
   PublicDiagnosticRunResult,
   PublicDiagnosticPromptResult,
   PublicDiagnosticTrendPoint,
 } from '@/lib/api';
 import {
-  ArrowUpRight,
-  BarChart3,
+  ChevronDown,
   Gauge,
+  LineChart as LineChartIcon,
   Medal,
-  Share2,
+  Star,
+  Tag,
   Target,
   TrendingUp,
+  Users,
 } from 'lucide-react';
 import {
   Bar,
@@ -28,6 +30,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { cn } from '@/lib/utils';
 
 const normalizeName = (value: string) =>
   value
@@ -70,6 +73,9 @@ const INTENTION_LABELS: Record<string, string> = {
   calidad: 'Calidad',
   precio: 'Precio',
 };
+
+/** Orden visual alineado con la maqueta (Urgencia, Calidad, Precio primero). */
+const INTENTION_CHART_ORDER = ['urgencia', 'calidad', 'precio', 'consideracion'];
 
 interface ComparisonRow {
   name: string;
@@ -115,60 +121,94 @@ const buildComparisonSummary = (results: PublicDiagnosticPromptResult[]): Compar
     .sort((a, b) => b.share - a.share);
 };
 
-function scoreTone(score: number) {
-  if (score >= 70) return 'text-emerald-600';
-  if (score >= 45) return 'text-amber-600';
-  return 'text-red-500';
+function scoreLabelEs(score: number) {
+  if (score >= 70) return 'alto';
+  if (score >= 45) return 'medio';
+  return 'bajo';
 }
 
 function sectionHeading(num: number, title: string, subtitle?: string) {
   return (
-    <div className="mb-3 flex items-center gap-2">
-      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+    <div className="mb-4 flex items-start gap-3">
+      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-md shadow-violet-500/25">
         {num}
       </span>
       <div>
-        <p className="text-xl font-semibold text-slate-900">{title}</p>
-        {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h2>
+        {subtitle ? <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p> : null}
       </div>
     </div>
   );
 }
 
-function GaugeSimple({ value }: { value: number }) {
-  const safe = Math.min(100, Math.max(0, value));
-  const r = 54;
-  const cx = 62;
-  const cy = 62;
+/** Semicírculo 0–100 con arco de fondo rojo→amarillo→verde (maqueta). */
+function GaugeSemicircleMaqueta({ value, gradientId }: { value: number; gradientId: string }) {
+  const size = 200;
+  const v = Math.min(100, Math.max(0, value));
+  const r = size / 2 - 14;
+  const stroke = 14;
   const circumference = Math.PI * r;
-  const offset = circumference - (safe / 100) * circumference;
-  const stroke = safe >= 70 ? '#34d399' : safe >= 45 ? '#f59e0b' : '#ef4444';
+  const offset = circumference - (v / 100) * circumference;
+  const strokeColor = v >= 70 ? '#22c55e' : v >= 45 ? '#eab308' : '#ef4444';
 
   return (
-    <div className="relative h-[120px] w-[124px]">
-      <svg width="124" height="124" viewBox="0 0 124 124">
+    <div className="relative flex flex-col items-center" style={{ width: size, height: size / 2 + 56 }}>
+      <svg width={size} height={size / 2 + 24} viewBox={`0 0 ${size} ${size / 2 + 24}`} className="overflow-visible">
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="42%" stopColor="#eab308" />
+            <stop offset="72%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+        </defs>
         <path
-          d={`M 8 ${cy} A ${r} ${r} 0 0 1 116 ${cy}`}
+          d={`M 14 ${size / 2} A ${r} ${r} 0 0 1 ${size - 14} ${size / 2}`}
           fill="none"
-          stroke="#e2e8f0"
-          strokeWidth="10"
+          stroke={`url(#${gradientId})`}
+          strokeWidth={stroke}
           strokeLinecap="round"
+          opacity={0.22}
         />
         <path
-          d={`M 8 ${cy} A ${r} ${r} 0 0 1 116 ${cy}`}
+          d={`M 14 ${size / 2} A ${r} ${r} 0 0 1 ${size - 14} ${size / 2}`}
           fill="none"
-          stroke={stroke}
-          strokeWidth="10"
+          stroke={strokeColor}
+          strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           className="transition-all duration-700"
         />
       </svg>
-      <div className="absolute inset-x-0 bottom-0 text-center">
-        <p className="text-5xl font-bold leading-none text-slate-900">{Math.round(safe)}</p>
+      <div className="absolute bottom-2 left-1/2 w-full -translate-x-1/2 text-center">
+        <p className="text-5xl font-bold tabular-nums leading-none text-slate-900">{Math.round(v)}</p>
+        <p className="mt-2 text-xs font-medium text-slate-500">Indicador 0-100 de recomendación en IA</p>
       </div>
     </div>
+  );
+}
+
+function CollapsibleRow({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100/80">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 [&::-webkit-details-marker]:hidden">
+        <div>
+          <p className="font-semibold text-slate-900">{title}</p>
+          <p className="text-xs text-slate-500">{subtitle}</p>
+        </div>
+        <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-slate-100 px-5 pb-5 pt-2">{children}</div>
+    </details>
   );
 }
 
@@ -181,6 +221,7 @@ export function ReporteCorridas({
   brandName: string;
   trendData?: PublicDiagnosticTrendPoint[];
 }) {
+  const gaugeGradientId = useId().replace(/:/g, '');
   const results = runResult.promptResults || [];
   const brandAliases = runResult.brandAliases || [];
   const totalPrompts = results.length;
@@ -228,6 +269,7 @@ export function ReporteCorridas({
       ? results.reduce((sum, row) => sum + (row.score || 0) * 100, 0) / results.length
       : runResult.cleexsScore || 0;
   const cleexsScore = intentionScores.length > 0 ? weightedScore : fallbackScore;
+  const displayScore = Math.round(cleexsScore || runResult.cleexsScore || 0);
 
   const comparisonSummary = buildComparisonSummary(results);
   const brandRow =
@@ -235,151 +277,255 @@ export function ReporteCorridas({
       (row) => row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases)
     ) || null;
   const leaderRow = comparisonSummary[0] || null;
-  const leaderGap = leaderRow && brandRow ? leaderRow.share - brandRow.share : 0;
+  const leaderGapPts = leaderRow && brandRow ? leaderRow.share - brandRow.share : 0;
+  const rank = brandRow ? Math.max(1, comparisonSummary.indexOf(brandRow) + 1) : null;
 
   const strongestIntention = [...intentionScores].sort((a, b) => b.score - a.score)[0];
+  const weakestIntention = [...intentionScores].sort((a, b) => a.score - b.score)[0];
+
+  const intentionMatrix: Record<string, Record<string, number>> = {};
+  results.forEach((r) => {
+    const extracted = extractIntention(r.promptText || '');
+    const key = extracted ? normalizeIntentionKey(extracted.name) : null;
+    if (!key) return;
+    if (!intentionMatrix[key]) intentionMatrix[key] = {};
+    (r.top3Json || []).forEach((e) => {
+      const n = e.name.trim();
+      if (!n) return;
+      intentionMatrix[key]![n] = (intentionMatrix[key]![n] ?? 0) + 1;
+    });
+  });
+  const promptsPerIntention: Record<string, number> = {};
+  Object.keys(intentionBuckets).forEach((k) => {
+    promptsPerIntention[k] = intentionBuckets[k]!.scores.length * 3;
+  });
+  const intentionMatrixPct: Record<string, Record<string, number>> = {};
+  Object.keys(intentionMatrix).forEach((intKey) => {
+    const total = promptsPerIntention[intKey] || 1;
+    intentionMatrixPct[intKey] = {};
+    Object.keys(intentionMatrix[intKey]!).forEach((name) => {
+      intentionMatrixPct[intKey]![name] = (intentionMatrix[intKey]![name]! / total) * 100;
+    });
+  });
+
+  const leaderName = leaderRow?.name ?? '';
+  const brandIsLeader =
+    Boolean(brandRow && leaderRow && normalizeName(brandRow.name) === normalizeName(leaderRow.name));
+  const intentionKeysOrdered = [
+    ...INTENTION_CHART_ORDER.filter((k) => intentionMatrixPct[k]),
+    ...Object.keys(intentionMatrixPct).filter((k) => !INTENTION_CHART_ORDER.includes(k)),
+  ];
+  const intentionChartRows = intentionKeysOrdered.map((intKey) => {
+    const row = intentionMatrixPct[intKey]!;
+    const brandKey = Object.keys(row).find((k) => isBrandEntry(k, brandName, brandAliases));
+    const brandVal = brandKey ? row[brandKey]! : 0;
+    const leaderVal = leaderName ? (row[leaderName] ?? 0) : 0;
+    return {
+      intention: INTENTION_LABELS[intKey] ?? intKey,
+      tuMarca: Math.round(brandVal),
+      lider: Math.round(leaderVal),
+    };
+  });
+
   const topCompetitors = comparisonSummary.slice(0, 5).map((row) => ({
     name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
     share: Number(row.share.toFixed(1)),
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
   }));
 
-  const intentionChart = intentionScores.slice(0, 4).map((item) => {
-    const leaderByIntention = comparisonSummary.find((row) => row.type === 'competitor')?.share ?? 0;
-    return {
-      intention: item.label,
-      tuMarca: Number(item.score.toFixed(0)),
-      lider: Number(Math.min(100, Math.max(0, leaderByIntention)).toFixed(0)),
-    };
-  });
+  const barHeight = Math.max(220, topCompetitors.length * 44);
+
+  const metaLine =
+    brandRow && leaderRow
+      ? `#${rank} en ranking · líder: ${leaderRow.name} ${leaderRow.share.toFixed(1)}%` +
+        (strongestIntention
+          ? ` · mejor intención: ${strongestIntention.label} ${Math.round(strongestIntention.score)}%`
+          : '')
+      : 'Sin datos de ranking suficientes para esta corrida.';
 
   const kpis = [
     {
       label: 'Cleexs Score',
-      value: Math.round(cleexsScore),
-      sub: `Nivel ${cleexsScore >= 70 ? 'alto' : cleexsScore >= 45 ? 'medio' : 'bajo'}`,
+      value: String(displayScore),
+      sub: `Nivel ${scoreLabelEs(cleexsScore)}`,
       icon: Gauge,
+      iconBg: 'bg-violet-100 text-violet-600',
     },
     {
       label: 'Ranking',
-      value: brandRow ? `#${Math.max(1, comparisonSummary.indexOf(brandRow) + 1)}` : '—',
+      value: brandRow ? `#${rank}` : '—',
       sub: `de ${Math.max(comparisonSummary.length, 1)} marcas`,
       icon: Medal,
+      iconBg: 'bg-indigo-100 text-indigo-600',
     },
     {
       label: 'Brecha vs líder',
-      value: leaderRow && brandRow ? `${leaderGap.toFixed(1)} pts` : '—',
-      sub: leaderRow ? `vs ${leaderRow.name} (${leaderRow.share.toFixed(1)}%)` : 'Sin líder',
+      value:
+        leaderRow && brandRow
+          ? brandIsLeader
+            ? '0 pts'
+            : `-${leaderGapPts.toFixed(1)} pts`
+          : '—',
+      sub: leaderRow
+        ? brandIsLeader
+          ? 'Sos el líder en % Top 3'
+          : `vs ${leaderRow.name} (${leaderRow.share.toFixed(1)}%)`
+        : 'Sin líder',
       icon: TrendingUp,
+      iconBg: 'bg-sky-100 text-sky-600',
     },
     {
       label: 'Mejor intención',
-      value: strongestIntention ? `${strongestIntention.label} ${Math.round(strongestIntention.score)}%` : '—',
+      value: strongestIntention
+        ? `${strongestIntention.label} ${Math.round(strongestIntention.score)}%`
+        : '—',
       sub: 'Mayor fortaleza',
       icon: Target,
+      iconBg: 'bg-fuchsia-100 text-fuchsia-700',
     },
   ];
 
-  const actions: Array<{ title: string; desc: string }> = [];
+  const leaderDisplay = leaderRow?.name ?? 'el líder';
+  const actions: Array<{ title: string; desc: string; Icon: typeof LineChartIcon }> = [];
   if (!brandRow || !leaderRow) {
-    actions.push({
-      title: 'Completar corrida',
-      desc: 'No hay datos suficientes para comparar. Ejecuta más prompts para obtener ranking y acciones.',
-    });
+    actions.push(
+      {
+        title: 'Completar datos',
+        desc: 'Ejecutá más prompts o verificá que el Top 3 sea parseable para ver ranking y acciones.',
+        Icon: LineChartIcon,
+      },
+      { title: 'Revisar competidores', desc: 'Definí competidores claros en el diagnóstico para una comparativa fiel.', Icon: Tag },
+      { title: 'Contactar soporte', desc: 'Si el informe no carga bien, podemos revisar el formato de respuestas del modelo.', Icon: Users }
+    );
   } else {
     actions.push({
-      title: leaderGap > 8 ? 'Mejorar posición #1' : 'Consolidar liderazgo',
+      title: rank === 1 ? 'Mantener liderazgo' : 'Mejorar posición #1',
       desc:
-        leaderGap > 8
-          ? 'Aumenta tu visibilidad en respuestas donde hoy domina el líder.'
-          : 'Defiende el posicionamiento actual con foco en consistencia y claridad de marca.',
+        rank === 1
+          ? 'Sostené la visibilidad que te ubica primero frente a la competencia en IA.'
+          : 'Aumentá tu visibilidad para alcanzar el liderazgo en las recomendaciones de IA.',
+      Icon: LineChartIcon,
     });
     actions.push({
-      title: top1Rate < 45 ? 'Subir tasa de #1' : 'Mantener top 1',
+      title: weakestIntention?.key === 'precio' ? 'Reforzar precio' : 'Reforzar percepción de valor',
       desc:
-        top1Rate < 45
-          ? 'Optimiza activos para que la IA te recomiende primero en más consultas.'
-          : 'Sostén las señales que hoy te ubican primero en los prompts clave.',
+        weakestIntention?.key === 'precio'
+          ? 'Mejorá tu percepción de valor frente a la competencia en consultas sensibles al precio.'
+          : 'Trabajá señales de confianza y propuesta de valor donde la IA aún no te prioriza.',
+      Icon: Tag,
     });
     actions.push({
-      title: strongestIntention ? `Reforzar ${strongestIntention.label.toLowerCase()}` : 'Reforzar intención más débil',
-      desc: 'Prioriza contenido y señales de autoridad en la intención con mayor oportunidad de mejora.',
+      title: 'Reducir brecha con el líder',
+      desc: `Acortá la distancia con ${leaderDisplay} y ganá participación en el Top 3.`,
+      Icon: Users,
     });
   }
 
+  const trendChartData =
+    trendData && trendData.length > 0
+      ? trendData
+      : [{ label: 'Corrida 1', score: displayScore }];
+
   return (
-    <div className="space-y-7">
+    <div className="space-y-10">
+      {/* 1 Resumen ejecutivo — una tarjeta unificada, tres columnas como maqueta */}
       <section>
         {sectionHeading(1, 'Resumen ejecutivo')}
-        <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <CardContent className="grid gap-4 p-4 lg:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Cleexs Score</p>
-              <p className={`text-3xl font-bold ${scoreTone(cleexsScore)}`}>{Math.round(cleexsScore)}</p>
-              <p className="mt-1 text-sm text-slate-600">
-                {brandRow
-                  ? `#${comparisonSummary.indexOf(brandRow) + 1} en ranking · líder: ${leaderRow?.name ?? '-'}`
-                  : 'Sin ranking disponible'}
-              </p>
+        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-md shadow-slate-200/40 ring-1 ring-slate-100">
+          <div className="grid gap-0 lg:grid-cols-3 lg:divide-x lg:divide-slate-100">
+            <div className="flex flex-col justify-center bg-gradient-to-br from-violet-50 via-white to-indigo-50/50 p-6 sm:p-8">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 shadow-sm">
+                <Star className="h-4 w-4 fill-violet-500 text-violet-600" aria-hidden />
+                <span className="text-xs font-semibold uppercase tracking-wide text-violet-700">Cleexs Score</span>
+              </div>
+              <p className="mt-4 text-5xl font-bold tabular-nums text-violet-700">{displayScore}</p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{metaLine}</p>
             </div>
-            <div className="flex items-center justify-center rounded-xl border border-slate-200 p-2">
-              <div className="text-center">
-                <p className="mb-1 text-sm font-medium text-slate-600">Cleexs Score</p>
-                <GaugeSimple value={cleexsScore} />
-                <p className="text-xs text-slate-500">Indicador 0-100 de recomendación en IA</p>
+            <div className="flex flex-col items-center justify-center border-t border-slate-100 bg-white px-4 py-8 lg:border-t-0">
+              <GaugeSemicircleMaqueta value={cleexsScore} gradientId={`g-${gaugeGradientId}`} />
+            </div>
+            <div className="border-t border-slate-100 bg-slate-50/40 p-5 sm:p-6 lg:border-t-0">
+              <p className="mb-2 text-sm font-semibold text-slate-800">Tendencia</p>
+              <div className="h-[160px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} width={32} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                      formatter={(v: number) => [Math.round(v), 'Score']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#7c3aed"
+                      strokeWidth={2.5}
+                      dot={{ r: 5, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
-              <p className="mb-1 text-sm font-medium text-slate-600">Tendencia</p>
-              <ResponsiveContainer width="100%" height={130}>
-                <LineChart data={trendData && trendData.length > 0 ? trendData : [{ label: 'Corrida 1', score: Math.round(cleexsScore) }]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [Math.round(v), 'Score']} />
-                  <Line dataKey="score" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
+      {/* 2 KPIs clave */}
       <section>
         {sectionHeading(2, 'KPIs clave')}
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
             return (
-              <Card key={kpi.label} className="rounded-xl border border-slate-200 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="mb-2 flex items-center gap-2 text-slate-500">
-                    <Icon className="h-4 w-4" />
-                    <p className="text-sm">{kpi.label}</p>
-                  </div>
-                  <p className="text-3xl font-bold text-slate-900">{kpi.value}</p>
-                  <p className="text-sm text-slate-500">{kpi.sub}</p>
-                </CardContent>
-              </Card>
+              <div
+                key={kpi.label}
+                className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60"
+              >
+                <div className={cn('mb-4 flex h-12 w-12 items-center justify-center rounded-xl', kpi.iconBg)}>
+                  <Icon className="h-6 w-6" strokeWidth={2} />
+                </div>
+                <p className="text-sm font-medium text-slate-500">{kpi.label}</p>
+                <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-slate-900">{kpi.value}</p>
+                <p className="mt-1 text-sm text-slate-500">{kpi.sub}</p>
+              </div>
             );
           })}
         </div>
       </section>
 
+      {/* 3 Comparativa principal */}
       <section>
         {sectionHeading(3, 'Comparativa principal')}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardContent className="p-4">
-              <p className="mb-3 text-sm font-medium text-slate-700">Tu marca vs competidores</p>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60">
+            <p className="border-b border-slate-100 pb-3 text-base font-bold text-slate-900">Tu marca vs competidores</p>
+            <div className="pt-4">
               {topCompetitors.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={topCompetitors} layout="vertical" margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(v: number) => [`${v}%`, '% Top 3']} />
-                    <Bar dataKey="share" radius={[0, 6, 6, 0]}>
+                <ResponsiveContainer width="100%" height={barHeight}>
+                  <BarChart
+                    data={topCompetitors}
+                    layout="vertical"
+                    margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+                    barCategoryGap="18%"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} unit="%" />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={108}
+                      tick={{ fontSize: 12, fill: '#334155', fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(124, 58, 237, 0.06)' }}
+                      contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }}
+                      formatter={(v: number) => [`${Number(v).toFixed(1)}%`, '% en Top 3']}
+                    />
+                    <Bar dataKey="share" radius={[0, 8, 8, 0]} maxBarSize={28}>
                       {topCompetitors.map((entry, idx) => (
                         <Cell key={idx} fill={entry.isBrand ? '#2563eb' : '#94a3b8'} />
                       ))}
@@ -387,139 +533,139 @@ export function ReporteCorridas({
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-slate-500">Sin datos comparativos.</p>
+                <p className="py-10 text-center text-sm text-slate-500">Sin datos comparativos.</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardContent className="p-4">
-              <p className="mb-3 text-sm font-medium text-slate-700">Por intención</p>
-              {intentionChart.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={intentionChart} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="intention" tick={{ fontSize: 11 }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: number) => [`${v}%`, '']} />
-                    <Legend />
-                    <Bar dataKey="tuMarca" name="Tu marca" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="lider" name="Líder" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60">
+            <p className="border-b border-slate-100 pb-3 text-base font-bold text-slate-900">Por intención</p>
+            <p className="mt-2 text-xs text-slate-500">Tu marca (azul) vs {leaderName || 'líder'} (gris)</p>
+            <div className="h-[280px] pt-2">
+              {intentionChartRows.length > 0 && leaderName ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={intentionChartRows} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barGap={6}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="intention" tick={{ fontSize: 12, fill: '#475569' }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={36} unit="%" />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }} formatter={(v: number) => [`${v}%`, '']} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="tuMarca" name="Tu marca" fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                    <Bar dataKey="lider" name={leaderName} fill="#94a3b8" radius={[6, 6, 0, 0]} maxBarSize={36} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-slate-500">Sin datos por intención.</p>
+                <p className="flex h-full items-center justify-center text-sm text-slate-500">
+                  Sin datos por intención para comparar con el líder.
+                </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </section>
 
+      {/* 4 Top 3 acciones */}
       <section>
         {sectionHeading(4, 'Top 3 acciones prioritarias', 'Acciones sugeridas para mejorar tu Cleexs Score')}
-        <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardContent className="grid gap-3 p-4 md:grid-cols-3">
-            {actions.slice(0, 3).map((action, idx) => (
-              <div key={action.title} className="rounded-lg border border-slate-200 p-3">
-                <p className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
-                  {idx + 1}
-                </p>
-                <p className="font-semibold text-slate-900">{action.title}</p>
-                <p className="mt-1 text-sm text-slate-600">{action.desc}</p>
+        <div className="grid gap-4 md:grid-cols-3">
+          {actions.slice(0, 3).map((action, idx) => {
+            const AIcon = action.Icon;
+            return (
+              <div
+                key={`${action.title}-${idx}`}
+                className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60"
+              >
+                <div className="absolute right-4 top-4 text-4xl font-black tabular-nums text-violet-100">{idx + 1}</div>
+                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <AIcon className="h-5 w-5" strokeWidth={2} />
+                </div>
+                <p className="pr-8 text-base font-bold text-slate-900">{action.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{action.desc}</p>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            );
+          })}
+        </div>
       </section>
 
+      {/* 5 Métricas — colapsable */}
       <section>
         {sectionHeading(5, 'Métricas del análisis')}
-        <details className="group rounded-xl border border-slate-200 bg-white shadow-sm">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-700">
-            Ver métricas detalladas
-            <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
-          </summary>
-          <div className="grid gap-3 border-t border-slate-100 p-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Confianza de formato</p>
-              <p className="text-2xl font-bold text-slate-900">{formatConfidence}%</p>
-              <p className="text-xs text-slate-500">{parseableCount}/{totalPrompts} parseables</p>
+        <CollapsibleRow title="Métricas del análisis" subtitle="Colapsable · secundario">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-medium text-slate-500">Confianza de formato</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{formatConfidence}%</p>
+              <p className="text-xs text-slate-500">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Mención de marca</p>
-              <p className="text-2xl font-bold text-slate-900">{mentionRate}%</p>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-medium text-slate-500">Mención de marca</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{mentionRate}%</p>
               <p className="text-xs text-slate-500">{mentionCount}/{totalPrompts} respuestas</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Aparición Top 3</p>
-              <p className="text-2xl font-bold text-slate-900">{top3Rate}%</p>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-medium text-slate-500">Aparición en Top 3</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{top3Rate}%</p>
               <p className="text-xs text-slate-500">{top3Count}/{totalPrompts} en Top 3</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Posición #1</p>
-              <p className="text-2xl font-bold text-slate-900">{top1Rate}%</p>
-              <p className="text-xs text-slate-500">{top1Count}/{totalPrompts} primero</p>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-medium text-slate-500">Posición #1</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{top1Rate}%</p>
+              <p className="text-xs text-slate-500">{top1Count}/{totalPrompts} en primer lugar</p>
             </div>
           </div>
-        </details>
+        </CollapsibleRow>
       </section>
 
+      {/* 6 Visualizaciones adicionales */}
       <section>
         {sectionHeading(6, 'Visualizaciones adicionales')}
-        <details className="group rounded-xl border border-slate-200 bg-white shadow-sm">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-700">
-            Ver visualizaciones extendidas
-            <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
-          </summary>
-          <div className="grid gap-4 border-t border-slate-100 p-4 lg:grid-cols-2">
-            <Card className="rounded-lg border border-slate-200 shadow-none">
-              <CardContent className="p-3">
-                <p className="mb-2 text-sm font-medium text-slate-700">Evolución de score</p>
-                <ResponsiveContainer width="100%" height={190}>
-                  <LineChart data={trendData && trendData.length > 0 ? trendData : [{ label: 'Corrida 1', score: Math.round(cleexsScore) }]}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: number) => [Math.round(v), 'Score']} />
-                    <Line dataKey="score" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+        <CollapsibleRow title="Visualizaciones adicionales" subtitle="Colapsable · secundario">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-100 bg-white p-4">
+              <p className="mb-2 text-sm font-semibold text-slate-800">Evolución del score</p>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={32} />
+                    <Tooltip contentStyle={{ borderRadius: 12 }} formatter={(v: number) => [Math.round(v), 'Score']} />
+                    <Line type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} dot={{ r: 4, fill: '#7c3aed' }} />
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card className="rounded-lg border border-slate-200 shadow-none">
-              <CardContent className="p-3">
-                <p className="mb-2 text-sm font-medium text-slate-700">Distribución por intención</p>
-                <ResponsiveContainer width="100%" height={190}>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-white p-4">
+              <p className="mb-2 text-sm font-semibold text-slate-800">Score por intención</p>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={
                       intentionScores.length > 0
                         ? intentionScores.map((item) => ({
                             name: item.label,
-                            score: Number(item.score.toFixed(0)),
+                            score: Math.round(item.score),
                           }))
-                        : [{ name: 'General', score: Math.round(cleexsScore) }]
+                        : [{ name: 'General', score: displayScore }]
                     }
+                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={32} />
                     <Tooltip formatter={(v: number) => [`${v}%`, '']} />
-                    <Bar dataKey="score" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="score" fill="#6366f1" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
-        </details>
+        </CollapsibleRow>
       </section>
 
-      <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/60 p-3 text-xs text-slate-600">
-        <p className="flex items-center gap-2">
-          <Share2 className="h-4 w-4 text-violet-600" />
-          La lectura pasa de análisis disperso a narrativa: estado actual → comparación → acciones → difusión.
-          <ArrowUpRight className="h-4 w-4 text-violet-600" />
-        </p>
-      </div>
+      <p className="text-center text-xs italic leading-relaxed text-slate-400">
+        La lectura pasa de análisis disperso a narrativa: estado actual → comparación → acciones → difusión.
+      </p>
     </div>
   );
 }

@@ -49,6 +49,8 @@ import {
   Layers,
   CheckCircle2,
   Users,
+  Rocket,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
@@ -811,91 +813,152 @@ function VerResultadoContent() {
                 {isCompleted && (diagnostic.shareSlug || (diagnostic.showFullReport && diagnostic.id)) && (
                   <div className="space-y-4 pt-6 mt-6 border-t border-slate-200/80">
                     {!legacyView && (
-                      <div className="mb-1 flex items-center gap-2">
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+                      <div className="mb-1 flex items-center gap-3">
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-md shadow-violet-500/25">
                           7
                         </span>
-                        <p className="text-xl font-semibold text-slate-900">Compartir e invitar</p>
+                        <p className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Compartir e invitar</p>
                       </div>
                     )}
-                    {diagnostic.shareSlug && (
-                      <div className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/60 p-5 shadow-md shadow-indigo-950/[0.06] ring-1 ring-indigo-100/80">
-                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 shadow-inner">
-                              <Sparkles className="h-5 w-5" />
-                            </span>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
-                              <p className="text-[11px] text-indigo-700/80">Difusión · página pública</p>
+                    {legacyView ? (
+                      <>
+                        {diagnostic.shareSlug && (
+                          <div className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/60 p-5 shadow-md shadow-indigo-950/[0.06] ring-1 ring-indigo-100/80">
+                            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                              <div className="flex items-start gap-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 shadow-inner">
+                                  <Sparkles className="h-5 w-5" />
+                                </span>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
+                                  <p className="text-[11px] text-indigo-700/80">Difusión · página pública</p>
+                                </div>
+                              </div>
+                              <span className="rounded-full bg-indigo-600/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
+                                Vista pública · resumida
+                              </span>
                             </div>
+                            <p className="text-xs leading-relaxed text-slate-600 mb-4">
+                              Enlace a la página pública del Cleexs Score: pensado para redes, email o difusión. Muestra el
+                              score y un resumen; no reemplaza el informe detallado de abajo.
+                            </p>
+                            <ShareScoreButtons
+                              path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
+                              intent="social"
+                              brandName={diagnostic.brandName}
+                              domain={diagnostic.domain}
+                            />
+                            <p className="mt-4 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-slate-600 ring-1 ring-indigo-100/60">
+                              <span className="font-medium text-slate-500">Enlace</span>
+                              {' '}
+                              <Link
+                                href={scoreSharePath || `/score/${diagnostic.shareSlug}`}
+                                className="font-medium text-indigo-600 underline break-all hover:text-indigo-700"
+                              >
+                                {sharePublicFullUrl || scoreSharePath || `/score/${diagnostic.shareSlug}`}
+                              </Link>
+                            </p>
                           </div>
-                          <span className="rounded-full bg-indigo-600/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
-                            Vista pública · resumida
-                          </span>
-                        </div>
-                        <p className="text-xs leading-relaxed text-slate-600 mb-4">
-                          Enlace a la página pública del Cleexs Score: pensado para redes, email o difusión. Muestra el
-                          score y un resumen; no reemplaza el informe detallado de abajo.
-                        </p>
-                        <ShareScoreButtons
-                          path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                          intent="social"
-                          brandName={diagnostic.brandName}
-                          domain={diagnostic.domain}
-                        />
-                        <p className="mt-4 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-slate-600 ring-1 ring-indigo-100/60">
-                          <span className="font-medium text-slate-500">Enlace</span>
-                          {' '}
-                          <Link
-                            href={scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                            className="font-medium text-indigo-600 underline break-all hover:text-indigo-700"
-                          >
-                            {sharePublicFullUrl || scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                          </Link>
-                        </p>
-                      </div>
-                    )}
-
-                    {diagnostic.showFullReport && diagnostic.id && (
-                      <div className="overflow-hidden rounded-2xl border border-slate-200/90 border-l-[4px] border-l-teal-500 bg-gradient-to-b from-stone-50 to-slate-100/70 p-5 shadow-sm">
-                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-teal-200/80 bg-teal-50 text-teal-700">
-                              <Users className="h-5 w-5" />
-                            </span>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">Invitar a tu equipo</p>
-                              <p className="text-[11px] text-teal-800/80">Uso interno · mismo informe que ves acá</p>
+                        )}
+                        {diagnostic.showFullReport && diagnostic.id && (
+                          <div className="overflow-hidden rounded-2xl border border-slate-200/90 border-l-[4px] border-l-teal-500 bg-gradient-to-b from-stone-50 to-slate-100/70 p-5 shadow-sm">
+                            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                              <div className="flex items-start gap-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-teal-200/80 bg-teal-50 text-teal-700">
+                                  <Users className="h-5 w-5" />
+                                </span>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">Invitar a tu equipo</p>
+                                  <p className="text-[11px] text-teal-800/80">Uso interno · mismo informe que ves acá</p>
+                                </div>
+                              </div>
+                              <span className="rounded-md border border-teal-200/70 bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-900">
+                                Informe detallado
+                              </span>
                             </div>
+                            <p className="text-xs leading-relaxed text-slate-600 mb-4">
+                              Compartí este enlace con marketing, agencia o personas internas: verán el mismo informe
+                              extenso que vos (métricas, comparativas y análisis). Si quieren seguir con más diagnósticos,
+                              pueden crear cuenta en Cleexs desde la web.
+                            </p>
+                            <ShareScoreButtons
+                              path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                              intent="team"
+                              brandName={diagnostic.brandName}
+                              domain={diagnostic.domain}
+                            />
+                            <p className="mt-4 rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-xs text-slate-600">
+                              <span className="font-medium text-slate-500">Enlace</span>
+                              {' '}
+                              <Link
+                                href={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                                className="font-medium text-teal-700 underline break-all hover:text-teal-800"
+                              >
+                                {teamInviteFullUrl ||
+                                  teamInvitePath ||
+                                  `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                              </Link>
+                            </p>
                           </div>
-                          <span className="rounded-md border border-teal-200/70 bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-900">
-                            Informe detallado
-                          </span>
-                        </div>
-                        <p className="text-xs leading-relaxed text-slate-600 mb-4">
-                          Compartí este enlace con marketing, agencia o personas internas: verán el mismo informe
-                          extenso que vos (métricas, comparativas y análisis). Si quieren seguir con más diagnósticos,
-                          pueden crear cuenta en Cleexs desde la web.
-                        </p>
-                        <ShareScoreButtons
-                          path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                          intent="team"
-                          brandName={diagnostic.brandName}
-                          domain={diagnostic.domain}
-                        />
-                        <p className="mt-4 rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-xs text-slate-600">
-                          <span className="font-medium text-slate-500">Enlace</span>
-                          {' '}
-                          <Link
-                            href={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                            className="font-medium text-teal-700 underline break-all hover:text-teal-800"
-                          >
-                            {teamInviteFullUrl ||
-                              teamInvitePath ||
-                              `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                          </Link>
-                        </p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
+                        {diagnostic.shareSlug && (
+                          <div className="flex-1 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60">
+                            <p className="mb-1 text-sm font-bold text-slate-900">Compartir resultado</p>
+                            <p className="mb-4 text-xs text-slate-500">Página pública del Cleexs Score · redes y difusión</p>
+                            <ShareScoreButtons
+                              path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
+                              intent="social"
+                              brandName={diagnostic.brandName}
+                              domain={diagnostic.domain}
+                            />
+                            <p className="mt-4 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1.5 text-xs text-slate-600">
+                              <span className="font-medium text-slate-500">Enlace</span>
+                              {' '}
+                              <Link
+                                href={scoreSharePath || `/score/${diagnostic.shareSlug}`}
+                                className="font-medium text-primary-600 underline break-all hover:text-primary-700"
+                              >
+                                {sharePublicFullUrl || scoreSharePath || `/score/${diagnostic.shareSlug}`}
+                              </Link>
+                            </p>
+                          </div>
+                        )}
+                        {diagnostic.showFullReport && diagnostic.id && (
+                          <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-green-50/50 p-5 shadow-sm ring-1 ring-emerald-100/80 lg:max-w-md lg:shrink-0">
+                            <div className="mb-3 flex items-start gap-3">
+                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                <Users className="h-5 w-5" />
+                              </span>
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">Invitar a tu equipo</p>
+                                <p className="mt-1 text-sm leading-snug text-slate-600">
+                                  Compartí el informe con tu equipo o colaboradores.
+                                </p>
+                              </div>
+                            </div>
+                            <ShareScoreButtons
+                              path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                              intent="team"
+                              brandName={diagnostic.brandName}
+                              domain={diagnostic.domain}
+                            />
+                            <p className="mt-4 rounded-lg border border-emerald-100 bg-white/80 px-2 py-1.5 text-xs text-slate-600">
+                              <span className="font-medium text-slate-500">Enlace</span>
+                              {' '}
+                              <Link
+                                href={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                                className="font-medium text-emerald-800 underline break-all hover:text-emerald-900"
+                              >
+                                {teamInviteFullUrl ||
+                                  teamInvitePath ||
+                                  `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                              </Link>
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -903,34 +966,60 @@ function VerResultadoContent() {
 
                 <div className="pt-6 mt-6 border-t border-slate-200/80">
                   {!legacyView && (
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+                    <div className="mb-4 flex items-center gap-3">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-md shadow-violet-500/25">
                         8
                       </span>
-                      <p className="text-xl font-semibold text-slate-900">CTA comercial</p>
+                      <p className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">CTA comercial</p>
                     </div>
                   )}
-                  <div className="rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
-                    <p className="text-sm font-medium text-foreground mb-2">
-                      ¿Querés más corridas y reportes completos?
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Elegí un plan para habilitar análisis y reportes completos.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      <Button asChild className="bg-primary-600 hover:bg-primary-700">
-                        <Link href="/planes">
-                          <LogIn className="mr-2 h-4 w-4" />
+                  {legacyView ? (
+                    <div className="rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
+                      <p className="text-sm font-medium text-foreground mb-2">
+                        ¿Querés más corridas y reportes completos?
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Elegí un plan para habilitar análisis y reportes completos.
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <Button asChild className="bg-primary-600 hover:bg-primary-700">
+                          <Link href="/planes">
+                            <LogIn className="mr-2 h-4 w-4" />
+                            Ver planes
+                          </Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                          <Link href="/diagnostico/crear">
+                            Otro diagnóstico
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-4 py-4 sm:flex-row sm:gap-5">
+                      <Button
+                        asChild
+                        size="lg"
+                        className="h-12 min-w-[220px] rounded-xl bg-primary-600 px-8 text-base font-semibold shadow-lg shadow-primary-600/20 hover:bg-primary-700"
+                      >
+                        <Link href="/planes" className="inline-flex items-center gap-2">
+                          <Rocket className="h-5 w-5" />
                           Ver planes
                         </Link>
                       </Button>
-                      <Button variant="outline" asChild>
-                        <Link href="/diagnostico/crear">
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="lg"
+                        className="h-12 min-w-[220px] rounded-xl border-2 border-primary-600 bg-white text-base font-semibold text-primary-700 hover:bg-primary-50"
+                      >
+                        <Link href="/diagnostico/crear" className="inline-flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
                           Otro diagnóstico
                         </Link>
                       </Button>
                     </div>
-                  </div>
+                  )}
                 </div>
               </Fragment>
             )}
