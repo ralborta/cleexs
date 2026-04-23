@@ -922,3 +922,4 @@ export function ReporteModerno({
       {satelliteBlock ? <>{satelliteBlock}</> : null}
     </div>
   );
+}
