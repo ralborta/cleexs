@@ -129,13 +129,13 @@ function scoreLabelEs(score: number) {
 
 function sectionHeading(num: number, title: string, subtitle?: string) {
   return (
-    <div className="mb-4 flex items-start gap-3">
-      <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-xs font-bold text-white shadow-md shadow-violet-500/25">
+    <div className="mb-2 flex items-start gap-2">
+      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
         {num}
       </span>
       <div>
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h2>
-        {subtitle ? <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p> : null}
+        <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">{title}</h2>
+        {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
       </div>
     </div>
   );
@@ -143,16 +143,16 @@ function sectionHeading(num: number, title: string, subtitle?: string) {
 
 /** Semicírculo 0–100 con arco de fondo rojo→amarillo→verde (maqueta). */
 function GaugeSemicircleMaqueta({ value, gradientId }: { value: number; gradientId: string }) {
-  const size = 168;
+  const size = 148;
   const v = Math.min(100, Math.max(0, value));
-  const r = size / 2 - 12;
-  const stroke = 12;
+  const r = size / 2 - 10;
+  const stroke = 10;
   const circumference = Math.PI * r;
   const offset = circumference - (v / 100) * circumference;
   const strokeColor = v >= 70 ? '#22c55e' : v >= 45 ? '#eab308' : '#ef4444';
 
   return (
-    <div className="relative flex flex-col items-center" style={{ width: size, height: size / 2 + 48 }}>
+    <div className="relative flex flex-col items-center" style={{ width: size, height: size / 2 + 40 }}>
       <svg width={size} height={size / 2 + 24} viewBox={`0 0 ${size} ${size / 2 + 24}`} className="overflow-visible">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
@@ -182,8 +182,8 @@ function GaugeSemicircleMaqueta({ value, gradientId }: { value: number; gradient
         />
       </svg>
       <div className="absolute bottom-1 left-1/2 w-full -translate-x-1/2 text-center">
-        <p className="text-3xl font-bold tabular-nums leading-none text-slate-900">{Math.round(v)}</p>
-        <p className="mt-1.5 text-xs font-medium text-slate-500">Indicador 0-100 de recomendación en IA</p>
+        <p className="text-2xl font-bold tabular-nums leading-none text-slate-900">{Math.round(v)}</p>
+        <p className="mt-1 text-[11px] font-medium text-slate-500">Indicador 0-100 de recomendación en IA</p>
       </div>
     </div>
   );
@@ -199,15 +199,15 @@ function CollapsibleRow({
   children: ReactNode;
 }) {
   return (
-    <details className="group rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100/80">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 [&::-webkit-details-marker]:hidden">
+    <details className="group rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100/80">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
         <div>
-          <p className="font-semibold text-slate-900">{title}</p>
-          <p className="text-xs text-slate-500">{subtitle}</p>
+          <p className="text-sm font-semibold text-slate-900">{title}</p>
+          <p className="text-[11px] text-slate-500">{subtitle}</p>
         </div>
-        <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
       </summary>
-      <div className="border-t border-slate-100 px-5 pb-5 pt-2">{children}</div>
+      <div className="border-t border-slate-100 px-3 pb-3 pt-1.5">{children}</div>
     </details>
   );
 }
@@ -333,7 +333,7 @@ export function ReporteCorridas({
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
   }));
 
-  const barHeight = Math.max(220, topCompetitors.length * 44);
+  const barHeight = Math.max(150, topCompetitors.length * 32);
 
   const metaLine =
     brandRow && leaderRow
@@ -427,26 +427,26 @@ export function ReporteCorridas({
       : [{ label: 'Corrida 1', score: displayScore }];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {/* 1 Resumen ejecutivo — una tarjeta unificada, tres columnas como maqueta */}
       <section>
         {sectionHeading(1, 'Resumen ejecutivo')}
-        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-md shadow-slate-200/40 ring-1 ring-slate-100">
+        <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm shadow-slate-200/30 ring-1 ring-slate-100">
           <div className="grid gap-0 lg:grid-cols-3 lg:divide-x lg:divide-slate-100">
-            <div className="flex flex-col justify-center bg-gradient-to-br from-violet-50 via-white to-indigo-50/50 p-6 sm:p-8">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 shadow-sm">
-                <Star className="h-4 w-4 fill-violet-500 text-violet-600" aria-hidden />
-                <span className="text-xs font-semibold uppercase tracking-wide text-violet-700">Cleexs Score</span>
+            <div className="flex flex-col justify-center bg-gradient-to-br from-violet-50 via-white to-indigo-50/50 p-4 sm:p-5">
+              <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-violet-200/80 bg-white/90 px-2.5 py-1 shadow-sm">
+                <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-600" aria-hidden />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">Cleexs Score</span>
               </div>
-              <p className="mt-4 text-3xl font-bold tabular-nums text-violet-700">{displayScore}</p>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">{metaLine}</p>
+              <p className="mt-3 text-2xl font-bold tabular-nums text-violet-700">{displayScore}</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">{metaLine}</p>
             </div>
-            <div className="flex flex-col items-center justify-center border-t border-slate-100 bg-white px-4 py-8 lg:border-t-0">
+            <div className="flex flex-col items-center justify-center border-t border-slate-100 bg-white px-3 py-4 lg:border-t-0">
               <GaugeSemicircleMaqueta value={cleexsScore} gradientId={`g-${gaugeGradientId}`} />
             </div>
-            <div className="border-t border-slate-100 bg-slate-50/40 p-5 sm:p-6 lg:border-t-0">
-              <p className="mb-2 text-sm font-semibold text-slate-800">Tendencia</p>
-              <div className="h-[160px] w-full">
+            <div className="border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4 lg:border-t-0">
+              <p className="mb-1.5 text-xs font-semibold text-slate-800">Tendencia</p>
+              <div className="h-[118px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -460,9 +460,9 @@ export function ReporteCorridas({
                       type="monotone"
                       dataKey="score"
                       stroke="#7c3aed"
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 5 }}
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: '#7c3aed', strokeWidth: 1, stroke: '#fff' }}
+                      activeDot={{ r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -475,20 +475,20 @@ export function ReporteCorridas({
       {/* 2 KPIs clave */}
       <section>
         {sectionHeading(2, 'KPIs clave')}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
             return (
               <div
                 key={kpi.label}
-                className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60"
+                className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60"
               >
-                <div className={cn('mb-4 flex h-12 w-12 items-center justify-center rounded-xl', kpi.iconBg)}>
-                  <Icon className="h-6 w-6" strokeWidth={2} />
+                <div className={cn('mb-2 flex h-9 w-9 items-center justify-center rounded-lg', kpi.iconBg)}>
+                  <Icon className="h-4 w-4" strokeWidth={2} />
                 </div>
-                <p className="text-sm font-medium text-slate-500">{kpi.label}</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-slate-900">{kpi.value}</p>
-                <p className="mt-1 text-sm text-slate-500">{kpi.sub}</p>
+                <p className="text-xs font-medium text-slate-500">{kpi.label}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums tracking-tight text-slate-900">{kpi.value}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{kpi.sub}</p>
               </div>
             );
           })}
@@ -498,10 +498,10 @@ export function ReporteCorridas({
       {/* 3 Comparativa principal */}
       <section>
         {sectionHeading(3, 'Comparativa principal')}
-        <div className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60">
-            <p className="border-b border-slate-100 pb-3 text-base font-bold text-slate-900">Tu marca vs competidores</p>
-            <div className="pt-4">
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
+            <p className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900">Tu marca vs competidores</p>
+            <div className="pt-2">
               {topCompetitors.length > 0 ? (
                 <ResponsiveContainer width="100%" height={barHeight}>
                   <BarChart
@@ -515,8 +515,8 @@ export function ReporteCorridas({
                     <YAxis
                       type="category"
                       dataKey="name"
-                      width={108}
-                      tick={{ fontSize: 12, fill: '#334155', fontWeight: 500 }}
+                      width={88}
+                      tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
                       axisLine={false}
                       tickLine={false}
                     />
@@ -525,7 +525,7 @@ export function ReporteCorridas({
                       contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }}
                       formatter={(v: number) => [`${Number(v).toFixed(1)}%`, '% en Top 3']}
                     />
-                    <Bar dataKey="share" radius={[0, 8, 8, 0]} maxBarSize={28}>
+                    <Bar dataKey="share" radius={[0, 6, 6, 0]} maxBarSize={20}>
                       {topCompetitors.map((entry, idx) => (
                         <Cell key={idx} fill={entry.isBrand ? '#2563eb' : '#94a3b8'} />
                       ))}
@@ -538,10 +538,10 @@ export function ReporteCorridas({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60">
-            <p className="border-b border-slate-100 pb-3 text-base font-bold text-slate-900">Por intención</p>
-            <p className="mt-2 text-xs text-slate-500">Tu marca (azul) vs {leaderName || 'líder'} (gris)</p>
-            <div className="h-[280px] pt-2">
+          <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
+            <p className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900">Por intención</p>
+            <p className="mt-1.5 text-[11px] text-slate-500">Tu marca (azul) vs {leaderName || 'líder'} (gris)</p>
+            <div className="h-[200px] pt-1.5">
               {intentionChartRows.length > 0 && leaderName ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={intentionChartRows} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barGap={6}>
@@ -549,9 +549,9 @@ export function ReporteCorridas({
                     <XAxis dataKey="intention" tick={{ fontSize: 12, fill: '#475569' }} axisLine={false} tickLine={false} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={36} unit="%" />
                     <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }} formatter={(v: number) => [`${v}%`, '']} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="tuMarca" name="Tu marca" fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                    <Bar dataKey="lider" name={leaderName} fill="#94a3b8" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="tuMarca" name="Tu marca" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                    <Bar dataKey="lider" name={leaderName} fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={24} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -567,20 +567,20 @@ export function ReporteCorridas({
       {/* 4 Top 3 acciones */}
       <section>
         {sectionHeading(4, 'Top 3 acciones prioritarias', 'Acciones sugeridas para mejorar tu Cleexs Score')}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {actions.slice(0, 3).map((action, idx) => {
             const AIcon = action.Icon;
             return (
               <div
                 key={`${action.title}-${idx}`}
-                className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60"
+                className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60"
               >
-                <div className="absolute right-3 top-3 text-2xl font-black tabular-nums text-violet-100">{idx + 1}</div>
-                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                  <AIcon className="h-5 w-5" strokeWidth={2} />
+                <div className="absolute right-2 top-2 text-lg font-black tabular-nums text-violet-100">{idx + 1}</div>
+                <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                  <AIcon className="h-4 w-4" strokeWidth={2} />
                 </div>
-                <p className="pr-8 text-base font-bold text-slate-900">{action.title}</p>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{action.desc}</p>
+                <p className="pr-7 text-sm font-bold text-slate-900">{action.title}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{action.desc}</p>
               </div>
             );
           })}
@@ -591,25 +591,25 @@ export function ReporteCorridas({
       <section>
         {sectionHeading(5, 'Métricas del análisis')}
         <CollapsibleRow title="Métricas del análisis" subtitle="Colapsable · secundario">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-medium text-slate-500">Confianza de formato</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{formatConfidence}%</p>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+              <p className="text-[11px] font-medium text-slate-500">Confianza de formato</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-900">{formatConfidence}%</p>
               <p className="text-xs text-slate-500">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-medium text-slate-500">Mención de marca</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{mentionRate}%</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+              <p className="text-[11px] font-medium text-slate-500">Mención de marca</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-900">{mentionRate}%</p>
               <p className="text-xs text-slate-500">{mentionCount}/{totalPrompts} respuestas</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-medium text-slate-500">Aparición en Top 3</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{top3Rate}%</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+              <p className="text-[11px] font-medium text-slate-500">Aparición en Top 3</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-900">{top3Rate}%</p>
               <p className="text-xs text-slate-500">{top3Count}/{totalPrompts} en Top 3</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-medium text-slate-500">Posición #1</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{top1Rate}%</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+              <p className="text-[11px] font-medium text-slate-500">Posición #1</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-900">{top1Rate}%</p>
               <p className="text-xs text-slate-500">{top1Count}/{totalPrompts} en primer lugar</p>
             </div>
           </div>
@@ -620,10 +620,10 @@ export function ReporteCorridas({
       <section>
         {sectionHeading(6, 'Visualizaciones adicionales')}
         <CollapsibleRow title="Visualizaciones adicionales" subtitle="Colapsable · secundario">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-slate-100 bg-white p-4">
-              <p className="mb-2 text-sm font-semibold text-slate-800">Evolución del score</p>
-              <div className="h-[200px]">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-lg border border-slate-100 bg-white p-3">
+              <p className="mb-1.5 text-xs font-semibold text-slate-800">Evolución del score</p>
+              <div className="h-[132px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -635,9 +635,9 @@ export function ReporteCorridas({
                 </ResponsiveContainer>
               </div>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4">
-              <p className="mb-2 text-sm font-semibold text-slate-800">Score por intención</p>
-              <div className="h-[200px]">
+            <div className="rounded-lg border border-slate-100 bg-white p-3">
+              <p className="mb-1.5 text-xs font-semibold text-slate-800">Score por intención</p>
+              <div className="h-[132px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={
@@ -663,7 +663,7 @@ export function ReporteCorridas({
         </CollapsibleRow>
       </section>
 
-      <p className="text-center text-xs italic leading-relaxed text-slate-400">
+      <p className="text-center text-[11px] italic leading-relaxed text-slate-400">
         La lectura pasa de análisis disperso a narrativa: estado actual → comparación → acciones → difusión.
       </p>
     </div>

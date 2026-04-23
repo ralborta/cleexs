@@ -659,21 +659,21 @@ function VerResultadoContent() {
 
   return (
     <div>
-      <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-6 py-16">
-        <div className="mx-auto max-w-6xl space-y-8 px-2 sm:px-4">
-          <Card className="border-0 bg-white shadow-lg shadow-slate-200/60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-6 w-6 text-primary-600" />
+      <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-4 py-10 sm:px-6 sm:py-12">
+        <div className="mx-auto max-w-5xl space-y-5 px-1 sm:px-3">
+          <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="space-y-1 p-4 pb-3 sm:p-5 sm:pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
               Resultado del diagnóstico
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               <span className="font-medium">{diagnostic.brandName}</span>
               {diagnostic.industry && ` · ${diagnostic.industry}`}
               {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 px-4 pb-4 pt-0 sm:space-y-5 sm:px-5 sm:pb-5">
             {isPending && (
               <div className="flex items-center gap-3 rounded-lg border border-primary-200 bg-primary-50 p-4 text-primary-800">
                 <Loader2 className="h-5 w-5 animate-spin shrink-0" />
@@ -694,18 +694,18 @@ function VerResultadoContent() {
               <Fragment>
                 {runResult ? (
                   diagnostic.showFullReport ? (
-                    <div className="space-y-8">
+                    <div className="space-y-5">
                       {mostrarTabsPorModelo && (
-                        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className="mr-1 text-sm font-medium text-slate-600">Ver datos por modelo:</span>
-                            <div className="flex flex-wrap gap-3">
+                        <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="mr-1 text-xs font-medium text-slate-600">Ver datos por modelo:</span>
+                            <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
                                 onClick={() => setVistaModelo('chatgpt')}
-                                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                                   vistaModelo === 'chatgpt'
-                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
                                     : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
@@ -723,9 +723,9 @@ function VerResultadoContent() {
                                       : 'Ver métricas según respuestas de Gemini'
                                 }
                                 onClick={() => runResultGemini && setVistaModelo('gemini')}
-                                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
                                   vistaModelo === 'gemini' && runResultGemini
-                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
                                     : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
@@ -747,9 +747,9 @@ function VerResultadoContent() {
                                       : 'Promedio ChatGPT + Gemini'
                                 }
                                 onClick={() => runResultGemini && setVistaModelo('consolidado')}
-                                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
                                   vistaModelo === 'consolidado' && runResultGemini
-                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-2'
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
                                     : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
@@ -811,13 +811,13 @@ function VerResultadoContent() {
                 )}
 
                 {isCompleted && (diagnostic.shareSlug || (diagnostic.showFullReport && diagnostic.id)) && (
-                  <div className="space-y-4 pt-6 mt-6 border-t border-slate-200/80">
+                  <div className="space-y-3 pt-5 mt-5 border-t border-slate-200/80">
                     {!legacyView && (
-                      <div className="mb-1 flex items-center gap-3">
-                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-xs font-bold text-white shadow-md shadow-violet-500/25">
+                      <div className="mb-0.5 flex items-center gap-2">
+                        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
                           7
                         </span>
-                        <p className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Compartir e invitar</p>
+                        <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Compartir e invitar</p>
                       </div>
                     )}
                     {legacyView ? (
@@ -903,18 +903,18 @@ function VerResultadoContent() {
                         )}
                       </>
                     ) : (
-                      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
                         {diagnostic.shareSlug && (
-                          <div className="flex-1 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/60">
-                            <p className="mb-1 text-sm font-bold text-slate-900">Compartir resultado</p>
-                            <p className="mb-4 text-xs text-slate-500">Página pública del Cleexs Score · redes y difusión</p>
+                          <div className="flex-1 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
+                            <p className="mb-0.5 text-xs font-bold text-slate-900">Compartir resultado</p>
+                            <p className="mb-3 text-[11px] text-slate-500">Página pública del Cleexs Score · redes y difusión</p>
                             <ShareScoreButtons
                               path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
                               intent="social"
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
                             />
-                            <p className="mt-4 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1.5 text-xs text-slate-600">
+                            <p className="mt-3 rounded-md border border-slate-100 bg-slate-50/80 px-2 py-1 text-[11px] text-slate-600">
                               <span className="font-medium text-slate-500">Enlace</span>
                               {' '}
                               <Link
@@ -927,14 +927,14 @@ function VerResultadoContent() {
                           </div>
                         )}
                         {diagnostic.showFullReport && diagnostic.id && (
-                          <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-green-50/50 p-5 shadow-sm ring-1 ring-emerald-100/80 lg:max-w-md lg:shrink-0">
-                            <div className="mb-3 flex items-start gap-3">
-                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                                <Users className="h-5 w-5" />
+                          <div className="rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-green-50/50 p-3.5 shadow-sm ring-1 ring-emerald-100/80 lg:max-w-sm lg:shrink-0">
+                            <div className="mb-2 flex items-start gap-2.5">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                <Users className="h-4 w-4" />
                               </span>
                               <div>
-                                <p className="text-sm font-bold text-slate-900">Invitar a tu equipo</p>
-                                <p className="mt-1 text-sm leading-snug text-slate-600">
+                                <p className="text-xs font-bold text-slate-900">Invitar a tu equipo</p>
+                                <p className="mt-0.5 text-xs leading-snug text-slate-600">
                                   Compartí el informe con tu equipo o colaboradores.
                                 </p>
                               </div>
@@ -945,7 +945,7 @@ function VerResultadoContent() {
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
                             />
-                            <p className="mt-4 rounded-lg border border-emerald-100 bg-white/80 px-2 py-1.5 text-xs text-slate-600">
+                            <p className="mt-3 rounded-md border border-emerald-100 bg-white/80 px-2 py-1 text-[11px] text-slate-600">
                               <span className="font-medium text-slate-500">Enlace</span>
                               {' '}
                               <Link
@@ -964,13 +964,13 @@ function VerResultadoContent() {
                   </div>
                 )}
 
-                <div className="pt-6 mt-6 border-t border-slate-200/80">
+                <div className="pt-5 mt-5 border-t border-slate-200/80">
                   {!legacyView && (
-                    <div className="mb-4 flex items-center gap-3">
-                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-xs font-bold text-white shadow-md shadow-violet-500/25">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
                         8
                       </span>
-                      <p className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">CTA comercial</p>
+                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">CTA comercial</p>
                     </div>
                   )}
                   {legacyView ? (
@@ -996,23 +996,23 @@ function VerResultadoContent() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center gap-4 py-4 sm:flex-row sm:gap-5">
+                    <div className="flex flex-col items-center justify-center gap-2.5 py-3 sm:flex-row sm:gap-3">
                       <Button
                         asChild
-                        className="h-10 min-w-[180px] rounded-xl bg-primary-600 px-6 text-sm font-semibold shadow-lg shadow-primary-600/20 hover:bg-primary-700"
+                        className="h-9 min-w-[160px] rounded-lg bg-primary-600 px-5 text-xs font-semibold shadow-md shadow-primary-600/15 hover:bg-primary-700"
                       >
-                        <Link href="/planes" className="inline-flex items-center gap-2">
-                          <Rocket className="h-4 w-4" />
+                        <Link href="/planes" className="inline-flex items-center gap-1.5">
+                          <Rocket className="h-3.5 w-3.5" />
                           Ver planes
                         </Link>
                       </Button>
                       <Button
                         asChild
                         variant="outline"
-                        className="h-10 min-w-[180px] rounded-xl border-2 border-primary-600 bg-white text-sm font-semibold text-primary-700 hover:bg-primary-50"
+                        className="h-9 min-w-[160px] rounded-lg border-2 border-primary-600 bg-white text-xs font-semibold text-primary-700 hover:bg-primary-50"
                       >
-                        <Link href="/diagnostico/crear" className="inline-flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
+                        <Link href="/diagnostico/crear" className="inline-flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5" />
                           Otro diagnóstico
                         </Link>
                       </Button>
