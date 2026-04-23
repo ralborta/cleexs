@@ -814,7 +814,7 @@ function VerResultadoContent() {
                   <div className="space-y-4 pt-6 mt-6 border-t border-slate-200/80">
                     {!legacyView && (
                       <div className="mb-1 flex items-center gap-3">
-                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-md shadow-violet-500/25">
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-xs font-bold text-white shadow-md shadow-violet-500/25">
                           7
                         </span>
                         <p className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Compartir e invitar</p>
@@ -967,7 +967,7 @@ function VerResultadoContent() {
                 <div className="pt-6 mt-6 border-t border-slate-200/80">
                   {!legacyView && (
                     <div className="mb-4 flex items-center gap-3">
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-md shadow-violet-500/25">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-xs font-bold text-white shadow-md shadow-violet-500/25">
                         8
                       </span>
                       <p className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">CTA comercial</p>
@@ -999,22 +999,20 @@ function VerResultadoContent() {
                     <div className="flex flex-col items-center justify-center gap-4 py-4 sm:flex-row sm:gap-5">
                       <Button
                         asChild
-                        size="lg"
-                        className="h-12 min-w-[220px] rounded-xl bg-primary-600 px-8 text-base font-semibold shadow-lg shadow-primary-600/20 hover:bg-primary-700"
+                        className="h-10 min-w-[180px] rounded-xl bg-primary-600 px-6 text-sm font-semibold shadow-lg shadow-primary-600/20 hover:bg-primary-700"
                       >
                         <Link href="/planes" className="inline-flex items-center gap-2">
-                          <Rocket className="h-5 w-5" />
+                          <Rocket className="h-4 w-4" />
                           Ver planes
                         </Link>
                       </Button>
                       <Button
                         asChild
                         variant="outline"
-                        size="lg"
-                        className="h-12 min-w-[220px] rounded-xl border-2 border-primary-600 bg-white text-base font-semibold text-primary-700 hover:bg-primary-50"
+                        className="h-10 min-w-[180px] rounded-xl border-2 border-primary-600 bg-white text-sm font-semibold text-primary-700 hover:bg-primary-50"
                       >
                         <Link href="/diagnostico/crear" className="inline-flex items-center gap-2">
-                          <FileText className="h-5 w-5" />
+                          <FileText className="h-4 w-4" />
                           Otro diagnóstico
                         </Link>
                       </Button>
