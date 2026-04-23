@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
+import { ReporteCorridas } from './reporte-corridas';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
@@ -448,6 +449,7 @@ function ReporteCompleto({
 function VerResultadoContent() {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
+  const legacyView = searchParams.get('vista') === 'legacy';
   const tierFromQuery = searchParams.get('tier') === 'gold' ? 'gold' : undefined;
   const [diagnostic, setDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -771,23 +773,30 @@ function VerResultadoContent() {
                           )}
                         </div>
                       )}
-                      {runResultToShow && (
-                        <ReporteModerno
-                          runResult={runResultToShow}
-                          brandName={runResultToShow.brandName}
-                          trendData={diagnostic.trendData}
-                          runResultChatGPT={tieneGemini ? runResult : undefined}
-                          runResultGemini={tieneGemini ? runResultGemini : undefined}
-                          satelliteBlock={
-                            <>
-                              {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
-                              {satelliteModule && (
-                                <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
-                              )}
-                            </>
-                          }
-                        />
-                      )}
+                      {runResultToShow &&
+                        (legacyView ? (
+                          <ReporteModerno
+                            runResult={runResultToShow}
+                            brandName={runResultToShow.brandName}
+                            trendData={diagnostic.trendData}
+                            runResultChatGPT={tieneGemini ? runResult : undefined}
+                            runResultGemini={tieneGemini ? runResultGemini : undefined}
+                            satelliteBlock={
+                              <>
+                                {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
+                                {satelliteModule && (
+                                  <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
+                                )}
+                              </>
+                            }
+                          />
+                        ) : (
+                          <ReporteCorridas
+                            runResult={runResultToShow}
+                            brandName={runResultToShow.brandName}
+                            trendData={diagnostic.trendData}
+                          />
+                        ))}
                     </div>
                   ) : (
                     <ReporteFreemium runResult={runResult} />
@@ -801,6 +810,14 @@ function VerResultadoContent() {
 
                 {isCompleted && (diagnostic.shareSlug || (diagnostic.showFullReport && diagnostic.id)) && (
                   <div className="space-y-4 pt-6 mt-6 border-t border-slate-200/80">
+                    {!legacyView && (
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+                          7
+                        </span>
+                        <p className="text-xl font-semibold text-slate-900">Compartir e invitar</p>
+                      </div>
+                    )}
                     {diagnostic.shareSlug && (
                       <div className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/60 p-5 shadow-md shadow-indigo-950/[0.06] ring-1 ring-indigo-100/80">
                         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -884,25 +901,35 @@ function VerResultadoContent() {
                   </div>
                 )}
 
-                <div className="pt-6 mt-6 border-t rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
-                  <p className="text-sm font-medium text-foreground mb-2">
-                    ¿Querés más corridas y reportes completos?
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Elegí un plan para habilitar análisis y reportes completos.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <Button asChild className="bg-primary-600 hover:bg-primary-700">
-                      <Link href="/planes">
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Ver planes
-                      </Link>
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <Link href="/diagnostico/crear">
-                        Otro diagnóstico
-                      </Link>
-                    </Button>
+                <div className="pt-6 mt-6 border-t border-slate-200/80">
+                  {!legacyView && (
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+                        8
+                      </span>
+                      <p className="text-xl font-semibold text-slate-900">CTA comercial</p>
+                    </div>
+                  )}
+                  <div className="rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
+                    <p className="text-sm font-medium text-foreground mb-2">
+                      ¿Querés más corridas y reportes completos?
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Elegí un plan para habilitar análisis y reportes completos.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <Button asChild className="bg-primary-600 hover:bg-primary-700">
+                        <Link href="/planes">
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Ver planes
+                        </Link>
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link href="/diagnostico/crear">
+                          Otro diagnóstico
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Fragment>
