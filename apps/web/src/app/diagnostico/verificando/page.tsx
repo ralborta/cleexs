@@ -7,6 +7,7 @@ import { Check, Mail, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -43,6 +44,15 @@ function VerificandoContent() {
   /** Al entrar a la página el usuario debe verificar antes de usar el correo. */
   const [captchaPopupOpen, setCaptchaPopupOpen] = useState(true);
   const emailFormRef = useRef<HTMLFormElement>(null);
+
+  const heroImages = ['/verificando-hero.png', '/verificando-hero-2.png'];
+  const [heroIdx, setHeroIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHeroIdx((i) => (i + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [heroImages.length]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -241,14 +251,20 @@ function VerificandoContent() {
 
           {/* Derecha: correo centrado en el eje vertical y horizontal del área disponible */}
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl py-4 lg:py-0 lg:pl-8 lg:border-l lg:border-slate-200/80">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat opacity-80"
-              style={{
-                backgroundImage: "url('/verificando-hero.png')",
-                backgroundSize: '70% auto',
-              }}
-            />
+            {heroImages.map((src, i) => (
+              <div
+                key={src}
+                aria-hidden
+                className={cn(
+                  'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
+                  heroIdx === i ? 'opacity-80' : 'opacity-0'
+                )}
+                style={{
+                  backgroundImage: `url('${src}')`,
+                  backgroundSize: '70% auto',
+                }}
+              />
+            ))}
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/35 via-white/15 to-white/35"
