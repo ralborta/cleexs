@@ -556,7 +556,12 @@ export function ReporteCorridas({
 
               {summaryTab === 'score' ? (
                 <div className="flex flex-1 flex-col justify-center">
-                  <p className="text-2xl font-bold tabular-nums text-violet-700">{displayScore}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 ring-1 ring-violet-200">
+                      <Sparkle className="h-4 w-4 fill-violet-600 text-violet-600" aria-hidden />
+                    </span>
+                    <p className="text-2xl font-bold tabular-nums text-violet-700">{displayScore}</p>
+                  </div>
                   <p className="mt-2 text-xs leading-relaxed text-slate-600">{metaLine}</p>
                 </div>
               ) : (
