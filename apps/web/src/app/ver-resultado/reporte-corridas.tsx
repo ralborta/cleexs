@@ -624,29 +624,63 @@ export function ReporteCorridas({
             <div className="flex flex-col items-center justify-center border-t border-slate-100 bg-white px-3 py-4 lg:border-t-0">
               <GaugeSemicircleMaqueta value={cleexsScore} gradientId={`g-${gaugeGradientId}`} />
             </div>
-            <div className="border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4 lg:border-t-0">
-              <p className="mb-1.5 text-xs font-semibold text-slate-800">Tendencia</p>
-              <div className="h-[118px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} width={32} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
-                      formatter={(v: number) => [Math.round(v), 'Score']}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="score"
-                      stroke="#7c3aed"
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: '#7c3aed', strokeWidth: 1, stroke: '#fff' }}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+            <div className="border-t border-slate-100 bg-gradient-to-br from-slate-50/80 via-white to-violet-50/30 p-3 sm:p-4 lg:border-t-0">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold text-slate-800">Desempeño por intención</p>
+                  <p className="text-[10px] text-slate-500">% Top 3 · tu marca vs líder</p>
+                </div>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-violet-100 ring-1 ring-violet-200">
+                  <Target className="h-3.5 w-3.5 text-violet-600" aria-hidden />
+                </span>
               </div>
+              {intentionChartRows.length === 0 ? (
+                <p className="text-[11px] text-slate-500">Sin datos suficientes por intención.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {intentionChartRows.slice(0, 4).map((row) => {
+                    const brandPct = Math.max(0, Math.min(100, row.tuMarca));
+                    const leaderPct = Math.max(0, Math.min(100, row.lider));
+                    const leads = brandPct >= leaderPct;
+                    return (
+                      <li key={row.intention}>
+                        <div className="mb-0.5 flex items-center justify-between gap-2">
+                          <span className="truncate text-[11px] font-medium text-slate-700">{row.intention}</span>
+                          <span className="flex items-baseline gap-1 tabular-nums">
+                            <span className="text-[11px] font-bold text-violet-700">{brandPct}%</span>
+                            <span className="text-[9px] text-slate-400">· líder {leaderPct}%</span>
+                          </span>
+                        </div>
+                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-200/60">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-[width] duration-700"
+                            style={{ width: `${brandPct}%` }}
+                          />
+                          {leaderPct > 0 && (
+                            <div
+                              className="absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-sm bg-slate-700/70 ring-1 ring-white"
+                              style={{ left: `calc(${leaderPct}% - 1px)` }}
+                              title={`Líder: ${leaderPct}%`}
+                            />
+                          )}
+                        </div>
+                        <p
+                          className={cn(
+                            'mt-0.5 text-[9.5px] font-medium',
+                            leads ? 'text-emerald-600' : 'text-slate-500'
+                          )}
+                        >
+                          {leads
+                            ? brandPct === leaderPct
+                              ? 'Empatás con el líder'
+                              : `Superás al líder por ${brandPct - leaderPct} pts`
+                            : `${leaderPct - brandPct} pts por detrás del líder`}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
         </div>
