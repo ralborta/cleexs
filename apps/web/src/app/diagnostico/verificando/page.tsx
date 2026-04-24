@@ -243,12 +243,15 @@ function VerificandoContent() {
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl py-4 lg:py-0 lg:pl-8 lg:border-l lg:border-slate-200/80">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-30"
-              style={{ backgroundImage: "url('/verificando-hero.png')" }}
+              className="pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat opacity-80"
+              style={{
+                backgroundImage: "url('/verificando-hero.png')",
+                backgroundSize: '70% auto',
+              }}
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/70 via-white/55 to-white/80"
+              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/35 via-white/15 to-white/35"
             />
             <div className="relative z-10 w-full max-w-sm">
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
