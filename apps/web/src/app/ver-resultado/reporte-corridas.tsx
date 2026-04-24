@@ -11,7 +11,7 @@ import {
   Gauge,
   LineChart as LineChartIcon,
   Medal,
-  Star,
+  Sparkle,
   Tag,
   Target,
   TrendingUp,
@@ -530,7 +530,13 @@ export function ReporteCorridas({
                       : 'text-slate-500 hover:text-violet-700'
                   )}
                 >
-                  <Star className={cn('h-3 w-3', summaryTab === 'score' ? 'fill-white text-white' : 'text-violet-500')} aria-hidden />
+                  <Sparkle
+                    className={cn(
+                      'h-3 w-3',
+                      summaryTab === 'score' ? 'fill-white text-white' : 'fill-violet-500 text-violet-500'
+                    )}
+                    aria-hidden
+                  />
                   Cleexs Score
                 </button>
                 <button
