@@ -445,6 +445,49 @@ export function ReporteCorridas({
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
   }));
 
+  const intentionLabelOf = (category: string) => {
+    const key = normalizeIntentionKey(category);
+    return (key ? INTENTION_LABELS[key] : undefined) ?? category;
+  };
+
+  const promptLabel = (p: PublicDiagnosticPromptResult) => {
+    const raw = (p.promptText ?? '').trim();
+    if (raw) return raw.length > 110 ? `${raw.slice(0, 110).trim()}…` : raw;
+    return `Prompt de ${intentionLabelOf(p.category)}`;
+  };
+
+  const promptBrandSignals = results.map((p) => {
+    const brandTop3 = p.top3Json?.find((e) => isBrandEntry(e.name, brandName, brandAliases));
+    const mentioned = isBrandMentioned(p.responseText ?? '', brandName, brandAliases);
+    const leaderInTop3 = leaderName
+      ? p.top3Json?.find((e) => normalizeName(e.name) === normalizeName(leaderName))
+      : undefined;
+    let strength = 0;
+    if (brandTop3?.position === 1) strength = 3;
+    else if (brandTop3?.position === 2) strength = 2;
+    else if (brandTop3?.position === 3) strength = 1;
+    else if (mentioned) strength = 0.5;
+    return {
+      prompt: p,
+      label: promptLabel(p),
+      category: intentionLabelOf(p.category),
+      brandPosition: brandTop3?.position ?? null,
+      mentioned,
+      strength,
+      leaderName: leaderInTop3?.name,
+      leaderPosition: leaderInTop3?.position,
+    };
+  });
+
+  const winnerPrompts = [...promptBrandSignals]
+    .filter((s) => s.strength > 0)
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, 3);
+
+  const missingPrompts = [...promptBrandSignals]
+    .filter((s) => s.strength === 0)
+    .slice(0, 3);
+
   const barHeight = Math.max(150, topCompetitors.length * 32);
 
   const metaLine =
@@ -989,90 +1032,107 @@ export function ReporteCorridas({
           <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
               <div>
-                <p className="text-sm font-bold text-slate-900">Podio por intención</p>
-                <p className="mt-0.5 text-[11px] text-slate-500">Top 3 marcas en cada intención de búsqueda</p>
+                <p className="text-sm font-bold text-slate-900">Prompts destacados</p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  Dónde capitalizás y dónde atacar
+                </p>
               </div>
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 ring-1 ring-amber-100">
-                <Trophy className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 ring-1 ring-emerald-100">
+                <Target className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
               </span>
             </div>
-            {intentionPodiums.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-500">
-                Sin datos suficientes por intención.
-              </p>
-            ) : (
-              <ul className="mt-2.5 space-y-2">
-                {intentionPodiums.map((item) => {
-                  const medalStyles = [
-                    'bg-amber-100 text-amber-700 ring-amber-200',
-                    'bg-slate-100 text-slate-600 ring-slate-200',
-                    'bg-orange-100 text-orange-700 ring-orange-200',
-                  ];
-                  return (
-                    <li
-                      key={item.key}
-                      className="rounded-lg border border-slate-100 bg-gradient-to-br from-slate-50/60 via-white to-white p-2.5"
-                    >
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                          {item.label}
-                        </p>
-                        {!item.brandInPodium && item.brandEntry ? (
-                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600">
-                            Tu marca: {item.brandEntry.pct}%
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {item.podium.map((p, idx) => (
-                          <div
-                            key={`${item.key}-${p.name}-${idx}`}
+
+            <div className="mt-2.5 space-y-3">
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 ring-1 ring-emerald-200">
+                    <TrendingUp className="h-2.5 w-2.5 text-emerald-700" aria-hidden />
+                  </span>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                    Ganadores ({winnerPrompts.length})
+                  </p>
+                </div>
+                {winnerPrompts.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-slate-200 bg-slate-50/40 px-2 py-2 text-[11px] text-slate-500">
+                    Todavía no entraste al Top 3 en ningún prompt.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {winnerPrompts.map((w, idx) => {
+                      const badge =
+                        w.brandPosition === 1
+                          ? { text: '#1', cls: 'bg-amber-100 text-amber-700 ring-amber-200' }
+                          : w.brandPosition === 2
+                            ? { text: '#2', cls: 'bg-slate-100 text-slate-700 ring-slate-200' }
+                            : w.brandPosition === 3
+                              ? { text: '#3', cls: 'bg-orange-100 text-orange-700 ring-orange-200' }
+                              : { text: 'Menc.', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
+                      return (
+                        <li
+                          key={`win-${idx}`}
+                          className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50/40 px-2 py-1.5"
+                        >
+                          <span
                             className={cn(
-                              'relative rounded-md border px-1.5 py-1.5',
-                              p.isBrand
-                                ? 'border-violet-200 bg-violet-50/80 ring-1 ring-violet-200'
-                                : 'border-slate-200/70 bg-white'
+                              'mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[9.5px] font-bold tabular-nums ring-1',
+                              badge.cls
                             )}
-                            title={`${p.name}: ${p.pct}%`}
                           >
-                            <div
-                              className={cn(
-                                'mb-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold tabular-nums ring-1',
-                                medalStyles[idx] ?? 'bg-slate-50 text-slate-500 ring-slate-200'
-                              )}
-                            >
-                              {idx + 1}
-                            </div>
-                            <p
-                              className={cn(
-                                'truncate text-[10.5px] font-semibold leading-tight',
-                                p.isBrand ? 'text-violet-700' : 'text-slate-700'
-                              )}
-                            >
-                              {p.isBrand ? 'Tu marca' : p.name}
+                            {badge.text}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-[11.5px] leading-snug text-slate-800">
+                              {w.label}
                             </p>
-                            <p
-                              className={cn(
-                                'mt-0.5 text-[11px] font-bold tabular-nums',
-                                p.isBrand ? 'text-violet-700' : 'text-slate-800'
-                              )}
-                            >
-                              {p.pct}%
+                            <p className="mt-0.5 text-[10px] font-medium text-slate-500">
+                              {w.category}
                             </p>
                           </div>
-                        ))}
-                        {Array.from({ length: Math.max(0, 3 - item.podium.length) }).map((_, i) => (
-                          <div
-                            key={`empty-${item.key}-${i}`}
-                            className="rounded-md border border-dashed border-slate-200 bg-slate-50/40"
-                          />
-                        ))}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-100 ring-1 ring-rose-200">
+                    <Target className="h-2.5 w-2.5 text-rose-700" aria-hidden />
+                  </span>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">
+                    Ausencias ({missingPrompts.length})
+                  </p>
+                </div>
+                {missingPrompts.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-slate-200 bg-slate-50/40 px-2 py-2 text-[11px] text-slate-500">
+                    Aparecés en todos los prompts analizados.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {missingPrompts.map((m, idx) => (
+                      <li
+                        key={`miss-${idx}`}
+                        className="flex items-start gap-2 rounded-lg border border-rose-100 bg-rose-50/40 px-2 py-1.5"
+                      >
+                        <span className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full bg-rose-100 px-1.5 py-0.5 text-[9.5px] font-bold text-rose-700 ring-1 ring-rose-200">
+                          —
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-[11.5px] leading-snug text-slate-800">
+                            {m.label}
+                          </p>
+                          <p className="mt-0.5 text-[10px] font-medium text-slate-500">
+                            {m.category}
+                            {m.leaderName ? ` · lidera ${m.leaderName}` : ''}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>
