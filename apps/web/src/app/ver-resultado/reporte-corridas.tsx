@@ -991,42 +991,83 @@ export function ReporteCorridas({
         {sectionHeading(3, 'Comparativa principal')}
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
-            <p className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900">Tu marca vs competidores</p>
-            <div className="pt-2">
-              {topCompetitors.length > 0 ? (
-                <ResponsiveContainer width="100%" height={barHeight}>
-                  <BarChart
-                    data={topCompetitors}
-                    layout="vertical"
-                    margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
-                    barCategoryGap="18%"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} unit="%" />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={88}
-                      tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(124, 58, 237, 0.06)' }}
-                      contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }}
-                      formatter={(v: number) => [`${Number(v).toFixed(1)}%`, '% en Top 3']}
-                    />
-                    <Bar dataKey="share" radius={[0, 6, 6, 0]} maxBarSize={20}>
-                      {topCompetitors.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.isBrand ? '#2563eb' : '#94a3b8'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="py-10 text-center text-sm text-slate-500">Sin datos comparativos.</p>
-              )}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+              <div>
+                <p className="text-sm font-bold text-slate-900">Tu marca vs competidores</p>
+                <p className="mt-0.5 text-[11px] text-slate-500">% de aparición en Top 3</p>
+              </div>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 ring-1 ring-indigo-100">
+                <Medal className="h-3.5 w-3.5 text-indigo-700" aria-hidden />
+              </span>
             </div>
+            {topCompetitors.length === 0 ? (
+              <p className="py-10 text-center text-sm text-slate-500">Sin datos comparativos.</p>
+            ) : (
+              (() => {
+                const maxShare = Math.max(...topCompetitors.map((c) => c.share), 1);
+                return (
+                  <ul className="mt-3 space-y-3">
+                    {topCompetitors.map((c, idx) => {
+                      const pct = (c.share / maxShare) * 100;
+                      const rankStyles = [
+                        'bg-amber-100 text-amber-700 ring-amber-200',
+                        'bg-slate-100 text-slate-700 ring-slate-200',
+                        'bg-orange-100 text-orange-700 ring-orange-200',
+                      ];
+                      return (
+                        <li key={`comp-${idx}`}>
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span
+                                className={cn(
+                                  'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums ring-1',
+                                  rankStyles[idx] ?? 'bg-slate-50 text-slate-500 ring-slate-200'
+                                )}
+                              >
+                                {idx + 1}
+                              </span>
+                              <span
+                                className={cn(
+                                  'truncate text-xs font-semibold',
+                                  c.isBrand ? 'text-indigo-700' : 'text-slate-700'
+                                )}
+                                title={c.name}
+                              >
+                                {c.name}
+                              </span>
+                              {c.isBrand && (
+                                <span className="rounded-full bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-700 ring-1 ring-indigo-100">
+                                  Tu marca
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className={cn(
+                                'shrink-0 text-sm font-bold tabular-nums',
+                                c.isBrand ? 'text-indigo-700' : 'text-slate-800'
+                              )}
+                            >
+                              {c.share.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-[width] duration-700',
+                                c.isBrand
+                                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500'
+                                  : 'bg-gradient-to-r from-slate-400 to-slate-300'
+                              )}
+                              style={{ width: `${Math.max(4, pct)}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()
+            )}
           </div>
 
           {(() => {
@@ -1036,10 +1077,8 @@ export function ReporteCorridas({
                 label: 'Prompts analizados',
                 count: totalPrompts,
                 pct: totalPrompts > 0 ? 100 : 0,
-                color: '#8b5cf6',
-                bg: 'from-violet-500 to-violet-600',
-                ring: 'ring-violet-200',
-                chipBg: 'bg-violet-50 text-violet-700',
+                bg: 'from-slate-500 to-slate-600',
+                ring: 'ring-slate-300/60',
                 hint: 'Base del análisis',
               },
               {
@@ -1047,10 +1086,8 @@ export function ReporteCorridas({
                 label: 'Menciones de marca',
                 count: mentionCount,
                 pct: mentionRate,
-                color: '#a855f7',
-                bg: 'from-fuchsia-500 to-fuchsia-600',
-                ring: 'ring-fuchsia-200',
-                chipBg: 'bg-fuchsia-50 text-fuchsia-700',
+                bg: 'from-slate-600 to-slate-700',
+                ring: 'ring-slate-400/50',
                 hint: 'La IA te reconoce',
               },
               {
@@ -1058,10 +1095,8 @@ export function ReporteCorridas({
                 label: 'Aparición en Top 3',
                 count: top3Count,
                 pct: top3Rate,
-                color: '#ec4899',
-                bg: 'from-pink-500 to-pink-600',
-                ring: 'ring-pink-200',
-                chipBg: 'bg-pink-50 text-pink-700',
+                bg: 'from-indigo-700 to-indigo-800',
+                ring: 'ring-indigo-300/60',
                 hint: 'La IA te recomienda',
               },
               {
@@ -1069,10 +1104,8 @@ export function ReporteCorridas({
                 label: 'Posición #1',
                 count: top1Count,
                 pct: top1Rate,
-                color: '#f59e0b',
-                bg: 'from-amber-500 to-orange-500',
-                ring: 'ring-amber-200',
-                chipBg: 'bg-amber-50 text-amber-700',
+                bg: 'from-indigo-900 to-slate-900',
+                ring: 'ring-indigo-400/50',
                 hint: 'Primera recomendación',
               },
             ];
@@ -1087,8 +1120,8 @@ export function ReporteCorridas({
                       De {totalPrompts} prompts hasta la recomendación #1
                     </p>
                   </div>
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-violet-50 ring-1 ring-violet-100">
-                    <TrendingUp className="h-3.5 w-3.5 text-violet-600" aria-hidden />
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 ring-1 ring-slate-200">
+                    <TrendingUp className="h-3.5 w-3.5 text-slate-700" aria-hidden />
                   </span>
                 </div>
 
