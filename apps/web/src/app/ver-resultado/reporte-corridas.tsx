@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type {
   PublicDiagnosticRunResult,
   PublicDiagnosticPromptResult,
@@ -15,6 +15,7 @@ import {
   Tag,
   Target,
   TrendingUp,
+  Trophy,
   Users,
 } from 'lucide-react';
 import {
@@ -141,47 +142,130 @@ function sectionHeading(num: number, title: string, subtitle?: string) {
   );
 }
 
-/** Semicírculo 0–100 con arco de fondo rojo→amarillo→verde (maqueta). */
+/** Velocímetro 0–100 tipo dashboard con zonas de color, ticks y aguja. */
 function GaugeSemicircleMaqueta({ value, gradientId }: { value: number; gradientId: string }) {
-  const size = 148;
+  const size = 220;
+  const height = 150;
+  const cx = size / 2;
+  const cy = height - 18;
+  const rOuter = size / 2 - 10;
+  const rInner = rOuter - 18;
+  const rTick = rOuter + 2;
+  const rTickInnerMajor = rOuter - 22;
+  const rTickInnerMinor = rOuter - 14;
+  const rLabel = rOuter - 32;
+  const rNeedle = rInner - 2;
+
   const v = Math.min(100, Math.max(0, value));
-  const r = size / 2 - 10;
-  const stroke = 10;
-  const circumference = Math.PI * r;
-  const offset = circumference - (v / 100) * circumference;
-  const strokeColor = v >= 70 ? '#22c55e' : v >= 45 ? '#eab308' : '#ef4444';
+  const angleFor = (val: number) => Math.PI * (1 - val / 100);
+  const polar = (r: number, ang: number) => ({ x: cx + r * Math.cos(ang), y: cy - r * Math.sin(ang) });
+
+  const arc = (r: number, from: number, to: number) => {
+    const p1 = polar(r, angleFor(from));
+    const p2 = polar(r, angleFor(to));
+    const large = to - from > 50 ? 1 : 0;
+    return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y}`;
+  };
+
+  const zoneArc = (from: number, to: number, color: string, opacity = 1) => {
+    const outer1 = polar(rOuter, angleFor(from));
+    const outer2 = polar(rOuter, angleFor(to));
+    const inner2 = polar(rInner, angleFor(to));
+    const inner1 = polar(rInner, angleFor(from));
+    const large = to - from > 50 ? 1 : 0;
+    const d = `M ${outer1.x} ${outer1.y} A ${rOuter} ${rOuter} 0 ${large} 1 ${outer2.x} ${outer2.y} L ${inner2.x} ${inner2.y} A ${rInner} ${rInner} 0 ${large} 0 ${inner1.x} ${inner1.y} Z`;
+    return <path d={d} fill={color} opacity={opacity} />;
+  };
+
+  const needleAngle = angleFor(v);
+  const needleTip = polar(rNeedle, needleAngle);
+  const needleBaseL = polar(8, needleAngle - Math.PI / 2);
+  const needleBaseR = polar(8, needleAngle + Math.PI / 2);
+
+  const majorTicks = [0, 20, 40, 60, 80, 100];
+  const minorTicks = Array.from({ length: 21 }, (_, i) => i * 5).filter((n) => !majorTicks.includes(n));
+
+  const strokeColor = v >= 70 ? '#16a34a' : v >= 45 ? '#ca8a04' : '#dc2626';
 
   return (
-    <div className="relative flex flex-col items-center" style={{ width: size, height: size / 2 + 40 }}>
-      <svg width={size} height={size / 2 + 24} viewBox={`0 0 ${size} ${size / 2 + 24}`} className="overflow-visible">
+    <div className="relative flex flex-col items-center" style={{ width: size }}>
+      <svg
+        width={size}
+        height={height + 18}
+        viewBox={`0 0 ${size} ${height + 18}`}
+        className="overflow-visible"
+      >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#ef4444" />
-            <stop offset="42%" stopColor="#eab308" />
-            <stop offset="72%" stopColor="#22c55e" />
+            <stop offset="50%" stopColor="#f59e0b" />
             <stop offset="100%" stopColor="#22c55e" />
           </linearGradient>
+          <radialGradient id={`${gradientId}-hub`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#1f2937" />
+            <stop offset="100%" stopColor="#0f172a" />
+          </radialGradient>
         </defs>
+
+        {zoneArc(0, 45, '#fecaca', 0.85)}
+        {zoneArc(45, 70, '#fde68a', 0.85)}
+        {zoneArc(70, 100, '#bbf7d0', 0.9)}
+
+        <path d={arc(rOuter, 0, 100)} fill="none" stroke="#e2e8f0" strokeWidth={1.5} />
+        <path d={arc(rInner, 0, 100)} fill="none" stroke="#e2e8f0" strokeWidth={1} />
+
+        {minorTicks.map((t) => {
+          const a = angleFor(t);
+          const p1 = polar(rTick, a);
+          const p2 = polar(rTickInnerMinor, a);
+          return (
+            <line
+              key={`minor-${t}`}
+              x1={p1.x}
+              y1={p1.y}
+              x2={p2.x}
+              y2={p2.y}
+              stroke="#94a3b8"
+              strokeWidth={1}
+            />
+          );
+        })}
+        {majorTicks.map((t) => {
+          const a = angleFor(t);
+          const p1 = polar(rTick, a);
+          const p2 = polar(rTickInnerMajor, a);
+          const pl = polar(rLabel, a);
+          return (
+            <g key={`major-${t}`}>
+              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#475569" strokeWidth={1.8} />
+              <text
+                x={pl.x}
+                y={pl.y + 3}
+                fontSize={9}
+                textAnchor="middle"
+                fill="#64748b"
+                fontFamily="ui-sans-serif, system-ui"
+                fontWeight={600}
+              >
+                {t}
+              </text>
+            </g>
+          );
+        })}
+
         <path
-          d={`M 14 ${size / 2} A ${r} ${r} 0 0 1 ${size - 14} ${size / 2}`}
-          fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          opacity={0.22}
-        />
-        <path
-          d={`M 14 ${size / 2} A ${r} ${r} 0 0 1 ${size - 14} ${size / 2}`}
-          fill="none"
+          d={`M ${needleBaseL.x} ${needleBaseL.y} L ${needleTip.x} ${needleTip.y} L ${needleBaseR.x} ${needleBaseR.y} Z`}
+          fill={strokeColor}
           stroke={strokeColor}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          strokeWidth={1}
+          strokeLinejoin="round"
           className="transition-all duration-700"
+          style={{ filter: 'drop-shadow(0 1px 1.5px rgba(15,23,42,0.25))' }}
         />
+        <circle cx={cx} cy={cy} r={9} fill={`url(#${gradientId}-hub)`} />
+        <circle cx={cx} cy={cy} r={3} fill="#f8fafc" />
       </svg>
-      <div className="absolute bottom-1 left-1/2 w-full -translate-x-1/2 text-center">
+      <div className="mt-1 text-center">
         <p className="text-2xl font-bold tabular-nums leading-none text-slate-900">{Math.round(v)}</p>
         <p className="mt-1 text-[11px] font-medium text-slate-500">Indicador 0-100 de recomendación en IA</p>
       </div>
@@ -222,6 +306,7 @@ export function ReporteCorridas({
   trendData?: PublicDiagnosticTrendPoint[];
 }) {
   const gaugeGradientId = useId().replace(/:/g, '');
+  const [summaryTab, setSummaryTab] = useState<'score' | 'competidores'>('score');
   const results = runResult.promptResults || [];
   const brandAliases = runResult.brandAliases || [];
   const totalPrompts = results.length;
@@ -433,13 +518,97 @@ export function ReporteCorridas({
         {sectionHeading(1, 'Resumen ejecutivo')}
         <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm shadow-slate-200/30 ring-1 ring-slate-100">
           <div className="grid gap-0 lg:grid-cols-3 lg:divide-x lg:divide-slate-100">
-            <div className="flex flex-col justify-center bg-gradient-to-br from-violet-50 via-white to-indigo-50/50 p-4 sm:p-5">
-              <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-violet-200/80 bg-white/90 px-2.5 py-1 shadow-sm">
-                <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-600" aria-hidden />
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">Cleexs Score</span>
+            <div className="flex flex-col bg-gradient-to-br from-violet-50 via-white to-indigo-50/50 p-4 sm:p-5">
+              <div className="mb-3 inline-flex w-fit items-center gap-1 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setSummaryTab('score')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition',
+                    summaryTab === 'score'
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-violet-700'
+                  )}
+                >
+                  <Star className={cn('h-3 w-3', summaryTab === 'score' ? 'fill-white text-white' : 'text-violet-500')} aria-hidden />
+                  Cleexs Score
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSummaryTab('competidores')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition',
+                    summaryTab === 'competidores'
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-violet-700'
+                  )}
+                >
+                  <Trophy className="h-3 w-3" aria-hidden />
+                  Competidores
+                </button>
               </div>
-              <p className="mt-3 text-2xl font-bold tabular-nums text-violet-700">{displayScore}</p>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600">{metaLine}</p>
+
+              {summaryTab === 'score' ? (
+                <div className="flex flex-1 flex-col justify-center">
+                  <p className="text-2xl font-bold tabular-nums text-violet-700">{displayScore}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-600">{metaLine}</p>
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col">
+                  <p className="mb-2 text-[11px] font-medium text-slate-500">
+                    Top {Math.min(topCompetitors.length, 5)} por % en Top 3
+                  </p>
+                  {topCompetitors.length === 0 ? (
+                    <p className="text-xs text-slate-500">Sin competidores suficientes en esta corrida.</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {topCompetitors.slice(0, 5).map((c, idx) => (
+                        <li
+                          key={`${c.name}-${idx}`}
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs',
+                            c.isBrand
+                              ? 'border-violet-200 bg-violet-50/70'
+                              : 'border-slate-200/70 bg-white/80'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums',
+                              idx === 0
+                                ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-200'
+                                : idx === 1
+                                  ? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+                                  : idx === 2
+                                    ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-200'
+                                    : 'bg-slate-50 text-slate-500 ring-1 ring-slate-200'
+                            )}
+                          >
+                            {idx + 1}
+                          </span>
+                          <span
+                            className={cn(
+                              'flex-1 truncate font-medium',
+                              c.isBrand ? 'text-violet-700' : 'text-slate-700'
+                            )}
+                            title={c.name}
+                          >
+                            {c.name}
+                          </span>
+                          <span
+                            className={cn(
+                              'tabular-nums font-semibold',
+                              c.isBrand ? 'text-violet-700' : 'text-slate-600'
+                            )}
+                          >
+                            {c.share.toFixed(1)}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex flex-col items-center justify-center border-t border-slate-100 bg-white px-3 py-4 lg:border-t-0">
               <GaugeSemicircleMaqueta value={cleexsScore} gradientId={`g-${gaugeGradientId}`} />
