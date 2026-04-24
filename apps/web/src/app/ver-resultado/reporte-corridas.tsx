@@ -1029,111 +1029,141 @@ export function ReporteCorridas({
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
-            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
-              <div>
-                <p className="text-sm font-bold text-slate-900">Prompts destacados</p>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  Dónde capitalizás y dónde atacar
-                </p>
-              </div>
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 ring-1 ring-emerald-100">
-                <Target className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
-              </span>
-            </div>
-
-            <div className="mt-2.5 space-y-3">
-              <div>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 ring-1 ring-emerald-200">
-                    <TrendingUp className="h-2.5 w-2.5 text-emerald-700" aria-hidden />
+          {(() => {
+            const stages = [
+              {
+                key: 'prompts',
+                label: 'Prompts analizados',
+                count: totalPrompts,
+                pct: totalPrompts > 0 ? 100 : 0,
+                color: '#8b5cf6',
+                bg: 'from-violet-500 to-violet-600',
+                ring: 'ring-violet-200',
+                chipBg: 'bg-violet-50 text-violet-700',
+                hint: 'Base del análisis',
+              },
+              {
+                key: 'menciones',
+                label: 'Menciones de marca',
+                count: mentionCount,
+                pct: mentionRate,
+                color: '#a855f7',
+                bg: 'from-fuchsia-500 to-fuchsia-600',
+                ring: 'ring-fuchsia-200',
+                chipBg: 'bg-fuchsia-50 text-fuchsia-700',
+                hint: 'La IA te reconoce',
+              },
+              {
+                key: 'top3',
+                label: 'Aparición en Top 3',
+                count: top3Count,
+                pct: top3Rate,
+                color: '#ec4899',
+                bg: 'from-pink-500 to-pink-600',
+                ring: 'ring-pink-200',
+                chipBg: 'bg-pink-50 text-pink-700',
+                hint: 'La IA te recomienda',
+              },
+              {
+                key: 'top1',
+                label: 'Posición #1',
+                count: top1Count,
+                pct: top1Rate,
+                color: '#f59e0b',
+                bg: 'from-amber-500 to-orange-500',
+                ring: 'ring-amber-200',
+                chipBg: 'bg-amber-50 text-amber-700',
+                hint: 'Primera recomendación',
+              },
+            ];
+            const maxWidth = 100;
+            const minWidth = 38;
+            return (
+              <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Funnel de presencia</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      De {totalPrompts} prompts hasta la recomendación #1
+                    </p>
+                  </div>
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-violet-50 ring-1 ring-violet-100">
+                    <TrendingUp className="h-3.5 w-3.5 text-violet-600" aria-hidden />
                   </span>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                    Ganadores ({winnerPrompts.length})
-                  </p>
                 </div>
-                {winnerPrompts.length === 0 ? (
-                  <p className="rounded-md border border-dashed border-slate-200 bg-slate-50/40 px-2 py-2 text-[11px] text-slate-500">
-                    Todavía no entraste al Top 3 en ningún prompt.
+
+                {totalPrompts === 0 ? (
+                  <p className="py-8 text-center text-sm text-slate-500">
+                    Sin prompts analizados en esta corrida.
                   </p>
                 ) : (
-                  <ul className="space-y-1.5">
-                    {winnerPrompts.map((w, idx) => {
-                      const badge =
-                        w.brandPosition === 1
-                          ? { text: '#1', cls: 'bg-amber-100 text-amber-700 ring-amber-200' }
-                          : w.brandPosition === 2
-                            ? { text: '#2', cls: 'bg-slate-100 text-slate-700 ring-slate-200' }
-                            : w.brandPosition === 3
-                              ? { text: '#3', cls: 'bg-orange-100 text-orange-700 ring-orange-200' }
-                              : { text: 'Menc.', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
+                  <div className="mt-3 space-y-1.5">
+                    {stages.map((s, idx) => {
+                      const pct = Math.max(0, Math.min(100, s.pct));
+                      const width = minWidth + ((maxWidth - minWidth) * pct) / 100;
+                      const prev = idx > 0 ? stages[idx - 1]! : null;
+                      const dropPts = prev ? Math.max(0, Math.round(prev.pct - s.pct)) : 0;
                       return (
-                        <li
-                          key={`win-${idx}`}
-                          className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50/40 px-2 py-1.5"
-                        >
-                          <span
-                            className={cn(
-                              'mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[9.5px] font-bold tabular-nums ring-1',
-                              badge.cls
-                            )}
-                          >
-                            {badge.text}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="line-clamp-2 text-[11.5px] leading-snug text-slate-800">
-                              {w.label}
-                            </p>
-                            <p className="mt-0.5 text-[10px] font-medium text-slate-500">
-                              {w.category}
-                            </p>
+                        <div key={s.key}>
+                          {prev && (
+                            <div className="flex items-center justify-center py-0.5">
+                              <div className="flex items-center gap-1 rounded-full bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold text-slate-500 ring-1 ring-slate-200">
+                                <ChevronDown className="h-2.5 w-2.5" aria-hidden />
+                                {dropPts > 0 ? `-${dropPts} pts` : 'se mantiene'}
+                              </div>
+                            </div>
+                          )}
+                          <div className="relative mx-auto" style={{ width: `${width}%` }}>
+                            <div
+                              className={cn(
+                                'relative flex items-center justify-between gap-2 overflow-hidden rounded-lg bg-gradient-to-r px-2.5 py-2 text-white shadow-sm ring-1',
+                                s.bg,
+                                s.ring
+                              )}
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-white/85">
+                                  {s.label}
+                                </p>
+                                <p className="text-[9px] font-medium text-white/70">{s.hint}</p>
+                              </div>
+                              <div className="flex shrink-0 items-baseline gap-1 text-right">
+                                <span className="text-base font-extrabold tabular-nums leading-none">
+                                  {s.count}
+                                </span>
+                                <span className="text-[10px] font-semibold tabular-nums text-white/80">
+                                  · {pct}%
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </li>
+                        </div>
                       );
                     })}
-                  </ul>
-                )}
-              </div>
 
-              <div>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-100 ring-1 ring-rose-200">
-                    <Target className="h-2.5 w-2.5 text-rose-700" aria-hidden />
-                  </span>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">
-                    Ausencias ({missingPrompts.length})
-                  </p>
-                </div>
-                {missingPrompts.length === 0 ? (
-                  <p className="rounded-md border border-dashed border-slate-200 bg-slate-50/40 px-2 py-2 text-[11px] text-slate-500">
-                    Aparecés en todos los prompts analizados.
-                  </p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {missingPrompts.map((m, idx) => (
-                      <li
-                        key={`miss-${idx}`}
-                        className="flex items-start gap-2 rounded-lg border border-rose-100 bg-rose-50/40 px-2 py-1.5"
-                      >
-                        <span className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full bg-rose-100 px-1.5 py-0.5 text-[9.5px] font-bold text-rose-700 ring-1 ring-rose-200">
-                          —
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-[11.5px] leading-snug text-slate-800">
-                            {m.label}
-                          </p>
-                          <p className="mt-0.5 text-[10px] font-medium text-slate-500">
-                            {m.category}
-                            {m.leaderName ? ` · lidera ${m.leaderName}` : ''}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                    <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-2.5">
+                      <div className="rounded-md bg-slate-50/80 px-2 py-1.5 ring-1 ring-slate-100">
+                        <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-500">
+                          Conv. Menciones → Top 3
+                        </p>
+                        <p className="mt-0.5 text-sm font-bold tabular-nums text-slate-900">
+                          {mentionCount > 0 ? Math.round((top3Count / mentionCount) * 100) : 0}%
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-slate-50/80 px-2 py-1.5 ring-1 ring-slate-100">
+                        <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-500">
+                          Conv. Top 3 → #1
+                        </p>
+                        <p className="mt-0.5 text-sm font-bold tabular-nums text-slate-900">
+                          {top3Count > 0 ? Math.round((top1Count / top3Count) * 100) : 0}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </section>
 
