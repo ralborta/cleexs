@@ -412,6 +412,33 @@ export function ReporteCorridas({
     };
   });
 
+  const intentionPodiums = intentionKeysOrdered.map((intKey) => {
+    const row = intentionMatrixPct[intKey]!;
+    const ranked = Object.entries(row)
+      .map(([name, pct]) => ({
+        name,
+        isBrand: isBrandEntry(name, brandName, brandAliases),
+        pct: Math.round(pct),
+      }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 3);
+    const brandEntry = Object.entries(row)
+      .map(([name, pct]) => ({
+        name,
+        isBrand: isBrandEntry(name, brandName, brandAliases),
+        pct: Math.round(pct),
+      }))
+      .find((e) => e.isBrand);
+    const brandInPodium = ranked.some((e) => e.isBrand);
+    return {
+      key: intKey,
+      label: INTENTION_LABELS[intKey] ?? intKey,
+      podium: ranked,
+      brandEntry: brandEntry ?? null,
+      brandInPodium,
+    };
+  });
+
   const topCompetitors = comparisonSummary.slice(0, 5).map((row) => ({
     name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
     share: Number(row.share.toFixed(1)),
@@ -471,39 +498,246 @@ export function ReporteCorridas({
   ];
 
   const leaderDisplay = leaderRow?.name ?? 'el líder';
-  const actions: Array<{ title: string; desc: string; Icon: typeof LineChartIcon }> = [];
-  if (!brandRow || !leaderRow) {
+
+  type ActionTone = 'critical' | 'warning' | 'opportunity' | 'positive';
+  type ActionIcon = typeof LineChartIcon;
+  type ActionCandidate = {
+    id: string;
+    title: string;
+    desc: string;
+    metric: string;
+    Icon: ActionIcon;
+    tone: ActionTone;
+    priority: number;
+  };
+
+  const actions: ActionCandidate[] = [];
+
+  if (!brandRow || !leaderRow || totalPrompts === 0) {
     actions.push(
       {
-        title: 'Completar datos',
-        desc: 'Ejecutá más prompts o verificá que el Top 3 sea parseable para ver ranking y acciones.',
+        id: 'sin-datos',
+        title: 'Completar el diagnóstico',
+        desc:
+          totalPrompts === 0
+            ? 'No se registraron resultados de prompts en esta corrida. Volvé a ejecutar el diagnóstico para recibir acciones personalizadas.'
+            : 'Faltan señales para calcular ranking y brechas. Aumentá la cantidad de prompts o asegurate de que el Top 3 sea parseable.',
+        metric: `${totalPrompts} prompts ejecutados`,
         Icon: LineChartIcon,
+        tone: 'warning',
+        priority: 100,
       },
-      { title: 'Revisar competidores', desc: 'Definí competidores claros en el diagnóstico para una comparativa fiel.', Icon: Tag },
-      { title: 'Contactar soporte', desc: 'Si el informe no carga bien, podemos revisar el formato de respuestas del modelo.', Icon: Users }
+      {
+        id: 'definir-competidores',
+        title: 'Definir competidores claros',
+        desc:
+          'Configurá una lista de competidores concreta en el diagnóstico para obtener una comparativa y ranking confiables.',
+        metric: `${comparisonSummary.length} marcas detectadas`,
+        Icon: Tag,
+        tone: 'warning',
+        priority: 80,
+      },
+      {
+        id: 'revisar-formato',
+        title: 'Revisar el formato de respuesta',
+        desc:
+          'Solo el Top 3 parseable habilita métricas de ranking. Ajustá el prompt del diagnóstico para obtener listas consistentes.',
+        metric: `${formatConfidence}% de respuestas parseables`,
+        Icon: Gauge,
+        tone: 'warning',
+        priority: 60,
+      }
     );
   } else {
-    actions.push({
-      title: rank === 1 ? 'Mantener liderazgo' : 'Mejorar posición #1',
-      desc:
-        rank === 1
-          ? 'Sostené la visibilidad que te ubica primero frente a la competencia en IA.'
-          : 'Aumentá tu visibilidad para alcanzar el liderazgo en las recomendaciones de IA.',
-      Icon: LineChartIcon,
-    });
-    actions.push({
-      title: weakestIntention?.key === 'precio' ? 'Reforzar precio' : 'Reforzar percepción de valor',
-      desc:
-        weakestIntention?.key === 'precio'
-          ? 'Mejorá tu percepción de valor frente a la competencia en consultas sensibles al precio.'
-          : 'Trabajá señales de confianza y propuesta de valor donde la IA aún no te prioriza.',
-      Icon: Tag,
-    });
-    actions.push({
-      title: 'Reducir brecha con el líder',
-      desc: `Acortá la distancia con ${leaderDisplay} y ganá participación en el Top 3.`,
-      Icon: Users,
-    });
+    const candidates: ActionCandidate[] = [];
+
+    if (mentionRate < 40) {
+      candidates.push({
+        id: 'awareness',
+        title: 'Reforzar awareness de marca',
+        desc: `Solo el ${mentionRate}% de las respuestas te mencionan. Sumá señales de autoridad (PR digital, Wikipedia, reseñas verificadas) para que la IA te reconozca más seguido.`,
+        metric: `Menciones: ${mentionCount}/${totalPrompts}`,
+        Icon: Sparkle,
+        tone: mentionRate < 20 ? 'critical' : 'warning',
+        priority: 100 - mentionRate,
+      });
+    }
+
+    if (top3Rate < 30) {
+      candidates.push({
+        id: 'top3',
+        title: 'Entrar al Top 3 con más frecuencia',
+        desc: `Aparecés en Top 3 en el ${top3Rate}% de los prompts. Generá contenido comparativo (listados, reviews, alternativas) para las intenciones donde la IA recomienda.`,
+        metric: `Top 3: ${top3Count}/${totalPrompts}`,
+        Icon: Medal,
+        tone: top3Rate < 15 ? 'critical' : 'warning',
+        priority: 95 - top3Rate,
+      });
+    } else if (top3Rate >= 30 && top3Rate < 60) {
+      candidates.push({
+        id: 'top3-consolidar',
+        title: 'Consolidar presencia en Top 3',
+        desc: `Ya aparecés en el ${top3Rate}% de los prompts: trabajá las intenciones donde aún no lográs entrar para llegar a ≥60%.`,
+        metric: `Top 3: ${top3Count}/${totalPrompts}`,
+        Icon: Medal,
+        tone: 'opportunity',
+        priority: 70 - (top3Rate - 30),
+      });
+    }
+
+    if (!brandIsLeader && top1Rate < 10) {
+      candidates.push({
+        id: 'top1',
+        title: `Disputar la posición #1`,
+        desc: `Conseguís #1 solo en el ${top1Rate}% de los prompts. Para desbancar a ${leaderDisplay}, reforzá señales de autoridad donde la IA hoy lo prioriza.`,
+        metric: `Posición #1: ${top1Count}/${totalPrompts}`,
+        Icon: Trophy,
+        tone: top1Rate === 0 ? 'critical' : 'warning',
+        priority: 85 - top1Rate,
+      });
+    }
+
+    if (!brandIsLeader && leaderRow) {
+      const gap = Math.max(0, Math.round(leaderGapPts * 10) / 10);
+      if (gap > 0) {
+        candidates.push({
+          id: 'gap-lider',
+          title:
+            gap < 5
+              ? `Sobrepaso táctico a ${leaderDisplay}`
+              : `Cerrar brecha con ${leaderDisplay}`,
+          desc:
+            gap < 5
+              ? `Estás a solo ${gap} pts del líder en % Top 3. Refuerzos puntuales en ${weakestIntention?.label ?? 'tu intención más débil'} pueden cruzarlo en la próxima corrida.`
+              : `Hay ${gap} pts de diferencia vs ${leaderDisplay} (${leaderRow.share.toFixed(1)}% Top 3). Priorizá contenido AEO en sus intenciones ganadoras para recortar distancia.`,
+          metric: `Brecha: ${gap} pts`,
+          Icon: TrendingUp,
+          tone: gap < 5 ? 'opportunity' : gap > 15 ? 'critical' : 'warning',
+          priority: 60 + Math.min(gap, 30),
+        });
+      }
+    }
+
+    if (brandIsLeader) {
+      const runnerUp = comparisonSummary.find(
+        (c) => !isBrandEntry(c.name, brandName, brandAliases)
+      );
+      const marginPts = runnerUp && brandRow ? Math.max(0, brandRow.share - runnerUp.share) : 0;
+      candidates.push({
+        id: 'defender',
+        title: 'Defender el liderazgo',
+        desc: runnerUp
+          ? `Liderás con ${brandRow.share.toFixed(1)}% Top 3 · ${marginPts.toFixed(1)} pts sobre ${runnerUp.name}. Monitoreá trimestralmente y reforzá contenido en las intenciones donde se acerca.`
+          : `Sostené la visibilidad que te ubica primero y monitoreá ingreso de nuevos competidores.`,
+        metric: runnerUp ? `Ventaja: ${marginPts.toFixed(1)} pts` : 'Liderás la categoría',
+        Icon: Trophy,
+        tone: marginPts < 5 ? 'warning' : 'positive',
+        priority: marginPts < 5 ? 85 : 40,
+      });
+    }
+
+    if (weakestIntention && weakestIntention.score < 60) {
+      const pct = Math.round(weakestIntention.score);
+      const key = weakestIntention.key;
+      const tacticas: Record<string, string> = {
+        precio: 'Comunicá valor y costo-beneficio con comparativas claras, testimonios y casos de uso.',
+        calidad: 'Publicá reseñas verificadas, certificaciones y resultados medibles de clientes.',
+        urgencia: 'Sumá señales de disponibilidad inmediata, entrega y respuesta rápida.',
+        consideracion: 'Producí contenidos comparativos vs. alternativas para la fase de evaluación.',
+      };
+      candidates.push({
+        id: `weak-${key}`,
+        title: `Reforzar ${weakestIntention.label}`,
+        desc: `Tu peor desempeño es en ${weakestIntention.label} (${pct}%). ${tacticas[key] ?? 'Generá contenido específico que responda esa intención de búsqueda.'}`,
+        metric: `${weakestIntention.label}: ${pct}%`,
+        Icon: Target,
+        tone: pct < 30 ? 'critical' : 'warning',
+        priority: 80 - pct,
+      });
+    }
+
+    const worstVsLeader = intentionChartRows
+      .filter((r) => r.lider - r.tuMarca > 10)
+      .sort((a, b) => (b.lider - b.tuMarca) - (a.lider - a.tuMarca))[0];
+    if (worstVsLeader && !brandIsLeader) {
+      const delta = worstVsLeader.lider - worstVsLeader.tuMarca;
+      candidates.push({
+        id: `gap-${worstVsLeader.intention}`,
+        title: `Atacar "${worstVsLeader.intention}"`,
+        desc: `En ${worstVsLeader.intention} la brecha con ${leaderDisplay} es de ${delta} pts (${worstVsLeader.tuMarca}% vs ${worstVsLeader.lider}%). Es la intención de mayor upside si producís contenido específico.`,
+        metric: `Brecha intención: ${delta} pts`,
+        Icon: Target,
+        tone: delta > 25 ? 'critical' : 'warning',
+        priority: 70 + Math.min(delta, 25),
+      });
+    }
+
+    if (strongestIntention && strongestIntention.score >= 60) {
+      const pct = Math.round(strongestIntention.score);
+      candidates.push({
+        id: `strong-${strongestIntention.key}`,
+        title: `Capitalizar fuerza en ${strongestIntention.label}`,
+        desc: `Rendís ${pct}% en ${strongestIntention.label}. Producí más contenido de ese eje y extendé el mensaje a intenciones adyacentes para escalar el Cleexs Score.`,
+        metric: `${strongestIntention.label}: ${pct}%`,
+        Icon: TrendingUp,
+        tone: 'positive',
+        priority: 45 + (pct - 60) / 2,
+      });
+    }
+
+    if (formatConfidence < 60) {
+      candidates.push({
+        id: 'formato',
+        title: 'Mejorar estructura de respuestas',
+        desc: `Solo el ${formatConfidence}% del Top 3 fue parseable. Ajustá el prompt del diagnóstico para obtener listas consistentes y métricas más confiables.`,
+        metric: `Formato: ${parseableCount}/${totalPrompts}`,
+        Icon: Gauge,
+        tone: formatConfidence < 40 ? 'critical' : 'warning',
+        priority: 65 - formatConfidence,
+      });
+    }
+
+    candidates.sort((a, b) => b.priority - a.priority);
+
+    const picked: ActionCandidate[] = [];
+    const usedKinds = new Set<string>();
+    for (const c of candidates) {
+      const kind = c.id.split('-')[0] ?? c.id;
+      if (!usedKinds.has(kind) || picked.length < 2) {
+        picked.push(c);
+        usedKinds.add(kind);
+      }
+      if (picked.length === 3) break;
+    }
+
+    if (picked.length < 3) {
+      const fallbacks: ActionCandidate[] = [
+        {
+          id: 'fallback-monitoreo',
+          title: 'Monitoreo continuo',
+          desc: `Programá corridas periódicas para detectar cambios en ${leaderDisplay} y nuevos competidores.`,
+          metric: `${comparisonSummary.length} marcas en ranking`,
+          Icon: Users,
+          tone: 'opportunity',
+          priority: 20,
+        },
+        {
+          id: 'fallback-contenido',
+          title: 'Plan de contenido AEO',
+          desc: `Con Cleexs Score ${displayScore}, un plan de contenido dirigido a las intenciones clave acelera la subida del score.`,
+          metric: `Score actual: ${displayScore}`,
+          Icon: Tag,
+          tone: 'opportunity',
+          priority: 15,
+        },
+      ];
+      for (const f of fallbacks) {
+        if (picked.length >= 3) break;
+        picked.push(f);
+      }
+    }
+
+    actions.push(...picked.slice(0, 3));
   }
 
   const trendChartData =
@@ -753,48 +987,154 @@ export function ReporteCorridas({
           </div>
 
           <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
-            <p className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900">Por intención</p>
-            <p className="mt-1.5 text-[11px] text-slate-500">Tu marca (azul) vs {leaderName || 'líder'} (gris)</p>
-            <div className="h-[200px] pt-1.5">
-              {intentionChartRows.length > 0 && leaderName ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={intentionChartRows} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barGap={6}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="intention" tick={{ fontSize: 12, fill: '#475569' }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={36} unit="%" />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }} formatter={(v: number) => [`${v}%`, '']} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="tuMarca" name="Tu marca" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                    <Bar dataKey="lider" name={leaderName} fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="flex h-full items-center justify-center text-sm text-slate-500">
-                  Sin datos por intención para comparar con el líder.
-                </p>
-              )}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+              <div>
+                <p className="text-sm font-bold text-slate-900">Podio por intención</p>
+                <p className="mt-0.5 text-[11px] text-slate-500">Top 3 marcas en cada intención de búsqueda</p>
+              </div>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 ring-1 ring-amber-100">
+                <Trophy className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+              </span>
             </div>
+            {intentionPodiums.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-500">
+                Sin datos suficientes por intención.
+              </p>
+            ) : (
+              <ul className="mt-2.5 space-y-2">
+                {intentionPodiums.map((item) => {
+                  const medalStyles = [
+                    'bg-amber-100 text-amber-700 ring-amber-200',
+                    'bg-slate-100 text-slate-600 ring-slate-200',
+                    'bg-orange-100 text-orange-700 ring-orange-200',
+                  ];
+                  return (
+                    <li
+                      key={item.key}
+                      className="rounded-lg border border-slate-100 bg-gradient-to-br from-slate-50/60 via-white to-white p-2.5"
+                    >
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                          {item.label}
+                        </p>
+                        {!item.brandInPodium && item.brandEntry ? (
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600">
+                            Tu marca: {item.brandEntry.pct}%
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {item.podium.map((p, idx) => (
+                          <div
+                            key={`${item.key}-${p.name}-${idx}`}
+                            className={cn(
+                              'relative rounded-md border px-1.5 py-1.5',
+                              p.isBrand
+                                ? 'border-violet-200 bg-violet-50/80 ring-1 ring-violet-200'
+                                : 'border-slate-200/70 bg-white'
+                            )}
+                            title={`${p.name}: ${p.pct}%`}
+                          >
+                            <div
+                              className={cn(
+                                'mb-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold tabular-nums ring-1',
+                                medalStyles[idx] ?? 'bg-slate-50 text-slate-500 ring-slate-200'
+                              )}
+                            >
+                              {idx + 1}
+                            </div>
+                            <p
+                              className={cn(
+                                'truncate text-[10.5px] font-semibold leading-tight',
+                                p.isBrand ? 'text-violet-700' : 'text-slate-700'
+                              )}
+                            >
+                              {p.isBrand ? 'Tu marca' : p.name}
+                            </p>
+                            <p
+                              className={cn(
+                                'mt-0.5 text-[11px] font-bold tabular-nums',
+                                p.isBrand ? 'text-violet-700' : 'text-slate-800'
+                              )}
+                            >
+                              {p.pct}%
+                            </p>
+                          </div>
+                        ))}
+                        {Array.from({ length: Math.max(0, 3 - item.podium.length) }).map((_, i) => (
+                          <div
+                            key={`empty-${item.key}-${i}`}
+                            className="rounded-md border border-dashed border-slate-200 bg-slate-50/40"
+                          />
+                        ))}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </div>
       </section>
 
       {/* 4 Top 3 acciones */}
       <section>
-        {sectionHeading(4, 'Top 3 acciones prioritarias', 'Acciones sugeridas para mejorar tu Cleexs Score')}
+        {sectionHeading(4, 'Top 3 acciones prioritarias', 'Acciones personalizadas según los resultados de esta corrida')}
         <div className="grid gap-3 md:grid-cols-3">
           {actions.slice(0, 3).map((action, idx) => {
             const AIcon = action.Icon;
+            const toneStyles: Record<ActionTone, { badge: string; icon: string; bar: string; chip: string }> = {
+              critical: {
+                badge: 'Urgente',
+                icon: 'bg-rose-50 text-rose-600 ring-1 ring-rose-100',
+                bar: 'from-rose-500 to-red-500',
+                chip: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
+              },
+              warning: {
+                badge: 'Prioritario',
+                icon: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',
+                bar: 'from-amber-500 to-orange-500',
+                chip: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+              },
+              opportunity: {
+                badge: 'Oportunidad',
+                icon: 'bg-violet-50 text-violet-600 ring-1 ring-violet-100',
+                bar: 'from-violet-500 to-fuchsia-500',
+                chip: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+              },
+              positive: {
+                badge: 'Capitalizar',
+                icon: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100',
+                bar: 'from-emerald-500 to-teal-500',
+                chip: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+              },
+            };
+            const t = toneStyles[action.tone];
             return (
               <div
-                key={`${action.title}-${idx}`}
+                key={`${action.id}-${idx}`}
                 className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60"
               >
-                <div className="absolute right-2 top-2 text-lg font-black tabular-nums text-violet-100">{idx + 1}</div>
-                <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-                  <AIcon className="h-4 w-4" strokeWidth={2} />
+                <div className={cn('absolute inset-x-0 top-0 h-1 bg-gradient-to-r', t.bar)} />
+                <div className="absolute right-2 top-2.5 text-lg font-black tabular-nums text-slate-100">
+                  {idx + 1}
+                </div>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className={cn('inline-flex h-8 w-8 items-center justify-center rounded-lg', t.icon)}>
+                    <AIcon className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide',
+                      t.chip
+                    )}
+                  >
+                    {t.badge}
+                  </span>
                 </div>
                 <p className="pr-7 text-sm font-bold text-slate-900">{action.title}</p>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{action.desc}</p>
+                <p className="mt-2 text-[10.5px] font-semibold tabular-nums text-slate-500">{action.metric}</p>
               </div>
             );
           })}
