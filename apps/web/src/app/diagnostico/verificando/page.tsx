@@ -240,7 +240,16 @@ function VerificandoContent() {
           </div>
 
           {/* Derecha: correo centrado en el eje vertical y horizontal del área disponible */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center py-4 lg:py-0 lg:pl-8 lg:border-l lg:border-slate-200/80">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden py-4 lg:py-0 lg:pl-8 lg:border-l lg:border-slate-200/80">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat opacity-[0.18]"
+              style={{ backgroundImage: "url('/verificando-hero.png')" }}
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-white/70 via-white/50 to-white/80"
+            />
             <div className="relative w-full max-w-sm">
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
                 {emailSent ? (
