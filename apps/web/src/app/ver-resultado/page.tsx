@@ -918,7 +918,7 @@ function VerResultadoContent() {
                       <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
                         8
                       </span>
-                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">CTA comercial</p>
+                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Próximos pasos</p>
                     </div>
                   )}
                   {legacyView ? (

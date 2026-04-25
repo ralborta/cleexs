@@ -893,11 +893,11 @@ export function ReporteModerno({
         </Card>
       </div>
 
-      {/* 8️⃣ CTA COMERCIAL */}
+      {/* 8️⃣ Próximos pasos (planes / marketing) */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white text-sm font-bold">8</div>
-          <h2 className="text-xl font-bold text-slate-900">CTA comercial</h2>
+          <h2 className="text-xl font-bold text-slate-900">Próximos pasos</h2>
         </div>
         <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardContent className="p-6">
