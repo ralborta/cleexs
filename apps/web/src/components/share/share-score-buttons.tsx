@@ -2,8 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Copy, Linkedin, Mail, MessageCircle, Send } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Check, Copy, Mail } from 'lucide-react';
 import { buildPublicShareCopy, buildTeamInviteCopy } from '@/lib/share-messages';
+import { IconLinkedInBrand, IconWhatsAppBrand, IconXBrand } from '@/components/share/share-brand-icons';
+
+const shareIconClass = 'h-3 w-3';
 
 const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
 
@@ -92,31 +96,35 @@ export function ShareScoreButtons({
         type="button"
         variant="outline"
         size="sm"
-        className="gap-1.5 border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+        className="gap-1 border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
         onClick={copyLink}
       >
-        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-slate-600" />}
+        {copied ? (
+          <Check className={cn(shareIconClass, 'text-emerald-600')} />
+        ) : (
+          <Copy className={cn(shareIconClass, 'text-slate-600')} />
+        )}
         Copiar enlace
       </Button>
       <Button
         type="button"
         size="sm"
-        className="gap-1.5 border-0 bg-[#25D366] text-white shadow-sm hover:bg-[#20bd5a] hover:text-white"
+        className="gap-1 border-0 bg-[#25D366] px-2.5 text-xs text-white shadow-sm hover:bg-[#20bd5a] hover:text-white"
         asChild
       >
         <a href={links.wa} target="_blank" rel="noopener noreferrer">
-          <MessageCircle className="h-4 w-4 shrink-0" />
+          <IconWhatsAppBrand className={shareIconClass} />
           WhatsApp
         </a>
       </Button>
       <Button
         type="button"
         size="sm"
-        className="gap-1.5 border-0 bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
+        className="gap-1 border-0 bg-sky-600 px-2.5 text-xs text-white shadow-sm hover:bg-sky-700 hover:text-white"
         asChild
       >
         <a href={links.mailto}>
-          <Mail className="h-4 w-4 shrink-0" />
+          <Mail className={shareIconClass} strokeWidth={2.25} />
           Email
         </a>
       </Button>
@@ -125,22 +133,22 @@ export function ShareScoreButtons({
           <Button
             type="button"
             size="sm"
-            className="gap-1.5 border-0 bg-[#0A66C2] text-white shadow-sm hover:bg-[#095195] hover:text-white"
+            className="gap-1 border-0 bg-[#0A66C2] px-2.5 text-xs text-white shadow-sm hover:bg-[#095195] hover:text-white"
             asChild
           >
             <a href={links.linkedin} target="_blank" rel="noopener noreferrer">
-              <Linkedin className="h-4 w-4 shrink-0" />
+              <IconLinkedInBrand className={shareIconClass} />
               LinkedIn
             </a>
           </Button>
           <Button
             type="button"
             size="sm"
-            className="gap-1.5 border-0 bg-slate-900 text-white shadow-sm hover:bg-slate-800 hover:text-white"
+            className="gap-1 border-0 bg-slate-900 px-2.5 text-xs text-white shadow-sm hover:bg-slate-800 hover:text-white"
             asChild
           >
             <a href={links.x} target="_blank" rel="noopener noreferrer">
-              <Send className="h-4 w-4 shrink-0" />
+              <IconXBrand className={shareIconClass} />
               X
             </a>
           </Button>

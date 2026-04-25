@@ -37,6 +37,7 @@ import {
   Legend,
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { IconLinkedInBrand, IconWhatsAppBrand } from '@/components/share/share-brand-icons';
 import {
   Zap,
   Award,
@@ -52,7 +53,6 @@ import {
   X,
   Mail,
   Copy,
-  FileText,
   Users,
   Rocket,
 } from 'lucide-react';
@@ -867,25 +867,25 @@ export function ReporteModerno({
         </div>
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" className="gap-2">
-                <Copy className="h-4 w-4" />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" className="gap-1 px-2.5 text-xs">
+                <Copy className="h-3 w-3" />
                 Copiar enlace
               </Button>
-              <Button variant="outline" className="gap-2">
-                <FileText className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="gap-1 px-2.5 text-xs text-[#25D366] hover:text-[#20bd5a]">
+                <IconWhatsAppBrand className="h-3 w-3" />
                 WhatsApp
               </Button>
-              <Button variant="outline" className="gap-2">
-                <Mail className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="gap-1 px-2.5 text-xs">
+                <Mail className="h-3 w-3" strokeWidth={2.25} />
                 Email
               </Button>
-              <Button variant="outline" className="gap-2">
-                <Users className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="gap-1 px-2.5 text-xs text-[#0A66C2] hover:text-[#095195]">
+                <IconLinkedInBrand className="h-3 w-3" />
                 LinkedIn
               </Button>
-              <Button variant="outline" className="gap-2 ml-auto">
-                <Users className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="ml-auto gap-1 px-2.5 text-xs">
+                <Users className="h-3 w-3" />
                 Invitar a tu equipo
               </Button>
             </div>
