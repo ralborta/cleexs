@@ -88,33 +88,59 @@ export function ShareScoreButtons({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={copyLink}>
-        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="gap-1.5 border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+        onClick={copyLink}
+      >
+        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-slate-600" />}
         Copiar enlace
       </Button>
-      <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+      <Button
+        type="button"
+        size="sm"
+        className="gap-1.5 border-0 bg-[#25D366] text-white shadow-sm hover:bg-[#20bd5a] hover:text-white"
+        asChild
+      >
         <a href={links.wa} target="_blank" rel="noopener noreferrer">
-          <MessageCircle className="h-4 w-4" />
+          <MessageCircle className="h-4 w-4 shrink-0" />
           WhatsApp
         </a>
       </Button>
-      <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+      <Button
+        type="button"
+        size="sm"
+        className="gap-1.5 border-0 bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
+        asChild
+      >
         <a href={links.mailto}>
-          <Mail className="h-4 w-4" />
+          <Mail className="h-4 w-4 shrink-0" />
           Email
         </a>
       </Button>
       {showSocialNetworks && links.linkedin && links.x && (
         <>
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5 border-0 bg-[#0A66C2] text-white shadow-sm hover:bg-[#095195] hover:text-white"
+            asChild
+          >
             <a href={links.linkedin} target="_blank" rel="noopener noreferrer">
-              <Linkedin className="h-4 w-4" />
+              <Linkedin className="h-4 w-4 shrink-0" />
               LinkedIn
             </a>
           </Button>
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5 border-0 bg-slate-900 text-white shadow-sm hover:bg-slate-800 hover:text-white"
+            asChild
+          >
             <a href={links.x} target="_blank" rel="noopener noreferrer">
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 shrink-0" />
               X
             </a>
           </Button>

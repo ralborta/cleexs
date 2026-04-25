@@ -597,11 +597,6 @@ function VerResultadoContent() {
   const isCompleted = diagnostic.status === 'completed';
   const isPending = diagnostic.status === 'pending' || diagnostic.status === 'running';
   const isFailed = diagnostic.status === 'failed';
-  const publicSiteBase =
-    (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')).replace(
-      /\/$/,
-      ''
-    );
   const scoreTrackingQuery =
     diagnostic.shareSlug && diagnostic.id
       ? buildShareTrackingQuery({
@@ -624,10 +619,6 @@ function VerResultadoContent() {
   const teamInvitePath = diagnostic.id
     ? appendQueryToPath(`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`, teamTrackingQuery)
     : null;
-  const sharePublicFullUrl =
-    publicSiteBase && scoreSharePath ? `${publicSiteBase}${scoreSharePath}` : scoreSharePath;
-  const teamInviteFullUrl =
-    publicSiteBase && teamInvitePath ? `${publicSiteBase}${teamInvitePath}` : teamInvitePath;
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
   const satelliteModule = diagnostic.satelliteModule;
@@ -848,16 +839,6 @@ function VerResultadoContent() {
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
                             />
-                            <p className="mt-4 rounded-lg bg-white/70 px-2 py-1.5 text-xs text-slate-600 ring-1 ring-indigo-100/60">
-                              <span className="font-medium text-slate-500">Enlace</span>
-                              {' '}
-                              <Link
-                                href={scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                                className="font-medium text-indigo-600 underline break-all hover:text-indigo-700"
-                              >
-                                {sharePublicFullUrl || scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                              </Link>
-                            </p>
                           </div>
                         )}
                         {diagnostic.showFullReport && diagnostic.id && (
@@ -887,18 +868,6 @@ function VerResultadoContent() {
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
                             />
-                            <p className="mt-4 rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-xs text-slate-600">
-                              <span className="font-medium text-slate-500">Enlace</span>
-                              {' '}
-                              <Link
-                                href={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                                className="font-medium text-teal-700 underline break-all hover:text-teal-800"
-                              >
-                                {teamInviteFullUrl ||
-                                  teamInvitePath ||
-                                  `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                              </Link>
-                            </p>
                           </div>
                         )}
                       </>
@@ -914,16 +883,6 @@ function VerResultadoContent() {
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
                             />
-                            <p className="mt-3 rounded-md border border-slate-100 bg-slate-50/80 px-2 py-1 text-[11px] text-slate-600">
-                              <span className="font-medium text-slate-500">Enlace</span>
-                              {' '}
-                              <Link
-                                href={scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                                className="font-medium text-primary-600 underline break-all hover:text-primary-700"
-                              >
-                                {sharePublicFullUrl || scoreSharePath || `/score/${diagnostic.shareSlug}`}
-                              </Link>
-                            </p>
                           </div>
                         )}
                         {diagnostic.showFullReport && diagnostic.id && (
@@ -945,18 +904,6 @@ function VerResultadoContent() {
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
                             />
-                            <p className="mt-3 rounded-md border border-emerald-100 bg-white/80 px-2 py-1 text-[11px] text-slate-600">
-                              <span className="font-medium text-slate-500">Enlace</span>
-                              {' '}
-                              <Link
-                                href={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                                className="font-medium text-emerald-800 underline break-all hover:text-emerald-900"
-                              >
-                                {teamInviteFullUrl ||
-                                  teamInvitePath ||
-                                  `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
-                              </Link>
-                            </p>
                           </div>
                         )}
                       </div>
