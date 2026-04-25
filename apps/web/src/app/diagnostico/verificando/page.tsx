@@ -1,13 +1,17 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Fragment, Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { publicDiagnosticApi } from '@/lib/api';
-import { Check, Mail, Lock } from 'lucide-react';
+import { Loader2, Lock, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { OnboardingRightStage } from '@/components/diagnostico/onboarding-right-stage';
+import { ONBOARDING_STEP_LABELS, saveOnboardingSnapshot, type SitePreviewContext } from './diagnostic-onboarding';
+import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
+import { OnboardingMomentStack, type MomentKind } from './onboarding-moments';
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -26,10 +30,19 @@ function PulsingDots() {
   );
 }
 
+const HERO = ['/verificando-hero.png', '/verificando-hero-2.png'] as const;
+
+type OverlayMoment = Extract<MomentKind, { type: 'quiz1' } | { type: 'quiz2' } | { type: 'insight' } | { type: 'social' } | { type: 'social2' } | { type: 'prediction' }> | { type: 'idle' };
+
+function isBlockingOverlay(m: OverlayMoment): m is Extract<OverlayMoment, { type: Exclude<OverlayMoment['type'], 'idle'> }> {
+  return m.type !== 'idle';
+}
+
 function VerificandoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
+  const tierQParam = searchParams.get('tier');
   const [diagnostic, setDiagnostic] = useState<Awaited<ReturnType<typeof publicDiagnosticApi.get>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -41,18 +54,123 @@ function VerificandoContent() {
   const [emailSendFailed, setEmailSendFailed] = useState(false);
   const [emailErrorCode, setEmailErrorCode] = useState<'provider_rejected' | 'send_failed' | undefined>();
   const [captchaVerified, setCaptchaVerified] = useState(false);
-  /** Al entrar a la página el usuario debe verificar antes de usar el correo. */
   const [captchaPopupOpen, setCaptchaPopupOpen] = useState(true);
-  const emailFormRef = useRef<HTMLFormElement>(null);
 
-  const heroImages = ['/verificando-hero.png', '/verificando-hero-2.png'];
   const [heroIdx, setHeroIdx] = useState(0);
   useEffect(() => {
     const id = setInterval(() => {
-      setHeroIdx((i) => (i + 1) % heroImages.length);
+      setHeroIdx((i) => (i + 1) % HERO.length);
     }, 5000);
     return () => clearInterval(id);
-  }, [heroImages.length]);
+  }, []);
+
+  const [handoff, setHandoff] = useState<'no' | 'preview' | 'leaving'>('no');
+  const [pipeline, setPipeline] = useState(0);
+  const [overlay, setOverlay] = useState<OverlayMoment>({ type: 'idle' });
+  const [visualBoost, setVisualBoost] = useState(0);
+  const [emailSectionVisible, setEmailSectionVisible] = useState(false);
+  const overlayRef = useRef(overlay);
+  useEffect(() => {
+    overlayRef.current = overlay;
+  }, [overlay]);
+
+  const started = useRef(false);
+  const abandonedTracked = useRef(false);
+
+  const stepsList = diagnostic?.steps ?? [];
+  const activeIndex = useMemo(() => {
+    if (stepsList.length === 0) return 0;
+    const i = stepsList.findIndex((s) => !s.completed);
+    return i < 0 ? ONBOARDING_STEP_LABELS.length - 1 : i;
+  }, [stepsList]);
+  const completedCount = useMemo(
+    () => (stepsList.length ? stepsList.filter((s) => s.completed).length : 0),
+    [stepsList]
+  );
+  const currentLabel = ONBOARDING_STEP_LABELS[activeIndex] ?? 'Conectando…';
+  const progress = diagnostic?.progressPercent ?? 0;
+  const brandLabel = diagnostic?.brandName ?? null;
+  const domain = diagnostic?.domain ?? '';
+  const industry = diagnostic?.industry ?? null;
+  const isRunning = diagnostic?.status === 'running';
+  const allStepsDone = stepsList.length > 0 && stepsList.every((s) => s.completed);
+  const isFinalizing = isRunning && allStepsDone;
+  const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6;
+  const barPct = isFinalizing ? finalizingWave : Math.min(progress, 100);
+  const ctx: SitePreviewContext = useMemo(
+    () => ({
+      brandName: brandLabel,
+      domain: domain || '',
+      industry,
+    }),
+    [brandLabel, domain, industry]
+  );
+  const domainShort = (domain || '').replace(/^https?:\/\//, '');
+
+  const advancePipeline = useCallback((next: number) => {
+    setPipeline(next);
+    setOverlay({ type: 'idle' });
+  }, []);
+
+  const onQuiz1 = useCallback(
+    (v: string) => {
+      if (!diagnosticId) return;
+      saveOnboardingSnapshot(diagnosticId, { quiz1: v });
+      trackOnboarding('onboarding_quiz_answered', { q: 'chatgpt_treatment', v });
+      setVisualBoost((b) => b + 1);
+      advancePipeline(1);
+    },
+    [diagnosticId, advancePipeline]
+  );
+  const onQuiz2 = useCallback(
+    (v: string) => {
+      if (!diagnosticId) return;
+      saveOnboardingSnapshot(diagnosticId, { quiz2: v });
+      trackOnboarding('onboarding_quiz_answered', { q: 'competitors', v });
+      setVisualBoost((b) => b + 1);
+      advancePipeline(4);
+    },
+    [diagnosticId, advancePipeline]
+  );
+  const onPredict = useCallback(
+    (r: string) => {
+      if (!diagnosticId) return;
+      saveOnboardingSnapshot(diagnosticId, { predictedRange: r });
+      trackOnboarding('onboarding_score_predicted', { range: r });
+      setVisualBoost((b) => b + 1);
+      advancePipeline(6);
+    },
+    [diagnosticId, advancePipeline]
+  );
+  const onInsightClose = useCallback(() => {
+    const o = overlayRef.current;
+    if (o.type !== 'insight') {
+      setOverlay({ type: 'idle' });
+      return;
+    }
+    if (o.stepIndex === 2) advancePipeline(2);
+    else if (o.stepIndex === 5) advancePipeline(5);
+    else if (o.stepIndex === 8) advancePipeline(7);
+  }, [advancePipeline]);
+  const onSocialClose = useCallback(() => {
+    const o = overlayRef.current;
+    if (o.type === 'social') {
+      trackOnboarding('onboarding_social_shown', { n: '1' });
+      advancePipeline(3);
+    } else if (o.type === 'social2') {
+      trackOnboarding('onboarding_social_shown', { n: '2' });
+      advancePipeline(8);
+    } else {
+      setOverlay({ type: 'idle' });
+    }
+  }, [advancePipeline]);
+
+  useEffect(() => {
+    if (!diagnosticId) return;
+    if (started.current) return;
+    started.current = true;
+    trackOnboarding('onboarding_started', { diagnosticId });
+  }, [diagnosticId]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -70,11 +188,10 @@ function VerificandoContent() {
     const id = diagnosticId;
     const poll = async () => {
       try {
-        const data = await publicDiagnosticApi.get(id);
+        const data = await publicDiagnosticApi.get(id, tierQParam === 'gold' ? 'gold' : undefined);
         setDiagnostic(data);
         if (data.status === 'completed') {
-          const tierQ = data.tier === 'gold' ? '&tier=gold' : '';
-          router.replace(`/ver-resultado?diagnosticId=${id}${tierQ}`);
+          setHandoff('preview');
           return false;
         }
         if (data.status === 'failed') return false;
@@ -87,17 +204,84 @@ function VerificandoContent() {
     let cancelled = false;
     const interval = setInterval(async () => {
       if (cancelled) return;
-      const keepPolling = await poll();
-      if (!keepPolling) clearInterval(interval);
+      const keep = await poll();
+      if (!keep) clearInterval(interval);
     }, 1500);
     poll();
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [diagnosticId, router]);
+  }, [diagnosticId, tierQParam]);
 
-  async function handleEmailSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (handoff !== 'preview' || !diagnosticId) return;
+    setOverlay({ type: 'idle' });
+    trackOnboarding('onboarding_preview_viewed', { diagnosticId });
+    const t = setTimeout(() => {
+      setHandoff('leaving');
+      const tierQ = diagnostic?.tier === 'gold' ? '&tier=gold' : '';
+      trackOnboarding('onboarding_report_opened', { diagnosticId });
+      router.replace(`/ver-resultado?diagnosticId=${diagnosticId}${tierQ}`);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [handoff, diagnosticId, router, diagnostic?.tier]);
+
+  useEffect(() => {
+    const h = () => {
+      if (!diagnosticId || handoff === 'leaving' || handoff === 'preview') return;
+      if (document.visibilityState === 'hidden' && !abandonedTracked.current) {
+        abandonedTracked.current = true;
+        const steps = diagnostic?.steps ?? [];
+        const idx = steps.findIndex((s) => !s.completed);
+        lastStepForAbandon({
+          diagnosticId,
+          phase: 'onboarding',
+          stepIndex: idx < 0 ? 10 : idx,
+        });
+        trackOnboarding('onboarding_abandon', { diagnosticId });
+      }
+    };
+    document.addEventListener('visibilitychange', h);
+    return () => document.removeEventListener('visibilitychange', h);
+  }, [diagnosticId, diagnostic?.steps, handoff]);
+
+  useEffect(() => {
+    if (!captchaVerified) return;
+    if (progress >= 60 && !emailSectionVisible && !emailSent) {
+      setEmailSectionVisible(true);
+      if (diagnosticId) trackOnboarding('onboarding_unlock_viewed', { diagnosticId });
+    }
+  }, [captchaVerified, progress, emailSectionVisible, emailSent, diagnosticId]);
+
+  useEffect(() => {
+    if (!captchaVerified) return;
+    if (diagnostic?.status === 'completed' || handoff !== 'no') return;
+    if (isBlockingOverlay(overlay)) return;
+
+    if (pipeline === 0 && activeIndex >= 1) {
+      setOverlay({ type: 'quiz1' });
+    } else if (pipeline === 1 && activeIndex >= 2) {
+      if (diagnosticId) trackOnboarding('onboarding_insight_shown', { step: '2' });
+      setOverlay({ type: 'insight', stepIndex: 2, ctx });
+    } else if (pipeline === 2) {
+      setOverlay({ type: 'social' });
+    } else if (pipeline === 3 && activeIndex >= 4) {
+      setOverlay({ type: 'quiz2' });
+    } else if (pipeline === 4 && activeIndex >= 5) {
+      if (diagnosticId) trackOnboarding('onboarding_insight_shown', { step: '5' });
+      setOverlay({ type: 'insight', stepIndex: 5, ctx });
+    } else if (pipeline === 5 && activeIndex >= 7) {
+      setOverlay({ type: 'prediction' });
+    } else if (pipeline === 6 && activeIndex >= 8) {
+      if (diagnosticId) trackOnboarding('onboarding_insight_shown', { step: '8' });
+      setOverlay({ type: 'insight', stepIndex: 8, ctx });
+    } else if (pipeline === 7) {
+      setOverlay({ type: 'social2' });
+    }
+  }, [captchaVerified, activeIndex, pipeline, overlay, diagnostic?.status, ctx, handoff, diagnosticId]);
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!diagnosticId || !email.trim()) return;
     if (!captchaVerified) {
@@ -109,16 +293,19 @@ function VerificandoContent() {
     try {
       const res = await publicDiagnosticApi.setEmail(diagnosticId, email.trim());
       setEmailSent(true);
+      trackOnboarding('onboarding_email_submitted', { diagnosticId, emailSent: String(!!res.emailSent) });
       if (res.emailSent === false) {
         setEmailSendFailed(true);
         if (res.emailError) setEmailErrorCode(res.emailError);
+        trackOnboarding('onboarding_email_failed', { diagnosticId, code: res.emailError ?? 'unknown' });
       }
     } catch {
       setEmailSendFailed(true);
+      trackOnboarding('onboarding_email_failed', { diagnosticId, code: 'throw' });
     } finally {
       setEmailLoading(false);
     }
-  }
+  };
 
   if (!diagnosticId) {
     return (
@@ -146,292 +333,233 @@ function VerificandoContent() {
     );
   }
 
-  const steps = diagnostic?.steps ?? [];
-  const progress = diagnostic?.progressPercent ?? 0;
-  const brandLabel = diagnostic?.brandName ?? null;
-  const isRunning = diagnostic?.status === 'running';
-  const allStepsCompleted = steps.length > 0 && steps.every((step) => step.completed);
-  const isFinalizingReport = isRunning && allStepsCompleted;
-  const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6; // 92 → 98 para indicar actividad
-  const visibleBottomProgress = isFinalizingReport ? finalizingWave : Math.min(progress, 100);
+  if (handoff === 'preview' || handoff === 'leaving') {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4">
+        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-lg">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
+            {handoff === 'leaving' ? (
+              <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
+            ) : (
+              <Sparkles className="h-6 w-6 text-primary-600" />
+            )}
+          </div>
+          <p className="text-lg font-bold text-slate-900">Tu informe está listo</p>
+          <p className="mt-2 text-sm text-slate-600">
+            {brandLabel
+              ? `Abrimos el análisis completo de ${brandLabel}: score, intención y posición frente a la competencia.`
+              : 'Abrimos el análisis con tu score y comparativa con la competencia.'}
+          </p>
+          {handoff === 'leaving' && <p className="mt-4 text-xs text-slate-500">Redirigiendo…</p>}
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
-        {/* Page header */}
-        <div className="mb-6 shrink-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 mb-1">Análisis en curso</p>
-          <h1 className="text-xl font-bold text-slate-900">
-            {brandLabel ? brandLabel : 'Procesando diagnóstico…'}
+        <div className="mb-4 shrink-0 sm:mb-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900">
+            {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
           </h1>
         </div>
 
-        {/* Dos columnas: pasos arriba/izquierda; correo centrado en el espacio restante (horizontal y vertical) */}
-        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8 xl:gap-10">
-          {/* Izquierda: lista de pasos (ancho acotado al contenido) */}
-          <div className="w-full shrink-0 lg:max-w-[min(100%,18.5rem)] xl:max-w-[20rem] lg:self-start lg:pr-6">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden w-full">
-              <div className="h-0.5 w-full bg-slate-100">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
+          <div className="flex min-h-0 min-w-0 flex-col">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="h-1.5 w-full overflow-hidden bg-slate-100">
                 <div
                   className="h-full bg-primary-600 transition-all duration-700 ease-out"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${captchaVerified ? barPct : 0}%` }}
                 />
               </div>
-              <div className="p-4 space-y-3">
-                <ul className="space-y-0.5">
-                  {steps.length > 0 ? (
-                    steps.map((step, idx) => {
-                      const isActive = !step.completed && steps.findIndex((s) => !s.completed) === idx;
-                      return (
-                        <li
-                          key={step.id}
-                          className={`flex items-center gap-2.5 rounded-lg px-2 py-2 transition-all duration-200 ${
-                            step.completed
-                              ? 'bg-primary-50/60'
-                              : isActive
-                                ? 'bg-primary-50 border border-primary-100'
-                                : ''
-                          }`}
-                        >
-                          <div className="shrink-0 flex h-7 w-7 items-center justify-center">
-                            {step.completed ? (
-                              <div className="h-7 w-7 rounded-full bg-primary-600 flex items-center justify-center">
-                                <Check className="h-3.5 w-3.5 text-white stroke-[2.5]" />
-                              </div>
-                            ) : isActive ? (
-                              <div className="h-7 w-7 rounded-full border-2 border-primary-600 bg-white flex items-center justify-center">
-                                <PulsingDots />
-                              </div>
-                            ) : (
-                              <div className="h-7 w-7 rounded-full border border-slate-200 bg-slate-50 flex items-center justify-center">
-                                <span className="text-xs font-medium text-slate-400">{idx + 1}</span>
-                              </div>
+              <div className="p-4 sm:p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Construyendo tu Cleexs Score: {completedCount}/{ONBOARDING_STEP_LABELS.length} completado
+                </p>
+                {captchaVerified ? (
+                  <>
+                    <p className="mt-2 text-sm font-bold leading-snug text-slate-900">Paso {activeIndex + 1} de 11</p>
+                    <p className="mt-1.5 min-h-[2.75rem] text-sm text-slate-600">{currentLabel}</p>
+                    {isRunning && allStepsDone && (
+                      <p className="mt-2 text-xs text-primary-800">
+                        {isFinalizing
+                          ? 'Checks listos. Consolidando tu Cleexs Score y el informe final…'
+                          : ''}
+                      </p>
+                    )}
+                    <ul className="mt-3 flex flex-wrap gap-1.5">
+                      {ONBOARDING_STEP_LABELS.map((_, i) => {
+                        const done = stepsList[i]?.completed === true;
+                        const isActive = i === activeIndex && !done;
+                        return (
+                          <li
+                            key={i}
+                            className={cn(
+                              'h-1.5 w-6 rounded-full',
+                              done ? 'bg-primary-500' : isActive ? 'bg-primary-200' : 'bg-slate-100'
                             )}
-                          </div>
-                          <span className={`text-sm leading-snug ${
-                            step.completed
-                              ? 'text-slate-400 line-through'
-                              : isActive
-                                ? 'font-semibold text-slate-900'
-                                : 'text-slate-400'
-                          }`}>
-                            {step.label}
-                          </span>
-                        </li>
-                      );
-                    })
-                  ) : (
-                    <li className="flex items-center gap-2.5 rounded-lg px-2 py-2 bg-primary-50 border border-primary-100">
-                      <div className="h-7 w-7 rounded-full border-2 border-primary-600 bg-white flex items-center justify-center shrink-0">
-                        <PulsingDots />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-900">Iniciando análisis…</span>
-                    </li>
-                  )}
-                </ul>
-
-                <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs text-slate-400">
-                  <span>
-                    {isRunning ? 'En proceso' : diagnostic?.status === 'completed' ? 'Completado' : 'Preparando'}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    {steps.length > 0 && <span className="font-semibold text-slate-600">{progress}%</span>}
-                    <span>{formatElapsed(elapsedSeconds)}</span>
-                  </div>
-                </div>
-
-                {isRunning && elapsedSeconds >= 360 && (
-                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
-                    Está tardando más de lo habitual. Si el progreso no avanza, intentá crear un nuevo diagnóstico más tarde.
-                  </p>
+                            title={`Paso ${i + 1}`}
+                          />
+                        );
+                      })}
+                    </ul>
+                    <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                      <span>
+                        {isRunning ? (isFinalizing ? 'Preparando informe' : 'En curso') : 'Preparando…'}
+                        {' · '}
+                        {formatElapsed(elapsedSeconds)}
+                      </span>
+                    </div>
+                    {isRunning && elapsedSeconds >= 360 && (
+                      <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                        Tarda más de lo usual. Si no avanzá, podés crear un diagnóstico más tarde.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-600">Confirmá que sos humano en la ventana a la derecha. Ahí
+                    arranca el análisis visual y el progreso.</p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Derecha: correo centrado en el eje vertical y horizontal del área disponible */}
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl py-4 lg:py-0 lg:pl-8 lg:border-l lg:border-slate-200/80">
-            {heroImages.map((src, i) => (
+          <div className="relative flex min-h-0 min-w-0 flex-col">
+            {HERO.map((src, i) => (
               <div
                 key={src}
                 aria-hidden
                 className={cn(
                   'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
-                  heroIdx === i ? 'opacity-80' : 'opacity-0'
+                  heroIdx === i ? 'opacity-25' : 'opacity-0'
                 )}
-                style={{
-                  backgroundImage: `url('${src}')`,
-                  backgroundSize: '70% auto',
-                }}
+                style={{ backgroundImage: `url('${src}')`, backgroundSize: '60% auto' }}
               />
             ))}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/35 via-white/15 to-white/35"
+              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
             />
-            <div className="relative z-10 w-full max-w-sm">
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
-                {emailSent ? (
-                  emailSendFailed ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-slate-900">Email registrado</p>
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                        <p>Guardamos tu email pero no pudimos enviar el correo ahora. Cuando el análisis esté listo te lo enviamos.</p>
-                        {emailErrorCode === 'provider_rejected' && (
-                          <p className="mt-1">
-                            Verificá tu dominio en{' '}
-                            <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline">resend.com/domains</a>.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center flex-1 gap-2 py-4">
-                      <div className="h-10 w-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center">
-                        <Mail className="h-5 w-5 text-green-600" />
-                      </div>
-                      <p className="text-sm font-semibold text-slate-900">¡Listo!</p>
-                      <p className="text-xs text-slate-500 max-w-[180px]">
-                        Te enviamos el resultado cuando esté listo. Revisá tu bandeja de entrada.
-                      </p>
-                    </div>
-                  )
-                ) : (
-                  <Fragment>
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold text-slate-900 mb-0.5">Recibí tu reporte</p>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        Ingresá tu correo y te lo enviamos cuando el análisis esté listo.
-                      </p>
-                    </div>
-                    {!captchaVerified && !captchaPopupOpen && (
-                      <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
-                        <p className="font-medium">Verificación pendiente</p>
-                        <p className="mt-0.5 text-amber-800/90">
-                          Completá la verificación para habilitar el envío por correo.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2 w-full border-amber-300 bg-white text-amber-950 hover:bg-amber-50"
-                          onClick={() => setCaptchaPopupOpen(true)}
-                        >
-                          Abrir verificación
-                        </Button>
-                      </div>
-                    )}
-                    <form ref={emailFormRef} onSubmit={handleEmailSubmit} className="flex flex-col gap-3 flex-1">
-                      <input
-                        type="email"
-                        placeholder="tu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={emailLoading || !captchaVerified}
-                      />
-                      <Button
-                        type="submit"
-                        className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm"
-                        disabled={emailLoading || !email.trim() || !captchaVerified}
-                      >
-                        {emailLoading ? 'Enviando…' : (
-                          <Fragment>
-                            <Mail className="mr-2 h-3.5 w-3.5" />
-                            Enviar reporte
-                          </Fragment>
-                        )}
-                      </Button>
-                      <p className="text-xs text-slate-400">
-                        Podés enviarlo ahora o esperar al resultado final.
-                      </p>
-                    </form>
-                  </Fragment>
-                )}
-              </div>
 
-              {captchaPopupOpen && (
-                <div
-                  className="absolute inset-x-0 -top-8 z-20 px-2"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="captcha-title"
-                >
-                  <div
-                    className="w-full rounded-xl border border-slate-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
-                  >
-                    <div className="flex flex-col items-center text-center">
-                      <Lock className="h-8 w-8 text-[#BBBBBB] mb-4" aria-hidden />
-                      <h3 id="captcha-title" className="text-2xl font-bold text-[#333333] mb-2">
-                        Desbloqueá tu informe gratuito
-                      </h3>
-                      <p className="text-[15px] text-[#666666] leading-snug mb-6 max-w-sm">
-                        Mirá cómo tu marca se posiciona en IA y recibí el resultado por correo.
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-[#DDDDDD] bg-[#FAFAFA] px-4 py-3 flex items-center justify-between gap-4">
-                      <label className="flex cursor-pointer items-center gap-3 flex-1 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={captchaVerified}
-                          onChange={(e) => {
-                            if (!e.target.checked) return;
-                            setCaptchaVerified(true);
-                            setCaptchaPopupOpen(false);
-                          }}
-                          className="h-5 w-5 rounded border-2 border-[#CCCCCC] bg-white text-[#333333] focus:ring-2 focus:ring-[#999999] focus:ring-offset-0"
-                          disabled={emailLoading}
-                        />
-                        <span className="text-base text-[#333333] font-normal">No soy un robot</span>
-                      </label>
-                      <div className="flex flex-col items-end shrink-0">
-                        <span className="text-sm font-bold text-[#666666]">CAPTCHA</span>
-                        <span className="text-xs text-[#999999]">Verificar - Email</span>
-                      </div>
-                    </div>
-                    <p className="mt-5 text-center text-[12px] leading-relaxed text-[#444444] px-1">
-                      Al continuar confirmás que entendés y aceptás los{' '}
-                      <a href="/terminos" className="underline text-[#333333] hover:text-black">Términos de Servicio</a>
-                      {' '}y consentís al uso de tu información según nuestra{' '}
-                      <a href="/privacidad" className="underline text-[#333333] hover:text-black">Política de Privacidad</a>.
-                    </p>
-                  </div>
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3">
+              <OnboardingRightStage
+                stepIndex={activeIndex}
+                brandName={brandLabel}
+                domainShort={domainShort}
+                pulseKey={visualBoost}
+                className="shrink-0"
+              />
+              {captchaVerified && isBlockingOverlay(overlay) && (
+                <OnboardingMomentStack
+                  className="flex-1"
+                  moment={overlay as MomentKind}
+                  onClose={overlay.type === 'insight' ? onInsightClose : onSocialClose}
+                  onQuiz1={onQuiz1}
+                  onQuiz2={onQuiz2}
+                  onPredict={onPredict}
+                  industry={industry}
+                />
+              )}
+
+              {captchaVerified && emailSectionVisible && !emailSent && (
+                <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
+                  <p className="text-sm font-bold text-violet-900">Desbloqueá el envío a tu mail</p>
+                  <p className="mt-0.5 text-xs text-violet-800/90">
+                    Recibí un aviso y el resumen de tu análisis cuando cierre. Sin spam.
+                  </p>
+                  <form onSubmit={handleEmailSubmit} className="mt-2 flex flex-col gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-sm"
+                      placeholder="correo@empresa.com"
+                    />
+                    <Button type="submit" size="sm" disabled={emailLoading || !email.trim()} className="w-full">
+                      {emailLoading ? 'Guardando…' : 'Enviar'}
+                    </Button>
+                  </form>
                 </div>
+              )}
+
+              {captchaVerified && emailSectionVisible && emailSent && (
+                <div className="rounded-xl border border-slate-200 bg-white p-3 text-center text-sm text-slate-600">
+                  {emailSendFailed ? (
+                    <p className="text-xs text-amber-800">
+                      Guardamos tu email. Si no te llega el aviso, revisá spam o escribinos.
+                      {emailErrorCode === 'provider_rejected' && (
+                        <span>
+                          {' '}
+                          <a href="https://resend.com/domains" className="underline" target="_blank" rel="noreferrer">
+                            Verificar dominio
+                          </a>
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p>Email guardado. Te avisamos cuando cierre el análisis.</p>
+                  )}
+                </div>
+              )}
+
+              {captchaVerified && !emailSectionVisible && !emailSent && progress >= 45 && (
+                <p className="text-center text-[10px] text-slate-500">El correo se habilita al 60% del progreso.</p>
               )}
             </div>
           </div>
-
         </div>
 
-        <div className="mt-6 shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {isFinalizingReport ? 'Armando reporte final' : 'Progreso general'}
-            </p>
-            <span className="text-xs font-semibold text-slate-700">
-              {isFinalizingReport ? `${Math.round(visibleBottomProgress)}%` : `${Math.min(progress, 100)}%`}
-            </span>
-          </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+        {captchaPopupOpen && !captchaVerified && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-3 sm:items-center">
             <div
-              className={`h-full rounded-full transition-all duration-700 ease-out ${
-                isFinalizingReport ? 'bg-gradient-to-r from-primary-500 via-primary-400 to-primary-600 animate-pulse' : 'bg-primary-600'
-              }`}
-              style={{ width: `${visibleBottomProgress}%` }}
-            />
+              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+              role="dialog"
+              aria-modal
+              aria-labelledby="captcha-title"
+            >
+              <div className="text-center">
+                <Lock className="mx-auto mb-3 h-7 w-7 text-slate-300" />
+                <h2 id="captcha-title" className="text-lg font-bold text-slate-900">
+                  Confirmá que sos humano y empezamos
+                </h2>
+                <p className="mt-1.5 text-sm text-slate-600">
+                  Con un click activamos el análisis en vivo de tu sitio. Después vas a ver el progreso paso a paso
+                  hasta tu Cleexs Score.
+                </p>
+              </div>
+              <label className="mt-5 flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <input
+                  type="checkbox"
+                  checked={captchaVerified}
+                  onChange={(e) => {
+                    if (!e.target.checked) return;
+                    setCaptchaVerified(true);
+                    setCaptchaPopupOpen(false);
+                    if (diagnosticId) {
+                      trackOnboarding('onboarding_captcha_completed', { diagnosticId });
+                    }
+                  }}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm font-medium text-slate-800">No soy un robot</span>
+              </label>
+              <p className="mt-3 text-center text-[11px] text-slate-500">
+                Acepto{' '}
+                <a href="/terminos" className="underline">Términos</a> y{' '}
+                <a href="/privacidad" className="underline">Privacidad</a>.
+              </p>
+            </div>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            {isFinalizingReport
-              ? 'Los checks terminaron; estamos consolidando y preparando la vista final.'
-              : 'Avance visible del diagnóstico en tiempo real.'}
-          </p>
-        </div>
+        )}
 
-        <p className="mt-6 shrink-0 text-center text-xs text-slate-400">
-          El análisis puede demorar entre 30 y 90 segundos.
+        <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
+          El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te llevamos al
+          informe.
         </p>
       </div>
-
     </main>
   );
 }
