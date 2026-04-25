@@ -20,6 +20,7 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
+import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import type { LucideIcon } from 'lucide-react';
 import {
   Loader2,
@@ -204,9 +205,9 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/diagnostico/crear">
+              <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
                 Otro diagnóstico
-              </Link>
+              </a>
             </Button>
           </div>
         </CardContent>
@@ -936,9 +937,9 @@ function VerResultadoContent() {
                           </Link>
                         </Button>
                         <Button variant="outline" asChild>
-                          <Link href="/diagnostico/crear">
+                          <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
                             Otro diagnóstico
-                          </Link>
+                          </a>
                         </Button>
                       </div>
                     </div>
@@ -958,10 +959,15 @@ function VerResultadoContent() {
                         variant="outline"
                         className="h-9 min-w-[160px] rounded-lg border-2 border-primary-600 bg-white text-xs font-semibold text-primary-700 hover:bg-primary-50"
                       >
-                        <Link href="/diagnostico/crear" className="inline-flex items-center gap-1.5">
+                        <a
+                          href={CLEEXS_MARKETING_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5"
+                        >
                           <FileText className="h-3.5 w-3.5" />
                           Otro diagnóstico
-                        </Link>
+                        </a>
                       </Button>
                     </div>
                   )}

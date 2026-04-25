@@ -15,6 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
+import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import {
   LineChart,
   Line,
@@ -910,7 +911,9 @@ export function ReporteModerno({
                   <Link href="/planes">Ver planes</Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link href="/diagnostico/crear">Otro diagnóstico</Link>
+                  <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
+                    Otro diagnóstico
+                  </a>
                 </Button>
               </div>
             </div>

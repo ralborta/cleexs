@@ -1,16 +1,20 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState } from 'react';
 import type {
   PublicDiagnosticRunResult,
   PublicDiagnosticPromptResult,
   PublicDiagnosticTrendPoint,
 } from '@/lib/api';
 import {
+  BarChart3,
   ChevronDown,
+  FileCheck,
   Gauge,
   LineChart as LineChartIcon,
+  ListOrdered,
   Medal,
+  Megaphone,
   Sparkle,
   Tag,
   Target,
@@ -19,6 +23,7 @@ import {
   Users,
 } from 'lucide-react';
 import {
+  Area,
   Bar,
   BarChart,
   CartesianGrid,
@@ -270,29 +275,6 @@ function GaugeSemicircleMaqueta({ value, gradientId }: { value: number; gradient
         <p className="mt-1 text-[11px] font-medium text-slate-500">Indicador 0-100 de recomendación en IA</p>
       </div>
     </div>
-  );
-}
-
-function CollapsibleRow({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-}) {
-  return (
-    <details className="group rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100/80">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
-          <p className="text-[11px] text-slate-500">{subtitle}</p>
-        </div>
-        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
-      </summary>
-      <div className="border-t border-slate-100 px-3 pb-3 pt-1.5">{children}</div>
-    </details>
   );
 }
 
@@ -788,6 +770,30 @@ export function ReporteCorridas({
       ? trendData
       : [{ label: 'Corrida 1', score: displayScore }];
 
+  const intentionBarData =
+    intentionScores.length > 0
+      ? intentionScores.map((item) => ({
+          name: item.label,
+          score: Math.round(item.score),
+        }))
+      : [{ name: 'General', score: displayScore }];
+
+  const vizGradBase = `${gaugeGradientId}-viz`;
+  const intentionBarStops: [string, string][] = [
+    ['#8b5cf6', '#6366f1'],
+    ['#a855f7', '#ec4899'],
+    ['#06b6d4', '#2563eb'],
+    ['#14b8a6', '#059669'],
+  ];
+
+  const chartTooltipStyle = {
+    borderRadius: 14,
+    border: 'none',
+    boxShadow: '0 12px 40px -12px rgb(15 23 42 / 0.25)',
+    padding: '10px 14px',
+    background: '#fff',
+  } as const;
+
   return (
     <div className="space-y-6">
       {/* 1 Resumen ejecutivo — una tarjeta unificada, tres columnas como maqueta */}
@@ -1200,9 +1206,217 @@ export function ReporteCorridas({
         </div>
       </section>
 
-      {/* 4 Top 3 acciones */}
+      {/* 4 Métricas — siempre visibles */}
       <section>
-        {sectionHeading(4, 'Top 3 acciones prioritarias', 'Acciones personalizadas según los resultados de esta corrida')}
+        {sectionHeading(4, 'Métricas del análisis')}
+        <p className="mb-3 text-xs text-slate-500">
+          Cuatro señales clave calculadas sobre las respuestas de esta corrida.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {(
+            [
+              {
+                label: 'Confianza de formato',
+                value: `${formatConfidence}%`,
+                hint: `${parseableCount}/${totalPrompts} con Top 3 parseable`,
+                icon: FileCheck,
+                accent: 'from-violet-500 to-fuchsia-500',
+                iconBg: 'bg-violet-500/10 text-violet-600',
+              },
+              {
+                label: 'Mención de marca',
+                value: `${mentionRate}%`,
+                hint: `${mentionCount}/${totalPrompts} respuestas`,
+                icon: Megaphone,
+                accent: 'from-sky-500 to-cyan-500',
+                iconBg: 'bg-sky-500/10 text-sky-600',
+              },
+              {
+                label: 'Aparición en Top 3',
+                value: `${top3Rate}%`,
+                hint: `${top3Count}/${totalPrompts} en Top 3`,
+                icon: ListOrdered,
+                accent: 'from-amber-500 to-orange-500',
+                iconBg: 'bg-amber-500/10 text-amber-700',
+              },
+              {
+                label: 'Posición #1',
+                value: `${top1Rate}%`,
+                hint: `${top1Count}/${totalPrompts} en primer lugar`,
+                icon: Trophy,
+                accent: 'from-emerald-500 to-teal-500',
+                iconBg: 'bg-emerald-500/10 text-emerald-700',
+              },
+            ] as const
+          ).map((m) => {
+            const Icon = m.icon;
+            return (
+              <div
+                key={m.label}
+                className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm ring-1 ring-slate-100/60 transition-shadow hover:shadow-md"
+              >
+                <div
+                  className={cn('absolute inset-x-0 top-0 h-1 bg-gradient-to-r opacity-90', m.accent)}
+                  aria-hidden
+                />
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{m.label}</p>
+                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', m.iconBg)}>
+                    <Icon className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                </div>
+                <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-900">{m.value}</p>
+                <p className="mt-1 text-xs leading-snug text-slate-500">{m.hint}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 5 Visualizaciones — siempre visibles */}
+      <section>
+        {sectionHeading(5, 'Visualizaciones adicionales')}
+        <p className="mb-3 text-xs text-slate-500">
+          Tendencia del Cleexs Score y reparto medio por intención de búsqueda en esta corrida.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-100/60 transition-shadow hover:shadow-md">
+            <div
+              className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-sky-500 opacity-95"
+              aria-hidden
+            />
+            <div className="flex items-start justify-between gap-3 px-4 pb-1 pt-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Tendencia</p>
+                <p className="text-sm font-bold text-slate-900">Evolución del score</p>
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
+                <LineChartIcon className="h-5 w-5" strokeWidth={2} aria-hidden />
+              </div>
+            </div>
+            <div className="h-[176px] px-1 pb-4 sm:px-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendChartData} margin={{ top: 10, right: 12, left: 0, bottom: 4 }}>
+                  <defs>
+                    <linearGradient id={`${vizGradBase}-line`} x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#7c3aed" />
+                      <stop offset="55%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#38bdf8" />
+                    </linearGradient>
+                    <linearGradient id={`${vizGradBase}-area`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.22} />
+                      <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="5 6" stroke="#e2e8f0" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
+                    dy={8}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    width={38}
+                  />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={{ color: '#64748b', fontSize: 11, fontWeight: 600 }}
+                    formatter={(v: number) => [Math.round(v), 'Score']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="score"
+                    stroke="none"
+                    fill={`url(#${vizGradBase}-area)`}
+                    fillOpacity={1}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke={`url(#${vizGradBase}-line)`}
+                    strokeWidth={2.75}
+                    dot={{
+                      r: 5,
+                      strokeWidth: 2,
+                      stroke: '#fff',
+                      fill: '#5b21b6',
+                    }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff', fill: '#4c1d95' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-100/60 transition-shadow hover:shadow-md">
+            <div
+              className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 opacity-95"
+              aria-hidden
+            />
+            <div className="flex items-start justify-between gap-3 px-4 pb-1 pt-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Intenciones</p>
+                <p className="text-sm font-bold text-slate-900">Score por intención</p>
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600">
+                <BarChart3 className="h-5 w-5" strokeWidth={2} aria-hidden />
+              </div>
+            </div>
+            <div className="h-[176px] px-1 pb-4 sm:px-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={intentionBarData} margin={{ top: 10, right: 12, left: 0, bottom: 4 }} barCategoryGap="28%">
+                  <defs>
+                    {intentionBarData.map((_, i) => {
+                      const [c0, c1] = intentionBarStops[i % intentionBarStops.length]!;
+                      return (
+                        <linearGradient key={i} id={`${vizGradBase}-bar-${i}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={c0} />
+                          <stop offset="100%" stopColor={c1} />
+                        </linearGradient>
+                      );
+                    })}
+                  </defs>
+                  <CartesianGrid strokeDasharray="5 6" stroke="#e2e8f0" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
+                    dy={8}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    width={38}
+                  />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={{ color: '#64748b', fontSize: 11, fontWeight: 600 }}
+                    formatter={(v: number) => [`${v}%`, 'Score medio']}
+                  />
+                  <Bar dataKey="score" radius={[10, 10, 0, 0]} maxBarSize={52}>
+                    {intentionBarData.map((_, index) => (
+                      <Cell key={`bar-cell-${index}`} fill={`url(#${vizGradBase}-bar-${index})`} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6 Top 3 acciones */}
+      <section>
+        {sectionHeading(6, 'Top 3 acciones prioritarias', 'Acciones personalizadas según los resultados de esta corrida')}
         <div className="grid gap-3 md:grid-cols-3">
           {actions.slice(0, 3).map((action, idx) => {
             const AIcon = action.Icon;
@@ -1264,84 +1478,8 @@ export function ReporteCorridas({
         </div>
       </section>
 
-      {/* 5 Métricas — colapsable */}
-      <section>
-        {sectionHeading(5, 'Métricas del análisis')}
-        <CollapsibleRow title="Métricas del análisis" subtitle="Colapsable · secundario">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-              <p className="text-[11px] font-medium text-slate-500">Confianza de formato</p>
-              <p className="mt-0.5 text-lg font-bold text-slate-900">{formatConfidence}%</p>
-              <p className="text-xs text-slate-500">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
-            </div>
-            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-              <p className="text-[11px] font-medium text-slate-500">Mención de marca</p>
-              <p className="mt-0.5 text-lg font-bold text-slate-900">{mentionRate}%</p>
-              <p className="text-xs text-slate-500">{mentionCount}/{totalPrompts} respuestas</p>
-            </div>
-            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-              <p className="text-[11px] font-medium text-slate-500">Aparición en Top 3</p>
-              <p className="mt-0.5 text-lg font-bold text-slate-900">{top3Rate}%</p>
-              <p className="text-xs text-slate-500">{top3Count}/{totalPrompts} en Top 3</p>
-            </div>
-            <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-              <p className="text-[11px] font-medium text-slate-500">Posición #1</p>
-              <p className="mt-0.5 text-lg font-bold text-slate-900">{top1Rate}%</p>
-              <p className="text-xs text-slate-500">{top1Count}/{totalPrompts} en primer lugar</p>
-            </div>
-          </div>
-        </CollapsibleRow>
-      </section>
-
-      {/* 6 Visualizaciones adicionales */}
-      <section>
-        {sectionHeading(6, 'Visualizaciones adicionales')}
-        <CollapsibleRow title="Visualizaciones adicionales" subtitle="Colapsable · secundario">
-          <div className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-lg border border-slate-100 bg-white p-3">
-              <p className="mb-1.5 text-xs font-semibold text-slate-800">Evolución del score</p>
-              <div className="h-[132px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={32} />
-                    <Tooltip contentStyle={{ borderRadius: 12 }} formatter={(v: number) => [Math.round(v), 'Score']} />
-                    <Line type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} dot={{ r: 4, fill: '#7c3aed' }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="rounded-lg border border-slate-100 bg-white p-3">
-              <p className="mb-1.5 text-xs font-semibold text-slate-800">Score por intención</p>
-              <div className="h-[132px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={
-                      intentionScores.length > 0
-                        ? intentionScores.map((item) => ({
-                            name: item.label,
-                            score: Math.round(item.score),
-                          }))
-                        : [{ name: 'General', score: displayScore }]
-                    }
-                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} width={32} />
-                    <Tooltip formatter={(v: number) => [`${v}%`, '']} />
-                    <Bar dataKey="score" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </CollapsibleRow>
-      </section>
-
       <p className="text-center text-[11px] italic leading-relaxed text-slate-400">
-        La lectura pasa de análisis disperso a narrativa: estado actual → comparación → acciones → difusión.
+        La lectura pasa de análisis disperso a narrativa: estado actual → comparación → métricas → tendencias → acciones.
       </p>
     </div>
   );
