@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { getPartialInsight, type SitePreviewContext } from './diagnostic-onboarding';
 import { cn } from '@/lib/utils';
-import { TrendingUp } from 'lucide-react';
+import { BrainCircuit, CircleGauge, Compass, Radar, Sparkles, TrendingUp } from 'lucide-react';
 
 export type MomentKind =
   | { type: 'idle' }
@@ -27,6 +27,40 @@ type Props = {
 export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPredict, industry, className }: Props) {
   if (moment.type === 'idle') return null;
 
+  const QuestionCard = ({
+    title,
+    description,
+    Icon,
+    iconTone = 'blue',
+    children,
+  }: {
+    title: string;
+    description: string;
+    Icon: React.ComponentType<{ className?: string }>;
+    iconTone?: 'blue' | 'violet';
+    children: React.ReactNode;
+  }) => (
+    <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/70">
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1',
+            iconTone === 'violet'
+              ? 'bg-violet-100 text-violet-700 ring-violet-200/80'
+              : 'bg-blue-50 text-blue-600 ring-blue-100'
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-900">{title}</p>
+          <p className="mt-1.5 text-sm leading-snug text-slate-600">{description}</p>
+        </div>
+      </div>
+      <div className="mt-3">{children}</div>
+    </div>
+  );
+
   return (
     <div
       className={cn(
@@ -35,11 +69,11 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
       )}
     >
       {moment.type === 'quiz1' && (
-        <div>
-          <p className="text-sm font-bold text-slate-900">Una pregunta rápida</p>
-          <p className="mt-1.5 text-xs text-slate-600">
-            Hoy, si alguien le pregunta a ChatGPT por tu servicio, ¿cómo creés que te trata en la respuesta?
-          </p>
+        <QuestionCard
+          title="Una pregunta rápida"
+          description="Hoy, si alguien le pregunta a ChatGPT por tu servicio, ¿cómo creés que te trata en la respuesta?"
+          Icon={BrainCircuit}
+        >
           <div className="mt-3 flex flex-col gap-2">
             {[
               { v: 'recomienda', label: 'Me prioriza o recomienda' },
@@ -50,20 +84,22 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
                 key={o.v}
                 type="button"
                 variant="outline"
-                className="h-auto justify-start whitespace-normal border-slate-200 py-2 text-left text-sm font-medium text-slate-800"
+                className="h-auto justify-start whitespace-normal rounded-lg border-slate-200 py-2.5 text-left text-sm font-medium text-slate-800 hover:border-blue-300 hover:bg-blue-50/50"
                 onClick={() => onQuiz1(o.v)}
               >
                 {o.label}
               </Button>
             ))}
           </div>
-        </div>
+        </QuestionCard>
       )}
 
       {moment.type === 'quiz2' && (
-        <div>
-          <p className="text-sm font-bold text-slate-900">Segundo pulso</p>
-          <p className="mt-1.5 text-xs text-slate-600">¿Ves a tus competidores aparecer en las respuestas de IA hoy?</p>
+        <QuestionCard
+          title="Segundo pulso"
+          description="¿Ves a tus competidores aparecer en las respuestas de IA hoy?"
+          Icon={Radar}
+        >
           <div className="mt-3 flex flex-col gap-2">
             {[
               { v: 'si', label: 'Sí, a menudo' },
@@ -74,14 +110,14 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
                 key={o.v}
                 type="button"
                 variant="outline"
-                className="h-auto justify-start border-slate-200 py-2 text-left text-sm"
+                className="h-auto justify-start rounded-lg border-slate-200 py-2.5 text-left text-sm hover:border-blue-300 hover:bg-blue-50/50"
                 onClick={() => onQuiz2(o.v)}
               >
                 {o.label}
               </Button>
             ))}
           </div>
-        </div>
+        </QuestionCard>
       )}
 
       {moment.type === 'insight' && (() => {
@@ -99,16 +135,20 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
       })()}
 
       {moment.type === 'social' && (
-        <div>
-          <p className="text-sm font-bold text-slate-900">El terreno se mueve</p>
-          <p className="mt-1.5 text-xs text-slate-600">
-            Otras empresas{industry ? ` en ${industry}` : ' de tu industria'} ya compiten en cómo responde la IA. Cada
-            análisis suma señal frente a tu competencia.
-          </p>
-          <Button type="button" size="sm" variant="secondary" className="mt-3 w-full" onClick={onClose}>
+        <QuestionCard
+          title="El terreno se mueve"
+          description={`Otras empresas${industry ? ` en ${industry}` : ' de tu industria'} ya compiten en cómo responde la IA. Cada análisis suma señal frente a tu competencia.`}
+          Icon={Compass}
+        >
+          <Button
+            type="button"
+            size="sm"
+            className="h-10 w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-md shadow-blue-600/20 hover:from-blue-700 hover:to-blue-600"
+            onClick={onClose}
+          >
             Seguir
           </Button>
-        </div>
+        </QuestionCard>
       )}
 
       {moment.type === 'social2' && (
@@ -137,9 +177,12 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
       )}
 
       {moment.type === 'prediction' && (
-        <div>
-          <p className="text-sm font-bold text-slate-900">¿Cuánto creés que es tu Cleexs Score?</p>
-          <p className="mb-2 mt-0.5 text-xs text-slate-500">Una estimación antes de ver el número final.</p>
+        <QuestionCard
+          title="¿Cuánto creés que es tu Cleexs Score?"
+          description="Una estimación antes de ver el número final."
+          Icon={CircleGauge}
+          iconTone="violet"
+        >
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -153,14 +196,14 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
                 key={b.v}
                 type="button"
                 variant="outline"
-                className="h-11 border-violet-200 text-sm font-semibold text-violet-900"
+                className="h-11 rounded-lg border-violet-200 text-sm font-semibold text-violet-900 hover:bg-violet-50"
                 onClick={() => onPredict(b.v)}
               >
                 {b.l}
               </Button>
             ))}
           </div>
-        </div>
+        </QuestionCard>
       )}
 
     </div>
