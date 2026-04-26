@@ -655,15 +655,24 @@ function VerResultadoContent() {
         <div className="mx-auto max-w-5xl space-y-5 px-1 sm:px-3">
           <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
           <CardHeader className="space-y-1 p-4 pb-3 sm:p-5 sm:pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
-              Resultado del diagnóstico
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              <span className="font-medium">{diagnostic.brandName}</span>
-              {diagnostic.industry && ` · ${diagnostic.industry}`}
-              {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
-            </CardDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
+                  Resultado del diagnóstico
+                </CardTitle>
+                <CardDescription className="mt-1 text-xs sm:text-sm">
+                  <span className="font-medium">{diagnostic.brandName}</span>
+                  {diagnostic.industry && ` · ${diagnostic.industry}`}
+                  {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
+                </CardDescription>
+              </div>
+              <img
+                src="/CleexsLogo.png"
+                alt="Cleexs"
+                className="h-10 w-auto shrink-0 rounded-md sm:h-12"
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4 px-4 pb-4 pt-0 sm:space-y-5 sm:px-5 sm:pb-5">
             {isPending && (

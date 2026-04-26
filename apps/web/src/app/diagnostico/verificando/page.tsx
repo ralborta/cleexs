@@ -444,10 +444,19 @@ function VerificandoContent() {
     <main className="flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
         <div className="mb-4 shrink-0 sm:mb-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
-          <h1 className="mt-1 text-xl font-bold text-slate-900">
-            {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900">
+                {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
+              </h1>
+            </div>
+            <img
+              src="/CleexsLogo.png"
+              alt="Cleexs"
+              className="h-10 w-auto shrink-0 rounded-md sm:h-12"
+            />
+          </div>
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
