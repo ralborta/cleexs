@@ -41,6 +41,18 @@ const STAGE_CONFIG: Record<
   },
 };
 
+const STEP_REFERENCE_IMAGE: Partial<Record<number, string>> = {
+  2: '/onboarding-step-2.png',
+  3: '/onboarding-step-3.png',
+  5: '/onboarding-step-5.png',
+  6: '/onboarding-step-6.png',
+  7: '/onboarding-step-7.png',
+  8: '/onboarding-step-8.png',
+  9: '/onboarding-step-9.png',
+  10: '/onboarding-step-10.png',
+  11: '/onboarding-step-11.png',
+};
+
 function stageFromStepIndex(i: number): OnboardingVisualStage {
   if (i <= 1) return 'site';
   if (i <= 3) return 'scan';
@@ -68,6 +80,8 @@ export function OnboardingRightStage({
   const stage = stageFromStepIndex(stepIndex);
   const { label, sub, icon: Icon, accent } = STAGE_CONFIG[stage];
   const brand = brandName ?? 'Tu marca';
+  const stepNumber = stepIndex + 1;
+  const referenceImage = STEP_REFERENCE_IMAGE[stepNumber] ?? (stepNumber === 4 ? STEP_REFERENCE_IMAGE[3] : undefined);
 
   return (
     <div
@@ -90,7 +104,18 @@ export function OnboardingRightStage({
           </div>
         </div>
 
-        {stage === 'site' && (
+        {referenceImage && (
+          <div className="mt-1 overflow-hidden rounded-xl border border-white/20 bg-black/25 shadow-2xl shadow-slate-950/30">
+            <img
+              src={referenceImage}
+              alt={`Vista de referencia del paso ${stepNumber}`}
+              className="h-auto w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        )}
+
+        {stage === 'site' && !referenceImage && (
           <div key={`site-${pulseKey}`} className="mt-1 flex-1 space-y-2">
             <div className="rounded-lg border border-white/15 bg-white/5 p-3 text-xs text-white/90">
               <p className="font-mono text-[10px] text-white/50">{domainShort}</p>
@@ -105,7 +130,7 @@ export function OnboardingRightStage({
           </div>
         )}
 
-        {stage === 'scan' && (
+        {stage === 'scan' && !referenceImage && (
           <div key={`scan-${pulseKey}`} className="mt-1 grid flex-1 grid-cols-2 gap-2 text-[10px]">
             {['H1 / propuesta', 'Schema / metas', 'FAQ / cómo', 'Navegación', 'Contenido', 'Velocidad'].map(
               (cell, idx) => (
@@ -123,7 +148,7 @@ export function OnboardingRightStage({
           </div>
         )}
 
-        {stage === 'chatgpt' && (
+        {stage === 'chatgpt' && !referenceImage && (
           <div key={`chat-${pulseKey}`} className="mt-1 flex-1 space-y-2 text-[11px]">
             <div className="rounded-lg border border-white/15 bg-black/20 p-2.5 text-white/90">
               <p className="text-[9px] font-medium text-white/50">ChatGPT (simulado)</p>
@@ -141,7 +166,7 @@ export function OnboardingRightStage({
           </div>
         )}
 
-        {stage === 'score' && (
+        {stage === 'score' && !referenceImage && (
           <div key={`score-${pulseKey}`} className="mt-1 flex flex-1 flex-col items-center justify-center gap-2">
             <div className="relative h-20 w-20">
               <svg className="h-20 w-20 -rotate-90" viewBox="0 0 36 36">
@@ -170,7 +195,7 @@ export function OnboardingRightStage({
           </div>
         )}
 
-        {stage === 'compete' && (
+        {stage === 'compete' && !referenceImage && (
           <div key={`compete-${pulseKey}`} className="mt-1 flex flex-1 flex-col justify-center gap-1.5 text-[11px] text-white/90">
             {[
               { n: 'Comp. A', w: 78 },

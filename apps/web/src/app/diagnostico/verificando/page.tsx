@@ -38,6 +38,22 @@ function isBlockingOverlay(m: OverlayMoment): m is Extract<OverlayMoment, { type
   return m.type !== 'idle';
 }
 
+function isReportReadyForRedirect(
+  diagnostic: Awaited<ReturnType<typeof publicDiagnosticApi.get>>
+): boolean {
+  if (diagnostic.status !== 'completed') return false;
+  if (!diagnostic.runResult) return false;
+  if (!diagnostic.showFullReport) return true;
+
+  // Esperamos a que exista consolidado técnico (analysisJson) para no abrir un reporte incompleto.
+  if (diagnostic.analysisJson == null) return false;
+
+  // Si hubo segundo modelo, esperamos su run o un fallo explícito.
+  if (!diagnostic.runGeminiId) return true;
+  if (diagnostic.runResultGemini) return true;
+  return diagnostic.geminiRunStatus === 'failed';
+}
+
 function VerificandoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,7 +206,7 @@ function VerificandoContent() {
       try {
         const data = await publicDiagnosticApi.get(id, tierQParam === 'gold' ? 'gold' : undefined);
         setDiagnostic(data);
-        if (data.status === 'completed') {
+        if (isReportReadyForRedirect(data)) {
           setHandoff('preview');
           return false;
         }
@@ -307,6 +323,18 @@ function VerificandoContent() {
     }
   };
 
+  const waitingSecondModel =
+    diagnostic?.status === 'completed' &&
+    !!diagnostic.showFullReport &&
+    !!diagnostic.runGeminiId &&
+    !diagnostic.runResultGemini &&
+    diagnostic.geminiRunStatus !== 'failed';
+  const waitingConsolidation =
+    diagnostic?.status === 'completed' &&
+    !!diagnostic.showFullReport &&
+    diagnostic.analysisJson == null;
+  const waitingFinalReady = waitingSecondModel || waitingConsolidation;
+
   if (!diagnosticId) {
     return (
       <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
@@ -388,6 +416,13 @@ function VerificandoContent() {
                         {isFinalizing
                           ? 'Checks listos. Consolidando tu Cleexs Score y el informe final…'
                           : ''}
+                      </p>
+                    )}
+                    {waitingFinalReady && (
+                      <p className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-2 text-xs text-primary-800">
+                        {waitingSecondModel
+                          ? 'Score base listo. Terminando el segundo modelo (Gemini) para habilitar consolidado…'
+                          : 'Score base listo. Cerrando consolidado técnico del informe…'}
                       </p>
                     )}
                     <ul className="mt-3 flex flex-wrap gap-1.5">
