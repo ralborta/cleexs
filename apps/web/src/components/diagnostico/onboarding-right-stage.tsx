@@ -42,6 +42,7 @@ const STAGE_CONFIG: Record<
 };
 
 const STEP_REFERENCE_IMAGE: Partial<Record<number, string>> = {
+  1: '/onboarding-step-2.png',
   2: '/onboarding-step-2.png',
   3: '/onboarding-step-3.png',
   5: '/onboarding-step-5.png',
@@ -81,7 +82,9 @@ export function OnboardingRightStage({
   const { label, sub, icon: Icon, accent } = STAGE_CONFIG[stage];
   const brand = brandName ?? 'Tu marca';
   const stepNumber = stepIndex + 1;
-  const referenceImage = STEP_REFERENCE_IMAGE[stepNumber] ?? (stepNumber === 4 ? STEP_REFERENCE_IMAGE[3] : undefined);
+  const referenceImage =
+    STEP_REFERENCE_IMAGE[stepNumber] ??
+    (stepNumber === 4 ? STEP_REFERENCE_IMAGE[3] : undefined);
 
   return (
     <div

@@ -84,7 +84,7 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
                 key={o.v}
                 type="button"
                 variant="outline"
-                className="h-auto justify-start whitespace-normal rounded-lg border-slate-200 py-2.5 text-left text-sm font-medium text-slate-800 hover:border-blue-300 hover:bg-blue-50/50"
+                className="h-auto justify-start whitespace-normal rounded-lg border-slate-200 py-2.5 text-left text-sm font-medium text-slate-800 hover:border-blue-300 hover:bg-blue-50/50 hover:text-slate-800 active:text-slate-800 focus-visible:text-slate-800"
                 onClick={() => onQuiz1(o.v)}
               >
                 {o.label}
@@ -110,7 +110,7 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
                 key={o.v}
                 type="button"
                 variant="outline"
-                className="h-auto justify-start rounded-lg border-slate-200 py-2.5 text-left text-sm hover:border-blue-300 hover:bg-blue-50/50"
+                className="h-auto justify-start rounded-lg border-slate-200 py-2.5 text-left text-sm font-medium text-slate-800 hover:border-blue-300 hover:bg-blue-50/50 hover:text-slate-800 active:text-slate-800 focus-visible:text-slate-800"
                 onClick={() => onQuiz2(o.v)}
               >
                 {o.label}
@@ -196,7 +196,7 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
                 key={b.v}
                 type="button"
                 variant="outline"
-                className="h-11 rounded-lg border-violet-200 text-sm font-semibold text-violet-900 hover:bg-violet-50"
+                className="h-11 rounded-lg border-violet-200 text-sm font-semibold text-violet-900 hover:bg-violet-50 hover:text-violet-900 active:text-violet-900 focus-visible:text-violet-900"
                 onClick={() => onPredict(b.v)}
               >
                 {b.l}
