@@ -85,12 +85,26 @@ export function OnboardingRightStage({
 
   return (
     <div
-      className={cn('relative flex min-h-[220px] flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-900 p-4 text-left shadow-md', className)}
+      className={cn(
+        'relative flex min-h-[220px] flex-1 flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left shadow-md',
+        referenceImage
+          ? 'border-violet-200/70 bg-gradient-to-b from-violet-50 via-[#f9f6ff] to-white shadow-violet-200/40'
+          : 'border-slate-200/80 bg-slate-900',
+        className
+      )}
       data-stage={stage}
     >
-      <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100', accent)} />
       <div
-        className="pointer-events-none absolute inset-0 bg-[url('/verificando-hero-2.png')] bg-center bg-no-repeat opacity-15"
+        className={cn(
+          'pointer-events-none absolute inset-0 bg-gradient-to-br',
+          referenceImage ? 'from-violet-200/40 via-violet-100/15 to-transparent opacity-100' : cn('opacity-100', accent)
+        )}
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 bg-[url('/verificando-hero-2.png')] bg-center bg-no-repeat",
+          referenceImage ? 'opacity-10' : 'opacity-15'
+        )}
         style={{ backgroundSize: '80% auto' }}
       />
       <div className="relative z-10 flex h-full min-h-0 flex-col">
