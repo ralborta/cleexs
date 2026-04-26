@@ -670,7 +670,7 @@ function VerResultadoContent() {
               <img
                 src="/CleexsLogo.png"
                 alt="Cleexs"
-                className="h-10 w-auto shrink-0 rounded-md sm:h-12"
+                className="h-14 w-auto shrink-0 object-contain sm:h-16"
               />
             </div>
           </CardHeader>
