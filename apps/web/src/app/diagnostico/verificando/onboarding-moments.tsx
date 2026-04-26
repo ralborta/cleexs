@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { getPartialInsight, type SitePreviewContext } from './diagnostic-onboarding';
 import { cn } from '@/lib/utils';
+import { TrendingUp } from 'lucide-react';
 
 export type MomentKind =
   | { type: 'idle' }
@@ -111,11 +112,25 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
       )}
 
       {moment.type === 'social2' && (
-        <div>
-          <p className="text-sm font-bold text-slate-900">Tu categoría hoy</p>
-          <p className="mt-1.5 text-xs text-slate-600">Las búsquedas conversacionales y las respuestas de asistentes ya
-            priorizan marcas con señal fuerte. Estamos anotando dónde te ubicas.</p>
-          <Button type="button" size="sm" variant="secondary" className="mt-3 w-full" onClick={onClose}>
+        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/70">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+              <TrendingUp className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-900">Tu categoría hoy</p>
+              <p className="mt-1.5 text-sm leading-snug text-slate-600">
+                Las búsquedas conversacionales y las respuestas de asistentes ya priorizan marcas con señal fuerte.
+                Estamos anotando dónde te ubicás.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="mt-3 h-10 w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-md shadow-blue-600/20 hover:from-blue-700 hover:to-blue-600"
+            onClick={onClose}
+          >
             Continuar
           </Button>
         </div>

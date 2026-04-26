@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { publicDiagnosticApi } from '@/lib/api';
-import { Loader2, Lock, Sparkles } from 'lucide-react';
+import { Boxes, Loader2, Lock, Mail, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { OnboardingRightStage } from '@/components/diagnostico/onboarding-right-
 import { ONBOARDING_STEP_LABELS, saveOnboardingSnapshot, type SitePreviewContext } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { OnboardingMomentStack, type MomentKind } from './onboarding-moments';
+import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -31,6 +32,19 @@ function PulsingDots() {
 }
 
 const HERO = ['/verificando-hero.png', '/verificando-hero-2.png'] as const;
+const ANALYSIS_STEP_CARD_LABELS = [
+  'Verificando acceso de IA al sitio',
+  'Analizando orden para IA',
+  'Midiendo claridad de respuesta',
+  'Evaluando autoridad real',
+  'Chequeando idioma para IA',
+  'Revisando actualización de info',
+  'Detectando confianza real',
+  'Testeando carga y funcionamiento',
+  'Rastreando menciones externas',
+  'Midiendo intención cubierta',
+  'Evaluando comprensión por IA',
+] as const;
 
 type OverlayMoment = Extract<MomentKind, { type: 'quiz1' } | { type: 'quiz2' } | { type: 'insight' } | { type: 'social' } | { type: 'social2' } | { type: 'prediction' }> | { type: 'idle' };
 
@@ -85,6 +99,7 @@ function VerificandoContent() {
   const [overlay, setOverlay] = useState<OverlayMoment>({ type: 'idle' });
   const [visualBoost, setVisualBoost] = useState(0);
   const [emailSectionVisible, setEmailSectionVisible] = useState(false);
+  const [visibleStepCards, setVisibleStepCards] = useState(3);
   const overlayRef = useRef(overlay);
   useEffect(() => {
     overlayRef.current = overlay;
@@ -92,6 +107,7 @@ function VerificandoContent() {
 
   const started = useRef(false);
   const abandonedTracked = useRef(false);
+  const waitingCompletedSinceRef = useRef<number | null>(null);
 
   const stepsList = diagnostic?.steps ?? [];
   const activeIndex = useMemo(() => {
@@ -104,6 +120,7 @@ function VerificandoContent() {
     [stepsList]
   );
   const currentLabel = ONBOARDING_STEP_LABELS[activeIndex] ?? 'Conectando…';
+  const currentCardLabel = ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
   const progress = diagnostic?.progressPercent ?? 0;
   const brandLabel = diagnostic?.brandName ?? null;
   const domain = diagnostic?.domain ?? '';
@@ -122,6 +139,12 @@ function VerificandoContent() {
     [brandLabel, domain, industry]
   );
   const domainShort = (domain || '').replace(/^https?:\/\//, '');
+  const activeStepForCards = useMemo(() => {
+    const firstPending = stepsList.findIndex((s) => !s.completed);
+    if (firstPending >= 0) return firstPending;
+    if (diagnostic?.status === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
+    return Math.max(activeIndex, 0);
+  }, [stepsList, diagnostic?.status, activeIndex]);
 
   const advancePipeline = useCallback((next: number) => {
     setPipeline(next);
@@ -207,8 +230,21 @@ function VerificandoContent() {
         const data = await publicDiagnosticApi.get(id, tierQParam === 'gold' ? 'gold' : undefined);
         setDiagnostic(data);
         if (isReportReadyForRedirect(data)) {
+          waitingCompletedSinceRef.current = null;
           setHandoff('preview');
           return false;
+        }
+        if (data.status === 'completed' && data.runResult) {
+          if (!waitingCompletedSinceRef.current) {
+            waitingCompletedSinceRef.current = Date.now();
+          }
+          const waitedMs = Date.now() - waitingCompletedSinceRef.current;
+          if (waitedMs >= 60_000) {
+            setHandoff('preview');
+            return false;
+          }
+        } else {
+          waitingCompletedSinceRef.current = null;
         }
         if (data.status === 'failed') return false;
       } catch (err) {
@@ -297,6 +333,13 @@ function VerificandoContent() {
     }
   }, [captchaVerified, activeIndex, pipeline, overlay, diagnostic?.status, ctx, handoff, diagnosticId]);
 
+  useEffect(() => {
+    const targetVisible = Math.min(ANALYSIS_STEP_CARD_LABELS.length, Math.max(3, activeStepForCards + 2));
+    if (visibleStepCards >= targetVisible) return;
+    const t = setTimeout(() => setVisibleStepCards((n) => Math.min(targetVisible, n + 1)), 120);
+    return () => clearTimeout(t);
+  }, [activeStepForCards, visibleStepCards]);
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!diagnosticId || !email.trim()) return;
@@ -334,6 +377,19 @@ function VerificandoContent() {
     !!diagnostic.showFullReport &&
     diagnostic.analysisJson == null;
   const waitingFinalReady = waitingSecondModel || waitingConsolidation;
+  const analysisSteps: AnalysisStepItem[] = ANALYSIS_STEP_CARD_LABELS.map((label, i) => {
+    const completedFromApi = stepsList[i]?.completed === true;
+    const isCompleted =
+      completedFromApi || (i < activeStepForCards && diagnostic?.status !== 'failed');
+    const isActive = !isCompleted && i === activeStepForCards && diagnostic?.status !== 'failed';
+    const state: AnalysisStepItem['state'] = isCompleted ? 'completed' : isActive ? 'active' : 'pending';
+    return {
+      id: i + 1,
+      label,
+      state,
+      visible: i < visibleStepCards,
+    };
+  });
 
   if (!diagnosticId) {
     return (
@@ -409,8 +465,15 @@ function VerificandoContent() {
                 </p>
                 {captchaVerified ? (
                   <>
-                    <p className="mt-2 text-sm font-bold leading-snug text-slate-900">Paso {activeIndex + 1} de 11</p>
-                    <p className="mt-1.5 min-h-[2.75rem] text-sm text-slate-600">{currentLabel}</p>
+                    <div className="mt-2 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold leading-snug text-slate-900">Paso {activeIndex + 1} de 11</p>
+                        <p className="mt-1.5 min-h-[2.75rem] text-sm text-slate-600">{currentCardLabel}</p>
+                      </div>
+                      <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-blue-200 bg-blue-50 text-blue-600 shadow-inner">
+                        <Boxes className="h-6 w-6" />
+                      </span>
+                    </div>
                     {isRunning && allStepsDone && (
                       <p className="mt-2 text-xs text-primary-800">
                         {isFinalizing
@@ -425,28 +488,13 @@ function VerificandoContent() {
                           : 'Score base listo. Cerrando consolidado técnico del informe…'}
                       </p>
                     )}
-                    <ul className="mt-3 flex flex-wrap gap-1.5">
-                      {ONBOARDING_STEP_LABELS.map((_, i) => {
-                        const done = stepsList[i]?.completed === true;
-                        const isActive = i === activeIndex && !done;
-                        return (
-                          <li
-                            key={i}
-                            className={cn(
-                              'h-1.5 w-6 rounded-full',
-                              done ? 'bg-primary-500' : isActive ? 'bg-primary-200' : 'bg-slate-100'
-                            )}
-                            title={`Paso ${i + 1}`}
-                          />
-                        );
-                      })}
-                    </ul>
                     <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                      <span>
-                        {isRunning ? (isFinalizing ? 'Preparando informe' : 'En curso') : 'Preparando…'}
-                        {' · '}
-                        {formatElapsed(elapsedSeconds)}
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span>{isRunning ? (isFinalizing ? 'Preparando informe' : 'En proceso') : 'Preparando…'}</span>
+                        <span className="font-semibold text-slate-700">
+                          {Math.round(captchaVerified ? barPct : 0)}% · {formatElapsed(elapsedSeconds)}
+                        </span>
+                      </div>
                     </div>
                     {isRunning && elapsedSeconds >= 360 && (
                       <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
@@ -458,6 +506,21 @@ function VerificandoContent() {
                   <p className="mt-2 text-sm text-slate-600">Confirmá que sos humano en la ventana a la derecha. Ahí
                     arranca el análisis visual y el progreso.</p>
                 )}
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <AnalysisStepsGrid steps={analysisSteps} />
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="inline-flex items-center gap-1.5 text-slate-600">
+                    <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+                    En proceso
+                  </span>
+                  <span className="font-semibold text-slate-700">
+                    {Math.round(captchaVerified ? barPct : 0)}%
+                  </span>
+                  <span className="text-slate-500">{formatElapsed(elapsedSeconds)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -501,10 +564,17 @@ function VerificandoContent() {
 
               {captchaVerified && emailSectionVisible && !emailSent && (
                 <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
-                  <p className="text-sm font-bold text-violet-900">Desbloqueá el envío a tu mail</p>
-                  <p className="mt-0.5 text-xs text-violet-800/90">
-                    Recibí un aviso y el resumen de tu análisis cuando cierre. Sin spam.
-                  </p>
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-1 ring-violet-200/80">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-violet-900">Desbloqueá el envío a tu mail</p>
+                      <p className="mt-0.5 text-xs text-violet-800/90">
+                        Recibí un aviso y el resumen de tu análisis cuando cierre. Sin spam.
+                      </p>
+                    </div>
+                  </div>
                   <form onSubmit={handleEmailSubmit} className="mt-2 flex flex-col gap-2">
                     <input
                       type="email"
@@ -513,7 +583,12 @@ function VerificandoContent() {
                       className="w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-sm"
                       placeholder="correo@empresa.com"
                     />
-                    <Button type="submit" size="sm" disabled={emailLoading || !email.trim()} className="w-full">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={emailLoading || !email.trim()}
+                      className="h-10 w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-md shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700"
+                    >
                       {emailLoading ? 'Guardando…' : 'Enviar'}
                     </Button>
                   </form>
@@ -546,7 +621,6 @@ function VerificandoContent() {
             </div>
           </div>
         </div>
-
         {captchaPopupOpen && !captchaVerified && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-3 sm:items-center">
             <div
