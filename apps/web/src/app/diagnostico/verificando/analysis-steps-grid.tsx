@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, LoaderCircle } from 'lucide-react';
+import { Check, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type ProgressStepState = 'completed' | 'active' | 'pending';
@@ -54,7 +54,7 @@ export function ProgressStepCard({
         {state === 'active' && <ActiveOrbitIcon />}
         {state === 'pending' && (
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-slate-300 text-slate-400">
-            <LoaderCircle className="h-4 w-4" />
+            <Circle className="h-3.5 w-3.5" />
           </span>
         )}
         <div className="min-w-0">
