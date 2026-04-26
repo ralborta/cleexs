@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { getPartialInsight, type SitePreviewContext } from './diagnostic-onboarding';
 import { cn } from '@/lib/utils';
-import { BrainCircuit, CircleGauge, Compass, Radar, Sparkles, TrendingUp } from 'lucide-react';
+import { BrainCircuit, Compass, Gauge, Radar, Sparkles, TrendingUp } from 'lucide-react';
 
 export type MomentKind =
   | { type: 'idle' }
@@ -180,7 +180,7 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
         <QuestionCard
           title="¿Cuánto creés que es tu Cleexs Score?"
           description="Una estimación antes de ver el número final."
-          Icon={CircleGauge}
+          Icon={Gauge}
           iconTone="violet"
         >
           <div className="grid grid-cols-2 gap-2">
