@@ -567,10 +567,15 @@ export const publicDiagnosticApi = {
 };
 
 export const publicDiagnosticShareApi = {
-  get: (slug: string) =>
+  get: (slug: string, opts?: { visitorId?: string }) =>
     api<PublicDiagnosticShareResponse>(
       `/api/public/diagnostic/share/${encodeURIComponent(slug)}`,
-      { cache: 'no-store' }
+      {
+        cache: 'no-store',
+        headers: {
+          ...(opts?.visitorId ? { 'x-visitor-id': opts.visitorId } : {}),
+        },
+      }
     ),
   registerVisit: (slug: string, visitorId: string) =>
     api<{

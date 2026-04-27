@@ -19,8 +19,14 @@ function isPublicDiagnosticPath(pathname: string | null): boolean {
   return false;
 }
 
+function isStandalonePortalPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathname.startsWith('/portal-crecimiento');
+}
+
 export function Header() {
   const pathname = usePathname();
+  if (isStandalonePortalPath(pathname)) return null;
   const minimal = isPublicDiagnosticPath(pathname);
 
   if (minimal) {

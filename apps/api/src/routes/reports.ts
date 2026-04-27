@@ -1,6 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { EntitlementAction } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
+import { executeRun } from '../lib/run-executor';
 
 const normalizeName = (value: string) =>
   value
@@ -57,6 +60,179 @@ function buildComparisonSummary(
 }
 
 const reportRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get<{
+    Querystring: {
+      tenantId: string;
+      userId?: string;
+      status?: 'pending' | 'running' | 'completed' | 'failed';
+    };
+  }>('/app/reports', async (request, reply) => {
+    const querySchema = z.object({
+      tenantId: z.string().uuid(),
+      userId: z.string().uuid().optional(),
+      status: z.enum(['pending', 'running', 'completed', 'failed']).optional(),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+
+    const where: any = {
+      tenantId: parsed.data.tenantId,
+      runType: 'deep_report',
+    };
+    if (parsed.data.status) where.status = parsed.data.status;
+
+    const runs = await prisma.run.findMany({
+      where,
+      include: {
+        brand: { select: { id: true, name: true, domain: true } },
+        priaReports: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    return runs.map((run) => ({
+      id: run.id,
+      status: run.status,
+      createdAt: run.createdAt,
+      periodStart: run.periodStart,
+      periodEnd: run.periodEnd,
+      reportType: run.runType,
+      score: run.priaReports[0]?.priaTotal ?? null,
+      brand: run.brand,
+    }));
+  });
+
+  fastify.get<{
+    Params: { id: string };
+    Querystring: { tenantId: string; userId?: string };
+  }>('/app/reports/:id', async (request, reply) => {
+    const parsed = z
+      .object({
+        id: z.string().uuid(),
+        tenantId: z.string().uuid(),
+        userId: z.string().uuid().optional(),
+      })
+      .safeParse({
+        id: request.params.id,
+        tenantId: request.query.tenantId,
+        userId: request.query.userId,
+      });
+    if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+
+    const run = await prisma.run.findUnique({
+      where: { id: parsed.data.id },
+      include: {
+        brand: { select: { id: true, name: true, domain: true, tenantId: true } },
+        promptResults: { include: { prompt: { include: { category: true } } }, orderBy: { createdAt: 'asc' } },
+        priaReports: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (!run) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+
+    const entitlement = await checkEntitlement(prisma, {
+      actor: { tenantId: parsed.data.tenantId, userId: parsed.data.userId },
+      action: EntitlementAction.report_deep_view,
+      brandId: run.brandId,
+    });
+    if (!entitlement.allowed) return reply.code(403).send({ ok: false, ...entitlement });
+
+    return run;
+  });
+
+  fastify.post<{
+    Params: { brandId: string };
+    Body: { tenantId: string; userId: string; periodStart?: string; periodEnd?: string };
+  }>('/:brandId/deep-generate', async (request, reply) => {
+    const payload = z
+      .object({
+        brandId: z.string().uuid(),
+        tenantId: z.string().uuid(),
+        userId: z.string().uuid(),
+        periodStart: z.string().datetime().optional(),
+        periodEnd: z.string().datetime().optional(),
+      })
+      .safeParse({
+        brandId: request.params.brandId,
+        ...(request.body ?? {}),
+      });
+    if (!payload.success) return reply.code(400).send({ error: 'Payload inválido.' });
+
+    const brand = await prisma.brand.findUnique({
+      where: { id: payload.data.brandId },
+      select: { id: true, tenantId: true },
+    });
+    if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
+    if (brand.tenantId !== payload.data.tenantId) {
+      return reply.code(403).send({ error: 'La marca no pertenece al tenant indicado.' });
+    }
+
+    const entitlement = await checkEntitlement(prisma, {
+      actor: { tenantId: payload.data.tenantId, userId: payload.data.userId },
+      action: EntitlementAction.report_deep_generate,
+      brandId: payload.data.brandId,
+    });
+    if (!entitlement.allowed) return reply.code(403).send({ ok: false, ...entitlement });
+
+    const now = new Date();
+    const periodStart = payload.data.periodStart ? new Date(payload.data.periodStart) : now;
+    const periodEnd = payload.data.periodEnd ? new Date(payload.data.periodEnd) : now;
+
+    const run = await prisma.run.create({
+      data: {
+        tenantId: payload.data.tenantId,
+        brandId: payload.data.brandId,
+        status: 'pending',
+        runType: 'deep_report',
+        periodStart,
+        periodEnd,
+      },
+    });
+
+    await prisma.tenantBrandAccess.upsert({
+      where: {
+        tenantId_brandId: {
+          tenantId: payload.data.tenantId,
+          brandId: payload.data.brandId,
+        },
+      },
+      create: {
+        tenantId: payload.data.tenantId,
+        brandId: payload.data.brandId,
+        source: 'deep_report_generation',
+      },
+      update: {},
+    });
+
+    await consumeEntitlement(prisma, {
+      actor: { tenantId: payload.data.tenantId, userId: payload.data.userId },
+      action: EntitlementAction.report_deep_generate,
+      brandId: payload.data.brandId,
+      dedupeKey: `deep-generate:${payload.data.tenantId}:${payload.data.brandId}:${run.id}`,
+      metaJson: { runId: run.id },
+    });
+
+    setImmediate(async () => {
+      try {
+        await executeRun(run.id);
+      } catch (err) {
+        fastify.log.error({ err, runId: run.id }, 'Error ejecutando deep report');
+        await prisma.run.update({ where: { id: run.id }, data: { status: 'failed' } }).catch(() => {});
+      }
+    });
+
+    return reply.code(202).send({
+      ok: true,
+      runId: run.id,
+      status: run.status,
+      entitlement: {
+        plan: entitlement.plan,
+        usage: entitlement.usage + 1,
+        limit: entitlement.limit,
+      },
+    });
+  });
+
   // GET /reports/pria?brandId=...&versionId=...&startDate=...&endDate=...
   fastify.get<{
     Querystring: {

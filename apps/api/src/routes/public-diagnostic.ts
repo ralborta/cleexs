@@ -4,6 +4,8 @@ import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
+import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
+import { EntitlementAction } from '@prisma/client';
 import { runOutreachForRun } from '../lib/outreach';
 import {
   determineMarketProfileForBrand,
@@ -581,6 +583,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const { brandName, url, tier: requestedTier, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
       const trimmedBrand = (brandName ?? '').trim();
       const trimmedUrl = (url ?? '').trim();
+      const visitorIdHeader = request.headers['x-visitor-id'];
+      const visitorId = typeof visitorIdHeader === 'string' ? visitorIdHeader.trim() : '';
 
       if (!trimmedBrand && !trimmedUrl) {
         return reply.code(400).send({
@@ -619,6 +623,22 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
+
+      if (visitorId) {
+        const canGenerate = await checkEntitlement(prisma, {
+          actor: { anonymousId: visitorId },
+          action: EntitlementAction.score_generate,
+        });
+        if (!canGenerate.allowed) {
+          return reply.code(403).send({
+            error: canGenerate.reason || 'Límite de diagnósticos alcanzado para visitante anónimo.',
+            code: canGenerate.code,
+            usage: canGenerate.usage,
+            limit: canGenerate.limit,
+          });
+        }
+      }
+
       const diagnostic = await prisma.publicDiagnostic.create({
         data: {
           brandName: brandForRun,
@@ -631,6 +651,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           ...(utmCampaign ? { utmCampaign: utmCampaign.toLowerCase() } : {}),
         },
       });
+
+      if (visitorId) {
+        await consumeEntitlement(prisma, {
+          actor: { anonymousId: visitorId },
+          action: EntitlementAction.score_generate,
+          dedupeKey: `anon-score-generate:${visitorId}:${diagnostic.id}`,
+          metaJson: { diagnosticId: diagnostic.id, domain },
+        });
+      }
 
       setImmediate(async () => {
       try {
@@ -1213,6 +1242,45 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (!row) {
       return reply.code(404).send({ error: 'Enlace no encontrado.' });
+    }
+
+    const visitorIdHeader = request.headers['x-visitor-id'];
+    const visitorId =
+      (typeof visitorIdHeader === 'string' && visitorIdHeader.trim()) ||
+      (typeof request.query === 'object' &&
+      request.query &&
+      'visitorId' in (request.query as Record<string, unknown>) &&
+      typeof (request.query as Record<string, unknown>).visitorId === 'string'
+        ? ((request.query as Record<string, unknown>).visitorId as string)
+        : undefined);
+
+    if (visitorId) {
+      const entitlement = await checkEntitlement(prisma, {
+        actor: { anonymousId: visitorId },
+        action: EntitlementAction.score_view,
+        profileSlug: slug,
+      });
+
+      if (!entitlement.allowed) {
+        return reply.code(403).send({
+          error: entitlement.reason || 'Límite de vistas alcanzado para visitante anónimo.',
+          code: entitlement.code,
+          plan: entitlement.plan,
+          planKey: entitlement.planKey,
+          planDisplay: entitlement.planDisplay,
+          usage: entitlement.usage,
+          limit: entitlement.limit,
+          upgradePath: '/planes',
+        });
+      }
+
+      await consumeEntitlement(prisma, {
+        actor: { anonymousId: visitorId },
+        action: EntitlementAction.score_view,
+        profileSlug: slug,
+        dedupeKey: `anon-score-view:${visitorId}:${slug}`,
+        metaJson: { diagnosticId: row.id, slug },
+      });
     }
 
     const visitCount = await prisma.publicDiagnosticShareVisit.count({

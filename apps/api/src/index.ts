@@ -14,6 +14,9 @@ import reportRoutes from './routes/reports';
 import publicDiagnosticRoutes from './routes/public-diagnostic';
 import cronRoutes from './routes/cron';
 import leadsRoutes from './routes/leads';
+import usageRoutes from './routes/usage';
+import profileRoutes from './routes/profile';
+import adminEntitlementRoutes from './routes/admin-entitlements';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -76,6 +79,9 @@ async function bootstrap() {
   await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
   await server.register(cronRoutes, { prefix: '/api/cron' });
   await server.register(leadsRoutes, { prefix: '/api/leads' });
+  await server.register(usageRoutes, { prefix: '/api' });
+  await server.register(profileRoutes, { prefix: '/api' });
+  await server.register(adminEntitlementRoutes, { prefix: '/api/admin' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server

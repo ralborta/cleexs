@@ -15,7 +15,20 @@ import {
 } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
-import { Bot, Gauge, LayoutDashboard, Layers, Loader2, Lock, LogIn, Sparkles, Target, Users } from 'lucide-react';
+import {
+  Bot,
+  Gauge,
+  LayoutDashboard,
+  Layers,
+  Loader2,
+  Lock,
+  LogIn,
+  Sparkles,
+  Target,
+  Users,
+  Building2,
+  FileStack,
+} from 'lucide-react';
 
 function buildRunResultAmbos(a: PublicDiagnosticRunResult, b: PublicDiagnosticRunResult): PublicDiagnosticRunResult {
   const prA = a.promptResults || [];
@@ -124,7 +137,8 @@ export function ScoreShareClient({ slug }: { slug: string }) {
   const visitSent = useRef(false);
 
   const load = useCallback(async () => {
-    const d = await publicDiagnosticShareApi.get(slug);
+    const visitorId = getOrCreateCleexsVisitorId();
+    const d = await publicDiagnosticShareApi.get(slug, visitorId ? { visitorId } : undefined);
     setData(d);
     return d;
   }, [slug]);
@@ -282,7 +296,37 @@ export function ScoreShareClient({ slug }: { slug: string }) {
               <div className="rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 to-accent-50 p-6">
                 <p className="text-xs font-medium text-primary-700 uppercase tracking-wide">Cleexs Score</p>
                 <p className="text-5xl font-bold text-foreground tabular-nums">{Math.round(data.cleexsScore)}</p>
-                <p className="text-sm text-muted-foreground mt-1">Vista pública · 0–100</p>
+                <p className="text-sm text-muted-foreground mt-1">Vista pública del score simple · 0–100</p>
+              </div>
+            )}
+
+            {data.status === 'completed' && (
+              <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/90 to-white p-5 shadow-sm">
+                <p className="text-sm font-semibold text-slate-900">¿Qué podés hacer ahora?</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  El <strong>Cleexs Score simple</strong> es público. El <strong>reporte en profundidad</strong>, AEO
+                  herramientas y el historial completo van con tu cuenta y plan.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button asChild variant="default" className="bg-violet-600 hover:bg-violet-700">
+                    <Link href="/planes">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Crear cuenta / ver planes
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="border-violet-200 text-violet-800 hover:bg-violet-50">
+                    <Link href="/planes">
+                      <Building2 className="mr-2 h-4 w-4" />
+                      Reclamar este perfil
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/planes">
+                      <FileStack className="mr-2 h-4 w-4" />
+                      Reporte en profundidad (Crecimiento)
+                    </Link>
+                  </Button>
+                </div>
               </div>
             )}
 

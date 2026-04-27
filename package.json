@@ -15,6 +15,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:provision:account": "tsx prisma/provision-account.ts",
     "deploy:api": "prisma migrate deploy && node apps/api/dist/index.js"
   },
   "prisma": {
