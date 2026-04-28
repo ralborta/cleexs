@@ -179,8 +179,13 @@ export default function PortalCrecimientoPage() {
         body: JSON.stringify({}),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error || `Error HTTP ${res.status}`);
+        const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        const detail = body.message || body.error || `HTTP ${res.status}`;
+        throw new Error(
+          res.status === 500 && (body.error === 'Internal Server Error' || !body.message)
+            ? `Generación de reporte no disponible (500). Suele faltar la tabla usage_ledger en la base de datos: ejecutá migraciones en la API (prisma migrate deploy). Detalle: ${detail}`
+            : detail
+        );
       }
       await loadData();
     } catch (err) {

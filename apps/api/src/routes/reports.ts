@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { EntitlementAction } from '@prisma/client';
+import { EntitlementAction, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
@@ -261,13 +261,26 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       update: {},
     });
 
-    await consumeEntitlement(prisma, {
-      actor: { tenantId, userId },
-      action: EntitlementAction.report_deep_generate,
-      brandId,
-      dedupeKey: `deep-generate:${tenantId}:${brandId}:${run.id}`,
-      metaJson: { runId: run.id },
-    });
+    try {
+      await consumeEntitlement(prisma, {
+        actor: { tenantId, userId },
+        action: EntitlementAction.report_deep_generate,
+        brandId,
+        dedupeKey: `deep-generate:${tenantId}:${brandId}:${run.id}`,
+        metaJson: { runId: run.id },
+      });
+    } catch (err) {
+      await prisma.run.delete({ where: { id: run.id } }).catch(() => {});
+      fastify.log.error({ err }, 'consumeEntitlement fallo');
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
+        return reply.code(503).send({
+          error: 'usage_ledger_requerido',
+          message:
+            'Falta la tabla usage_ledger (u objetos relacionados). En el servicio API ejecutá: npx prisma migrate deploy',
+        });
+      }
+      throw err;
+    }
 
     setImmediate(async () => {
       try {
