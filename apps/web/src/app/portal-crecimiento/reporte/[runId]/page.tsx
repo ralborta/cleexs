@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -19,7 +19,7 @@ type PortalRunDetail = {
     domain?: string | null;
     industry?: string | null;
     productType?: string | null;
-    competitors: Array<{ id: string; name: string }>;
+    competitors: Array<{ id: string; name: string; domain?: string | null }>;
     aliases: Array<{ id: string; alias: string }>;
   };
   promptResults: Array<{
@@ -27,9 +27,14 @@ type PortalRunDetail = {
     score: number;
     top3Json: unknown;
     responseText: string;
-    prompt: { promptText: string; category?: { name: string } | null };
+    prompt: {
+      id?: string;
+      name?: string | null;
+      promptText: string;
+      category?: { name: string } | null;
+    };
   }>;
-  priaReports: Array<{ priaTotal: number }>;
+  priaReports: Array<{ priaTotal: number; priaByCategoryJson?: unknown }>;
 };
 
 const normalizeName = (value: string) =>
@@ -75,6 +80,34 @@ function buildComparisonSummary(promptResults: Array<{ top3Json: unknown }>) {
       sampleReason: row.sampleReason,
     }))
     .sort((a, b) => b.appearances - a.appearances);
+}
+
+/** Competidores citados en el Top 3 de las respuestas (nombre + veces). */
+function competitorsDetectedInRun(promptResults: Array<{ top3Json: unknown }>) {
+  const counts = new Map<string, number>();
+  for (const result of promptResults) {
+    const top3 = (result.top3Json as Top3Entry[]) || [];
+    for (const entry of top3) {
+      if (`${entry.type}`.toLowerCase() !== 'competitor') continue;
+      const k = entry.name.trim();
+      if (!k) continue;
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([name, mentionsInTop3Slots]) => ({ name, mentionsInTop3Slots }))
+    .sort((a, b) => b.mentionsInTop3Slots - a.mentionsInTop3Slots);
+}
+
+function parsePriaCategories(json: unknown): { label: string; score: number }[] {
+  if (!json || typeof json !== 'object') return [];
+  return Object.entries(json as Record<string, unknown>)
+    .map(([label, v]) => ({
+      label,
+      score: typeof v === 'number' ? v : Number(v) || 0,
+    }))
+    .filter((r) => r.label)
+    .sort((a, b) => b.score - a.score);
 }
 
 export default function PortalReporteRunPage() {
@@ -128,6 +161,11 @@ export default function PortalReporteRunPage() {
     };
   }, [runId]);
 
+  const detectedCompetitors = useMemo(
+    () => (run ? competitorsDetectedInRun(run.promptResults) : []),
+    [run]
+  );
+
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 p-6">
@@ -149,7 +187,9 @@ export default function PortalReporteRunPage() {
     );
   }
 
-  const pria = run.priaReports?.[0]?.priaTotal;
+  const latestPria = run.priaReports?.[0];
+  const pria = latestPria?.priaTotal;
+  const priaCategories = parsePriaCategories(latestPria?.priaByCategoryJson);
   const promptAvg =
     run.promptResults.length > 0
       ? run.promptResults.reduce((s, r) => s + (Number(r.score) || 0), 0) / run.promptResults.length
@@ -158,10 +198,13 @@ export default function PortalReporteRunPage() {
     pria != null ? Math.round(pria) : promptAvg != null ? Math.round(promptAvg * 100) : null;
 
   const comparison = buildComparisonSummary(run.promptResults);
-  const competidorNames = run.brand.competitors.map((c) => c.name).filter(Boolean);
+  const competidorRows = run.brand.competitors;
   const referenceRows: { name: string; role: string }[] = [
     { name: run.brand.name, role: 'Tu marca (medida en los prompts)' },
-    ...competidorNames.map((n) => ({ name: n, role: 'Competidor configurado' })),
+    ...competidorRows.map((c) => ({
+      name: c.domain ? `${c.name} (${c.domain})` : c.name,
+      role: 'Competidor configurado',
+    })),
   ];
   const runKindLabel = run.runType === 'deep_report' ? 'Reporte profundo' : 'Corrida Cleexs';
 
@@ -188,96 +231,140 @@ export default function PortalReporteRunPage() {
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
             <p className="font-medium">Esta ejecución falló antes de completar el análisis.</p>
             <p className="mt-2 text-red-800">
-              Con la última actualización de la API, las cuentas sin prompts propios usan los del sistema (tenant 000).
-              Volvé a ejecutar una corrida o reporte desde el portal tras desplegar la API. Si sigue en fallo, revisá
-              en Railway que exista <code className="rounded bg-red-100 px-1">OPENAI_API_KEY</code> y que el seed tenga
-              prompts activos en el tenant <code className="rounded bg-red-100 px-1">000</code>.
+              Volvé a ejecutar desde el portal tras desplegar la API (prompts del tenant 000,{' '}
+              <code className="rounded bg-red-100 px-1">OPENAI_API_KEY</code> en Railway).
             </p>
             <p className="mt-2 text-red-800">
-              Igual podés ver abajo <strong>qué competidores</strong> están cargados para tu marca; la tabla con
-              métricas aparece cuando la corrida termine bien.
+              Igual podés ver la <strong>configuración de competidores</strong> y, si hay datos parciales, el detalle
+              por prompt más abajo.
             </p>
           </div>
         ) : null}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Competidores configurados</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Competidores</h2>
           <p className="mt-1 text-xs text-slate-600">
-            Se comparan en los prompts junto con tu marca (según lo cargado en la marca).
+            Configurados en tu marca (lo que pedimos al modelo) y, si la corrida generó resultados, quiénes aparecieron
+            en los Top 3 de las respuestas.
           </p>
-          {competidorNames.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-600">
-              No hay competidores cargados para esta marca. Desde el equipo Cleexs se pueden asociar competidores al
-              perfil para enriquecer el Top 3.
-            </p>
-          ) : (
-            <ul className="mt-3 list-inside list-disc text-sm text-slate-800">
-              {competidorNames.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          )}
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+              <p className="text-xs font-semibold uppercase text-slate-600">En tu cuenta</p>
+              {competidorRows.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-600">
+                  No hay competidores cargados. Cleexs puede asociarlos al perfil de marca; sin ellos el modelo igual
+                  puede nombrar otras marcas en el texto.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm text-slate-900">
+                  {competidorRows.map((c) => (
+                    <li key={c.id}>
+                      <span className="font-medium">{c.name}</span>
+                      {c.domain ? (
+                        <span className="text-slate-600"> · {c.domain}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
+              <p className="text-xs font-semibold uppercase text-emerald-800">En esta corrida (IA)</p>
+              {detectedCompetitors.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-600">
+                  {run.promptResults.length === 0
+                    ? 'Aún no hay Top 3 guardados para esta ejecución.'
+                    : 'No se detectaron entradas tipo “competidor” en el Top 3 parseado (o la corrida no terminó).'}
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1.5 text-sm">
+                  {detectedCompetitors.map((d) => (
+                    <li key={d.name} className="flex justify-between gap-2 text-emerald-950">
+                      <span className="font-medium">{d.name}</span>
+                      <span className="text-xs text-emerald-800">{d.mentionsInTop3Slots} menciones Top 3</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {(competidorRows.length === 0 && run.promptResults.length === 0) || comparison.length === 0 ? (
+            <div className="mt-4">
+              <p className="text-xs font-medium uppercase text-slate-500">Referencia — universo del análisis</p>
+              <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[320px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                      <th className="py-2 px-3">Marca / competidor</th>
+                      <th className="py-2 px-3">Rol</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {referenceRows.map((row) => (
+                      <tr key={`${row.name}-${row.role}`} className="border-b border-slate-100">
+                        <td className="py-2 px-3 font-medium text-slate-900">{row.name}</td>
+                        <td className="py-2 px-3 text-slate-600">{row.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Cleexs Score</h2>
           <p className="mt-1 text-xs text-slate-600">
             {pria != null
-              ? 'Agregado PRIA de esta corrida.'
-              : 'Estimación hasta que exista PRIA completo (promedio de scores por prompt).'}
+              ? 'PRIA agregado de esta corrida.'
+              : 'Hasta que exista PRIA, estimación por promedio de scores por prompt.'}
           </p>
           <p className="mt-4 text-5xl font-bold text-slate-900">{displayScore ?? '—'}</p>
+          {priaCategories.length > 0 ? (
+            <div className="mt-6">
+              <p className="text-xs font-medium uppercase text-slate-500">Por categoría (PRIA)</p>
+              <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[280px] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                      <th className="py-2 px-3 text-left">Categoría</th>
+                      <th className="py-2 px-3 text-right">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {priaCategories.map((row) => (
+                      <tr key={row.label} className="border-b border-slate-100">
+                        <td className="py-2 px-3 text-slate-800">{row.label}</td>
+                        <td className="py-2 px-3 text-right font-medium text-slate-900">
+                          {Math.round(row.score)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
           {run.status !== 'completed' ? (
             <p className="mt-3 text-sm text-amber-800">
-              Este run está <strong>{run.status}</strong>.
+              Estado: <strong>{run.status}</strong>.
               {run.status === 'failed'
-                ? ' No hay score agregado hasta que una ejecución termine correctamente.'
-                : ' Los números pueden completarse cuando termine la ejecución; actualizá esta página en unos minutos.'}
+                ? ' Sin score completo hasta que una ejecución termine bien.'
+                : ' Actualizá en unos minutos si sigue en proceso.'}
             </p>
           ) : null}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Presencia en la IA: tu marca vs competencia</h2>
-          <p className="mt-1 text-xs text-slate-600">
-            Resumen de apariciones en el Top 3 de las respuestas del modelo (marca propia y competidores citados en
-            cada respuesta).
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">Vista resumida: tu marca vs competencia en la IA</h2>
+          <p className="mt-1 text-xs text-slate-600">Agrupado por todas las respuestas de esta corrida.</p>
           {comparison.length === 0 ? (
-            <div className="mt-4 space-y-4">
-              <p className="text-sm text-slate-600">
-                {run.promptResults.length === 0
-                  ? run.status === 'running' || run.status === 'pending'
-                    ? 'La corrida sigue en proceso. Actualizá esta página en unos minutos para ver el Top 3 y la competencia en la IA.'
-                    : 'Todavía no hay resultados de prompts en esta ejecución.'
-                  : 'No se pudo armar un Top 3 a partir de las respuestas guardadas.'}
-              </p>
-              <div>
-                <p className="text-xs font-medium uppercase text-slate-500">Referencia — quién entra en el análisis</p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Mientras no haya resultados, esta es la marca medida y los competidores configurados (lo que la IA
-                  debería contrastar en cada prompt).
-                </p>
-                <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="w-full min-w-[320px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-                        <th className="py-2 px-3">Marca / competidor</th>
-                        <th className="py-2 px-3">Rol</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {referenceRows.map((row) => (
-                        <tr key={`${row.name}-${row.role}`} className="border-b border-slate-100">
-                          <td className="py-2 px-3 font-medium text-slate-900">{row.name}</td>
-                          <td className="py-2 px-3 text-slate-600">{row.role}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <p className="mt-4 text-sm text-slate-600">
+              Sin datos de Top 3 todavía. Cuando la corrida termine, verás apariciones y posición media por marca.
+            </p>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
@@ -307,6 +394,89 @@ export default function PortalReporteRunPage() {
                 </tbody>
               </table>
             </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Reporte completo — cada prompt</h2>
+          <p className="mt-1 text-xs text-slate-600">
+            Texto del prompt, respuesta del modelo, ranking Top 3 y score del prompt. Desplegá cada bloque para leer el
+            detalle.
+          </p>
+          {run.promptResults.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-600">
+              No hay resultados guardados en esta ejecución (pendiente, fallida o en curso).
+            </p>
+          ) : (
+            <ol className="mt-4 space-y-3">
+              {run.promptResults.map((pr, idx) => {
+                const top3 = (pr.top3Json as Top3Entry[]) || [];
+                const category = pr.prompt?.category?.name;
+                const title =
+                  pr.prompt?.name?.trim() ||
+                  (category ? `${category} · Prompt ${idx + 1}` : `Prompt ${idx + 1}`);
+                return (
+                  <li
+                    key={pr.id}
+                    className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-sm shadow-sm"
+                  >
+                    <p className="text-xs font-semibold uppercase text-violet-700">
+                      {idx + 1}. {title}
+                    </p>
+                    {category ? (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Categoría: <span className="text-slate-700">{category}</span>
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-slate-600">
+                      Score prompt:{' '}
+                      <span className="font-mono font-medium text-slate-900">
+                        {Number(pr.score) <= 1 ? `${Math.round(Number(pr.score) * 100)} / 100` : String(pr.score)}
+                      </span>
+                    </p>
+                    <details className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-medium text-slate-800">
+                        Texto del prompt
+                      </summary>
+                      <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-slate-700">
+                        {pr.prompt?.promptText || '—'}
+                      </pre>
+                    </details>
+                    {top3.length > 0 ? (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-slate-700">Top 3 (extraído)</p>
+                        <ul className="mt-1 list-inside list-decimal text-xs text-slate-800">
+                          {top3.map((t, j) => (
+                            <li key={`${t.name}-${j}`}>
+                              <span className="font-medium">{t.name}</span>
+                              <span className="text-slate-600">
+                                {' '}
+                                — {t.type === 'brand' ? 'marca' : 'competidor'}
+                              </span>
+                              {t.reason ? (
+                                <span className="block pl-4 text-slate-600">
+                                  {t.reason.replace(/\*+/g, '').trim()}
+                                </span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-amber-800">Sin Top 3 parseable en esta respuesta.</p>
+                    )}
+                    <details className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-medium text-slate-800">
+                        Respuesta del modelo (texto completo)
+                      </summary>
+                      <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs text-slate-700">
+                        {pr.responseText || '—'}
+                      </pre>
+                    </details>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </section>
       </div>

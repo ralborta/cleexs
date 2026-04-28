@@ -161,7 +161,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
             tenantId: true,
             industry: true,
             productType: true,
-            competitors: { select: { id: true, name: true } },
+            competitors: { select: { id: true, name: true, domain: true } },
             aliases: { select: { id: true, alias: true } },
           },
         },
