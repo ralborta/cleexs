@@ -3,6 +3,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { checkEntitlement } from '../lib/entitlements';
 import { prisma } from '../lib/prisma';
+import { resolvePortalUserFromRequest } from '../lib/portal-user';
 
 const queryActorSchema = z.object({
   tenantId: z.string().uuid().optional(),
@@ -12,27 +13,39 @@ const queryActorSchema = z.object({
 
 const usageRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: z.infer<typeof queryActorSchema> }>('/me/usage', async (request, reply) => {
-    const parsed = queryActorSchema.safeParse(request.query ?? {});
-    if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos para usage.' });
+    const portalUser = await resolvePortalUserFromRequest(request);
+    let actor: { tenantId?: string; userId?: string; anonymousId?: string };
+    let accountEmail: string | undefined;
 
-    const actor = {
-      tenantId: parsed.data.tenantId,
-      userId: parsed.data.userId,
-      anonymousId: parsed.data.visitorId,
-    };
+    if (portalUser) {
+      actor = { tenantId: portalUser.tenantId, userId: portalUser.userId };
+      accountEmail = portalUser.email;
+    } else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true') {
+      const parsed = queryActorSchema.safeParse(request.query ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos para usage.' });
+      actor = {
+        tenantId: parsed.data.tenantId,
+        userId: parsed.data.userId,
+        anonymousId: parsed.data.visitorId,
+      };
+      if (parsed.data.userId != null) {
+        const row = await prisma.user.findUnique({
+          where: { id: parsed.data.userId },
+          select: { email: true },
+        });
+        accountEmail = row?.email ?? undefined;
+      }
+    } else {
+      return reply.code(401).send({
+        error:
+          'Autenticación requerida: Authorization: Bearer <token> (POST /api/auth/portal/login con email y contraseña).',
+      });
+    }
 
     const [scoreCheck, deepCheck] = await Promise.all([
       checkEntitlement(prisma, { actor, action: EntitlementAction.score_view }),
       checkEntitlement(prisma, { actor, action: EntitlementAction.report_deep_generate }),
     ]);
-
-    const account =
-      parsed.data.userId != null
-        ? await prisma.user.findUnique({
-            where: { id: parsed.data.userId },
-            select: { email: true },
-          })
-        : null;
 
     return {
       actor,
@@ -52,7 +65,7 @@ const usageRoutes: FastifyPluginAsync = async (fastify) => {
         canViewScore: scoreCheck.allowed,
         canGenerateDeepReport: deepCheck.allowed,
       },
-      account: account?.email ? { email: account.email } : undefined,
+      account: accountEmail ? { email: accountEmail } : undefined,
     };
   });
 

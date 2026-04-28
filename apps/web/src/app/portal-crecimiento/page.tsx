@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+const TOKEN_KEY = 'cleexs_portal_token';
+
 type UsageResponse = {
   usage?: { scoreViews?: number; deepReportsGenerated?: number };
   limits?: { scoreViews?: number | null; deepReportsGenerated?: number | null };
@@ -23,50 +25,70 @@ type ReportItem = {
 type BrandItem = { id: string; name: string; domain?: string | null };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const TENANT_ID = process.env.NEXT_PUBLIC_PORTAL_TENANT_ID?.trim();
-const USER_ID = process.env.NEXT_PUBLIC_PORTAL_USER_ID?.trim();
-const BRAND_ID = process.env.NEXT_PUBLIC_PORTAL_BRAND_ID?.trim();
 const PORTAL_TITLE =
   process.env.NEXT_PUBLIC_PORTAL_TITLE?.trim() || 'Cleexs Crecimiento · Portal cliente';
 const PORTAL_SUBTITLE =
   process.env.NEXT_PUBLIC_PORTAL_SUBTITLE?.trim() ||
-  'Uso del plan, reportes profundos y marcas asociadas a tu tenant (datos reales desde la API).';
+  'Iniciá sesión con tu email y contraseña de cuenta. Cada usuario ve solo su plan y su uso.';
 
 export default function PortalCrecimientoPage() {
+  const [token, setToken] = useState<string | null>(null);
+  const [booting, setBooting] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
+
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [brands, setBrands] = useState<BrandItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [brandId, setBrandId] = useState<string>('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
+  useEffect(() => {
+    try {
+      const t = sessionStorage.getItem(TOKEN_KEY);
+      setToken(t && t.length > 20 ? t : null);
+    } catch {
+      setToken(null);
+    }
+    setBooting(false);
+  }, []);
+
+  const authHeaders = (t: string | null): HeadersInit =>
+    t ? { Authorization: `Bearer ${t}` } : {};
+
   const loadData = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     setError(null);
-    if (!TENANT_ID || !USER_ID) {
-      setError(
-        'Falta configuración: definí NEXT_PUBLIC_PORTAL_TENANT_ID y NEXT_PUBLIC_PORTAL_USER_ID en apps/web/.env.local (UUID reales). Referencia: apps/web/.env.example.'
-      );
-      setLoading(false);
-      return;
-    }
-
     const controller = new AbortController();
     const timeoutMs = 18_000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const fetchOpts: RequestInit = { cache: 'no-store', signal: controller.signal };
-    const q = `tenantId=${encodeURIComponent(TENANT_ID)}&userId=${encodeURIComponent(USER_ID)}`;
+    const fetchOpts: RequestInit = {
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: { ...authHeaders(token) },
+    };
 
     try {
       const [usageRes, reportsRes, brandsRes] = await Promise.all([
-        fetch(`${API_URL}/api/me/usage?${q}`, fetchOpts),
-        fetch(`${API_URL}/api/reports/app/reports?${q}`, fetchOpts),
-        fetch(`${API_URL}/api/brands?tenantId=${encodeURIComponent(TENANT_ID)}`, fetchOpts),
+        fetch(`${API_URL}/api/me/usage`, fetchOpts),
+        fetch(`${API_URL}/api/reports/app/reports`, fetchOpts),
+        fetch(`${API_URL}/api/brands`, fetchOpts),
       ]);
+
+      if (usageRes.status === 401 || reportsRes.status === 401 || brandsRes.status === 401) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        setToken(null);
+        setError('Sesión vencida o inválida. Volvé a iniciar sesión.');
+        return;
+      }
 
       if (!usageRes.ok || !reportsRes.ok || !brandsRes.ok) {
         throw new Error(
-          `La API respondió con error (${API_URL}). Comprobá migraciones, DATABASE_URL en la API y que existan tenant/usuario.`
+          `La API respondió con error (${API_URL}). Comprobá migraciones, PORTAL_JWT_SECRET en la API y que el usuario tenga contraseña (provision --password).`
         );
       }
 
@@ -77,12 +99,17 @@ export default function PortalCrecimientoPage() {
       ]);
 
       setUsage(usageData);
+      const list = Array.isArray(brandsData) ? brandsData : [];
+      setBrands(list);
+      setBrandId((prev) => {
+        if (prev && list.some((b) => b.id === prev)) return prev;
+        return list[0]?.id ?? '';
+      });
       setReports(Array.isArray(reportsData) ? reportsData : []);
-      setBrands(Array.isArray(brandsData) ? brandsData : []);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         setError(
-          `La API no respondió en ${timeoutMs / 1000}s (${API_URL}). Verificá que el backend esté en marcha y la URL en NEXT_PUBLIC_API_URL.`
+          `La API no respondió en ${timeoutMs / 1000}s (${API_URL}). Verificá NEXT_PUBLIC_API_URL y que el backend esté en marcha.`
         );
       } else {
         setError(err instanceof Error ? err.message : 'Error cargando el portal');
@@ -91,22 +118,65 @@ export default function PortalCrecimientoPage() {
       clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    if (token) void loadData();
+    else {
+      setUsage(null);
+      setReports([]);
+      setBrands([]);
+      setBrandId('');
+    }
+  }, [token, loadData]);
+
+  async function onLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoginBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/portal/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(body.error || `Error ${res.status}`);
+      }
+      if (!body.token) throw new Error('Respuesta inválida del servidor.');
+      sessionStorage.setItem(TOKEN_KEY, body.token);
+      setPassword('');
+      setToken(body.token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
+    } finally {
+      setLoginBusy(false);
+    }
+  }
+
+  function onLogout() {
+    sessionStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+    setUsage(null);
+    setReports([]);
+    setBrands([]);
+    setBrandId('');
+    setError(null);
+  }
 
   async function generateDeepReport() {
-    if (!TENANT_ID || !USER_ID || !BRAND_ID) {
-      setError(
-        'Para generar un reporte profundo desde acá, agregá NEXT_PUBLIC_PORTAL_BRAND_ID en .env.local (UUID de la marca).'
-      );
+    if (!token || !brandId) {
+      setError('Elegí una marca para generar el reporte.');
       return;
     }
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/reports/${encodeURIComponent(BRAND_ID)}/deep-generate`, {
+      const res = await fetch(`${API_URL}/api/reports/${encodeURIComponent(brandId)}/deep-generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: TENANT_ID, userId: USER_ID }),
+        headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -120,17 +190,95 @@ export default function PortalCrecimientoPage() {
     }
   }
 
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  if (booting) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-6">
+        <p className="text-center text-sm text-slate-600">Cargando…</p>
+      </main>
+    );
+  }
+
+  if (!token) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-6">
+        <div className="mx-auto max-w-md space-y-6 pt-12">
+          <header className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal cliente</p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-900">{PORTAL_TITLE}</h1>
+            <p className="mt-2 text-sm text-slate-600">{PORTAL_SUBTITLE}</p>
+          </header>
+
+          {error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+          ) : null}
+
+          <form
+            onSubmit={onLogin}
+            className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div>
+              <label htmlFor="portal-email" className="block text-xs font-medium text-slate-700">
+                Email
+              </label>
+              <input
+                id="portal-email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(ev) => setEmail(ev.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="portal-password" className="block text-xs font-medium text-slate-700">
+                Contraseña
+              </label>
+              <input
+                id="portal-password"
+                type="password"
+                autoComplete="current-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(ev) => setPassword(ev.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loginBusy}
+              className="w-full rounded-md bg-violet-600 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {loginBusy ? 'Entrando…' : 'Entrar'}
+            </button>
+            <p className="text-xs text-slate-500">
+              Contraseña: definila con{' '}
+              <code className="rounded bg-slate-100 px-1">npm run db:provision:account -- --email=TU_EMAIL --domain=tu-dominio.com --password=TU_CLAVE</code>
+              . La API necesita <code className="rounded bg-slate-100 px-1">PORTAL_JWT_SECRET</code>.
+            </p>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <header className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Portal cliente</p>
-          <h1 className="mt-1 text-2xl font-bold">{PORTAL_TITLE}</h1>
-          <p className="mt-1 text-sm text-violet-100">{PORTAL_SUBTITLE}</p>
+        <header className="flex flex-col gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Portal cliente</p>
+            <h1 className="mt-1 text-2xl font-bold">{PORTAL_TITLE}</h1>
+            <p className="mt-1 text-sm text-violet-100">{PORTAL_SUBTITLE}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="self-start rounded-md border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20"
+          >
+            Cerrar sesión
+          </button>
         </header>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -139,8 +287,7 @@ export default function PortalCrecimientoPage() {
           </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">Resumen de cuenta</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Cuenta:{' '}
-            <span className="font-medium">{usage?.account?.email || '—'}</span>
+            Cuenta: <span className="font-medium">{usage?.account?.email || '—'}</span>
             {usage?.planDisplay ? (
               <>
                 {' '}
@@ -177,9 +324,9 @@ export default function PortalCrecimientoPage() {
                 </p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs uppercase text-slate-500">Marcas en el tenant</p>
+                <p className="text-xs uppercase text-slate-500">Marcas en tu cuenta</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{brands.length}</p>
-                <p className="text-xs text-slate-500">Listado desde /api/brands</p>
+                <p className="text-xs text-slate-500">Asociadas a tu tenant</p>
               </div>
             </section>
 
@@ -192,19 +339,35 @@ export default function PortalCrecimientoPage() {
             </section>
 
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Reportes profundos</h2>
-                  <p className="text-xs text-slate-600">Historial desde la API (runs tipo deep_report).</p>
+                  <p className="text-xs text-slate-600">Historial de runs tipo deep_report.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void generateDeepReport()}
-                  disabled={creating || !usage?.permissions?.canGenerateDeepReport}
-                  className="rounded-md bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {creating ? 'Generando…' : 'Generar reporte profundo'}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="text-xs text-slate-600">
+                    Marca
+                    <select
+                      value={brandId}
+                      onChange={(ev) => setBrandId(ev.target.value)}
+                      className="ml-2 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    >
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void generateDeepReport()}
+                    disabled={creating || !brandId || !usage?.permissions?.canGenerateDeepReport}
+                    className="rounded-md bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {creating ? 'Generando…' : 'Generar reporte profundo'}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">

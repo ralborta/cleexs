@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import {
   classifyDomain,
   discoverCompetitors,
@@ -62,10 +63,23 @@ const parseSuggestions = (text: string): SuggestionItem[] => {
 };
 
 const brandRoutes: FastifyPluginAsync = async (fastify) => {
-  // GET /brands?tenantId=...
-  fastify.get<{ Querystring: { tenantId: string } }>('/', async (request, reply) => {
+  // GET /brands — con Bearer (portal) usa el tenant del usuario; legacy opcional con ?tenantId=
+  fastify.get<{ Querystring: { tenantId?: string } }>('/', async (request, reply) => {
+    const portalUser = await resolvePortalUserFromRequest(request);
+    let tenantId: string | undefined;
+    if (portalUser) tenantId = portalUser.tenantId;
+    else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true' && request.query.tenantId) {
+      tenantId = request.query.tenantId;
+    }
+    if (!tenantId) {
+      return reply.code(401).send({
+        error:
+          'Autenticación requerida: Authorization: Bearer <token>, o ?tenantId= con ALLOW_USAGE_ACTOR_QUERY=true.',
+      });
+    }
+
     const brands = await prisma.brand.findMany({
-      where: { tenantId: request.query.tenantId },
+      where: { tenantId },
       include: {
         aliases: true,
         competitors: true,

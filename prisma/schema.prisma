@@ -109,13 +109,14 @@ enum ProfileClaimStatus {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  name        String?
-  tenantId    String    @map("tenant_id")
-  role        UserRole  @default(viewer)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  passwordHash String?   @map("password_hash")
+  tenantId     String    @map("tenant_id")
+  role         UserRole  @default(viewer)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relations
   tenant      Tenant    @relation(fields: [tenantId], references: [id])

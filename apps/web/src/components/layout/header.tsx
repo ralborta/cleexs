@@ -24,9 +24,14 @@ function isStandalonePortalPath(pathname: string | null): boolean {
   return pathname.startsWith('/portal-crecimiento');
 }
 
+function isAdminPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathname.startsWith('/admin');
+}
+
 export function Header() {
   const pathname = usePathname();
-  if (isStandalonePortalPath(pathname)) return null;
+  if (isStandalonePortalPath(pathname) || isAdminPath(pathname)) return null;
   const minimal = isPublicDiagnosticPath(pathname);
 
   if (minimal) {

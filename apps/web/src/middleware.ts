@@ -28,6 +28,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname.startsWith('/diagnostico/verificando')) return true;
   if (pathname.startsWith('/ver-resultado')) return true;
   if (pathname.startsWith('/score')) return true;
+  if (pathname.startsWith('/admin')) return true;
   return false;
 }
 
@@ -52,7 +53,8 @@ export function middleware(request: NextRequest) {
       pathname === '/planes' ||
       pathname.startsWith('/diagnostico/verificando') ||
       pathname.startsWith('/ver-resultado') ||
-      pathname.startsWith('/score');
+      pathname.startsWith('/score') ||
+      pathname.startsWith('/admin');
     if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
       url.pathname = '/diagnostico/crear';

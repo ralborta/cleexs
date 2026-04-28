@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { EntitlementAction } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { executeRun } from '../lib/run-executor';
 
@@ -67,19 +68,33 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       status?: 'pending' | 'running' | 'completed' | 'failed';
     };
   }>('/app/reports', async (request, reply) => {
-    const querySchema = z.object({
-      tenantId: z.string().uuid(),
-      userId: z.string().uuid().optional(),
-      status: z.enum(['pending', 'running', 'completed', 'failed']).optional(),
-    });
-    const parsed = querySchema.safeParse(request.query);
-    if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+    const portalUser = await resolvePortalUserFromRequest(request);
+    let tenantId: string;
+    if (portalUser) tenantId = portalUser.tenantId;
+    else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true') {
+      const querySchema = z.object({
+        tenantId: z.string().uuid(),
+        userId: z.string().uuid().optional(),
+        status: z.enum(['pending', 'running', 'completed', 'failed']).optional(),
+      });
+      const parsed = querySchema.safeParse(request.query);
+      if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+      tenantId = parsed.data.tenantId;
+    } else {
+      return reply.code(401).send({
+        error: 'Autenticación requerida: Authorization: Bearer <token>.',
+      });
+    }
+
+    const statusSchema = z.enum(['pending', 'running', 'completed', 'failed']).optional();
+    const statusOnly = z.object({ status: statusSchema }).safeParse(request.query);
+    const status = statusOnly.success ? statusOnly.data.status : undefined;
 
     const where: any = {
-      tenantId: parsed.data.tenantId,
+      tenantId,
       runType: 'deep_report',
     };
-    if (parsed.data.status) where.status = parsed.data.status;
+    if (status) where.status = status;
 
     const runs = await prisma.run.findMany({
       where,
@@ -107,21 +122,36 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { id: string };
     Querystring: { tenantId: string; userId?: string };
   }>('/app/reports/:id', async (request, reply) => {
-    const parsed = z
-      .object({
-        id: z.string().uuid(),
-        tenantId: z.string().uuid(),
-        userId: z.string().uuid().optional(),
-      })
-      .safeParse({
-        id: request.params.id,
-        tenantId: request.query.tenantId,
-        userId: request.query.userId,
-      });
-    if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+    const portalUser = await resolvePortalUserFromRequest(request);
+    let tenantId: string;
+    let userId: string | undefined;
+    if (portalUser) {
+      tenantId = portalUser.tenantId;
+      userId = portalUser.userId;
+    } else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true') {
+      const parsed = z
+        .object({
+          id: z.string().uuid(),
+          tenantId: z.string().uuid(),
+          userId: z.string().uuid().optional(),
+        })
+        .safeParse({
+          id: request.params.id,
+          tenantId: request.query.tenantId,
+          userId: request.query.userId,
+        });
+      if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+      tenantId = parsed.data.tenantId;
+      userId = parsed.data.userId;
+    } else {
+      return reply.code(401).send({ error: 'Autenticación requerida: Authorization: Bearer <token>.' });
+    }
+
+    const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+    if (!idParsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
 
     const run = await prisma.run.findUnique({
-      where: { id: parsed.data.id },
+      where: { id: idParsed.data.id },
       include: {
         brand: { select: { id: true, name: true, domain: true, tenantId: true } },
         promptResults: { include: { prompt: { include: { category: true } } }, orderBy: { createdAt: 'asc' } },
@@ -129,9 +159,12 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
     if (!run) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+    if (run.tenantId !== tenantId) {
+      return reply.code(403).send({ error: 'Este reporte no pertenece a tu cuenta.' });
+    }
 
     const entitlement = await checkEntitlement(prisma, {
-      actor: { tenantId: parsed.data.tenantId, userId: parsed.data.userId },
+      actor: { tenantId, userId },
       action: EntitlementAction.report_deep_view,
       brandId: run.brandId,
     });
@@ -144,44 +177,68 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { brandId: string };
     Body: { tenantId: string; userId: string; periodStart?: string; periodEnd?: string };
   }>('/:brandId/deep-generate', async (request, reply) => {
-    const payload = z
-      .object({
-        brandId: z.string().uuid(),
-        tenantId: z.string().uuid(),
-        userId: z.string().uuid(),
-        periodStart: z.string().datetime().optional(),
-        periodEnd: z.string().datetime().optional(),
-      })
-      .safeParse({
-        brandId: request.params.brandId,
-        ...(request.body ?? {}),
-      });
-    if (!payload.success) return reply.code(400).send({ error: 'Payload inválido.' });
+    const portalUser = await resolvePortalUserFromRequest(request);
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    let tenantId: string;
+    let userId: string;
+    let periodStartRaw: string | undefined;
+    let periodEndRaw: string | undefined;
+
+    if (portalUser) {
+      tenantId = portalUser.tenantId;
+      userId = portalUser.userId;
+      periodStartRaw = typeof body.periodStart === 'string' ? body.periodStart : undefined;
+      periodEndRaw = typeof body.periodEnd === 'string' ? body.periodEnd : undefined;
+    } else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true') {
+      const payload = z
+        .object({
+          brandId: z.string().uuid(),
+          tenantId: z.string().uuid(),
+          userId: z.string().uuid(),
+          periodStart: z.string().datetime().optional(),
+          periodEnd: z.string().datetime().optional(),
+        })
+        .safeParse({
+          brandId: request.params.brandId,
+          ...body,
+        });
+      if (!payload.success) return reply.code(400).send({ error: 'Payload inválido.' });
+      tenantId = payload.data.tenantId;
+      userId = payload.data.userId;
+      periodStartRaw = payload.data.periodStart;
+      periodEndRaw = payload.data.periodEnd;
+    } else {
+      return reply.code(401).send({ error: 'Autenticación requerida: Authorization: Bearer <token>.' });
+    }
+
+    const brandId = request.params.brandId;
+    const idCheck = z.string().uuid().safeParse(brandId);
+    if (!idCheck.success) return reply.code(400).send({ error: 'Payload inválido.' });
 
     const brand = await prisma.brand.findUnique({
-      where: { id: payload.data.brandId },
+      where: { id: brandId },
       select: { id: true, tenantId: true },
     });
     if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
-    if (brand.tenantId !== payload.data.tenantId) {
-      return reply.code(403).send({ error: 'La marca no pertenece al tenant indicado.' });
+    if (brand.tenantId !== tenantId) {
+      return reply.code(403).send({ error: 'La marca no pertenece a tu cuenta.' });
     }
 
     const entitlement = await checkEntitlement(prisma, {
-      actor: { tenantId: payload.data.tenantId, userId: payload.data.userId },
+      actor: { tenantId, userId },
       action: EntitlementAction.report_deep_generate,
-      brandId: payload.data.brandId,
+      brandId,
     });
     if (!entitlement.allowed) return reply.code(403).send({ ok: false, ...entitlement });
 
     const now = new Date();
-    const periodStart = payload.data.periodStart ? new Date(payload.data.periodStart) : now;
-    const periodEnd = payload.data.periodEnd ? new Date(payload.data.periodEnd) : now;
+    const periodStart = periodStartRaw ? new Date(periodStartRaw) : now;
+    const periodEnd = periodEndRaw ? new Date(periodEndRaw) : now;
 
     const run = await prisma.run.create({
       data: {
-        tenantId: payload.data.tenantId,
-        brandId: payload.data.brandId,
+        tenantId,
+        brandId,
         status: 'pending',
         runType: 'deep_report',
         periodStart,
@@ -192,23 +249,23 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     await prisma.tenantBrandAccess.upsert({
       where: {
         tenantId_brandId: {
-          tenantId: payload.data.tenantId,
-          brandId: payload.data.brandId,
+          tenantId,
+          brandId,
         },
       },
       create: {
-        tenantId: payload.data.tenantId,
-        brandId: payload.data.brandId,
+        tenantId,
+        brandId,
         source: 'deep_report_generation',
       },
       update: {},
     });
 
     await consumeEntitlement(prisma, {
-      actor: { tenantId: payload.data.tenantId, userId: payload.data.userId },
+      actor: { tenantId, userId },
       action: EntitlementAction.report_deep_generate,
-      brandId: payload.data.brandId,
-      dedupeKey: `deep-generate:${payload.data.tenantId}:${payload.data.brandId}:${run.id}`,
+      brandId,
+      dedupeKey: `deep-generate:${tenantId}:${brandId}:${run.id}`,
       metaJson: { runId: run.id },
     });
 
