@@ -475,7 +475,8 @@ export default function PortalCrecimientoPage() {
               </div>
               <p className="mt-3 text-[11px] text-slate-500">
                 Los scores de competidores se estiman desde la última corrida de la marca pivot cuando hay Top 3
-                parseable; el informe detallado con gráficos está en “Ver reporte de análisis completo”.
+                parseable; el resultado del diagnóstico (secciones 1–8 + anexo técnico) está en “Ver resultado del
+                diagnóstico”.
               </p>
             </section>
 
@@ -594,13 +595,13 @@ export default function PortalCrecimientoPage() {
               </p>
             </section>
 
-            {/* Mock 3 — Historial (acceso al reporte de análisis, pantallas tipo diagnóstico completo) */}
+            {/* Mock 3 — Historial (resultado del diagnóstico: informe ejecutivo, no solo listado por prompt) */}
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-1">
                 <h2 className="text-lg font-semibold text-slate-900">Historial de diagnósticos</h2>
                 <p className="text-xs text-slate-600">
-                  Ver corridas anteriores y abrir el <strong>reporte de análisis completo</strong> (prompts,
-                  gráficos y métricas), separado del panel resumido de arriba.
+                  Ver corridas anteriores y abrir el <strong>resultado del diagnóstico</strong> (resumen, KPIs,
+                  comparativa, métricas y acciones). El listado largo por prompt queda como anexo al final.
                 </p>
               </div>
               <div className="mt-5 border-t border-slate-100 pt-5">
@@ -657,7 +658,7 @@ export default function PortalCrecimientoPage() {
                         href={`/portal-crecimiento/reporte/${r.id}`}
                         className="shrink-0 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-center text-xs font-semibold text-violet-900 hover:bg-violet-100"
                       >
-                        Ver reporte de análisis completo
+                        Ver resultado del diagnóstico
                       </Link>
                     </article>
                   ))}
