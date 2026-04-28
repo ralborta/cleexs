@@ -8,7 +8,11 @@ const TOKEN_KEY = 'cleexs_portal_token';
 type UsageResponse = {
   usage?: { scoreViews?: number; deepReportsGenerated?: number };
   limits?: { scoreViews?: number | null; deepReportsGenerated?: number | null };
-  permissions?: { canViewScore?: boolean; canGenerateDeepReport?: boolean };
+  permissions?: {
+    canViewScore?: boolean;
+    canGenerateDeepReport?: boolean;
+    canRunMonthlyAnalysis?: boolean;
+  };
   account?: { email?: string };
   plan?: string;
   planKey?: string;
@@ -20,6 +24,7 @@ type ReportItem = {
   status: string;
   createdAt: string;
   score: number | null;
+  reportType?: string;
   brand: { name: string; domain?: string };
 };
 
@@ -46,6 +51,7 @@ export default function PortalCrecimientoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [runningMes, setRunningMes] = useState(false);
 
   useEffect(() => {
     try {
@@ -193,6 +199,31 @@ export default function PortalCrecimientoPage() {
       setError(err instanceof Error ? err.message : 'Error generando reporte');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function runMonthlyAnalysis() {
+    if (!token || !brandId) {
+      setError('Elegí una marca para ejecutar el análisis.');
+      return;
+    }
+    setRunningMes(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/runs/portal/mes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+        body: JSON.stringify({ brandId }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string; hint?: string };
+      if (!res.ok) {
+        throw new Error(body.message || body.error || `Error HTTP ${res.status}`);
+      }
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar la corrida');
+    } finally {
+      setRunningMes(false);
     }
   }
 
@@ -345,12 +376,16 @@ export default function PortalCrecimientoPage() {
             </section>
 
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="mb-3 flex flex-col gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Reportes profundos</h2>
-                  <p className="text-xs text-slate-600">Historial de runs tipo deep_report.</p>
+                  <h2 className="text-lg font-semibold text-slate-900">Análisis Cleexs y reportes</h2>
+                  <p className="text-xs text-slate-600">
+                    Elegí marca, ejecutá una <strong>corrida</strong> (análisis estándar con prompts de tu plan) o un{' '}
+                    <strong>reporte profundo</strong>. El historial muestra ambos; abrí &quot;Ver score y competencia&quot;
+                    para el detalle.
+                  </p>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
                   <label className="text-xs text-slate-600">
                     Marca
                     <select
@@ -365,6 +400,16 @@ export default function PortalCrecimientoPage() {
                       ))}
                     </select>
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => void runMonthlyAnalysis()}
+                    disabled={
+                      runningMes || !brandId || usage?.permissions?.canRunMonthlyAnalysis === false
+                    }
+                    className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {runningMes ? 'Iniciando corrida…' : 'Ejecutar corrida Cleexs'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => void generateDeepReport()}
@@ -383,6 +428,9 @@ export default function PortalCrecimientoPage() {
                     className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
+                      <p className="text-xs font-medium uppercase text-slate-500">
+                        {r.reportType === 'deep_report' ? 'Reporte profundo' : 'Corrida Cleexs'}
+                      </p>
                       <p className="text-sm font-medium text-slate-900">{r.brand.name}</p>
                       {r.brand.domain ? <p className="text-xs text-slate-600">{r.brand.domain}</p> : null}
                     </div>
@@ -402,7 +450,7 @@ export default function PortalCrecimientoPage() {
                   </article>
                 ))}
                 {reports.length === 0 ? (
-                  <p className="text-sm text-slate-600">Todavía no hay reportes en el historial.</p>
+                  <p className="text-sm text-slate-600">Todavía no hay corridas ni reportes en el historial.</p>
                 ) : null}
               </div>
             </section>

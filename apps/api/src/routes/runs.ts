@@ -1,13 +1,108 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { EntitlementAction, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { canCreateRun } from '../lib/tenant';
 import { parseTop3 } from '../lib/parsing';
 import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from '../lib/pria';
+import { resolvePortalUserFromRequest } from '../lib/portal-user';
+import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
+import { executeRun } from '../lib/run-executor';
 
 const runRoutes: FastifyPluginAsync = async (fastify) => {
+  /** Portal cliente: crea run mensual y ejecuta análisis (mismos prompts que el dashboard). */
+  fastify.post<{ Body: { brandId: string } }>('/portal/mes', async (request, reply) => {
+    const portalUser = await resolvePortalUserFromRequest(request);
+    if (!portalUser) {
+      return reply.code(401).send({ error: 'Autenticación requerida: Bearer <token> del portal.' });
+    }
+
+    const parsed = z.object({ brandId: z.string().uuid() }).safeParse(request.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'brandId inválido.' });
+
+    const { tenantId, userId } = portalUser;
+    const { brandId } = parsed.data;
+
+    const brand = await prisma.brand.findUnique({
+      where: { id: brandId },
+      select: { id: true, tenantId: true },
+    });
+    if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
+    if (brand.tenantId !== tenantId) {
+      return reply.code(403).send({ error: 'La marca no pertenece a tu cuenta.' });
+    }
+
+    const canCreate = await canCreateRun(tenantId);
+    if (!canCreate.allowed) {
+      return reply.code(403).send({ error: canCreate.reason || 'No podés crear una corrida ahora.' });
+    }
+
+    const genCheck = await checkEntitlement(prisma, {
+      actor: { tenantId, userId },
+      action: EntitlementAction.score_generate,
+    });
+    if (!genCheck.allowed) {
+      return reply.code(403).send({
+        error: genCheck.reason || 'Límite de análisis alcanzado.',
+        code: genCheck.code,
+        usage: genCheck.usage,
+        limit: genCheck.limit,
+      });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return reply.code(503).send({ error: 'OPENAI_API_KEY no configurada en el servidor.' });
+    }
+
+    const now = new Date();
+    const run = await prisma.run.create({
+      data: {
+        tenantId,
+        brandId,
+        status: 'pending',
+        runType: 'monthly',
+        periodStart: now,
+        periodEnd: now,
+      },
+    });
+
+    try {
+      await consumeEntitlement(prisma, {
+        actor: { tenantId, userId },
+        action: EntitlementAction.score_generate,
+        brandId,
+        dedupeKey: `portal-mes:${run.id}`,
+        metaJson: { runId: run.id, runType: 'monthly' },
+      });
+    } catch (err) {
+      await prisma.run.delete({ where: { id: run.id } }).catch(() => {});
+      fastify.log.error({ err }, 'consumeEntitlement score_generate portal/mes');
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
+        return reply.code(503).send({
+          error: 'usage_ledger_requerido',
+          message: 'Falta la tabla usage_ledger. Ejecutá migraciones en la API.',
+        });
+      }
+      throw err;
+    }
+
+    setImmediate(() => {
+      void executeRun(run.id).catch(async (err) => {
+        fastify.log.error({ err, runId: run.id }, 'executeRun portal/mes falló');
+        await prisma.run.update({ where: { id: run.id }, data: { status: 'failed' } }).catch(() => {});
+      });
+    });
+
+    return reply.code(202).send({
+      ok: true,
+      runId: run.id,
+      status: run.status,
+      runType: run.runType,
+      hint: 'La corrida se ejecuta en segundo plano. Actualizá el historial del portal en 1–3 minutos.',
+    });
+  });
+
   // GET /runs?tenantId=...&brandId=...
   fastify.get<{ Querystring: { tenantId?: string; brandId?: string } }>('/', async (request) => {
     const where: any = {};

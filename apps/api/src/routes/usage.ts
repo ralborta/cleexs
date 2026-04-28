@@ -42,9 +42,10 @@ const usageRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const [scoreCheck, deepCheck] = await Promise.all([
+    const [scoreCheck, deepCheck, monthlyGenCheck] = await Promise.all([
       checkEntitlement(prisma, { actor, action: EntitlementAction.score_view }),
       checkEntitlement(prisma, { actor, action: EntitlementAction.report_deep_generate }),
+      checkEntitlement(prisma, { actor, action: EntitlementAction.score_generate }),
     ]);
 
     return {
@@ -64,6 +65,7 @@ const usageRoutes: FastifyPluginAsync = async (fastify) => {
       permissions: {
         canViewScore: scoreCheck.allowed,
         canGenerateDeepReport: deepCheck.allowed,
+        canRunMonthlyAnalysis: monthlyGenCheck.allowed,
       },
       account: accountEmail ? { email: accountEmail } : undefined,
     };

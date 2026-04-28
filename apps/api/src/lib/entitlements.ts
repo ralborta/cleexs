@@ -320,18 +320,7 @@ export async function checkEntitlement(
       });
     }
 
-    if (!input.brandId) {
-      return wrapResult({
-        allowed: false,
-        code: 'brand_required',
-        reason: 'Falta brandId para validar permisos',
-        planKey,
-        usage: 0,
-        limit: limits.deepReportsMonthly,
-      });
-    }
-
-    if (limits.maxBrands === 1) {
+    if (input.brandId && limits.maxBrands === 1) {
       const accesses = await prisma.tenantBrandAccess.findMany({
         where: { tenantId: input.actor.tenantId },
         orderBy: { createdAt: 'asc' },

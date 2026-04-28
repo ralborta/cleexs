@@ -92,7 +92,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
 
     const where: any = {
       tenantId,
-      runType: 'deep_report',
+      runType: { in: ['deep_report', 'monthly'] },
     };
     if (status) where.status = status;
 
@@ -174,12 +174,14 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(403).send({ error: 'Este reporte no pertenece a tu cuenta.' });
     }
 
-    const entitlement = await checkEntitlement(prisma, {
-      actor: { tenantId, userId },
-      action: EntitlementAction.report_deep_view,
-      brandId: run.brandId,
-    });
-    if (!entitlement.allowed) return reply.code(403).send({ ok: false, ...entitlement });
+    if (run.runType === 'deep_report') {
+      const entitlement = await checkEntitlement(prisma, {
+        actor: { tenantId, userId },
+        action: EntitlementAction.report_deep_view,
+        brandId: run.brandId,
+      });
+      if (!entitlement.allowed) return reply.code(403).send({ ok: false, ...entitlement });
+    }
 
     return run;
   });
