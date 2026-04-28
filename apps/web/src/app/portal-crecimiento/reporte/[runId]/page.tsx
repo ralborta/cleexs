@@ -225,6 +225,11 @@ export default function PortalReporteRunPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">{runKindLabel}</p>
           <h1 className="mt-1 text-2xl font-bold">{run.brand.name}</h1>
           {run.brand.domain ? <p className="mt-1 text-sm text-violet-100">{run.brand.domain}</p> : null}
+          <p className="mt-2 text-xs leading-relaxed text-violet-100/90">
+            Reporte de análisis completo: métricas, comparativas y detalle por prompt. El panel resumido con KPIs y
+            tabla comparativa está en <Link href="/portal-crecimiento" className="underline hover:text-white">portal</Link>
+            .
+          </p>
         </header>
 
         {run.status === 'failed' ? (

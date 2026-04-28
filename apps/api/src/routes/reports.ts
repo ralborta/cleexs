@@ -118,6 +118,120 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
+  /** Datos para el panel resumido del portal (tabla comparativa; no es el reporte largo). */
+  fastify.get<{ Querystring: { brandId?: string } }>('/app/portal-panel', async (request, reply) => {
+    const portalUser = await resolvePortalUserFromRequest(request);
+    if (!portalUser) {
+      return reply.code(401).send({ error: 'Autenticación requerida: Authorization: Bearer <token>.' });
+    }
+    const tenantId = portalUser.tenantId;
+
+    const brands = await prisma.brand.findMany({
+      where: { tenantId },
+      orderBy: { name: 'asc' },
+      include: {
+        competitors: { select: { id: true, name: true, domain: true } },
+      },
+    });
+
+    let primaryId = (request.query.brandId || '').trim();
+    if (!primaryId || !brands.some((b) => b.id === primaryId)) {
+      primaryId = brands[0]?.id ?? '';
+    }
+    const primaryBrand = brands.find((b) => b.id === primaryId) ?? brands[0];
+
+    const brandScores = new Map<string, number | null>();
+    for (const b of brands) {
+      const run = await prisma.run.findFirst({
+        where: { brandId: b.id, tenantId, status: 'completed' },
+        orderBy: { createdAt: 'desc' },
+        include: { priaReports: { orderBy: { createdAt: 'desc' }, take: 1 } },
+      });
+      const p = run?.priaReports[0]?.priaTotal;
+      brandScores.set(b.id, p != null && Number.isFinite(p) ? Math.round(p) : null);
+    }
+
+    type Row = {
+      rank: number;
+      name: string;
+      domain: string | null;
+      tag: 'mi_empresa' | 'competidor';
+      score: number | null;
+    };
+    const rows: Row[] = [];
+
+    const pseudoCompetitorScore = (row: ComparisonRow): number => {
+      const share = row.share;
+      const pos = row.averagePosition;
+      return Math.min(
+        100,
+        Math.max(0, Math.round(38 + share * 0.42 + (4 - pos) * 9))
+      );
+    };
+
+    const competitorScoresByName = new Map<string, number | null>();
+    if (primaryBrand) {
+      const anchorRun = await prisma.run.findFirst({
+        where: { brandId: primaryBrand.id, tenantId, status: 'completed' },
+        orderBy: { createdAt: 'desc' },
+        include: { promptResults: { select: { top3Json: true } } },
+      });
+      if (anchorRun) {
+        const comp = buildComparisonSummary(anchorRun.promptResults);
+        for (const c of primaryBrand.competitors) {
+          const row =
+            comp.find(
+              (r) => normalizeName(r.name) === normalizeName(c.name) && r.type === 'competitor'
+            ) || comp.find((r) => normalizeName(r.name) === normalizeName(c.name));
+          competitorScoresByName.set(
+            c.id,
+            row ? pseudoCompetitorScore(row) : null
+          );
+        }
+      }
+    }
+
+    if (primaryBrand) {
+      rows.push({
+        rank: 0,
+        name: primaryBrand.name,
+        domain: primaryBrand.domain,
+        tag: 'mi_empresa',
+        score: brandScores.get(primaryBrand.id) ?? null,
+      });
+    }
+    for (const b of brands) {
+      if (primaryBrand && b.id === primaryBrand.id) continue;
+      rows.push({
+        rank: 0,
+        name: b.name,
+        domain: b.domain,
+        tag: 'mi_empresa',
+        score: brandScores.get(b.id) ?? null,
+      });
+    }
+    if (primaryBrand) {
+      for (const c of primaryBrand.competitors) {
+        rows.push({
+          rank: 0,
+          name: c.name,
+          domain: c.domain ?? null,
+          tag: 'competidor',
+          score: competitorScoresByName.get(c.id) ?? null,
+        });
+      }
+    }
+
+    rows.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    const compareRows = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+
+    return {
+      primaryBrandId: primaryId || null,
+      multimarca: brands.length > 1,
+      compareRows,
+    };
+  });
+
   fastify.get<{
     Params: { id: string };
     Querystring: { tenantId: string; userId?: string };
