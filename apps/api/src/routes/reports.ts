@@ -153,7 +153,18 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     const run = await prisma.run.findUnique({
       where: { id: idParsed.data.id },
       include: {
-        brand: { select: { id: true, name: true, domain: true, tenantId: true } },
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            domain: true,
+            tenantId: true,
+            industry: true,
+            productType: true,
+            competitors: { select: { id: true, name: true } },
+            aliases: { select: { id: true, alias: true } },
+          },
+        },
         promptResults: { include: { prompt: { include: { category: true } } }, orderBy: { createdAt: 'asc' } },
         priaReports: { orderBy: { createdAt: 'desc' } },
       },

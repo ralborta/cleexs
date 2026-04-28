@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -392,6 +393,12 @@ export default function PortalCrecimientoPage() {
                       Score: <span className="font-medium text-slate-900">{r.score ?? '—'}</span>
                     </div>
                     <div className="text-xs text-slate-600">{new Date(r.createdAt).toLocaleString()}</div>
+                    <Link
+                      href={`/portal-crecimiento/reporte/${r.id}`}
+                      className="shrink-0 rounded-md border border-violet-200 bg-violet-50 px-3 py-1.5 text-center text-xs font-medium text-violet-800 hover:bg-violet-100"
+                    >
+                      Ver score y competencia
+                    </Link>
                   </article>
                 ))}
                 {reports.length === 0 ? (
