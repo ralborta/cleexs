@@ -12,6 +12,7 @@ type Top3Entry = { position: number; name: string; type: string; reason?: string
 type PortalRunDetail = {
   id: string;
   status: string;
+  runType?: string;
   brand: {
     id: string;
     name: string;
@@ -158,6 +159,11 @@ export default function PortalReporteRunPage() {
 
   const comparison = buildComparisonSummary(run.promptResults);
   const competidorNames = run.brand.competitors.map((c) => c.name).filter(Boolean);
+  const referenceRows: { name: string; role: string }[] = [
+    { name: run.brand.name, role: 'Tu marca (medida en los prompts)' },
+    ...competidorNames.map((n) => ({ name: n, role: 'Competidor configurado' })),
+  ];
+  const runKindLabel = run.runType === 'deep_report' ? 'Reporte profundo' : 'Corrida Cleexs';
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
@@ -173,26 +179,26 @@ export default function PortalReporteRunPage() {
         </div>
 
         <header className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 p-6 text-white shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Reporte profundo</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">{runKindLabel}</p>
           <h1 className="mt-1 text-2xl font-bold">{run.brand.name}</h1>
           {run.brand.domain ? <p className="mt-1 text-sm text-violet-100">{run.brand.domain}</p> : null}
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Cleexs Score</h2>
-          <p className="mt-1 text-xs text-slate-600">
-            {pria != null
-              ? 'Agregado PRIA de esta corrida.'
-              : 'Estimación hasta que exista PRIA completo (promedio de scores por prompt).'}
-          </p>
-          <p className="mt-4 text-5xl font-bold text-slate-900">{displayScore ?? '—'}</p>
-          {run.status !== 'completed' ? (
-            <p className="mt-3 text-sm text-amber-800">
-              Este run todavía está <strong>{run.status}</strong>. Los números pueden completarse cuando termine la
-              ejecución; actualizá desde el portal.
+        {run.status === 'failed' ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+            <p className="font-medium">Esta ejecución falló antes de completar el análisis.</p>
+            <p className="mt-2 text-red-800">
+              Con la última actualización de la API, las cuentas sin prompts propios usan los del sistema (tenant 000).
+              Volvé a ejecutar una corrida o reporte desde el portal tras desplegar la API. Si sigue en fallo, revisá
+              en Railway que exista <code className="rounded bg-red-100 px-1">OPENAI_API_KEY</code> y que el seed tenga
+              prompts activos en el tenant <code className="rounded bg-red-100 px-1">000</code>.
             </p>
-          ) : null}
-        </section>
+            <p className="mt-2 text-red-800">
+              Igual podés ver abajo <strong>qué competidores</strong> están cargados para tu marca; la tabla con
+              métricas aparece cuando la corrida termine bien.
+            </p>
+          </div>
+        ) : null}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Competidores configurados</h2>
@@ -214,17 +220,64 @@ export default function PortalReporteRunPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Cleexs Score</h2>
+          <p className="mt-1 text-xs text-slate-600">
+            {pria != null
+              ? 'Agregado PRIA de esta corrida.'
+              : 'Estimación hasta que exista PRIA completo (promedio de scores por prompt).'}
+          </p>
+          <p className="mt-4 text-5xl font-bold text-slate-900">{displayScore ?? '—'}</p>
+          {run.status !== 'completed' ? (
+            <p className="mt-3 text-sm text-amber-800">
+              Este run está <strong>{run.status}</strong>.
+              {run.status === 'failed'
+                ? ' No hay score agregado hasta que una ejecución termine correctamente.'
+                : ' Los números pueden completarse cuando termine la ejecución; actualizá esta página en unos minutos.'}
+            </p>
+          ) : null}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Presencia en la IA: tu marca vs competencia</h2>
           <p className="mt-1 text-xs text-slate-600">
             Resumen de apariciones en el Top 3 de las respuestas del modelo (marca propia y competidores citados en
             cada respuesta).
           </p>
           {comparison.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-600">
-              {run.promptResults.length === 0
-                ? 'Todavía no hay resultados de prompts. Si acabás de generar el reporte, esperá unos minutos y actualizá.'
-                : 'No se pudo armar un Top 3 a partir de las respuestas. Si el run falló, generá otro desde el portal.'}
-            </p>
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-slate-600">
+                {run.promptResults.length === 0
+                  ? run.status === 'running' || run.status === 'pending'
+                    ? 'La corrida sigue en proceso. Actualizá esta página en unos minutos para ver el Top 3 y la competencia en la IA.'
+                    : 'Todavía no hay resultados de prompts en esta ejecución.'
+                  : 'No se pudo armar un Top 3 a partir de las respuestas guardadas.'}
+              </p>
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">Referencia — quién entra en el análisis</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Mientras no haya resultados, esta es la marca medida y los competidores configurados (lo que la IA
+                  debería contrastar en cada prompt).
+                </p>
+                <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full min-w-[320px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                        <th className="py-2 px-3">Marca / competidor</th>
+                        <th className="py-2 px-3">Rol</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {referenceRows.map((row) => (
+                        <tr key={`${row.name}-${row.role}`} className="border-b border-slate-100">
+                          <td className="py-2 px-3 font-medium text-slate-900">{row.name}</td>
+                          <td className="py-2 px-3 text-slate-600">{row.role}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">

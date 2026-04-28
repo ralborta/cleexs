@@ -8,7 +8,7 @@ import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from '../lib/pria';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
-import { executeRun } from '../lib/run-executor';
+import { executeRun, resolveActivePromptVersion } from '../lib/run-executor';
 
 const runRoutes: FastifyPluginAsync = async (fastify) => {
   /** Portal cliente: crea run mensual y ejecuta análisis (mismos prompts que el dashboard). */
@@ -470,12 +470,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const promptVersion = data.promptVersionId
-        ? await prisma.promptVersion.findUnique({ where: { id: data.promptVersionId } })
-        : await prisma.promptVersion.findFirst({
-            where: { tenantId: run.tenantId, active: true },
-            orderBy: { createdAt: 'desc' },
-          });
+      const promptVersion = await resolveActivePromptVersion(run.tenantId, data.promptVersionId ?? null);
 
       if (!promptVersion) {
         return reply.code(400).send({ error: 'No hay versión de prompts activa' });

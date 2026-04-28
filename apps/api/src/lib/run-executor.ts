@@ -4,6 +4,30 @@ import { parseTop3 } from './parsing';
 import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from './pria';
 
+/** Versión de prompts activa del tenant, o la del tenant root (000) si el cliente no tiene la suya. */
+export async function resolveActivePromptVersion(
+  runTenantId: string,
+  explicitVersionId?: string | null
+) {
+  if (explicitVersionId) {
+    return prisma.promptVersion.findUnique({ where: { id: explicitVersionId } });
+  }
+  const own = await prisma.promptVersion.findFirst({
+    where: { tenantId: runTenantId, active: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (own) return own;
+  const root = await prisma.tenant.findFirst({
+    where: { tenantCode: '000' },
+    select: { id: true },
+  });
+  if (!root) return null;
+  return prisma.promptVersion.findFirst({
+    where: { tenantId: root.id, active: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export interface ExecuteRunOptions {
   model?: string;
   temperature?: number;
@@ -38,12 +62,7 @@ export async function executeRun(
 
   if (!run) throw new Error('Run no encontrado');
 
-  const promptVersion = options.promptVersionId
-    ? await prisma.promptVersion.findUnique({ where: { id: options.promptVersionId } })
-    : await prisma.promptVersion.findFirst({
-        where: { tenantId: run.tenantId, active: true },
-        orderBy: { createdAt: 'desc' },
-      });
+  const promptVersion = await resolveActivePromptVersion(run.tenantId, options.promptVersionId ?? null);
 
   if (!promptVersion) throw new Error('No hay versión de prompts activa');
 
@@ -62,6 +81,9 @@ export async function executeRun(
         model,
         temperature,
         maxTokens,
+        promptVersionId: promptVersion.id,
+        promptVersionSource:
+          promptVersion.tenantId === run.tenantId ? 'tenant' : 'root_fallback',
       } as unknown as Prisma.InputJsonValue,
     },
   });
@@ -234,12 +256,7 @@ export async function executeRunGemini(
 
   if (!run) throw new Error('Run no encontrado');
 
-  const promptVersion = options.promptVersionId
-    ? await prisma.promptVersion.findUnique({ where: { id: options.promptVersionId } })
-    : await prisma.promptVersion.findFirst({
-        where: { tenantId: run.tenantId, active: true },
-        orderBy: { createdAt: 'desc' },
-      });
+  const promptVersion = await resolveActivePromptVersion(run.tenantId, options.promptVersionId ?? null);
 
   if (!promptVersion) throw new Error('No hay versión de prompts activa');
 
@@ -254,7 +271,12 @@ export async function executeRunGemini(
     where: { id: runId },
     data: {
       status: 'running',
-      modelMeta: { provider: 'gemini' } as unknown as Prisma.InputJsonValue,
+      modelMeta: {
+        provider: 'gemini',
+        promptVersionId: promptVersion.id,
+        promptVersionSource:
+          promptVersion.tenantId === run.tenantId ? 'tenant' : 'root_fallback',
+      } as unknown as Prisma.InputJsonValue,
     },
   });
 
