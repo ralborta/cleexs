@@ -3,7 +3,19 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AtSign,
+  BarChart2,
+  ClipboardList,
+  FileText,
+  Loader2,
+  Rocket,
+  Share2,
+  Sparkles,
+  Trophy,
+} from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { ReportSectionTitle } from '@/components/report/report-section';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -150,22 +162,6 @@ function scoreLabel(score: number) {
   if (score >= 60) return 'Nivel medio';
   if (score >= 40) return 'Nivel bajo';
   return 'Muy bajo';
-}
-
-function SectionTitle({ n, title, subtitle }: { n: number; title: string; subtitle?: string }) {
-  return (
-    <div className="mb-4">
-      <h2 className="flex items-start gap-3 text-lg font-semibold text-slate-900">
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">
-          {n}
-        </span>
-        <span className="min-w-0">
-          {title}
-          {subtitle ? <p className="mt-1 text-xs font-normal text-slate-600">{subtitle}</p> : null}
-        </span>
-      </h2>
-    </div>
-  );
 }
 
 function SemiGauge({ value }: { value: number }) {
@@ -464,18 +460,27 @@ export default function PortalReporteRunPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 p-6">
-        <p className="text-center text-sm text-slate-600">Cargando resultado del diagnóstico…</p>
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 p-6">
+        <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-4 py-24">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
+          <p className="text-sm font-medium text-slate-600">Cargando informe…</p>
+          <div className="h-2 w-48 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-primary-600/70" />
+          </div>
+        </div>
       </main>
     );
   }
 
   if (error || !run || !diag) {
     return (
-      <main className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-lg space-y-4 rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-          <p>{error || 'Diagnóstico no encontrado.'}</p>
-          <Link href="/portal-crecimiento" className="font-medium text-violet-700 underline">
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
+        <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-red-200/80 bg-red-50/90 p-6 text-sm text-red-900 shadow-sm">
+          <p className="font-medium">{error || 'Diagnóstico no encontrado.'}</p>
+          <Link
+            href="/portal-crecimiento"
+            className="inline-flex text-sm font-semibold text-primary-700 underline-offset-2 hover:underline"
+          >
             ← Volver al portal
           </Link>
         </div>
@@ -490,46 +495,47 @@ export default function PortalReporteRunPage() {
   const industryLine = [run.brand.industry, run.brand.productType].filter(Boolean).join(' · ');
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 pb-14 sm:p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/80 p-4 pb-16 sm:p-6">
+      <div className="mx-auto max-w-4xl space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href="/portal-crecimiento" className="text-sm font-medium text-violet-700 hover:underline">
+          <Link
+            href="/portal-crecimiento"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-primary-700 underline-offset-2 hover:underline"
+          >
             ← Volver al panel
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 shadow-sm">
             <p className="text-xs text-slate-500">
-              <span className="font-mono">{run.id.slice(0, 8)}…</span> · {run.status}
+              <span className="font-mono text-slate-700">{run.id.slice(0, 8)}…</span>
+              <span className="mx-1.5 text-slate-300">·</span>
+              {run.status}
             </p>
-            <CleexsMark className="h-7 w-7 shrink-0" />
+            <CleexsMark className="h-6 w-6 shrink-0" />
           </div>
         </div>
 
-        <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-700">
-                <span aria-hidden>📋</span> Resultado del diagnóstico
+        <header className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-100/60 sm:p-8 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700">
+                <FileText className="h-3.5 w-3.5" aria-hidden />
+                Informe de corrida
               </p>
-              <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{run.brand.name}</h1>
-              <p className="mt-1 text-sm text-slate-600">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{run.brand.name}</h1>
+              <p className="text-sm text-slate-600">
                 {[industryLine, run.brand.domain].filter(Boolean).join(' · ') || 'Marca'}
               </p>
-              <p className="mt-2 text-xs text-slate-500">
-                Este es el <strong>informe ejecutivo</strong> de la corrida ({runKindLabel}), alineado a la vista de
-                diagnóstico. El <strong>panel resumido</strong> (KPIs de cuenta y tabla comparativa) está en{' '}
-                <Link href="/portal-crecimiento" className="font-medium text-violet-700 underline">
-                  portal
+              <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
+                {runKindLabel}. El panel resumido de cuenta está en{' '}
+                <Link href="/portal-crecimiento" className="font-semibold text-primary-700 underline-offset-2 hover:underline">
+                  portal de crecimiento
                 </Link>
                 .
               </p>
             </div>
-          </div>
-          <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase text-slate-500">Ver datos por modelo</p>
-            <p className="mt-1 text-xs text-slate-600">
-              Esta corrida se muestra como <span className="font-semibold text-slate-800">consolidado</span>. Si en el
-              futuro tenés desglose ChatGPT / Gemini, aparecerá el selector aquí.
-            </p>
+            <span className="shrink-0 self-start rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700">
+              Vista consolidada
+            </span>
           </div>
         </header>
 
@@ -543,23 +549,24 @@ export default function PortalReporteRunPage() {
           </div>
         ) : null}
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            n={1}
-            title="Resumen ejecutivo"
-            subtitle="Estado actual, posición frente al líder y desempeño por intención (esta corrida)."
-          />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Resumen ejecutivo"
+              subtitle="Estado actual, posición frente al líder y desempeño por intención en esta corrida."
+            />
+          </div>
           <div className="grid gap-6 lg:grid-cols-3">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <div className="flex gap-2">
-                <span className="rounded-md bg-violet-600 px-2 py-1 text-[10px] font-semibold text-white">
-                  CLEEXS SCORE
+            <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-primary/5 to-white p-5">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-md bg-primary-600 px-2 py-1 text-[10px] font-semibold text-white">
+                  Cleexs Score
                 </span>
                 <span className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600">
-                  COMPETIDORES
+                  Competidores
                 </span>
               </div>
-              <p className="mt-4 text-5xl font-bold text-violet-600">{diag.displayScore}</p>
+              <p className="mt-4 text-5xl font-bold tabular-nums text-primary-700">{diag.displayScore}</p>
               <p className="mt-2 text-xs text-slate-600">
                 {diag.rankNum > 0 && diag.totalBrands > 0 ? (
                   <>
@@ -603,7 +610,7 @@ export default function PortalReporteRunPage() {
                         </div>
                         <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100">
                           <div
-                            className="h-full rounded-full bg-violet-500"
+                            className="h-full rounded-full bg-primary-600"
                             style={{ width: `${Math.min(100, brandPct)}%` }}
                           />
                         </div>
@@ -621,35 +628,60 @@ export default function PortalReporteRunPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle n={2} title="KPIs clave" subtitle="Lectura rápida del desempeño en esta corrida." />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="KPIs clave"
+              subtitle="Lectura rápida del desempeño en esta corrida."
+            />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <p className="text-[10px] font-semibold uppercase text-slate-500">Cleexs Score</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{diag.displayScore}</p>
+            <div className="rounded-xl border border-slate-200/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <Sparkles className="h-4 w-4 text-primary-600" aria-hidden />
+                </span>
+                <p className="text-[10px] font-semibold uppercase text-slate-500">Cleexs Score</p>
+              </div>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{diag.displayScore}</p>
               <p className="text-xs text-slate-600">{scoreLabel(diag.displayScore)}</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <p className="text-[10px] font-semibold uppercase text-slate-500">Ranking</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
+            <div className="rounded-xl border border-slate-200/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100">
+                  <Trophy className="h-4 w-4 text-sky-600" aria-hidden />
+                </span>
+                <p className="text-[10px] font-semibold uppercase text-slate-500">Ranking</p>
+              </div>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
                 {diag.rankNum > 0 ? `#${diag.rankNum}` : '—'}
               </p>
               <p className="text-xs text-slate-600">
                 {diag.totalBrands > 0 ? `de ${diag.totalBrands} marcas en Top 3` : 'sin datos'}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <p className="text-[10px] font-semibold uppercase text-slate-500">Brecha vs líder</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
+            <div className="rounded-xl border border-slate-200/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
+                  <BarChart2 className="h-4 w-4 text-amber-600" aria-hidden />
+                </span>
+                <p className="text-[10px] font-semibold uppercase text-slate-500">Brecha vs líder</p>
+              </div>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
                 {diag.gapToLeader > 0 ? `-${diag.gapToLeader.toFixed(1)} pts` : '—'}
               </p>
               <p className="text-xs text-slate-600">
                 {diag.leaderDisplayName !== '—' ? `vs ${diag.leaderDisplayName}` : 'sin líder claro'}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <p className="text-[10px] font-semibold uppercase text-slate-500">Mejor intención</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">
+            <div className="rounded-xl border border-slate-200/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+                  <ClipboardList className="h-4 w-4 text-emerald-600" aria-hidden />
+                </span>
+                <p className="text-[10px] font-semibold uppercase text-slate-500">Mejor intención</p>
+              </div>
+              <p className="mt-2 text-xl font-bold text-slate-900">
                 {diag.strongestIntention
                   ? `${INTENTION_LABELS[diag.strongestIntention.key] ?? diag.strongestIntention.key} ${Math.round(diag.strongestIntention.score)}%`
                   : '—'}
@@ -659,12 +691,13 @@ export default function PortalReporteRunPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            n={3}
-            title="Comparativa principal"
-            subtitle={`Competidores en cuenta: ${competidorRows.length}. En la corrida (IA): ${detectedCompetitors.length} detectados en Top 3.`}
-          />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Comparativa principal"
+              subtitle={`Competidores en cuenta: ${competidorRows.length}. En la corrida (IA): ${detectedCompetitors.length} detectados en Top 3.`}
+            />
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border border-slate-100 p-4">
               <p className="text-xs font-semibold text-slate-800">Tu marca vs competidores</p>
@@ -677,7 +710,9 @@ export default function PortalReporteRunPage() {
                     <li key={row.name} className="flex items-center gap-2">
                       <span className="w-40 shrink-0 truncate text-xs font-medium text-slate-800 sm:w-48">
                         {row.isBrand ? (
-                          <span className="rounded bg-orange-100 px-1.5 py-0.5 text-orange-900">{row.name}</span>
+                          <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary-800">
+                            {row.name}
+                          </span>
                         ) : (
                           row.name
                         )}
@@ -685,7 +720,7 @@ export default function PortalReporteRunPage() {
                       <div className="min-w-0 flex-1">
                         <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                           <div
-                            className={`h-full rounded-full ${row.isBrand ? 'bg-violet-500' : 'bg-sky-400'}`}
+                            className={`h-full rounded-full ${row.isBrand ? 'bg-primary-600' : 'bg-sky-400'}`}
                             style={{ width: `${Math.min(100, row.value)}%` }}
                           />
                         </div>
@@ -704,37 +739,45 @@ export default function PortalReporteRunPage() {
                 De {diag.totalPrompts} prompts hasta la recomendación #1 (tu marca).
               </p>
               <div className="mt-4 space-y-2">
-                <div className="rounded-lg bg-slate-800 px-3 py-3 text-white">
-                  <p className="text-[10px] font-semibold uppercase text-slate-300">Prompts analizados</p>
-                  <p className="text-2xl font-bold">
-                    {diag.totalPrompts} · {diag.totalPrompts ? 100 : 0}%
+                <div className="rounded-xl border border-slate-200/80 bg-slate-900 px-4 py-3 text-white shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Prompts analizados
+                  </p>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {diag.totalPrompts}
+                    <span className="ml-2 text-base font-semibold text-slate-300">
+                      · {diag.totalPrompts ? 100 : 0}%
+                    </span>
                   </p>
                 </div>
-                <div className="rounded-lg bg-slate-700 px-3 py-2 text-white">
-                  <p className="text-[10px] font-semibold uppercase text-slate-300">Menciones de marca</p>
-                  <p className="text-lg font-semibold">
-                    {diag.mentionCount} · {diag.mentionRate}%
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    Menciones de marca
+                  </p>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {diag.mentionCount}{' '}
+                    <span className="text-sm font-normal text-slate-600">· {diag.mentionRate}%</span>
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg bg-slate-600 px-2 py-2 text-center text-white">
-                    <p className="text-[9px] font-semibold uppercase text-slate-200">Top 3</p>
-                    <p className="text-sm font-bold">
+                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
+                    <p className="text-[9px] font-semibold uppercase text-slate-500">Top 3</p>
+                    <p className="text-sm font-bold text-slate-900">
                       {diag.top3Count} · {diag.top3Rate}%
                     </p>
                   </div>
-                  <div className="rounded-lg bg-slate-600 px-2 py-2 text-center text-white">
-                    <p className="text-[9px] font-semibold uppercase text-slate-200">Posición #1</p>
-                    <p className="text-sm font-bold">
+                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
+                    <p className="text-[9px] font-semibold uppercase text-slate-500">Posición #1</p>
+                    <p className="text-sm font-bold text-slate-900">
                       {diag.top1Count} · {diag.top1Rate}%
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2 text-[10px] text-slate-600">
-                  <span className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                <div className="flex flex-wrap gap-2 text-[10px] text-slate-600">
+                  <span className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 shadow-sm">
                     Conv. menciones → Top 3: <strong>{diag.convMentionToTop3}%</strong>
                   </span>
-                  <span className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                  <span className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 shadow-sm">
                     Conv. Top 3 → #1: <strong>{diag.convTop3ToFirst}%</strong>
                   </span>
                 </div>
@@ -756,51 +799,50 @@ export default function PortalReporteRunPage() {
           ) : null}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            n={4}
-            title="Métricas del análisis"
-            subtitle="Cobertura de formato y presencia de tu marca en las respuestas."
-          />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Métricas del análisis"
+              subtitle="Cobertura de formato y presencia de tu marca en las respuestas."
+            />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 label: 'Confianza de formato',
                 pct: diag.formatConfidence,
                 sub: `${diag.parseableCount}/${diag.totalPrompts} con Top 3 parseable`,
-                icon: '📄',
-                ring: 'ring-violet-200 bg-violet-50',
+                Icon: ClipboardList,
+                ring: 'ring-primary-600/20 bg-primary-50/80',
               },
               {
                 label: 'Mención de marca',
                 pct: diag.mentionRate,
                 sub: `${diag.mentionCount}/${diag.totalPrompts} respuestas`,
-                icon: '📣',
-                ring: 'ring-sky-200 bg-sky-50',
+                Icon: AtSign,
+                ring: 'ring-sky-200 bg-sky-50/80',
               },
               {
                 label: 'Aparición en Top 3',
                 pct: diag.top3Rate,
                 sub: `${diag.top3Count}/${diag.totalPrompts} en Top 3`,
-                icon: '📊',
-                ring: 'ring-amber-200 bg-amber-50',
+                Icon: BarChart2,
+                ring: 'ring-amber-200 bg-amber-50/80',
               },
               {
                 label: 'Posición #1',
                 pct: diag.top1Rate,
                 sub: `${diag.top1Count}/${diag.totalPrompts} en primer lugar`,
-                icon: '🏆',
-                ring: 'ring-emerald-200 bg-emerald-50',
+                Icon: Trophy,
+                ring: 'ring-emerald-200 bg-emerald-50/80',
               },
             ].map((m) => (
               <div key={m.label} className={`rounded-xl border border-slate-100 p-4 ring-1 ${m.ring}`}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-[10px] font-semibold uppercase text-slate-700">{m.label}</p>
-                  <span className="text-lg" aria-hidden>
-                    {m.icon}
-                  </span>
+                  <m.Icon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
                 </div>
-                <p className="mt-2 text-3xl font-bold text-slate-900">{m.pct}%</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{m.pct}%</p>
                 <p className="text-[11px] text-slate-600">{m.sub}</p>
               </div>
             ))}
@@ -822,19 +864,20 @@ export default function PortalReporteRunPage() {
           ) : null}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            n={5}
-            title="Visualizaciones adicionales"
-            subtitle="Tendencia (un punto por corrida en esta vista) e intenciones."
-          />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Visualizaciones adicionales"
+              subtitle="Tendencia (un punto por corrida en esta vista) e intenciones."
+            />
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-slate-100 p-4">
-              <p className="text-xs font-semibold text-violet-800">Tendencia · evolución del score</p>
+            <div className="rounded-xl border border-slate-200/60 bg-slate-50/30 p-4">
+              <p className="text-xs font-semibold text-primary-800">Tendencia · evolución del score</p>
               <div className="mt-4 flex h-40 items-end justify-center gap-4 border-b border-l border-slate-200 pl-2 pb-0">
                 <div className="flex flex-col items-center gap-1">
                   <div
-                    className="w-10 rounded-t-md bg-violet-500"
+                    className="w-10 rounded-t-md bg-primary-600"
                     style={{ height: `${Math.min(120, (diag.displayScore / 100) * 120)}px` }}
                   />
                   <span className="text-[10px] text-slate-500">Corrida 1</span>
@@ -843,15 +886,15 @@ export default function PortalReporteRunPage() {
               </div>
               <p className="mt-2 text-[10px] text-slate-500">Con más corridas comparables, el gráfico mostrará la serie.</p>
             </div>
-            <div className="rounded-xl border border-slate-100 p-4">
-              <p className="text-xs font-semibold text-violet-800">Intenciones · score por intención</p>
+            <div className="rounded-xl border border-slate-200/60 bg-slate-50/30 p-4">
+              <p className="text-xs font-semibold text-primary-800">Intenciones · score por intención</p>
               {diag.intentionScores.length === 0 ? (
                 <p className="mt-4 text-sm text-slate-600">Sin intenciones etiquetadas en los prompts.</p>
               ) : (
                 <div className="mt-4 flex h-40 items-end justify-center gap-4 border-b border-l border-slate-200 px-2">
                   {diag.intentionScores.map((row, i) => {
                     const h = Math.min(120, (row.score / 100) * 120);
-                    const colors = ['bg-violet-500', 'bg-fuchsia-500', 'bg-sky-500', 'bg-teal-500'];
+                    const colors = ['bg-primary-600', 'bg-fuchsia-500', 'bg-sky-500', 'bg-teal-500'];
                     return (
                       <div key={row.key} className="flex flex-col items-center gap-1">
                         <div
@@ -871,39 +914,43 @@ export default function PortalReporteRunPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            n={6}
-            title="Top 3 acciones prioritarias"
-            subtitle="Acciones personalizadas según los resultados de esta corrida."
-          />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Top 3 acciones prioritarias"
+              subtitle="Acciones personalizadas según los resultados de esta corrida."
+            />
+          </div>
           <div className="grid gap-3 md:grid-cols-3">
             {diag.actionCards.map((a) => (
-              <div key={a.title} className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 text-sm">
-                <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${a.badgeClass}`}>
+              <div
+                key={a.title}
+                className="rounded-xl border border-slate-200/60 bg-white p-4 text-sm shadow-sm transition-shadow hover:shadow-md"
+              >
+                <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-bold ${a.badgeClass}`}>
                   {a.badge}
                 </span>
                 <p className="mt-2 font-semibold text-slate-900">{a.title}</p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-600">{a.body}</p>
-                <p className="mt-3 text-[11px] font-medium text-violet-800">{a.footer}</p>
+                <p className="mt-3 text-[11px] font-medium text-primary-800">{a.footer}</p>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-center text-[11px] italic text-slate-500">
-            La lectura pasa de análisis disperso a narrativa: estado actual → comparación → métricas → tendencias →
-            acciones.
-          </p>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            n={7}
-            title="Compartir e invitar"
-            subtitle="Difundí el enlace a este resultado (sesión requerida para verlo en el portal)."
-          />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-100/50 sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Compartir e invitar"
+              subtitle="Difundí el enlace a este resultado (sesión requerida para verlo en el portal)."
+            />
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-100 p-4">
-              <p className="text-xs font-semibold text-slate-900">Compartir resultado</p>
+            <div className="rounded-xl border border-slate-200/60 p-4">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold text-slate-900">
+                <Share2 className="h-3.5 w-3.5 text-slate-500" aria-hidden />
+                Compartir resultado
+              </p>
               <p className="text-[11px] text-slate-500">Copiá el enlace o enviálo por tus canales.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
@@ -975,32 +1022,49 @@ export default function PortalReporteRunPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle n={8} title="Próximos pasos" subtitle="" />
-          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-white to-slate-50 p-6 shadow-sm sm:p-8">
+          <div className="mb-6">
+            <ReportSectionTitle
+              title="Próximos pasos"
+              subtitle="Pasá a Premium para reporte completo y más competidores en el análisis."
+            />
+          </div>
+          <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/planes"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+            >
+              <Rocket className="h-4 w-4 shrink-0" aria-hidden />
+              Ver Plan y Premium
+            </Link>
+            <Link
+              href="/portal-crecimiento"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-primary-600 bg-white px-6 py-3 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary/5"
+            >
+              <FileText className="h-4 w-4 shrink-0" aria-hidden />
+              Otro diagnóstico
+            </Link>
             <a
               href={CLEEXS_MARKETING_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:ml-auto"
             >
-              🚀 Ver planes
+              Sitio Cleexs
             </a>
-            <Link
-              href="/portal-crecimiento"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-blue-600 bg-white px-6 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-            >
-              📄 Otro diagnóstico
-            </Link>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Anexo · detalle por consulta (prompt)</h2>
-          <p className="mt-1 text-xs text-slate-600">
-            <strong>No forma parte del informe ejecutivo.</strong> Es la transcripción técnica: texto del prompt,
-            respuesta del modelo, Top 3 y score por ítem. Usalo para auditoría puntual.
+        <section className="rounded-2xl border border-dashed border-slate-300/90 bg-slate-50/40 p-6 shadow-sm sm:p-8">
+          <ReportSectionTitle
+            title="Anexo · detalle por consulta (prompt)"
+            subtitle="Transcripción técnica para auditoría; no es el resumen ejecutivo."
+          />
+          <p className="mt-4 text-xs text-slate-600">
+            <strong className="text-slate-800">Uso interno / auditoría:</strong> texto del prompt, respuesta del modelo,
+            Top 3 y score por ítem.
           </p>
+          <h2 className="sr-only">Listado de prompts</h2>
           {run.promptResults.length === 0 ? (
             <p className="mt-4 text-sm text-slate-600">
               No hay resultados guardados en esta ejecución (pendiente, fallida o en curso).
@@ -1018,7 +1082,7 @@ export default function PortalReporteRunPage() {
                     key={pr.id}
                     className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-sm shadow-sm"
                   >
-                    <p className="text-xs font-semibold uppercase text-violet-700">
+                    <p className="text-xs font-semibold uppercase text-primary-800">
                       {idx + 1}. {title}
                     </p>
                     {category ? (

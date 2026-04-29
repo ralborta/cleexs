@@ -323,7 +323,7 @@ export function ScoreShareClient({ slug }: { slug: string }) {
                   <Button asChild variant="outline">
                     <Link href="/planes">
                       <FileStack className="mr-2 h-4 w-4" />
-                      Reporte en profundidad (Crecimiento)
+                      Reporte en profundidad (Premium)
                     </Link>
                   </Button>
                 </div>

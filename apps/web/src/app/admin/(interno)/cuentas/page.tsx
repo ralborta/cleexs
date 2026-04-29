@@ -210,13 +210,13 @@ export default function AdminCuentasPage() {
                 onChange={(ev) => setPPlan(ev.target.value as 'crecimiento' | 'free')}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               >
-                <option value="crecimiento">Crecimiento</option>
+                <option value="crecimiento">Premium</option>
                 <option value="free">Siempre gratis</option>
               </select>
             </label>
             <label className="flex items-center gap-2 pt-6 text-sm text-slate-700">
               <input type="checkbox" checked={pCourtesy} onChange={(ev) => setPCourtesy(ev.target.checked)} />
-              Cortesía Crecimiento (override 1 año)
+              Cortesía Premium (override 1 año)
             </label>
             <label className="block sm:col-span-2">
               <span className="text-xs font-medium text-slate-600">Contraseña portal (opcional)</span>

@@ -37,6 +37,7 @@ import {
   Legend,
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { ReportSectionTitle } from '@/components/report/report-section';
 import { IconLinkedInBrand, IconWhatsAppBrand } from '@/components/share/share-brand-icons';
 import {
   Zap,
@@ -332,12 +333,6 @@ function FunnelSteps({ mention, top3, top1 }: { mention: number; top3: number; t
   );
 }
 
-function scoreLabel(score: number): string {
-  if (score >= 70) return 'alto';
-  if (score >= 45) return 'medio';
-  return 'bajo';
-}
-
 export function ReporteModerno({
   runResult,
   brandName,
@@ -604,48 +599,83 @@ export function ReporteModerno({
         })
       : [];
 
+  const rankIndex = comparisonSummary.findIndex((r) => isBrandEntry(r.name, brandName, brandAliases));
+  const rankDisplay = rankIndex >= 0 ? rankIndex + 1 : null;
+
   return (
-    <div className="space-y-8">
-      {/* 1️⃣ RESUMEN EJECUTIVO */}
+    <div className="space-y-10">
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm font-bold">1</div>
-          <h2 className="text-xl font-bold text-slate-900">Resumen ejecutivo</h2>
-        </div>
-        <Card className="overflow-hidden border-0 shadow-lg">
-          <CardContent className="p-8">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-              {/* Gauge + Score grande */}
-              <div className="flex flex-col items-center justify-center space-y-4">
+        <ReportSectionTitle
+          title="Resumen ejecutivo"
+          subtitle="Lectura rápida de posición, score y tendencia en un solo vistazo."
+        />
+        <Card className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-100/60">
+          <CardContent className="p-6 sm:p-8">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
+              <div className="flex flex-col items-center justify-center space-y-3 lg:col-span-3">
                 <GaugeScore value={displayScore} size={200} />
                 <div className="text-center">
-                  <p className="text-sm font-medium text-slate-600 uppercase tracking-wide">Cleexs Score</p>
-                  <p className="text-4xl font-bold text-slate-900">{Math.round(displayScore)}</p>
-                </div>
-              </div>
-              
-              {/* Texto + KPIs secundarios */}
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">#{comparisonSummary.findIndex((r) => isBrandEntry(r.name, brandName, brandAliases)) + 1 || '?'} en ranking · líder: {leaderRow?.name || '—'} {leaderRow?.share.toFixed(1) || '—'}%</p>
-                  <p className="mt-1 text-xs text-slate-500">Mejor intención: {strongestIntention ? `${INTENTION_LABELS[strongestIntention.key]?.label || strongestIntention.key} ${Math.round(strongestIntention.score)}%` : '—'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Cleexs Score</p>
+                  <p className="text-4xl font-bold tabular-nums text-slate-900">{Math.round(displayScore)}</p>
+                  <p className="text-xs text-slate-500">{scoreLabel(displayScore)}</p>
                 </div>
               </div>
 
-              {/* Gráfico de tendencia simple */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Tendencia</p>
+              <div className="space-y-4 lg:col-span-6">
+                <p className="text-sm leading-relaxed text-slate-700">{resumenEjecutivo}</p>
+                <div className="flex flex-wrap gap-2 rounded-xl border border-slate-100 bg-slate-50/90 p-4">
+                  <span className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-800 ring-1 ring-slate-200/80">
+                    Ranking:{' '}
+                    <span className="ml-1 tabular-nums font-semibold text-primary-700">
+                      {rankDisplay != null ? `#${rankDisplay}` : '—'}
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-800 ring-1 ring-slate-200/80">
+                    Líder:{' '}
+                    <span className="ml-1 font-semibold text-slate-900">{leaderRow?.name ?? '—'}</span>
+                    {leaderRow?.share != null ? (
+                      <span className="ml-1 tabular-nums text-slate-600">{leaderRow.share.toFixed(1)}%</span>
+                    ) : null}
+                  </span>
+                  {strongestIntention ? (
+                    <span className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-800 ring-1 ring-slate-200/80">
+                      Mejor intención:{' '}
+                      <span className="ml-1 font-semibold text-primary-700">
+                        {INTENTION_LABELS[strongestIntention.key]?.label || strongestIntention.key}{' '}
+                        {Math.round(strongestIntention.score)}%
+                      </span>
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2 lg:col-span-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tendencia</p>
                 {trendData && trendData.length >= 1 ? (
-                  <ResponsiveContainer width="100%" height={120}>
-                    <LineChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#64748b" />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" />
-                      <Line type="monotone" dataKey="score" stroke="rgb(139, 92, 246)" strokeWidth={2} dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-2">
+                    <ResponsiveContainer width="100%" height={128}>
+                      <LineChart data={trendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#64748b" />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" width={32} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 8, fontSize: 12 }}
+                          formatter={(v: number) => [`${v}`, 'Score']}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="score"
+                          stroke="#2563EB"
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: '#2563EB' }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
-                  <p className="text-xs text-slate-500 py-8 text-center">Sin datos</p>
+                  <p className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-xs text-slate-500">
+                    Sin serie histórica en esta vista.
+                  </p>
                 )}
               </div>
             </div>
@@ -653,19 +683,15 @@ export function ReporteModerno({
         </Card>
       </div>
 
-      {/* 2️⃣ KPIs CLAVE */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white text-sm font-bold">2</div>
-          <h2 className="text-xl font-bold text-slate-900">KPIs clave</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <ReportSectionTitle title="KPIs clave" subtitle="Indicadores derivados de esta corrida." />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {/* KPI 1: Cleexs Score */}
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200/80 shadow-sm transition-shadow hover:shadow-md">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100">
-                  <Award className="h-5 w-5 text-violet-600" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                  <Award className="h-5 w-5 text-primary" />
                 </div>
                 <p className="text-xs font-medium text-slate-600 uppercase">Cleexs Score</p>
               </div>
@@ -675,21 +701,23 @@ export function ReporteModerno({
           </Card>
 
           {/* KPI 2: Ranking */}
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200/80 shadow-sm transition-shadow hover:shadow-md">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
-                  <Trophy className="h-5 w-5 text-blue-600" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100">
+                  <Trophy className="h-5 w-5 text-sky-600" />
                 </div>
                 <p className="text-xs font-medium text-slate-600 uppercase">Ranking</p>
               </div>
-              <p className="text-3xl font-bold text-slate-900">#{comparisonSummary.findIndex((r) => isBrandEntry(r.name, brandName, brandAliases)) + 1 || '?'}</p>
+              <p className="text-3xl font-bold text-slate-900">
+                {rankDisplay != null ? `#${rankDisplay}` : '—'}
+              </p>
               <p className="text-xs text-slate-500 mt-1">de {comparisonSummary.length} marcas</p>
             </CardContent>
           </Card>
 
           {/* KPI 3: Brecha vs líder */}
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200/80 shadow-sm transition-shadow hover:shadow-md">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100">
@@ -703,7 +731,7 @@ export function ReporteModerno({
           </Card>
 
           {/* KPI 4: Mejor intención */}
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200/80 shadow-sm transition-shadow hover:shadow-md">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
@@ -718,17 +746,15 @@ export function ReporteModerno({
         </div>
       </div>
 
-      {/* 3️⃣ COMPARATIVA PRINCIPAL */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-sm font-bold">3</div>
-          <h2 className="text-xl font-bold text-slate-900">Comparativa principal</h2>
-        </div>
+        <ReportSectionTitle
+          title="Comparativa principal"
+          subtitle="Cuota aproximada en el Top 3 y desglose por intención de búsqueda."
+        />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Gráfico 1: Tu marca vs competidores */}
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
             <CardHeader className="pb-2 pt-6">
-              <CardTitle className="text-base font-bold text-slate-800">Tu marca vs competidores</CardTitle>
+              <CardTitle className="text-base font-semibold text-slate-800">Tu marca vs competidores</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {barData.length > 0 ? (
@@ -740,7 +766,10 @@ export function ReporteModerno({
                     <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, '% Top 3']} />
                     <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                       {barData.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.isBrand ? 'rgb(59, 130, 246)' : 'rgb(148, 163, 184)'} />
+                        <Cell
+                          key={idx}
+                          fill={entry.isBrand ? '#2563EB' : 'rgb(148, 163, 184)'}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -751,10 +780,9 @@ export function ReporteModerno({
             </CardContent>
           </Card>
 
-          {/* Gráfico 2: Por intención */}
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
             <CardHeader className="pb-2 pt-6">
-              <CardTitle className="text-base font-bold text-slate-800">Por intención</CardTitle>
+              <CardTitle className="text-base font-semibold text-slate-800">Por intención</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {stackedData.length > 0 && leaderName ? (
@@ -765,7 +793,7 @@ export function ReporteModerno({
                     <YAxis dataKey="intencion" type="category" width={95} tick={{ fontSize: 11 }} stroke="#64748b" />
                     <Tooltip formatter={(v: number) => [`${v}%`, '']} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="tuMarca" fill="rgb(59, 130, 246)" name="Tu marca" />
+                    <Bar dataKey="tuMarca" fill="#2563EB" name="Tu marca" />
                     <Bar dataKey="lider" fill="rgb(100, 116, 139)" name={leaderName || 'Líder'} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -777,19 +805,20 @@ export function ReporteModerno({
         </div>
       </div>
 
-      {/* 4️⃣ TOP 3 ACCIONES PRIORITARIAS */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white text-sm font-bold">4</div>
-          <h2 className="text-xl font-bold text-slate-900">Top 3 acciones prioritarias</h2>
-          <span className="ml-auto text-xs font-medium text-slate-500">Acciones sugeridas para mejorar tu Cleexs Score</span>
-        </div>
+        <ReportSectionTitle
+          title="Top 3 acciones prioritarias"
+          subtitle="Sugerencias automáticas según brechas y métricas de esta corrida."
+        />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {top3Acciones.map((accion, idx) => (
-            <Card key={idx} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card
+              key={idx}
+              className="rounded-2xl border border-slate-200/80 shadow-sm transition-shadow hover:shadow-md"
+            >
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                     {idx + 1}
                   </div>
                   <p className="text-sm font-medium text-slate-700 leading-relaxed">{accion}</p>
@@ -800,16 +829,17 @@ export function ReporteModerno({
         </div>
       </div>
 
-      {/* 5️⃣ MÉTRICAS DEL ANÁLISIS (Collapsible) */}
       <div className="space-y-4">
-        <details className="group">
-          <summary className="flex items-center gap-3 cursor-pointer">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-sm font-bold">5</div>
-            <h2 className="text-xl font-bold text-slate-900">Métricas del análisis</h2>
-            <span className="ml-auto text-xs font-medium text-slate-500 group-open:hidden">collapsible / secundario</span>
-            <ChevronDown className="ml-auto h-5 w-5 text-slate-400 group-open:rotate-180 transition-transform" />
+        <details className="group rounded-2xl border border-slate-200/80 bg-slate-50/40 open:bg-white open:shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+            <ReportSectionTitle
+              title="Métricas del análisis"
+              subtitle="Detalle técnico de cobertura y presencia (desplegable)."
+              className="min-w-0 flex-1"
+            />
+            <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
           </summary>
-          <Card className="border-0 shadow-sm mt-4">
+          <Card className="mx-4 mb-4 rounded-xl border border-slate-200/60 shadow-none sm:mx-5">
             <CardContent className="p-6">
               <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
                 {metrics.map((m, idx) => (
@@ -825,19 +855,19 @@ export function ReporteModerno({
         </details>
       </div>
 
-      {/* 6️⃣ VISUALIZACIONES ADICIONALES (Collapsible) */}
       <div className="space-y-4">
-        <details className="group">
-          <summary className="flex items-center gap-3 cursor-pointer">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-pink-600 text-white text-sm font-bold">6</div>
-            <h2 className="text-xl font-bold text-slate-900">Visualizaciones adicionales</h2>
-            <span className="ml-auto text-xs font-medium text-slate-500 group-open:hidden">collapsible / secundario</span>
-            <ChevronDown className="ml-auto h-5 w-5 text-slate-400 group-open:rotate-180 transition-transform" />
+        <details className="group rounded-2xl border border-slate-200/80 bg-slate-50/40 open:bg-white open:shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+            <ReportSectionTitle
+              title="Visualizaciones adicionales"
+              subtitle="Radar y vistas complementarias cuando hay datos suficientes."
+              className="min-w-0 flex-1"
+            />
+            <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
           </summary>
-          <div className="space-y-6 mt-4">
-            {/* Visualizaciones avanzadas aquí */}
+          <div className="space-y-6 px-4 pb-6 sm:px-5">
             {radarData.length > 0 && leaderName && (
-              <Card className="border-0 shadow-sm">
+              <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
                 <CardHeader className="pb-2 pt-6">
                   <CardTitle className="text-base font-bold text-slate-800">Radar: Tu marca vs líder</CardTitle>
                 </CardHeader>
@@ -847,7 +877,7 @@ export function ReporteModerno({
                       <PolarGrid stroke="#e2e8f0" />
                       <PolarAngleAxis dataKey="intencion" tick={{ fontSize: 11 }} />
                       <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
-                      <Radar name="Tu marca" dataKey="tuMarca" stroke="rgb(59, 130, 246)" fill="rgb(59, 130, 246)" fillOpacity={0.45} />
+                      <Radar name="Tu marca" dataKey="tuMarca" stroke="#2563EB" fill="#2563EB" fillOpacity={0.45} />
                       <Radar name={leaderName} dataKey="lider" stroke="rgb(100, 116, 139)" fill="rgb(100, 116, 139)" fillOpacity={0.35} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
                     </RadarChart>
@@ -859,13 +889,9 @@ export function ReporteModerno({
         </details>
       </div>
 
-      {/* 7️⃣ COMPARTIR E INVITAR */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white text-sm font-bold">7</div>
-          <h2 className="text-xl font-bold text-slate-900">Compartir e invitar</h2>
-        </div>
-        <Card className="border-0 shadow-sm">
+        <ReportSectionTitle title="Compartir e invitar" subtitle="Difundí el análisis o invitá a tu equipo." />
+        <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" className="gap-1 px-2.5 text-xs">
@@ -893,22 +919,20 @@ export function ReporteModerno({
         </Card>
       </div>
 
-      {/* 8️⃣ Próximos pasos (planes / marketing) */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white text-sm font-bold">8</div>
-          <h2 className="text-xl font-bold text-slate-900">Próximos pasos</h2>
-        </div>
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardContent className="p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="font-semibold text-slate-900">Desbloqueá el reporte completo</p>
-                <p className="text-sm text-slate-600">Acceso a todas las métricas, análisis detallado y recomendaciones personalizadas.</p>
+        <ReportSectionTitle title="Próximos pasos" subtitle="Pasá a Premium para reporte completo y más competidores en el análisis." />
+        <Card className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-white to-primary/10 shadow-sm">
+          <CardContent className="p-6 sm:p-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="max-w-xl space-y-1">
+                <p className="font-semibold text-slate-900">Desbloqueá el reporte completo con Premium</p>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  Más profundidad en métricas, más marcas competidoras en el informe y soporte prioritario.
+                </p>
               </div>
-              <div className="flex gap-3">
-                <Button asChild className="bg-blue-600 hover:bg-blue-700">
-                  <Link href="/planes">Ver planes</Link>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild>
+                  <Link href="/planes">Ver Plan y Premium</Link>
                 </Button>
                 <Button variant="outline" asChild>
                   <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
