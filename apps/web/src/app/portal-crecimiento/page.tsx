@@ -654,12 +654,20 @@ export default function PortalCrecimientoPage() {
                         </span>
                         <span>{new Date(r.createdAt).toLocaleString()}</span>
                       </div>
-                      <Link
-                        href={`/portal-crecimiento/reporte/${r.id}`}
-                        className="shrink-0 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-center text-xs font-semibold text-violet-900 hover:bg-violet-100"
-                      >
-                        Ver resultado del diagnóstico
-                      </Link>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Link
+                          href={`/portal-crecimiento/reporte/${r.id}`}
+                          className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-center text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                        >
+                          Ver resultado
+                        </Link>
+                        <Link
+                          href={`/portal-crecimiento/reporte/${r.id}/premium`}
+                          className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+                        >
+                          Ver Premium
+                        </Link>
+                      </div>
                     </article>
                   ))}
                   {reports.length === 0 ? (
