@@ -168,6 +168,50 @@ export default function PortalReportePremiumInterpretacionPage() {
     return computeInterpretacionAmpliada(prompts, run.brand.name, brandAliases, cleexsScoreHint);
   }, [run, prompts, brandAliases, cleexsScoreHint]);
 
+  const intentionScores = useMemo(() => {
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/g, '')
+        .trim();
+    const keyOf = (value: string) => {
+      const n = normalize(value);
+      if (n.includes('urgencia')) return 'urgencia';
+      if (n.includes('consideracion')) return 'consideracion';
+      if (n.includes('calidad')) return 'calidad';
+      if (n.includes('precio')) return 'precio';
+      return 'otros';
+    };
+    const labelOf = (key: string) =>
+      key === 'urgencia'
+        ? 'Urgencia'
+        : key === 'consideracion'
+          ? 'Consideración'
+          : key === 'calidad'
+            ? 'Calidad'
+            : key === 'precio'
+              ? 'Precio'
+              : 'Otros';
+    const buckets: Record<string, number[]> = {};
+    prompts.forEach((p) => {
+      const key = keyOf(p.category || p.promptText || '');
+      const score = Number(p.score || 0);
+      const pct = Number.isFinite(score) && score <= 1 ? score * 100 : score;
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key]!.push(Math.max(0, Math.min(100, pct)));
+    });
+    return Object.entries(buckets)
+      .map(([key, values]) => ({
+        key,
+        label: labelOf(key),
+        score: values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0,
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }, [prompts]);
+
   const premium = isPremiumPlan(usage?.planKey);
 
   const brandReports = useMemo(() => {
@@ -375,6 +419,50 @@ export default function PortalReportePremiumInterpretacionPage() {
               ))}
             </ul>
           )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100/60 sm:p-6">
+          <h2 className="text-sm font-bold text-slate-900">Gráficos Premium</h2>
+          <p className="mt-1 text-xs text-slate-600">Visual rápido de score actual e intención promedio.</p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-200/70 bg-slate-50/40 p-4">
+              <p className="text-xs font-semibold text-slate-800">Score actual de la corrida</p>
+              <div className="mt-3">
+                <div className="h-3 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-600"
+                    style={{ width: `${Math.max(0, Math.min(100, cleexsScoreHint || 0))}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {Math.round(cleexsScoreHint || 0)} / 100
+                </p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200/70 bg-slate-50/40 p-4">
+              <p className="text-xs font-semibold text-slate-800">Score por intención</p>
+              {intentionScores.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-600">Sin datos por intención en esta corrida.</p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {intentionScores.map((row) => (
+                    <li key={row.key}>
+                      <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-700">
+                        <span>{row.label}</span>
+                        <span className="font-semibold">{Math.round(row.score)}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-500"
+                          style={{ width: `${Math.max(0, Math.min(100, row.score))}%` }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </section>
 
         <InterpretacionAmpliadaCorridasBlock parrafos={parrafos} winnerLabels={winnerLabels} />
