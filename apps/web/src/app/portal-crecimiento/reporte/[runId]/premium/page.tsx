@@ -88,7 +88,8 @@ export default function PortalReportePremiumInterpretacionPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [panel, setPanel] = useState<PanelResponse | null>(null);
   const [runningMes, setRunningMes] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export default function PortalReportePremiumInterpretacionPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      setError(null);
+      setLoadError(null);
       try {
         let token: string | null = null;
         try {
@@ -105,7 +106,7 @@ export default function PortalReportePremiumInterpretacionPage() {
           token = null;
         }
         if (!token) {
-          setError('No hay sesión. Volvé al portal e iniciá sesión.');
+          setLoadError('No hay sesión. Volvé al portal e iniciá sesión.');
           setLoading(false);
           return;
         }
@@ -119,7 +120,7 @@ export default function PortalReportePremiumInterpretacionPage() {
         ]);
         if (runRes.status === 401 || usageRes.status === 401) {
           sessionStorage.removeItem(TOKEN_KEY);
-          setError('Sesión vencida. Volvé al portal e iniciá sesión.');
+          setLoadError('Sesión vencida. Volvé al portal e iniciá sesión.');
           setLoading(false);
           return;
         }
@@ -155,7 +156,7 @@ export default function PortalReportePremiumInterpretacionPage() {
           setPanel(panelData);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Error al cargar');
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Error al cargar');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -238,7 +239,10 @@ export default function PortalReportePremiumInterpretacionPage() {
 
   const latestReport = brandReports[0] ?? null;
   const previousReports = useMemo(() => brandReports.filter((r) => r.id !== runId), [brandReports, runId]);
-
+  const previousComparable = useMemo(
+    () => previousReports.find((r) => r.score != null) ?? null,
+    [previousReports]
+  );
   const competitorRows = useMemo(() => (panel?.compareRows ?? []).filter((row) => row.tag === 'competidor'), [panel]);
   const miEmpresaRow = useMemo(() => (panel?.compareRows ?? []).find((row) => row.tag === 'mi_empresa') ?? null, [panel]);
   const rank = miEmpresaRow?.rank ?? null;
@@ -252,6 +256,10 @@ export default function PortalReportePremiumInterpretacionPage() {
   const gapVsLeader =
     leaderCompetitor != null && Number.isFinite(currentScore)
       ? Math.round((currentScore - leaderCompetitor) * 10) / 10
+      : null;
+  const deltaVsPrevious =
+    previousComparable && Number.isFinite(currentScore)
+      ? Math.round((currentScore - toPct(previousComparable.score)) * 10) / 10
       : null;
 
   const historyPoints = useMemo(
@@ -268,10 +276,12 @@ export default function PortalReportePremiumInterpretacionPage() {
     historyPoints.length >= 2
       ? Math.round((toPct(historyPoints[historyPoints.length - 1]!.score) - toPct(historyPoints[0]!.score)) * 10) / 10
       : 0;
+  const competitorsWithScore = competitorRows.filter((row) => row.score != null).length;
+  const competitorsWithoutScore = competitorRows.length - competitorsWithScore;
 
   async function runNewDiagnostic() {
     if (!run?.brand.id) {
-      setError('No se pudo identificar la marca para ejecutar una nueva corrida.');
+      setActionError('No se pudo identificar la marca para ejecutar una nueva corrida.');
       return;
     }
     let token: string | null = null;
@@ -281,12 +291,12 @@ export default function PortalReportePremiumInterpretacionPage() {
       token = null;
     }
     if (!token) {
-      setError('Sesión vencida. Volvé al portal e iniciá sesión.');
+      setActionError('Sesión vencida. Volvé al portal e iniciá sesión.');
       return;
     }
 
     setRunningMes(true);
-    setError(null);
+    setActionError(null);
     try {
       const res = await fetch(`${API_URL}/api/runs/portal/mes`, {
         method: 'POST',
@@ -297,7 +307,7 @@ export default function PortalReportePremiumInterpretacionPage() {
       if (!res.ok) throw new Error(body.message || body.error || `Error HTTP ${res.status}`);
       window.location.href = '/portal-crecimiento';
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al iniciar la corrida');
+      setActionError(e instanceof Error ? e.message : 'Error al iniciar la corrida');
     } finally {
       setRunningMes(false);
     }
@@ -311,11 +321,11 @@ export default function PortalReportePremiumInterpretacionPage() {
     );
   }
 
-  if (error || !run) {
+  if (loadError || !run) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
         <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-red-200/80 bg-red-50/90 p-6 text-sm text-red-900">
-          <p>{error || 'No encontrado.'}</p>
+          <p>{loadError || 'No encontrado.'}</p>
           <Link href="/portal-crecimiento" className="font-semibold text-primary-700 underline">
             ← Portal
           </Link>
@@ -413,18 +423,21 @@ export default function PortalReportePremiumInterpretacionPage() {
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard icon={CalendarClock} label="Último análisis" value={latestReport ? new Date(latestReport.createdAt).toLocaleDateString() : '—'} />
             <MetricCard
-              icon={CalendarClock}
-              label="Próximo análisis"
+              icon={LineChart}
+              label="Comparación previa"
               value={
-                latestReport
-                  ? new Date(+new Date(latestReport.createdAt) + 1000 * 60 * 60 * 24 * 30).toLocaleDateString()
-                  : '—'
+                deltaVsPrevious == null ? 'Sin base' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious} pts`
               }
+              sub={previousComparable ? new Date(previousComparable.createdAt).toLocaleDateString() : undefined}
             />
             <MetricCard icon={ListChecks} label="Reportes disponibles" value={String(brandReports.length)} />
             <MetricCard icon={BarChart3} label="Prompts activos" value={String(run.promptResults.length)} />
             <MetricCard icon={Users} label="Competidores" value={String(competitorRows.length)} />
           </section>
+
+          {actionError ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{actionError}</p>
+          ) : null}
 
           <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2">
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
@@ -531,6 +544,9 @@ export default function PortalReportePremiumInterpretacionPage() {
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900">Competidores y Cleexs Score</h2>
+            <p className="mt-1 text-xs text-slate-600">
+              Con score: {competitorsWithScore} · Sin score: {competitorsWithoutScore}
+            </p>
             {competitorRows.length === 0 ? (
               <p className="mt-2 text-xs text-slate-600">Sin competidores detectados todavía en el panel comparativo.</p>
             ) : (
@@ -547,6 +563,32 @@ export default function PortalReportePremiumInterpretacionPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-bold text-slate-900">Comparación con corrida anterior</h2>
+            {previousComparable ? (
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[11px] text-slate-500">Corrida actual</p>
+                  <p className="text-2xl font-bold text-slate-900">{currentScore}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[11px] text-slate-500">Corrida anterior</p>
+                  <p className="text-2xl font-bold text-slate-900">{Math.round(toPct(previousComparable.score))}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[11px] text-slate-500">Diferencia</p>
+                  <p className={`text-2xl font-bold ${deltaVsPrevious != null && deltaVsPrevious >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    {deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious}`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate-600">
+                No hay una corrida anterior con score disponible para comparar.
+              </p>
             )}
           </section>
 
