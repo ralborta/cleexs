@@ -335,6 +335,7 @@ export default function PortalCrecimientoPage() {
   }
 
   const planUpper = (usage?.planDisplay || usage?.planKey || 'Plan').toUpperCase();
+  const latestReport = [...reports].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0] || null;
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 pb-12 sm:p-6">
@@ -366,6 +367,28 @@ export default function PortalCrecimientoPage() {
               </>
             ) : null}
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {latestReport ? (
+              <>
+                <Link
+                  href={`/portal-crecimiento/reporte/${latestReport.id}`}
+                  className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                >
+                  Abrir último resultado
+                </Link>
+                <Link
+                  href={`/portal-crecimiento/reporte/${latestReport.id}/premium`}
+                  className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+                >
+                  Abrir último Premium
+                </Link>
+              </>
+            ) : (
+              <span className="text-xs text-slate-500">
+                No hay corridas todavía para abrir en modo Premium.
+              </span>
+            )}
+          </div>
         </div>
 
         {error ? (
