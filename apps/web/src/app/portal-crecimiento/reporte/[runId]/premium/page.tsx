@@ -3,6 +3,16 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  BarChart3,
+  CalendarClock,
+  Gauge,
+  LineChart,
+  ListChecks,
+  Medal,
+  Rocket,
+  Users,
+} from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { InterpretacionAmpliadaCorridasBlock } from '@/components/report/interpretacion-ampliada-corridas-block';
 import {
@@ -62,6 +72,12 @@ type PanelResponse = {
 
 function isPremiumPlan(planKey?: string) {
   return planKey === 'crecimiento' || planKey === 'enterprise';
+}
+
+function toPct(score: number | null | undefined) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 0;
+  return n <= 1 ? n * 100 : n;
 }
 
 export default function PortalReportePremiumInterpretacionPage() {
@@ -197,8 +213,7 @@ export default function PortalReportePremiumInterpretacionPage() {
     const buckets: Record<string, number[]> = {};
     prompts.forEach((p) => {
       const key = keyOf(p.category || p.promptText || '');
-      const score = Number(p.score || 0);
-      const pct = Number.isFinite(score) && score <= 1 ? score * 100 : score;
+      const pct = toPct(p.score ?? 0);
       if (!buckets[key]) buckets[key] = [];
       buckets[key]!.push(Math.max(0, Math.min(100, pct)));
     });
@@ -221,12 +236,38 @@ export default function PortalReportePremiumInterpretacionPage() {
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [reports, run]);
 
+  const latestReport = brandReports[0] ?? null;
   const previousReports = useMemo(() => brandReports.filter((r) => r.id !== runId), [brandReports, runId]);
 
-  const competitorRows = useMemo(
-    () => (panel?.compareRows ?? []).filter((row) => row.tag === 'competidor'),
-    [panel]
+  const competitorRows = useMemo(() => (panel?.compareRows ?? []).filter((row) => row.tag === 'competidor'), [panel]);
+  const miEmpresaRow = useMemo(() => (panel?.compareRows ?? []).find((row) => row.tag === 'mi_empresa') ?? null, [panel]);
+  const rank = miEmpresaRow?.rank ?? null;
+  const competitorScores = competitorRows.filter((c) => c.score != null).map((c) => Number(c.score));
+  const leaderCompetitor = competitorScores.length > 0 ? Math.max(...competitorScores) : null;
+  const currentScore = Math.round(cleexsScoreHint ?? toPct(latestReport?.score ?? null));
+  const avgIntentionScore =
+    intentionScores.length > 0
+      ? Math.round(intentionScores.reduce((acc, row) => acc + row.score, 0) / intentionScores.length)
+      : currentScore;
+  const gapVsLeader =
+    leaderCompetitor != null && Number.isFinite(currentScore)
+      ? Math.round((currentScore - leaderCompetitor) * 10) / 10
+      : null;
+
+  const historyPoints = useMemo(
+    () =>
+      [...brandReports]
+        .filter((r) => r.score != null)
+        .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt))
+        .slice(-6),
+    [brandReports]
   );
+  const minHist = Math.min(...historyPoints.map((p) => toPct(p.score)));
+  const maxHist = Math.max(...historyPoints.map((p) => toPct(p.score)));
+  const evolutionDelta =
+    historyPoints.length >= 2
+      ? Math.round((toPct(historyPoints[historyPoints.length - 1]!.score) - toPct(historyPoints[0]!.score)) * 10) / 10
+      : 0;
 
   async function runNewDiagnostic() {
     if (!run?.brand.id) {
@@ -312,148 +353,108 @@ export default function PortalReportePremiumInterpretacionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/80 p-4 pb-16 sm:p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={`/portal-crecimiento/reporte/${runId}`}
-            className="text-sm font-semibold text-primary-700 underline-offset-2 hover:underline"
-          >
-            ← Volver al informe
-          </Link>
-          <CleexsMark className="h-7 w-7 shrink-0" />
-        </div>
-
-        <header className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100/60 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Premium · lectura extendida</p>
-          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{run.brand.name}</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Misma vista base + extras Premium para operar diagnósticos y comparar corridas.
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-700">
-              <p className="font-semibold text-slate-900">URL de la marca (solo propia)</p>
-              <p className="mt-1 font-mono text-[11px]">{run.brand.domain || 'sin dominio cargado'}</p>
-            </div>
-            <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-3">
-              <p className="text-xs font-semibold text-violet-900">Nuevo diagnóstico</p>
-              <p className="mt-1 text-xs text-violet-800/90">
-                Ejecuta una nueva corrida para esta misma marca/URL y la agrega al historial.
-              </p>
-              <button
-                type="button"
-                onClick={() => void runNewDiagnostic()}
-                disabled={runningMes || !run.brand.id}
-                className="mt-2 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-              >
-                {runningMes ? 'Iniciando…' : 'Ejecutar nuevo diagnóstico'}
-              </button>
-            </div>
+    <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
+      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[220px_1fr]">
+        <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <CleexsMark className="h-6 w-6" />
+            <p className="font-bold text-slate-900">Cleexs</p>
           </div>
-        </header>
+          <nav className="space-y-1 text-sm">
+            <p className="rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">Portal cliente</p>
+            <p className="rounded-lg px-3 py-2 text-slate-600">Comparación</p>
+            <p className="rounded-lg px-3 py-2 text-slate-600">Prompts</p>
+            <p className="rounded-lg px-3 py-2 text-slate-600">Competidores</p>
+            <p className="rounded-lg px-3 py-2 text-slate-600">Historial</p>
+            <p className="rounded-lg px-3 py-2 text-slate-600">Reportes</p>
+          </nav>
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs text-slate-500">Plan actual</p>
+            <p className="font-semibold text-slate-900">{usage?.planDisplay || usage?.planKey || 'Premium'}</p>
+          </div>
+        </aside>
 
-        {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</p> : null}
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100/60 sm:p-6">
-          <h2 className="text-sm font-bold text-slate-900">Comparar con corridas anteriores</h2>
-          {previousReports.length === 0 ? (
-            <p className="mt-2 text-xs text-slate-600">Todavía no hay corridas previas para comparar.</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {previousReports.slice(0, 6).map((rep) => (
-                <li key={rep.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3">
-                  <div className="text-xs text-slate-700">
-                    <p className="font-semibold text-slate-900">{new Date(rep.createdAt).toLocaleString()}</p>
-                    <p>
-                      Estado: {rep.status} · Score: {rep.score ?? '—'}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link href={`/portal-crecimiento/reporte/${rep.id}`} className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-800">
-                      Ver corrida anterior
-                    </Link>
-                    <Link href={`/portal-crecimiento/reporte/${rep.id}/premium`} className="rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-900">
-                      Ver Premium
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100/60 sm:p-6">
-          <h2 className="text-sm font-bold text-slate-900">Historial de resultados (esta marca)</h2>
-          <ul className="mt-3 space-y-2">
-            {brandReports.slice(0, 10).map((rep) => (
-              <li key={rep.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-xs">
-                <div>
-                  <p className="font-semibold text-slate-900">{new Date(rep.createdAt).toLocaleString()}</p>
-                  <p className="text-slate-700">{rep.reportType === 'deep_report' ? 'Reporte profundo' : 'Corrida Cleexs'}</p>
-                </div>
-                <div className="text-slate-700">Score: <span className="font-semibold">{rep.score ?? '—'}</span></div>
-                <Link href={`/portal-crecimiento/reporte/${rep.id}`} className="rounded-md border border-slate-300 px-2 py-1 font-semibold text-slate-800">
-                  Abrir
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100/60 sm:p-6">
-          <h2 className="text-sm font-bold text-slate-900">Competidores y Cleexs Score</h2>
-          {competitorRows.length === 0 ? (
-            <p className="mt-2 text-xs text-slate-600">Sin competidores detectados todavía en el panel comparativo.</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {competitorRows.map((row) => (
-                <li key={`${row.rank}-${row.name}`} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-xs">
-                  <div>
-                    <p className="font-semibold text-slate-900">{row.name}</p>
-                    <p className="text-slate-600">{row.domain || 'sin dominio'}</p>
-                  </div>
-                  <div className={row.score == null ? 'text-amber-700' : 'text-emerald-700'}>
-                    {row.score == null ? 'Sin Cleexs Score aún' : `Cleexs Score: ${Math.round(row.score)}`}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100/60 sm:p-6">
-          <h2 className="text-sm font-bold text-slate-900">Gráficos Premium</h2>
-          <p className="mt-1 text-xs text-slate-600">Visual rápido de score actual e intención promedio.</p>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-slate-200/70 bg-slate-50/40 p-4">
-              <p className="text-xs font-semibold text-slate-800">Score actual de la corrida</p>
-              <div className="mt-3">
-                <div className="h-3 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-600"
-                    style={{ width: `${Math.max(0, Math.min(100, cleexsScoreHint || 0))}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {Math.round(cleexsScoreHint || 0)} / 100
+        <div className="space-y-4">
+          <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal Cliente</p>
+                <h1 className="text-2xl font-bold text-slate-900">{run.brand.name}</h1>
+                <p className="text-xs text-slate-600">
+                  {run.brand.domain || 'sin dominio'} · Plan {usage?.planDisplay || usage?.planKey || 'Premium'} · Estado{' '}
+                  <span className="font-semibold text-emerald-700">{run.status}</span>
                 </p>
               </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/portal-crecimiento/reporte/${latestReport?.id || run.id}`}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                >
+                  Ver último diagnóstico
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void runNewDiagnostic()}
+                  disabled={runningMes || !run.brand.id}
+                  className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                >
+                  {runningMes ? 'Iniciando…' : 'Generar nuevo análisis'}
+                </button>
+                <Link
+                  href={`/portal-crecimiento/reporte/${run.id}`}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                >
+                  Compartir reporte
+                </Link>
+              </div>
             </div>
-            <div className="rounded-xl border border-slate-200/70 bg-slate-50/40 p-4">
-              <p className="text-xs font-semibold text-slate-800">Score por intención</p>
+          </header>
+
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <MetricCard icon={CalendarClock} label="Último análisis" value={latestReport ? new Date(latestReport.createdAt).toLocaleDateString() : '—'} />
+            <MetricCard
+              icon={CalendarClock}
+              label="Próximo análisis"
+              value={
+                latestReport
+                  ? new Date(+new Date(latestReport.createdAt) + 1000 * 60 * 60 * 24 * 30).toLocaleDateString()
+                  : '—'
+              }
+            />
+            <MetricCard icon={ListChecks} label="Reportes disponibles" value={String(brandReports.length)} />
+            <MetricCard icon={BarChart3} label="Prompts activos" value={String(run.promptResults.length)} />
+            <MetricCard icon={Users} label="Competidores" value={String(competitorRows.length)} />
+          </section>
+
+          <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <p className="text-sm font-bold text-slate-900">Cleexs Score</p>
+              <div className="mt-4 space-y-2">
+                <div className="h-4 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500"
+                    style={{ width: `${Math.max(0, Math.min(100, currentScore))}%` }}
+                  />
+                </div>
+                <p className="text-4xl font-black text-slate-900">{currentScore}</p>
+                <p className="text-xs text-slate-600">Probabilidad de que una IA recomiende o priorice esta marca.</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <p className="text-sm font-bold text-slate-900">Desempeño por intención</p>
               {intentionScores.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-600">Sin datos por intención en esta corrida.</p>
               ) : (
                 <ul className="mt-3 space-y-2">
                   {intentionScores.map((row) => (
                     <li key={row.key}>
-                      <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-700">
+                      <div className="mb-0.5 flex items-center justify-between text-xs text-slate-700">
                         <span>{row.label}</span>
                         <span className="font-semibold">{Math.round(row.score)}%</span>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-500"
+                          className="h-full rounded-full bg-violet-600"
                           style={{ width: `${Math.max(0, Math.min(100, row.score))}%` }}
                         />
                       </div>
@@ -462,11 +463,140 @@ export default function PortalReportePremiumInterpretacionPage() {
                 </ul>
               )}
             </div>
-          </div>
-        </section>
+          </section>
 
-        <InterpretacionAmpliadaCorridasBlock parrafos={parrafos} winnerLabels={winnerLabels} />
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <MetricCard icon={Gauge} label="Cleexs Score" value={String(currentScore)} sub={currentScore >= 80 ? 'Nivel excelente' : 'Nivel medio'} />
+            <MetricCard icon={Medal} label="Ranking" value={rank ? `#${rank}` : '—'} sub={`de ${Math.max(1, panel?.compareRows.length ?? 0)} marcas`} />
+            <MetricCard icon={ListChecks} label="Reportes generados" value={String(brandReports.length)} />
+            <MetricCard icon={BarChart3} label="Promedio desempeño" value={`${avgIntentionScore}%`} />
+            <MetricCard
+              icon={LineChart}
+              label="Brecha vs líder"
+              value={gapVsLeader == null ? '—' : `${gapVsLeader > 0 ? '+' : ''}${gapVsLeader} pts`}
+              sub={gapVsLeader == null ? 'Sin datos' : gapVsLeader >= 0 ? 'sobre competidores' : 'debajo del líder'}
+            />
+            <MetricCard
+              icon={Rocket}
+              label="Mejor intención"
+              value={intentionScores[0] ? intentionScores[0].label : '—'}
+              sub={intentionScores[0] ? `${Math.round(intentionScores[0].score)}%` : 'Sin dato'}
+            />
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-sm font-bold text-slate-900">Reportes del cliente</h2>
+              <ul className="mt-3 space-y-2">
+                {brandReports.slice(0, 6).map((rep, idx) => (
+                  <li key={rep.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-xs">
+                    <div>
+                      <p className="font-semibold text-slate-900">Reporte #{brandReports.length - idx}</p>
+                      <p className="text-slate-600">{new Date(rep.createdAt).toLocaleDateString()} · {rep.reportType === 'deep_report' ? 'Profundo' : 'Consolidado'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-900">{Math.round(toPct(rep.score))}</p>
+                      <Link href={`/portal-crecimiento/reporte/${rep.id}/premium`} className="font-semibold text-violet-700">
+                        Ver reporte →
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-sm font-bold text-slate-900">Historial de diagnósticos</h2>
+              {historyPoints.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-600">No hay histórico suficiente.</p>
+              ) : (
+                <div className="mt-3 flex h-44 items-end gap-3 rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+                  {historyPoints.map((p) => {
+                    const s = toPct(p.score);
+                    const h = maxHist === minHist ? 90 : 30 + ((s - minHist) / Math.max(1, maxHist - minHist)) * 95;
+                    return (
+                      <div key={p.id} className="flex flex-1 flex-col items-center justify-end gap-1">
+                        <span className="text-[10px] font-semibold text-slate-700">{Math.round(s)}</span>
+                        <div className="w-full rounded-t-md bg-gradient-to-t from-violet-600 to-violet-400" style={{ height: `${h}px` }} />
+                        <span className="text-[10px] text-slate-500">{new Date(p.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="mt-2 text-xs text-emerald-700">
+                {evolutionDelta >= 0 ? `+${evolutionDelta}` : evolutionDelta} pts evolución del score.
+              </p>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-bold text-slate-900">Competidores y Cleexs Score</h2>
+            {competitorRows.length === 0 ? (
+              <p className="mt-2 text-xs text-slate-600">Sin competidores detectados todavía en el panel comparativo.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {competitorRows.map((row) => (
+                  <li key={`${row.rank}-${row.name}`} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-xs">
+                    <div>
+                      <p className="font-semibold text-slate-900">{row.name}</p>
+                      <p className="text-slate-600">{row.domain || 'sin dominio'}</p>
+                    </div>
+                    <div className={row.score == null ? 'text-amber-700' : 'text-emerald-700'}>
+                      {row.score == null ? 'Sin Cleexs Score aún' : `Cleexs Score: ${Math.round(row.score)}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-violet-950">
+                {evolutionDelta >= 0 ? 'Estás evolucionando por encima del mercado' : 'Hay margen de mejora en la evolución'}
+              </p>
+              <Link
+                href={`/portal-crecimiento/reporte/${run.id}`}
+                className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-900"
+              >
+                Ver comparación vs competidores →
+              </Link>
+            </div>
+            <p className="mt-1 text-xs text-violet-900/80">
+              Tu visibilidad en IA cambió {evolutionDelta >= 0 ? `+${evolutionDelta}` : evolutionDelta} puntos en las últimas corridas registradas.
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <InterpretacionAmpliadaCorridasBlock parrafos={parrafos} winnerLabels={winnerLabels} />
+          </section>
+        </div>
       </div>
     </main>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
+          <Icon className="h-3.5 w-3.5 text-violet-700" />
+        </span>
+        <p className="text-[11px] font-semibold text-slate-600">{label}</p>
+      </div>
+      <p className="mt-2 text-xl font-bold text-slate-900">{value}</p>
+      {sub ? <p className="text-[11px] text-slate-500">{sub}</p> : null}
+    </div>
   );
 }
