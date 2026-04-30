@@ -371,12 +371,24 @@ export default function PortalReportePremiumInterpretacionPage() {
             <p className="font-bold text-slate-900">Cleexs</p>
           </div>
           <nav className="space-y-1 text-sm">
-            <p className="rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">Portal cliente</p>
-            <p className="rounded-lg px-3 py-2 text-slate-600">Comparación</p>
-            <p className="rounded-lg px-3 py-2 text-slate-600">Prompts</p>
-            <p className="rounded-lg px-3 py-2 text-slate-600">Competidores</p>
-            <p className="rounded-lg px-3 py-2 text-slate-600">Historial</p>
-            <p className="rounded-lg px-3 py-2 text-slate-600">Reportes</p>
+            <a href="#portal-cliente" className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">
+              Portal cliente
+            </a>
+            <a href="#comparacion" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Comparación
+            </a>
+            <a href="#prompts" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Prompts
+            </a>
+            <a href="#competidores" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Competidores
+            </a>
+            <a href="#historial" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Historial
+            </a>
+            <a href="#reportes" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Reportes
+            </a>
           </nav>
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs text-slate-500">Plan actual</p>
@@ -385,7 +397,7 @@ export default function PortalReportePremiumInterpretacionPage() {
         </aside>
 
         <div className="space-y-4">
-          <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <header id="portal-cliente" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal Cliente</p>
@@ -439,7 +451,10 @@ export default function PortalReportePremiumInterpretacionPage() {
             <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{actionError}</p>
           ) : null}
 
-          <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2">
+          <section
+            id="comparacion"
+            className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2"
+          >
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
               <p className="text-sm font-bold text-slate-900">Cleexs Score</p>
               <div className="mt-4 space-y-2">
@@ -498,7 +513,7 @@ export default function PortalReportePremiumInterpretacionPage() {
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div id="reportes" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="text-sm font-bold text-slate-900">Reportes del cliente</h2>
               <ul className="mt-3 space-y-2">
                 {brandReports.slice(0, 6).map((rep, idx) => (
@@ -517,7 +532,7 @@ export default function PortalReportePremiumInterpretacionPage() {
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div id="historial" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="text-sm font-bold text-slate-900">Historial de diagnósticos</h2>
               {historyPoints.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-600">No hay histórico suficiente.</p>
@@ -542,7 +557,7 @@ export default function PortalReportePremiumInterpretacionPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section id="competidores" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900">Competidores y Cleexs Score</h2>
             <p className="mt-1 text-xs text-slate-600">
               Con score: {competitorsWithScore} · Sin score: {competitorsWithoutScore}
@@ -609,7 +624,7 @@ export default function PortalReportePremiumInterpretacionPage() {
             </p>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section id="prompts" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <InterpretacionAmpliadaCorridasBlock parrafos={parrafos} winnerLabels={winnerLabels} />
           </section>
         </div>
