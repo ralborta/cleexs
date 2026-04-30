@@ -23,6 +23,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 type Top3Entry = { position: number; name: string; type: string; reason?: string };
 
+type UsageResponse = {
+  planKey?: string;
+  planDisplay?: string;
+};
+
+function isPremiumPlan(planKey?: string | null) {
+  return planKey === 'crecimiento' || planKey === 'enterprise';
+}
+
 type PortalRunDetail = {
   id: string;
   status: string;
@@ -209,6 +218,7 @@ export default function PortalReporteRunPage() {
   const params = useParams();
   const runId = params.runId as string;
   const [run, setRun] = useState<PortalRunDetail | null>(null);
+  const [planKey, setPlanKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [shareUrl, setShareUrl] = useState('');
@@ -236,19 +246,28 @@ export default function PortalReporteRunPage() {
           setLoading(false);
           return;
         }
-        const res = await fetch(`${API_URL}/api/reports/app/reports/${encodeURIComponent(runId)}`, {
-          cache: 'no-store',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.status === 401) {
+        const [runRes, usageRes] = await Promise.all([
+          fetch(`${API_URL}/api/reports/app/reports/${encodeURIComponent(runId)}`, {
+            cache: 'no-store',
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_URL}/api/me/usage`, { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        if (runRes.status === 401 || usageRes.status === 401) {
           sessionStorage.removeItem(TOKEN_KEY);
           setError('Sesión vencida. Volvé al portal e iniciá sesión.');
           setLoading(false);
           return;
         }
-        const body = (await res.json().catch(() => ({}))) as PortalRunDetail & { error?: string };
-        if (!res.ok) {
-          throw new Error(body.error || `Error ${res.status}`);
+        if (usageRes.ok) {
+          const u = (await usageRes.json().catch(() => ({}))) as UsageResponse;
+          if (!cancelled) setPlanKey(u.planKey ?? null);
+        } else if (!cancelled) {
+          setPlanKey(null);
+        }
+        const body = (await runRes.json().catch(() => ({}))) as PortalRunDetail & { error?: string };
+        if (!runRes.ok) {
+          throw new Error(body.error || `Error ${runRes.status}`);
         }
         if (!cancelled) setRun(body as PortalRunDetail);
       } catch (e) {
@@ -532,6 +551,23 @@ export default function PortalReporteRunPage() {
                 </Link>
                 .
               </p>
+              <div className="pt-2">
+                <Link
+                  href={`/portal-crecimiento/reporte/${runId}/premium`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-violet-200/90 bg-violet-50/90 px-3 py-2 text-xs font-semibold text-violet-950 shadow-sm ring-1 ring-violet-100/60 transition hover:bg-violet-100/90"
+                >
+                  Interpretación ampliada
+                  {isPremiumPlan(planKey) ? (
+                    <span className="rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      Incluida
+                    </span>
+                  ) : (
+                    <span className="rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800 ring-1 ring-violet-200">
+                      Premium
+                    </span>
+                  )}
+                </Link>
+              </div>
             </div>
             <span className="shrink-0 self-start rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700">
               Vista consolidada

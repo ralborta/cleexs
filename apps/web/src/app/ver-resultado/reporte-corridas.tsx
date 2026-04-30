@@ -8,11 +8,9 @@ import type {
 } from '@/lib/api';
 import {
   BarChart3,
-  BookOpen,
   ChevronDown,
   FileCheck,
   Gauge,
-  HelpCircle,
   LineChart as LineChartIcon,
   ListOrdered,
   Medal,
@@ -429,51 +427,6 @@ export function ReporteCorridas({
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
   }));
 
-  const intentionLabelOf = (category: string) => {
-    const key = normalizeIntentionKey(category);
-    return (key ? INTENTION_LABELS[key] : undefined) ?? category;
-  };
-
-  const promptLabel = (p: PublicDiagnosticPromptResult) => {
-    const raw = (p.promptText ?? '').trim();
-    if (raw) return raw.length > 110 ? `${raw.slice(0, 110).trim()}…` : raw;
-    return `Prompt de ${intentionLabelOf(p.category)}`;
-  };
-
-  const promptBrandSignals = results.map((p) => {
-    const brandTop3 = p.top3Json?.find((e) => isBrandEntry(e.name, brandName, brandAliases));
-    const mentioned = isBrandMentioned(p.responseText ?? '', brandName, brandAliases);
-    const leaderInTop3 = leaderName
-      ? p.top3Json?.find((e) => normalizeName(e.name) === normalizeName(leaderName))
-      : undefined;
-    let strength = 0;
-    if (brandTop3?.position === 1) strength = 3;
-    else if (brandTop3?.position === 2) strength = 2;
-    else if (brandTop3?.position === 3) strength = 1;
-    else if (mentioned) strength = 0.5;
-    return {
-      prompt: p,
-      label: promptLabel(p),
-      category: intentionLabelOf(p.category),
-      brandPosition: brandTop3?.position ?? null,
-      mentioned,
-      strength,
-      leaderName: leaderInTop3?.name,
-      leaderPosition: leaderInTop3?.position,
-    };
-  });
-
-  const winnerPrompts = [...promptBrandSignals]
-    .filter((s) => s.strength > 0)
-    .sort((a, b) => b.strength - a.strength)
-    .slice(0, 3);
-
-  const missingPrompts = [...promptBrandSignals]
-    .filter((s) => s.strength === 0)
-    .slice(0, 3);
-
-  const barHeight = Math.max(150, topCompetitors.length * 32);
-
   const metaLine =
     brandRow && leaderRow
       ? `#${rank} en ranking · líder: ${leaderRow.name} ${leaderRow.share.toFixed(1)}%` +
@@ -481,71 +434,6 @@ export function ReporteCorridas({
           ? ` · mejor intención: ${strongestIntention.label} ${Math.round(strongestIntention.score)}%`
           : '')
       : 'Sin datos de ranking suficientes para esta corrida.';
-
-  /** Narrativa larga para el bloque “Interpretación ampliada” (misma corrida, mismo estilo visual). */
-  const interpretacionParrafos: string[] = [];
-  interpretacionParrafos.push(
-    totalPrompts > 0
-      ? `En esta corrida simulamos ${totalPrompts} consultas a la inteligencia artificial, como si fueran usuarios reales buscando soluciones. En el ${formatConfidence}% de los casos el modelo devolvió un ranking “Top 3” suficientemente claro para medirte con precisión. El Cleexs Score ${displayScore} (0–100) resume, en promedio, qué tan fuerte es tu presencia cuando la IA recomienda marcas en esas respuestas.`
-      : `Todavía no hay prompts ejecutados en esta vista. Cuando la corrida termine, acá vas a ver una lectura automática del Cleexs Score y del ranking frente a competidores.`
-  );
-  if (totalPrompts > 0) {
-    interpretacionParrafos.push(
-      brandRow && leaderRow
-        ? brandIsLeader
-          ? `En la comparativa por cuota en el Top 3, tu marca lidera el conjunto con ${brandRow.share.toFixed(1)}% de apariciones en las recomendaciones listadas. Eso no implica dominio absoluto en todas las consultas: conviene vigilar las intenciones donde un competidor se acerca o te supera en el gráfico de la derecha.`
-          : `En la comparativa por cuota en el Top 3, estás en el puesto #${rank} entre ${Math.max(comparisonSummary.length, 1)} marcas detectadas. ${leaderRow.name} concentra ${leaderRow.share.toFixed(1)}% de esas apariciones; tu marca ${brandRow.share.toFixed(1)}%. La brecha de ${leaderGapPts.toFixed(1)} puntos indica cuánto terreno hay que recuperar con contenidos y señales AEO para que la IA te elija con similar frecuencia.`
-        : `Aún no alcanzamos un ranking estable: hace falta más Top 3 parseable o más marcas comparables en las respuestas. Revisá que los prompts pidan listados explícitos y que los competidores estén bien definidos en el diagnóstico.`
-    );
-    interpretacionParrafos.push(
-      `Menciones (${mentionRate}%): la IA te nombra en el texto aunque no te rankee. Top 3 (${top3Rate}%): aparecés entre las tres marcas recomendadas. Posición #1 (${top1Rate}%): sos la primera opción citada. Si las menciones son altas pero el Top 3 es bajo, el modelo te reconoce pero no te prioriza: ahí suele faltar prueba social, comparativas y autoridad. Si el Top 3 es alto pero el #1 es bajo, ya estás en carrera y falta empujar diferenciación.`
-    );
-    if (strongestIntention || weakestIntention) {
-      const parts: string[] = [];
-      if (strongestIntention) {
-        parts.push(
-          `Tu lectura más favorable es ${strongestIntention.label} (aprox. ${Math.round(strongestIntention.score)}% en los prompts donde aplica esa intención).`
-        );
-      }
-      if (
-        weakestIntention &&
-        (!strongestIntention || weakestIntention.key !== strongestIntention.key)
-      ) {
-        parts.push(
-          `El eje con más margen de mejora es ${weakestIntention.label} (aprox. ${Math.round(weakestIntention.score)}%): conviene crear contenidos que respondan explícitamente a esa intención de búsqueda.`
-        );
-      }
-      if (parts.length) interpretacionParrafos.push(parts.join(' '));
-    }
-    if (formatConfidence < 70) {
-      interpretacionParrafos.push(
-        `Nota de confianza: solo el ${formatConfidence}% de las respuestas tuvo un formato ideal para extraer el Top 3. Mientras eso suba, las métricas pueden subestimarte o verse “planas”. Ajustar el estilo del prompt del diagnóstico suele mejorar mucho la parseabilidad.`
-      );
-    }
-  }
-
-  const glosarioBloques = [
-    {
-      title: 'Cleexs Score',
-      body: 'Promedio 0–100 de tu desempeño en los prompts de esta corrida: combina posición en el Top 3, peso por intención y señales de la respuesta.',
-      Icon: Sparkle,
-    },
-    {
-      title: 'Top 3 y ranking',
-      body: 'Medimos qué marcas aparecen en las tres primeras recomendaciones del modelo. El ranking compara la frecuencia relativa entre marcas en esas listas.',
-      Icon: Medal,
-    },
-    {
-      title: 'Intención de búsqueda',
-      body: 'Agrupamos prompts por tipo de necesidad (urgencia, calidad, precio, etc.) cuando el texto del prompt lo indica. Así ves dónde ganás o perdés vs. el líder.',
-      Icon: Target,
-    },
-    {
-      title: 'Funnel de presencia',
-      body: 'Del total de consultas → menciones de tu marca → entradas al Top 3 → primer puesto. Las conversiones entre etapas muestran dónde se “fuga” la recomendación.',
-      Icon: TrendingUp,
-    },
-  ] as const;
 
   const kpis = [
     {
@@ -979,11 +867,6 @@ export function ReporteCorridas({
                 <div>
                   <p className="text-xs font-semibold text-slate-800">Desempeño por intención</p>
                   <p className="text-[10px] text-slate-500">% Top 3 · tu marca vs líder</p>
-                  <p className="mt-1.5 text-[10px] leading-snug text-slate-600">
-                    Cada barra violeta es tu cuota de aparición en el Top 3 para prompts etiquetados con esa intención.
-                    La marca vertical gris indica al líder en el mismo universo de respuestas: sirve para ver si te
-                    faltan “puntos de conversión” en urgencia, calidad o precio.
-                  </p>
                 </div>
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-violet-100 ring-1 ring-violet-200">
                   <Target className="h-3.5 w-3.5 text-violet-600" aria-hidden />
@@ -1038,76 +921,6 @@ export function ReporteCorridas({
               )}
             </div>
           </div>
-
-          <div className="border-t border-slate-100 bg-gradient-to-br from-slate-50/90 via-white to-violet-50/25 px-4 py-4 sm:px-5 sm:py-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 ring-1 ring-violet-200">
-                <BookOpen className="h-3.5 w-3.5 text-violet-700" aria-hidden />
-              </span>
-              <div>
-                <p className="text-xs font-bold text-slate-900">Interpretación ampliada</p>
-                <p className="text-[10px] text-slate-500">Lectura automática según los datos de esta corrida</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {interpretacionParrafos
-                .filter((p) => p.trim().length > 0)
-                .map((p, i) => (
-                  <p key={i} className="text-xs leading-relaxed text-slate-700 sm:text-[13px] sm:leading-relaxed">
-                    {p}
-                  </p>
-                ))}
-            </div>
-            {winnerPrompts.length > 0 ? (
-              <div className="mt-4 rounded-lg border border-violet-100 bg-white/80 p-3 ring-1 ring-violet-50">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">
-                  Ejemplos de consultas donde tu marca tuvo más fuerza
-                </p>
-                <p className="mt-1 text-[10px] text-slate-500">
-                  Vista resumida del texto del prompt (podés ver el detalle completo en el anexo técnico del informe).
-                </p>
-                <ul className="mt-2 space-y-1.5">
-                  {winnerPrompts.map((w, i) => (
-                    <li
-                      key={`winner-prompt-${i}`}
-                      className="flex gap-2 text-[11px] leading-snug text-slate-700"
-                    >
-                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700">
-                        {i + 1}
-                      </span>
-                      <span className="min-w-0">{w.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="border-t border-slate-100 bg-white px-4 py-4 sm:px-5 sm:py-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 ring-1 ring-indigo-100">
-                <HelpCircle className="h-3.5 w-3.5 text-indigo-700" aria-hidden />
-              </span>
-              <div>
-                <p className="text-xs font-bold text-slate-900">Qué significa cada bloque</p>
-                <p className="text-[10px] text-slate-500">Glosario rápido; las cifras concretas están arriba y en KPIs</p>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {glosarioBloques.map(({ title, body, Icon }) => (
-                <div
-                  key={title}
-                  className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/80 p-3 shadow-sm ring-1 ring-slate-100/60"
-                >
-                  <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-700 ring-1 ring-violet-100">
-                    <Icon className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  </div>
-                  <p className="text-[11px] font-bold text-slate-900">{title}</p>
-                  <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-600">{body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1131,16 +944,6 @@ export function ReporteCorridas({
               </div>
             );
           })}
-        </div>
-        <div className="mt-3 rounded-xl border border-slate-200/90 bg-gradient-to-r from-violet-50/50 via-white to-indigo-50/40 p-3.5 shadow-sm ring-1 ring-slate-100/60 sm:p-4">
-          <p className="text-xs font-bold text-slate-900">Cómo leer estos KPI en conjunto</p>
-          <p className="mt-2 text-xs leading-relaxed text-slate-600">
-            El Cleexs Score sintetiza la corrida; el ranking y la brecha vs. líder te dicen si ganás “cuota de
-            recomendación” frente a otras marcas. La mejor intención muestra dónde ya tenés mensaje alineado con lo que
-            la IA prioriza. Si el score es medio pero la brecha es chica, estás a un buen empujón de contenido de
-            superar al referente; si la brecha es grande, conviene atacar de a una o dos intenciones antes de
-            dispersarte.
-          </p>
         </div>
       </section>
 
@@ -1361,14 +1164,8 @@ export function ReporteCorridas({
       {/* 4 Métricas — siempre visibles */}
       <section>
         {sectionHeading(4, 'Métricas del análisis')}
-        <p className="mb-2 text-xs text-slate-500">
+        <p className="mb-3 text-xs text-slate-500">
           Cuatro señales clave calculadas sobre las respuestas de esta corrida.
-        </p>
-        <p className="mb-3 max-w-3xl text-xs leading-relaxed text-slate-600">
-          La confianza de formato indica qué tan seguros podemos estar al leer el Top 3 automáticamente. Las menciones
-          miden reconocimiento nominal; el Top 3 y el #1 miden priorización. Cuando formato es bajo pero menciones son
-          altas, muchas veces el modelo habla de vos pero sin listas ordenadas: conviene ajustar el prompt del
-          diagnóstico para forzar estructura comparable entre corridas.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {(
