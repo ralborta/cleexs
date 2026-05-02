@@ -35,10 +35,16 @@ type PortalRunDetail = {
   };
   priaReports?: Array<{ priaTotal: number }>;
   promptResults: Array<{
+    id?: string;
     score: number;
     responseText: string;
     top3Json: unknown;
-    prompt?: { promptText?: string; category?: { name?: string } | null };
+    prompt?: {
+      id?: string;
+      name?: string | null;
+      promptText?: string;
+      category?: { name?: string } | null;
+    };
   }>;
 };
 
@@ -363,7 +369,7 @@ export default function PortalReportePremiumInterpretacionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
+    <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[220px_1fr]">
         <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
@@ -397,7 +403,8 @@ export default function PortalReportePremiumInterpretacionPage() {
         </aside>
 
         <div className="space-y-4">
-          <header id="portal-cliente" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div id="portal-cliente" className="scroll-mt-24 space-y-4">
+          <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal Cliente</p>
@@ -446,14 +453,15 @@ export default function PortalReportePremiumInterpretacionPage() {
             <MetricCard icon={BarChart3} label="Prompts activos" value={String(run.promptResults.length)} />
             <MetricCard icon={Users} label="Competidores" value={String(competitorRows.length)} />
           </section>
+          </div>
 
           {actionError ? (
             <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{actionError}</p>
           ) : null}
 
           <section
-            id="comparacion"
-            className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2"
+            id="resumen-ejecutivo"
+            className="scroll-mt-24 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2"
           >
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
               <p className="text-sm font-bold text-slate-900">Cleexs Score</p>
@@ -493,27 +501,116 @@ export default function PortalReportePremiumInterpretacionPage() {
             </div>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <MetricCard icon={Gauge} label="Cleexs Score" value={String(currentScore)} sub={currentScore >= 80 ? 'Nivel excelente' : 'Nivel medio'} />
-            <MetricCard icon={Medal} label="Ranking" value={rank ? `#${rank}` : '—'} sub={`de ${Math.max(1, panel?.compareRows.length ?? 0)} marcas`} />
-            <MetricCard icon={ListChecks} label="Reportes generados" value={String(brandReports.length)} />
-            <MetricCard icon={BarChart3} label="Promedio desempeño" value={`${avgIntentionScore}%`} />
-            <MetricCard
-              icon={LineChart}
-              label="Brecha vs líder"
-              value={gapVsLeader == null ? '—' : `${gapVsLeader > 0 ? '+' : ''}${gapVsLeader} pts`}
-              sub={gapVsLeader == null ? 'Sin datos' : gapVsLeader >= 0 ? 'sobre competidores' : 'debajo del líder'}
-            />
-            <MetricCard
-              icon={Rocket}
-              label="Mejor intención"
-              value={intentionScores[0] ? intentionScores[0].label : '—'}
-              sub={intentionScores[0] ? `${Math.round(intentionScores[0].score)}%` : 'Sin dato'}
-            />
+          <section id="comparacion" className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Comparación</h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Evolución frente a tu última corrida con score y posición relativa frente al grupo (datos del panel
+                comparativo de la API).
+              </p>
+            </div>
+
+            {previousComparable ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[11px] text-slate-500">Corrida actual</p>
+                  <p className="text-2xl font-bold text-slate-900">{currentScore}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[11px] text-slate-500">Corrida anterior</p>
+                  <p className="text-2xl font-bold text-slate-900">{Math.round(toPct(previousComparable.score))}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    {new Date(previousComparable.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[11px] text-slate-500">Diferencia</p>
+                  <p
+                    className={`text-2xl font-bold ${deltaVsPrevious != null && deltaVsPrevious >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}
+                  >
+                    {deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious}`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-600">
+                No hay una corrida anterior con score disponible para comparar en esta vista.
+              </p>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+              <MetricCard icon={Gauge} label="Cleexs Score" value={String(currentScore)} sub={currentScore >= 80 ? 'Nivel excelente' : 'Nivel medio'} />
+              <MetricCard icon={Medal} label="Ranking" value={rank ? `#${rank}` : '—'} sub={`de ${Math.max(1, panel?.compareRows.length ?? 0)} marcas`} />
+              <MetricCard icon={ListChecks} label="Reportes generados" value={String(brandReports.length)} />
+              <MetricCard icon={BarChart3} label="Promedio desempeño" value={`${avgIntentionScore}%`} />
+              <MetricCard
+                icon={LineChart}
+                label="Brecha vs líder"
+                value={gapVsLeader == null ? '—' : `${gapVsLeader > 0 ? '+' : ''}${gapVsLeader} pts`}
+                sub={gapVsLeader == null ? 'Sin datos' : gapVsLeader >= 0 ? 'sobre competidores' : 'debajo del líder'}
+              />
+              <MetricCard
+                icon={Rocket}
+                label="Mejor intención"
+                value={intentionScores[0] ? intentionScores[0].label : '—'}
+                sub={intentionScores[0] ? `${Math.round(intentionScores[0].score)}%` : 'Sin dato'}
+              />
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Ranking del panel</h3>
+              {(panel?.compareRows ?? []).length === 0 ? (
+                <p className="mt-2 text-xs text-slate-600">Sin filas del panel comparativo (revisá marca y última corrida en API).</p>
+              ) : (
+                <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full min-w-[320px] text-left text-xs">
+                    <thead className="bg-slate-50 text-[10px] font-semibold uppercase text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">Marca</th>
+                        <th className="px-3 py-2">Tipo</th>
+                        <th className="px-3 py-2 text-right">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...(panel?.compareRows ?? [])]
+                        .sort((a, b) => a.rank - b.rank)
+                        .map((row) => (
+                          <tr key={`${row.rank}-${row.name}`} className="border-t border-slate-100">
+                            <td className="px-3 py-2 font-medium text-slate-700">{row.rank}</td>
+                            <td className="px-3 py-2 text-slate-900">{row.name}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={
+                                  row.tag === 'mi_empresa'
+                                    ? 'rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800'
+                                    : 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700'
+                                }
+                              >
+                                {row.tag === 'mi_empresa' ? 'Tu marca' : 'Competidor'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-900">
+                              {row.score == null ? '—' : Math.round(Number(row.score))}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <Link
+              href={`/portal-crecimiento/reporte/${run.id}`}
+              className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Ver informe completo (Top 3, funnel y anexo por prompt) →
+            </Link>
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <div id="reportes" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div id="reportes" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="text-sm font-bold text-slate-900">Reportes del cliente</h2>
               <ul className="mt-3 space-y-2">
                 {brandReports.slice(0, 6).map((rep, idx) => (
@@ -532,7 +629,7 @@ export default function PortalReportePremiumInterpretacionPage() {
                 ))}
               </ul>
             </div>
-            <div id="historial" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div id="historial" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="text-sm font-bold text-slate-900">Historial de diagnósticos</h2>
               {historyPoints.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-600">No hay histórico suficiente.</p>
@@ -557,7 +654,7 @@ export default function PortalReportePremiumInterpretacionPage() {
             </div>
           </section>
 
-          <section id="competidores" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section id="competidores" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900">Competidores y Cleexs Score</h2>
             <p className="mt-1 text-xs text-slate-600">
               Con score: {competitorsWithScore} · Sin score: {competitorsWithoutScore}
@@ -581,32 +678,6 @@ export default function PortalReportePremiumInterpretacionPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-slate-900">Comparación con corrida anterior</h2>
-            {previousComparable ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-[11px] text-slate-500">Corrida actual</p>
-                  <p className="text-2xl font-bold text-slate-900">{currentScore}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-[11px] text-slate-500">Corrida anterior</p>
-                  <p className="text-2xl font-bold text-slate-900">{Math.round(toPct(previousComparable.score))}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-[11px] text-slate-500">Diferencia</p>
-                  <p className={`text-2xl font-bold ${deltaVsPrevious != null && deltaVsPrevious >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious}`}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-2 text-xs text-slate-600">
-                No hay una corrida anterior con score disponible para comparar.
-              </p>
-            )}
-          </section>
-
           <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-violet-950">
@@ -624,8 +695,56 @@ export default function PortalReportePremiumInterpretacionPage() {
             </p>
           </section>
 
-          <section id="prompts" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <InterpretacionAmpliadaCorridasBlock parrafos={parrafos} winnerLabels={winnerLabels} />
+          <section id="prompts" className="scroll-mt-24 space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Consultas (prompts) de esta corrida</h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Datos reales de cada prompt ejecutado en esta corrida. El detalle técnico completo está en el informe
+                estándar (anexo por consulta).
+              </p>
+              {run.promptResults.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-600">No hay prompts en esta corrida.</p>
+              ) : (
+                <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
+                  {run.promptResults.map((pr, i) => {
+                    const title =
+                      (pr.prompt?.name && String(pr.prompt.name).trim()) ||
+                      pr.prompt?.category?.name ||
+                      `Consulta ${i + 1}`;
+                    const raw = (pr.prompt?.promptText ?? '').trim();
+                    const snippet = raw.length > 160 ? `${raw.slice(0, 160)}…` : raw;
+                    const sc = toPct(pr.score);
+                    return (
+                      <li key={pr.id ?? `pr-${i}`} className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-xs">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p className="font-semibold text-slate-900">{title}</p>
+                          <span className="shrink-0 rounded-md bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800">
+                            {Math.round(sc)}
+                          </span>
+                        </div>
+                        {pr.prompt?.category?.name ? (
+                          <p className="mt-1 text-[11px] text-slate-500">Categoría: {pr.prompt.category.name}</p>
+                        ) : null}
+                        {snippet ? <p className="mt-1 leading-relaxed text-slate-700">{snippet}</p> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <Link
+                href={`/portal-crecimiento/reporte/${run.id}`}
+                className="mt-3 inline-flex text-xs font-semibold text-violet-700 hover:underline"
+              >
+                Abrir anexo técnico por prompt en el informe →
+              </Link>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Interpretación ampliada</h3>
+              <p className="mt-1 text-xs text-slate-600">Lectura ejecutiva automática sobre los mismos datos.</p>
+              <div className="mt-3">
+                <InterpretacionAmpliadaCorridasBlock parrafos={parrafos} winnerLabels={winnerLabels} />
+              </div>
+            </div>
           </section>
         </div>
       </div>
