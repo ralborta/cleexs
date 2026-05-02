@@ -401,6 +401,9 @@ export default function PortalReportePremiumInterpretacionPage() {
             <Link href={`/portal-crecimiento/reporte/${runId}/premium/equipo`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Equipo
             </Link>
+            <Link href={`/portal-crecimiento/reporte/${runId}/premium/herramientas`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Herramientas
+            </Link>
           </nav>
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs text-slate-500">Plan actual</p>
