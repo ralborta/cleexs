@@ -37,6 +37,9 @@ Thumbs.db
 # Prisma (migrations sí van al repo para deploy)
 # prisma/migrations/
 
+# TypeScript build artifacts
+*.tsbuildinfo
+
 # Turbo
 .turbo/
 
