@@ -6,19 +6,24 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   CalendarClock,
+  Check,
   Gauge,
+  Info,
   LineChart,
   ListChecks,
   Medal,
   Rocket,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { InterpretacionAmpliadaCorridasBlock } from '@/components/report/interpretacion-ampliada-corridas-block';
 import {
   computeInterpretacionAmpliada,
   type CorridasPromptRow,
 } from '@/lib/interpretacion-ampliada-corridas';
+import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -97,6 +102,9 @@ export default function PortalReportePremiumInterpretacionPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const [pagoOpen, setPagoOpen] = useState(false);
+  const [planForPago, setPlanForPago] = useState<PlanDefinition['id']>('crecimiento');
 
   useEffect(() => {
     if (!runId) return;
@@ -394,6 +402,9 @@ export default function PortalReportePremiumInterpretacionPage() {
             </a>
             <a href="#reportes" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Reportes
+            </a>
+            <a href="#suscripcion" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+              Suscripción
             </a>
           </nav>
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -746,8 +757,232 @@ export default function PortalReportePremiumInterpretacionPage() {
               </div>
             </div>
           </section>
+
+          {/* ── Suscripción ───────────────────────────────────────────── */}
+          <section id="suscripcion" className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Suscripción
+                </div>
+                <h2 className="mt-2 text-xl font-bold text-slate-900">
+                  Tu plan actual:{' '}
+                  <span className="text-violet-700">{usage?.planDisplay || usage?.planKey || 'Premium Mensual'}</span>
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  Potenciá tus resultados con más motores, prompts y competidores. Elegí la opción que mejor se adapte a
+                  tus objetivos.
+                </p>
+              </div>
+              {/* Billing toggle */}
+              <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setBillingMode('monthly')}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    billingMode === 'monthly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Mensual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingMode('annual')}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    billingMode === 'annual' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Anual (10% off)
+                </button>
+                {billingMode === 'annual' && (
+                  <span className="ml-1 hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 sm:inline">
+                    Ahorrá 10% pagando anual
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Plan cards */}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {APP_PLANS.map((plan) => {
+                const price =
+                  plan.monthlyPrice == null
+                    ? null
+                    : billingMode === 'annual'
+                      ? getAnnualPrice(plan.monthlyPrice)
+                      : plan.monthlyPrice;
+                const isCurrent =
+                  (usage?.planKey === 'crecimiento' && plan.id === 'crecimiento') ||
+                  (usage?.planKey === 'free' && plan.id === 'free');
+                return (
+                  <div
+                    key={plan.id}
+                    className={`relative rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md ${
+                      plan.highlighted
+                        ? 'border-violet-300 ring-1 ring-violet-100'
+                        : 'border-slate-200'
+                    }`}
+                  >
+                    {plan.badge && (
+                      <span className="absolute right-3 top-3 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+                        {plan.badge}
+                      </span>
+                    )}
+                    <p className="text-base font-bold text-slate-900">{plan.name}</p>
+                    <div className="mt-1 flex items-baseline gap-1">
+                      {price == null ? (
+                        <p className="text-xl font-bold text-slate-900">Contáctanos</p>
+                      ) : (
+                        <>
+                          <span className="text-2xl font-bold text-slate-900">${price}</span>
+                          <span className="text-xs text-slate-500">{plan.periodLabel}</span>
+                          {billingMode === 'annual' && plan.monthlyPrice && (
+                            <span className="ml-1 text-xs text-slate-400 line-through">${plan.monthlyPrice}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-600">{plan.description}</p>
+
+                    <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-2">
+                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        {plan.enginesTitle}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {plan.engines.map((e) => (
+                          <span
+                            key={e}
+                            className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-700"
+                          >
+                            {e}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <ul className="mt-3 space-y-1.5">
+                      {plan.features.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[11px] text-slate-600">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      type="button"
+                      disabled={isCurrent || plan.contactOnly}
+                      onClick={() => {
+                        if (plan.contactOnly) return;
+                        setPlanForPago(plan.id);
+                        setPagoOpen(true);
+                      }}
+                      className={`mt-4 w-full rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                        isCurrent
+                          ? 'cursor-default bg-slate-100 text-slate-500'
+                          : plan.highlighted
+                            ? 'bg-violet-600 text-white hover:bg-violet-700'
+                            : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                      }`}
+                    >
+                      {isCurrent ? 'Plan actual' : plan.cta}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Upgrade card (plan anual) */}
+            {billingMode === 'monthly' && (
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-violet-700">
+                      <Info className="h-3.5 w-3.5" />
+                      Premium Anual
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700">
+                        10% OFF
+                      </span>
+                    </div>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">
+                      $89
+                      <span className="ml-1 text-xs font-normal text-slate-500">/mes</span>
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      $1.068/año{' '}
+                      <span className="text-slate-400 line-through">$1.188/año</span>
+                    </p>
+                  </div>
+                  <ul className="space-y-1 text-[11px] text-slate-700">
+                    <li className="flex items-center gap-1.5">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      Mismos beneficios que tu plan actual
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      Ahorro total de $120 por año
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      Cancelá o cambiá de plan cuando quieras
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      Facturación anual
+                    </li>
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBillingMode('annual');
+                    setPlanForPago('crecimiento');
+                    setPagoOpen(true);
+                  }}
+                  className="mt-4 w-full rounded-xl bg-violet-600 py-2 text-xs font-semibold text-white hover:bg-violet-700"
+                >
+                  Cambiar a plan anual
+                </button>
+                <p className="mt-1.5 text-center text-[10px] text-slate-500">
+                  🔒 Cancelá cuando quieras. Sin permanencias.
+                </p>
+              </div>
+            )}
+
+            {/* Bottom trust row */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 pt-1 border-t border-slate-100">
+              {[
+                { icon: '🔒', title: 'Datos seguros', sub: 'Tus datos están protegidos con los más altos estándares.' },
+                { icon: '✗', title: 'Cancelá cuando quieras', sub: 'Sin permanencias ni cargos ocultos.' },
+                { icon: '↗', title: 'Reportes accionables', sub: 'Insights claros para tomar mejores decisiones.' },
+                { icon: '💬', title: 'Soporte humano', sub: 'Estamos para ayudarte en cada paso.' },
+              ].map((item) => (
+                <div key={item.title} className="space-y-0.5 text-xs text-slate-600">
+                  <p className="text-sm">{item.icon}</p>
+                  <p className="font-semibold text-slate-800">{item.title}</p>
+                  <p className="text-[10px]">{item.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center text-xs text-slate-500">
+              ¿Necesitás ayuda para elegir?{' '}
+              <a href="mailto:hola@cleexs.com" className="font-semibold text-violet-700 hover:underline">
+                Hablar con un experto →
+              </a>
+            </p>
+          </section>
         </div>
       </div>
+
+      <PlanPaymentModal
+        open={pagoOpen}
+        onOpenChange={setPagoOpen}
+        planId={planForPago}
+        billingMode={billingMode}
+        onConfirm={() => setPagoOpen(false)}
+      />
     </main>
   );
 }
