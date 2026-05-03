@@ -85,67 +85,64 @@ function ScoreBadge({ score }: { score: number }) {
 function IncludedCard({
   icon: Icon,
   name,
-  tag,
-  tagColor,
   description,
   features,
   score,
   onOpen,
-  accentBg = 'bg-violet-600',
 }: {
   icon: React.ComponentType<{ className?: string }>;
   name: string;
-  tag: string;
-  tagColor: string;
   description: string;
   features: string[];
   score: number;
   onOpen: () => void;
-  accentBg?: string;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border-2 border-violet-200 ${accentBg} p-5 text-white shadow-md`}>
-      {/* decorative circle */}
-      <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
-      <div className="pointer-events-none absolute -bottom-6 right-10 h-20 w-20 rounded-full bg-white/5" />
-
-      <div className="relative flex items-start justify-between gap-3">
+    <div className="overflow-hidden rounded-2xl border-2 border-violet-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600">
             <Icon className="h-5 w-5 text-white" />
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <p className="font-bold text-white">{name}</p>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tagColor}`}>{tag}</span>
+              <p className="font-bold text-slate-900">{name}</p>
+              <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700">
+                Incluido
+              </span>
             </div>
-            <p className="text-xs text-violet-200">Gratis con tu plan</p>
+            <p className="text-xs font-semibold text-emerald-600">Gratis con tu plan</p>
           </div>
         </div>
-        <div className="shrink-0">
+
+        {/* Score + sparkline a la derecha */}
+        <div className="flex shrink-0 flex-col items-center gap-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
           <ScoreBadge score={score} />
+          <div className="h-8 w-20">
+            <Sparkline color="#7c3aed" height={32} />
+          </div>
         </div>
       </div>
 
-      <p className="relative mt-3 text-sm text-violet-100">{description}</p>
+      {/* Descripción */}
+      <p className="mt-4 text-sm text-slate-600">{description}</p>
 
-      <div className="relative mt-3 h-10 opacity-80">
-        <Sparkline color="#fff" height={40} />
-      </div>
-
-      <ul className="relative mt-3 space-y-1.5">
+      {/* Features */}
+      <ul className="mt-3 space-y-1.5">
         {features.map((f) => (
-          <li key={f} className="flex items-center gap-2 text-xs text-violet-100">
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-white/80" />
+          <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-violet-500" />
             {f}
           </li>
         ))}
       </ul>
 
+      {/* CTA */}
       <button
         type="button"
         onClick={onOpen}
-        className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-semibold text-violet-700 transition-opacity hover:opacity-90"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700"
       >
         Abrir herramienta
         <ArrowUpRight className="h-4 w-4" />
@@ -428,8 +425,6 @@ export default function HerramientasPage() {
             <IncludedCard
               icon={Zap}
               name="AEO ToolKit"
-              tag="Incluido"
-              tagColor="bg-white/30 text-white"
               description="Conjunto de herramientas para analizar, optimizar y monitorear tu visibilidad en motores de IA."
               features={[
                 'Auditoría de presencia en IA',
@@ -437,13 +432,7 @@ export default function HerramientasPage() {
                 'Recomendaciones accionables',
               ]}
               score={score}
-              onOpen={() => {
-                if (brandUrl) {
-                  window.open(aeoUrl, '_blank', 'noopener,noreferrer');
-                } else {
-                  window.open(AEO_TOOLKIT_URL, '_blank', 'noopener,noreferrer');
-                }
-              }}
+              onOpen={() => window.open(brandUrl ? aeoUrl : AEO_TOOLKIT_URL, '_blank', 'noopener,noreferrer')}
             />
 
             {/* Chat Funcional */}
