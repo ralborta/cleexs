@@ -380,9 +380,9 @@ export default function PortalReportePremiumInterpretacionPage() {
             <a href="#portal-cliente" className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">
               Portal cliente
             </a>
-            <a href="#comparacion" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`/portal-crecimiento/reporte/${runId}/premium/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Comparación
-            </a>
+            </Link>
             <a href="#prompts" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Prompts
             </a>

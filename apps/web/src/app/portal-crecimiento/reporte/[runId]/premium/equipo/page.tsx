@@ -280,7 +280,7 @@ export default function EquipoPage() {
           </div>
           <nav className="space-y-1 text-sm">
             <Link href={`${basePath}#portal-cliente`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Portal cliente</Link>
-            <Link href={`${basePath}#comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Comparación</Link>
+            <Link href={`${basePath}/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Comparación</Link>
             <Link href={`${basePath}#prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Prompts</Link>
             <Link href={`${basePath}#competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Competidores</Link>
             <Link href={`${basePath}#historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Historial</Link>

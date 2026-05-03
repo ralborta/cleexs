@@ -81,7 +81,7 @@ export default function SuscripcionPage() {
             <Link href={`${basePath}#portal-cliente`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Portal cliente
             </Link>
-            <Link href={`${basePath}#comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`${basePath}/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Comparación
             </Link>
             <Link href={`${basePath}#prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
