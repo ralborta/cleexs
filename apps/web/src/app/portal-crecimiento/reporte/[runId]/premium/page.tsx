@@ -392,9 +392,9 @@ export default function PortalReportePremiumInterpretacionPage() {
             <Link href={`/portal-crecimiento/reporte/${runId}/premium/historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Historial
             </Link>
-            <a href="#reportes" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`/portal-crecimiento/reporte/${runId}/premium/reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Reportes
-            </a>
+            </Link>
             <Link href={`/portal-crecimiento/reporte/${runId}/premium/suscripcion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Suscripción
             </Link>
@@ -620,7 +620,15 @@ export default function PortalReportePremiumInterpretacionPage() {
 
           <section className="grid gap-4 lg:grid-cols-2">
             <div id="reportes" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-bold text-slate-900">Reportes del cliente</h2>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h2 className="text-sm font-bold text-slate-900">Reportes del cliente</h2>
+                <Link
+                  href={`/portal-crecimiento/reporte/${run.id}/premium/reportes`}
+                  className="text-xs font-bold text-violet-700 hover:underline"
+                >
+                  Abrir vista completa (KPI · filtros · detalle) →
+                </Link>
+              </div>
               <ul className="mt-3 space-y-2">
                 {brandReports.slice(0, 6).map((rep, idx) => (
                   <li key={rep.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-xs">

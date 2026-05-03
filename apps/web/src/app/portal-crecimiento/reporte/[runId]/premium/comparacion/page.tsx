@@ -279,7 +279,7 @@ export default function ComparacionPage() {
             <Link href={`${basePath}/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Prompts</Link>
             <Link href={`${basePath}/competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Competidores</Link>
             <Link href={`${basePath}/historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Historial</Link>
-            <Link href={`${basePath}#reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Reportes</Link>
+            <Link href={`${basePath}/reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Reportes</Link>
             <Link href={`${basePath}/suscripcion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Suscripción</Link>
             <Link href={`${basePath}/equipo`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Equipo</Link>
             <Link href={`${basePath}/herramientas`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Herramientas</Link>

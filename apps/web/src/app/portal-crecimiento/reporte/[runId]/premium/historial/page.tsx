@@ -290,7 +290,7 @@ export default function HistorialDiagnosticosPage() {
             <Link href={`${basePath}/historial`} className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">
               Historial
             </Link>
-            <Link href={`${basePath}#reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`${basePath}/reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Reportes
             </Link>
             <Link href={`${basePath}/suscripcion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
