@@ -386,9 +386,9 @@ export default function PortalReportePremiumInterpretacionPage() {
             <Link href={`/portal-crecimiento/reporte/${runId}/premium/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Prompts
             </Link>
-            <a href="#competidores" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`/portal-crecimiento/reporte/${runId}/premium/competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Competidores
-            </a>
+            </Link>
             <a href="#historial" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Historial
             </a>
@@ -666,7 +666,13 @@ export default function PortalReportePremiumInterpretacionPage() {
           <section id="competidores" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900">Competidores y Cleexs Score</h2>
             <p className="mt-1 text-xs text-slate-600">
-              Con score: {competitorsWithScore} · Sin score: {competitorsWithoutScore}
+              Con score: {competitorsWithScore} · Sin score: {competitorsWithoutScore}.{' '}
+              <Link
+                href={`/portal-crecimiento/reporte/${run.id}/premium/competidores`}
+                className="font-semibold text-violet-700 hover:underline"
+              >
+                Vista competidores (Top 3 y tabla) →
+              </Link>
             </p>
             {competitorRows.length === 0 ? (
               <p className="mt-2 text-xs text-slate-600">Sin competidores detectados todavía en el panel comparativo.</p>
