@@ -383,9 +383,9 @@ export default function PortalReportePremiumInterpretacionPage() {
             <Link href={`/portal-crecimiento/reporte/${runId}/premium/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Comparación
             </Link>
-            <a href="#prompts" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`/portal-crecimiento/reporte/${runId}/premium/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Prompts
-            </a>
+            </Link>
             <a href="#competidores" className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Competidores
             </a>
@@ -709,7 +709,13 @@ export default function PortalReportePremiumInterpretacionPage() {
               <h2 className="text-base font-bold text-slate-900">Consultas (prompts) de esta corrida</h2>
               <p className="mt-1 text-xs text-slate-600">
                 Datos reales de cada prompt ejecutado en esta corrida. El detalle técnico completo está en el informe
-                estándar (anexo por consulta).
+                estándar (anexo por consulta).{' '}
+                <Link
+                  href={`/portal-crecimiento/reporte/${run.id}/premium/prompts`}
+                  className="font-semibold text-violet-700 hover:underline"
+                >
+                  Abrir vista Prompts →
+                </Link>
               </p>
               {run.promptResults.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-600">No hay prompts en esta corrida.</p>

@@ -276,7 +276,7 @@ export default function ComparacionPage() {
           <nav className="space-y-1 text-sm">
             <Link href={`${basePath}#portal-cliente`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Portal cliente</Link>
             <Link href={`${basePath}/comparacion`} className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">Comparación</Link>
-            <Link href={`${basePath}#prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Prompts</Link>
+            <Link href={`${basePath}/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Prompts</Link>
             <Link href={`${basePath}#competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Competidores</Link>
             <Link href={`${basePath}#historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Historial</Link>
             <Link href={`${basePath}#reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Reportes</Link>
@@ -499,7 +499,7 @@ export default function ComparacionPage() {
                         ))}
                       </ul>
                     </div>
-                    <Link href={`${basePath}#prompts`} className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 hover:underline">
+                    <Link href={`${basePath}/prompts`} className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 hover:underline">
                       Ver detalle por intención →
                     </Link>
                   </div>
