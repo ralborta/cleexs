@@ -411,7 +411,7 @@ export default function PromptsCorridaPage() {
             <Link href={`${basePath}/competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Competidores
             </Link>
-            <Link href={`${basePath}#historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
+            <Link href={`${basePath}/historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Historial
             </Link>
             <Link href={`${basePath}#reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
