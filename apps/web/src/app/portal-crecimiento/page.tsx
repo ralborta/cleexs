@@ -60,6 +60,10 @@ function limitLabel(v: number | null | undefined): string {
   return String(v);
 }
 
+function isPremiumPlan(planKey?: string) {
+  return planKey === 'crecimiento' || planKey === 'enterprise';
+}
+
 export default function PortalCrecimientoPage() {
   const [token, setToken] = useState<string | null>(null);
   const [booting, setBooting] = useState(true);
@@ -376,12 +380,21 @@ export default function PortalCrecimientoPage() {
                 >
                   Abrir último resultado
                 </Link>
-                <Link
-                  href={`/portal-crecimiento/reporte/${latestReport.id}/premium`}
-                  className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
-                >
-                  Abrir último Premium
-                </Link>
+                {isPremiumPlan(usage?.planKey) ? (
+                  <Link
+                    href={`/portal-crecimiento/reporte/${latestReport.id}/premium`}
+                    className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+                  >
+                    Abrir último Premium
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/portal-cliente/reporte/${latestReport.id}`}
+                    className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                  >
+                    Portal cliente (Free)
+                  </Link>
+                )}
               </>
             ) : (
               <span className="text-xs text-slate-500">
@@ -684,12 +697,21 @@ export default function PortalCrecimientoPage() {
                         >
                           Ver resultado
                         </Link>
-                        <Link
-                          href={`/portal-crecimiento/reporte/${r.id}/premium`}
-                          className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
-                        >
-                          Ver Premium
-                        </Link>
+                        {isPremiumPlan(usage?.planKey) ? (
+                          <Link
+                            href={`/portal-crecimiento/reporte/${r.id}/premium`}
+                            className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+                          >
+                            Ver Premium
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/portal-cliente/reporte/${r.id}`}
+                            className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-center text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                          >
+                            Portal cliente
+                          </Link>
+                        )}
                       </div>
                     </article>
                   ))}
