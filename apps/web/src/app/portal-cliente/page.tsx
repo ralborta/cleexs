@@ -26,7 +26,7 @@ function isPremiumPlan(planKey?: string) {
   return planKey === 'crecimiento' || planKey === 'enterprise';
 }
 
-/** Entrada del portal cliente (plan Free). Cleexs Crecimiento sigue en /portal-crecimiento. */
+/** Entrada solo para cuentas en plan gratuito. Cleexs Crecimiento: /portal-crecimiento */
 export default function PortalClienteHomePage() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
@@ -132,14 +132,10 @@ export default function PortalClienteHomePage() {
       <main className="min-h-screen bg-slate-50 p-6">
         <div className="mx-auto max-w-md space-y-6 pt-12">
           <header className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal cliente</p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">Cleexs · Plan Free</h1>
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal gratuito</p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-900">Cleexs · portal cliente</h1>
             <p className="mt-2 text-sm text-slate-600">
-              Accedé con tu cuenta. El portal <strong>Crecimiento</strong> (Premium) está en{' '}
-              <Link href="/portal-crecimiento" className="font-semibold text-violet-700 underline">
-                /portal-crecimiento
-              </Link>
-              .
+              Iniciá sesión con tu email y contraseña para ver tu panel y tus análisis del plan incluido sin costo.
             </p>
           </header>
           {error ? (
@@ -183,6 +179,13 @@ export default function PortalClienteHomePage() {
               {loginBusy ? 'Entrando…' : 'Entrar'}
             </button>
           </form>
+          <p className="text-center text-xs text-slate-500">
+            ¿Tu empresa tiene contrato <span className="font-medium text-slate-700">Cleexs Crecimiento</span>?{' '}
+            <Link href="/portal-crecimiento" className="font-medium text-violet-700 underline-offset-2 hover:underline">
+              Entrá por el portal Crecimiento
+            </Link>{' '}
+            —es otra URL y otro flujo, separado de este portal gratuito.
+          </p>
         </div>
       </main>
     );
@@ -195,8 +198,8 @@ export default function PortalClienteHomePage() {
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="flex flex-col gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100/95">Portal cliente · Free</p>
-            <h1 className="mt-1 text-2xl font-bold">Tu panel limitado</h1>
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100/95">Portal gratuito</p>
+            <h1 className="mt-1 text-2xl font-bold">Tu panel</h1>
             <p className="mt-1 text-sm text-violet-100">
               {usage?.account?.email ? <>Sesión: {usage.account.email}</> : null}
             </p>
@@ -215,15 +218,6 @@ export default function PortalClienteHomePage() {
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
         ) : null}
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm text-sm text-slate-600">
-          <p>
-            ¿Tenés plan <strong>Crecimiento</strong>?{' '}
-            <Link href="/portal-crecimiento" className="font-semibold text-violet-700 underline">
-              Ir al portal Crecimiento
-            </Link>
-          </p>
-        </div>
 
         {loading ? (
           <p className="text-sm text-slate-600">Cargando reportes…</p>
@@ -279,6 +273,13 @@ export default function PortalClienteHomePage() {
             </ul>
           </section>
         )}
+
+        <p className="text-center text-xs text-slate-400">
+          ¿Contrato Cleexs Crecimiento?{' '}
+          <Link href="/portal-crecimiento" className="text-violet-600 underline-offset-2 hover:underline">
+            Portal Crecimiento
+          </Link>
+        </p>
       </div>
     </main>
   );

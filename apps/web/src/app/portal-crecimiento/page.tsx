@@ -46,7 +46,7 @@ type PanelResponse = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const PORTAL_TITLE =
-  process.env.NEXT_PUBLIC_PORTAL_TITLE?.trim() || 'Cleexs Crecimiento · Portal cliente';
+  process.env.NEXT_PUBLIC_PORTAL_TITLE?.trim() || 'Panel de cuenta · análisis y reportes ampliados';
 /** Subtítulo del panel (mock 1). */
 const PORTAL_PANEL_SUBTITLE =
   process.env.NEXT_PUBLIC_PORTAL_PANEL_SUBTITLE?.trim() ||
@@ -279,7 +279,7 @@ export default function PortalCrecimientoPage() {
       <main className="min-h-screen bg-slate-50 p-6">
         <div className="mx-auto max-w-md space-y-6 pt-12">
           <header className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portal cliente</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Cleexs Crecimiento</p>
             <h1 className="mt-2 text-2xl font-bold text-slate-900">{PORTAL_TITLE}</h1>
             <p className="mt-2 text-sm text-slate-600">{PORTAL_LOGIN_SUBTITLE}</p>
           </header>
@@ -332,6 +332,13 @@ export default function PortalCrecimientoPage() {
               Contraseña: definila con provisionado en API. Variable{' '}
               <code className="rounded bg-slate-100 px-1">PORTAL_JWT_SECRET</code>.
             </p>
+            <p className="text-center text-xs text-slate-500">
+              ¿Estás en el <span className="font-medium text-slate-700">plan gratuito</span>?{' '}
+              <Link href="/portal-cliente" className="font-medium text-violet-700 underline-offset-2 hover:underline">
+                Usá el portal cliente gratuito
+              </Link>
+              .
+            </p>
           </form>
         </div>
       </main>
@@ -346,7 +353,7 @@ export default function PortalCrecimientoPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex flex-col gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100/95">Portal cliente</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100/95">Cleexs Crecimiento</p>
             <h1 className="mt-1 text-2xl font-bold">{PORTAL_TITLE}</h1>
             <p className="mt-1 text-sm leading-relaxed text-violet-100">{PORTAL_PANEL_SUBTITLE}</p>
           </div>
