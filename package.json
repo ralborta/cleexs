@@ -18,6 +18,7 @@
     "db:provision:account": "tsx prisma/provision-account.ts",
     "db:list-recent-runs": "tsx prisma/list-recent-runs-portal-users.ts",
     "db:random-portal-from-runs": "tsx prisma/random-portal-user-from-recent-runs.ts",
+    "db:portal-user-brand": "tsx prisma/portal-user-for-brand.ts",
     "portal:env": "tsx prisma/print-portal-env.ts",
     "deploy:api": "prisma migrate deploy && node apps/api/dist/index.js"
   },
