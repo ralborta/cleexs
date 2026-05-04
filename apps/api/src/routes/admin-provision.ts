@@ -3,6 +3,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { provisionAccount, randomPortalPassword } from '../lib/provision-account-core';
+import { randomPortalFromRecentRuns } from '../lib/random-portal-from-recent-runs';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
   const secret = process.env.ADMIN_API_SECRET?.trim();
@@ -51,6 +52,39 @@ const adminProvisionRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(400).send({ error: msg });
     }
   });
+
+  const randomPortalBody = z.object({
+    password: z.string().min(8).max(200).optional(),
+    poolSize: z.number().int().min(1).max(100).optional(),
+  });
+
+  /** POST con x-admin-secret: elige un run al azar entre los últimos N y devuelve email + contraseña de portal (listo para /portal-cliente). */
+  fastify.post<{ Body: z.infer<typeof randomPortalBody> }>(
+    '/random-portal-from-recent-runs',
+    async (request, reply) => {
+      if (!requireAdminSecret(request)) {
+        return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+          error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+        });
+      }
+
+      const parsed = randomPortalBody.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+      }
+
+      try {
+        const out = await randomPortalFromRecentRuns(prisma, {
+          poolSize: parsed.data.poolSize,
+          password: parsed.data.password ?? null,
+        });
+        return out;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Error';
+        return reply.code(400).send({ error: msg });
+      }
+    },
+  );
 
   fastify.get<{ Querystring: { q?: string; limit?: string } }>('/users', async (request, reply) => {
     if (!requireAdminSecret(request)) {
