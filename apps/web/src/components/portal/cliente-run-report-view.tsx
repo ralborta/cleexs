@@ -3,19 +3,21 @@
 import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
   ArrowUpRight,
   BarChart3,
   CalendarClock,
   Gauge,
+  Info,
   LineChart,
   ListChecks,
   Lock,
   Medal,
   Rocket,
   Sparkles,
-  TrendingUp,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -217,6 +219,203 @@ function HubMetricCard({
       </div>
       <p className="mt-2 text-xl font-bold text-slate-900">{value}</p>
       {sub ? <p className="text-[11px] text-slate-500">{sub}</p> : null}
+    </div>
+  );
+}
+
+function PortalPlanFreeHeaderKpis({
+  run,
+  latestReport,
+  latestDetailHref,
+  currentScore,
+  deltaVsPrevious,
+  previousComparable,
+  analysesUsed,
+  analysesLimit,
+  analysesLabel,
+  belowKpis,
+}: {
+  run: PortalRunDetail;
+  latestReport: ReportItem | null;
+  latestDetailHref: string | null;
+  currentScore: number;
+  deltaVsPrevious: number | null;
+  previousComparable: ReportItem | null;
+  analysesUsed: number;
+  analysesLimit: number | null;
+  analysesLabel: string;
+  belowKpis?: ReactNode;
+}) {
+  const domainLine = run.brand.domain?.trim() || 'sin dominio';
+  const lastRunDate = latestReport
+    ? new Date(latestReport.createdAt).toLocaleDateString('es-AR')
+    : '—';
+  const comparisonUp = deltaVsPrevious != null && deltaVsPrevious > 0;
+  const comparisonDown = deltaVsPrevious != null && deltaVsPrevious < 0;
+  const ringFrac =
+    analysesLimit != null && analysesLimit > 0
+      ? Math.min(1, analysesUsed / analysesLimit)
+      : 0;
+  const ringDash = `${ringFrac * 88} 88`;
+
+  return (
+    <div id="portal-cliente" className="scroll-mt-24 space-y-3">
+      <header className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 xl:max-w-[46%]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-600 sm:text-[11px]">
+              PORTAL CLIENTE (PLAN FREE)
+            </p>
+            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-[1.65rem]">
+              {run.brand.name}
+            </h1>
+            <p className="mt-1.5 text-xs text-slate-600 sm:text-sm">
+              {domainLine} · Plan Free · Estado{' '}
+              <span className="font-semibold lowercase text-emerald-600">{run.status}</span>
+            </p>
+          </div>
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-3 rounded-xl border border-violet-200/70 bg-violet-50/95 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+            <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 ring-1 ring-violet-200/50">
+                <Sparkles className="h-5 w-5 text-violet-600" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold leading-snug text-slate-900">
+                  Desbloqueá todo el potencial de Cleexs
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                  Accedé a reportes completos, prompts, histórico y análisis avanzados.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/planes"
+              className="inline-flex w-full shrink-0 items-center justify-center rounded-lg bg-violet-600 px-4 py-2.5 text-center text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 sm:w-auto sm:self-center"
+            >
+              Actualizar plan →
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
+            <CalendarClock className="h-4 w-4 text-violet-600" aria-hidden />
+          </div>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Último análisis</p>
+          <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{lastRunDate}</p>
+          {latestDetailHref ? (
+            <Link
+              href={latestDetailHref}
+              className="mt-2 inline-flex text-[11px] font-semibold text-violet-700 hover:underline"
+            >
+              Ver detalle →
+            </Link>
+          ) : null}
+        </div>
+
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
+            <Gauge className="h-4 w-4 text-violet-600" aria-hidden />
+          </div>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Cleexs Score</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-lg font-bold tabular-nums text-slate-900">{currentScore}</p>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+              Vista parcial
+            </span>
+          </div>
+          <p className="mt-1.5 text-[10px] text-slate-500">Actualizado: {lastRunDate}</p>
+        </div>
+
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
+            <LineChart className="h-4 w-4 text-violet-600" aria-hidden />
+          </div>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comparación previa</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p
+              className={`text-lg font-bold tabular-nums ${comparisonUp ? 'text-emerald-600' : comparisonDown ? 'text-rose-600' : 'text-slate-900'}`}
+            >
+              {deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious} pts`}
+            </p>
+            {deltaVsPrevious != null && deltaVsPrevious !== 0 ? (
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full ${comparisonUp ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                aria-hidden
+              >
+                {comparisonUp ? (
+                  <ArrowUp className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                ) : (
+                  <ArrowDown className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                )}
+              </span>
+            ) : null}
+          </div>
+          {previousComparable ? (
+            <p className="mt-1.5 text-[10px] text-slate-500">
+              vs {new Date(previousComparable.createdAt).toLocaleDateString('es-AR')}
+            </p>
+          ) : (
+            <p className="mt-1.5 text-[10px] text-slate-500">Sin base anterior</p>
+          )}
+        </div>
+
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
+              <ListChecks className="h-4 w-4 text-violet-600" aria-hidden />
+            </div>
+            <span title="Uso y tope de análisis según tu cuenta y plan." className="text-slate-400">
+              <Info className="h-4 w-4 shrink-0" aria-hidden />
+            </span>
+          </div>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Análisis disponibles</p>
+          <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{analysesLabel}</p>
+          <Link href="/planes" className="mt-2 inline-flex text-[11px] font-semibold text-violet-700 hover:underline">
+            Ver plan →
+          </Link>
+        </div>
+
+        <div className="relative min-h-[7.5rem] rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
+            <BarChart3 className="h-4 w-4 text-violet-600" aria-hidden />
+          </div>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Límite del plan</p>
+          <p className="mt-1 pr-12 text-lg font-bold leading-tight text-slate-900">
+            {analysesLimit == null || analysesLimit <= 0 ? '—' : `${analysesLimit} análisis / mes`}
+          </p>
+          <p className="mt-1.5 text-[10px] text-slate-500">Usados: {analysesUsed}</p>
+          {analysesLimit != null && analysesLimit > 0 ? (
+            <div className="absolute right-3 top-3 h-11 w-11">
+              <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90" aria-hidden>
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  className="text-slate-200"
+                />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  strokeDasharray={ringDash}
+                  className="text-violet-600"
+                />
+              </svg>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {belowKpis ? <div className="flex flex-wrap gap-2 pt-0.5">{belowKpis}</div> : null}
     </div>
   );
 }
@@ -471,9 +670,10 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const configuredCompetitors = run?.brand.competitors ?? [];
   const analysesUsed = usage?.usage?.scoreViews ?? 0;
-  const analysesLimit = usage?.limits?.scoreViews ?? 2;
+  const analysesLimitRaw = usage?.limits?.scoreViews;
+  const analysesLimitForNav = analysesLimitRaw ?? 2;
   const analysesLabel =
-    analysesLimit == null ? `${analysesUsed} (sin tope declarado)` : `${analysesUsed} / ${analysesLimit}`;
+    analysesLimitRaw == null ? `${analysesUsed} (sin tope declarado)` : `${analysesUsed} / ${analysesLimitRaw}`;
 
   const scoreLevel =
     currentScore >= 80 ? 'Nivel excelente' : currentScore >= 60 ? 'Nivel alto' : currentScore >= 40 ? 'Nivel medio' : 'Nivel inicial';
@@ -528,137 +728,25 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
       ? `/portal-cliente/reporte/${runId}`
       : `/portal-crecimiento/reporte/${runId}/cliente`;
 
-  const portalEyebrow = 'Portal cliente (plan Free)';
+  const latestDetailHref = latestReport
+    ? shell === 'portal-cliente'
+      ? `/portal-cliente/reporte/${latestReport.id}`
+      : `/portal-crecimiento/reporte/${latestReport.id}/cliente`
+    : null;
 
   const freeMainColumn = (
     <div className="min-w-0 space-y-4">
-          <div id="portal-cliente" className="scroll-mt-24 space-y-4">
-            <header className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-violet-700">
-                    {portalEyebrow}
-                  </p>
-                  <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{run.brand.name}</h1>
-                  <p className="mt-2 text-sm text-slate-600">
-                    {run.brand.domain || 'sin dominio'} · Plan Free · Estado{' '}
-                    <span className="font-semibold capitalize text-emerald-700">{run.status}</span>
-                  </p>
-                </div>
-                <div className="flex max-w-md shrink-0 items-start gap-3 rounded-xl border border-violet-200/80 bg-gradient-to-br from-violet-50 to-violet-100/60 p-4 text-violet-950 shadow-sm">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
-                    <Sparkles className="h-4 w-4" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-snug">Desbloqueá todo el potencial de Cleexs.</p>
-                    <p className="mt-1 text-xs leading-relaxed text-violet-900/90">
-                      Accedé a reportes completos, prompts, histórico y análisis avanzados.
-                    </p>
-                    <Link
-                      href="/planes"
-                      className="mt-3 inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700"
-                    >
-                      Actualizar plan <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </header>
-
-            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              {[
-                {
-                  title: 'Último análisis',
-                  value: latestReport ? new Date(latestReport.createdAt).toLocaleDateString('es-AR') : '—',
-                  link: latestReport
-                    ? shell === 'portal-cliente'
-                      ? `/portal-cliente/reporte/${latestReport.id}`
-                      : `/portal-crecimiento/reporte/${latestReport.id}/cliente`
-                    : undefined,
-                  linkLabel: 'Ver detalle →',
-                },
-                {
-                  title: 'Cleexs Score',
-                  value: String(currentScore),
-                  tag: 'Vista parcial',
-                  sub: `Actualizado: ${latestReport ? new Date(latestReport.createdAt).toLocaleDateString('es-AR') : '—'}`,
-                },
-                {
-                  title: 'Comparación previa',
-                  value: deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious} pts`,
-                  sub: previousComparable
-                    ? `vs ${new Date(previousComparable.createdAt).toLocaleDateString('es-AR')}`
-                    : undefined,
-                  highlight: deltaVsPrevious != null && deltaVsPrevious >= 0,
-                },
-                {
-                  title: 'Análisis disponibles',
-                  value: analysesLabel,
-                  link: '/planes',
-                  linkLabel: 'Ver plan →',
-                },
-                {
-                  title: 'Límite del plan',
-                  value: analysesLimit == null ? '—' : `${analysesLimit} análisis / mes`,
-                  sub: `Usados: ${analysesUsed}`,
-                  ring: true,
-                },
-              ].map((card, i) => (
-                <div
-                  key={i}
-                  className="relative rounded-xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
-                >
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{card.title}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <p
-                      className={`text-xl font-bold tabular-nums ${'highlight' in card && card.highlight ? 'text-emerald-600' : 'text-slate-900'}`}
-                    >
-                      {'value' in card ? card.value : ''}
-                    </p>
-                    {'tag' in card && card.tag ? (
-                      <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                        {card.tag}
-                      </span>
-                    ) : null}
-                    {'highlight' in card && card.highlight ? (
-                      <TrendingUp className="h-4 w-4 text-emerald-600" aria-hidden />
-                    ) : null}
-                  </div>
-                  {'sub' in card && card.sub ? <p className="mt-1 text-[11px] text-slate-500">{card.sub}</p> : null}
-                  {'link' in card && card.link ? (
-                    <Link href={card.link} className="mt-2 inline-flex text-xs font-semibold text-violet-700 hover:underline">
-                      {card.linkLabel}
-                    </Link>
-                  ) : null}
-                  {'ring' in card && card.ring ? (
-                    <div className="absolute right-3 top-3 h-10 w-10 rounded-full border-4 border-violet-100">
-                      <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
-                        <circle
-                          cx="18"
-                          cy="18"
-                          r="14"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          className="text-slate-200"
-                        />
-                        <circle
-                          cx="18"
-                          cy="18"
-                          r="14"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          strokeDasharray={`${analysesLimit ? (analysesUsed / analysesLimit) * 88 : 44} 88`}
-                          className="text-violet-600"
-                        />
-                      </svg>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </section>
-          </div>
+      <PortalPlanFreeHeaderKpis
+        run={run}
+        latestReport={latestReport}
+        latestDetailHref={latestDetailHref}
+        currentScore={currentScore}
+        deltaVsPrevious={deltaVsPrevious}
+        previousComparable={previousComparable}
+        analysesUsed={analysesUsed}
+        analysesLimit={analysesLimitRaw ?? null}
+        analysesLabel={analysesLabel}
+      />
 
           <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
             <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
@@ -944,61 +1032,41 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const hubMainColumn = (
     <div className="min-w-0 space-y-4">
-      <div id="portal-cliente" className="scroll-mt-24 space-y-4">
-        <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Portal cliente</p>
-              <h1 className="text-2xl font-bold text-slate-900">{run.brand.name}</h1>
-              <p className="text-xs text-slate-600">
-                {run.brand.domain || 'sin dominio'} · Plan Free · Estado{' '}
-                <span className="font-semibold text-emerald-700">{run.status}</span>
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/portal-crecimiento/reporte/${latestReport?.id || run.id}`}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Ver último diagnóstico
-              </Link>
-              <button
-                type="button"
-                onClick={() => void runNewDiagnostic()}
-                disabled={runningMes || !run.brand?.id}
-                className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-              >
-                {runningMes ? 'Iniciando…' : 'Generar nuevo análisis'}
-              </button>
-              <Link
-                href={`/portal-crecimiento/reporte/${run.id}`}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Compartir reporte
-              </Link>
-            </div>
-          </div>
-        </header>
-
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <HubMetricCard
-            icon={CalendarClock}
-            label="Último análisis"
-            value={latestReport ? new Date(latestReport.createdAt).toLocaleDateString('es-AR') : '—'}
-          />
-          <HubMetricCard
-            icon={LineChart}
-            label="Comparación previa"
-            value={deltaVsPrevious == null ? 'Sin base' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious} pts`}
-            sub={
-              previousComparable ? new Date(previousComparable.createdAt).toLocaleDateString('es-AR') : undefined
-            }
-          />
-          <HubMetricCard icon={ListChecks} label="Reportes disponibles" value={String(brandReports.length)} />
-          <HubMetricCard icon={BarChart3} label="Prompts activos" value={String(run.promptResults.length)} />
-          <HubMetricCard icon={Users} label="Competidores" value={String(competitorRowsPanel.length)} />
-        </section>
-      </div>
+      <PortalPlanFreeHeaderKpis
+        run={run}
+        latestReport={latestReport}
+        latestDetailHref={latestDetailHref}
+        currentScore={currentScore}
+        deltaVsPrevious={deltaVsPrevious}
+        previousComparable={previousComparable}
+        analysesUsed={analysesUsed}
+        analysesLimit={analysesLimitRaw ?? null}
+        analysesLabel={analysesLabel}
+        belowKpis={
+          <>
+            <Link
+              href={`/portal-crecimiento/reporte/${latestReport?.id || run.id}`}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Ver último diagnóstico
+            </Link>
+            <button
+              type="button"
+              onClick={() => void runNewDiagnostic()}
+              disabled={runningMes || !run.brand?.id}
+              className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {runningMes ? 'Iniciando…' : 'Generar nuevo análisis'}
+            </button>
+            <Link
+              href={`/portal-crecimiento/reporte/${run.id}`}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Compartir reporte
+            </Link>
+          </>
+        }
+      />
 
       {hubActionError ? (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{hubActionError}</p>
@@ -1241,7 +1309,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
           <PortalFreeTierNav
             basePath={base}
             analysesUsed={analysesUsed}
-            analysesLimit={analysesLimit ?? null}
+            analysesLimit={analysesLimitForNav}
             renewalLabel={nextRenewalLabel()}
           />
         ) : (
@@ -1250,7 +1318,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             runId={runId}
             planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
             analysesUsed={analysesUsed}
-            analysesLimit={analysesLimit ?? null}
+            analysesLimit={analysesLimitForNav}
             renewalLabel={nextRenewalLabel()}
           />
         )}
