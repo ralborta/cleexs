@@ -782,7 +782,6 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const freeMainColumn = (
     <div className="min-w-0 space-y-4">
-      {shell === 'portal-cliente' ? <PortalReferralUpsell /> : null}
       <PortalPlanFreeHeaderKpis
         run={run}
         latestReport={latestReport}
@@ -1032,6 +1031,12 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               Anexo técnico (corrida)
             </Link>
           </p>
+
+          {shell === 'portal-cliente' ? (
+            <div className="mt-8 border-t border-slate-200/90 pt-6">
+              <PortalReferralUpsell />
+            </div>
+          ) : null}
     </div>
   );
 

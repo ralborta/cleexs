@@ -227,8 +227,6 @@ export default function PortalClienteHomePage() {
           </button>
         </header>
 
-        <PortalReferralUpsell />
-
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
         ) : null}
@@ -251,6 +249,10 @@ export default function PortalClienteHomePage() {
             Portal Crecimiento
           </Link>
         </p>
+
+        <div className="mt-8 border-t border-slate-200/90 pt-6">
+          <PortalReferralUpsell />
+        </div>
       </div>
     </main>
   );
