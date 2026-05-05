@@ -734,6 +734,81 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
       : `/portal-crecimiento/reporte/${latestReport.id}/cliente`
     : null;
 
+  const equipoFreeSection = (
+    <section
+      id="equipo"
+      className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+    >
+      <div className="p-3.5 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xs font-bold text-slate-900 sm:text-sm">Equipo (1/2 miembros usados)</h2>
+          <Link
+            href={`/portal-crecimiento/reporte/${runId}/premium/equipo`}
+            className="text-[10px] font-semibold text-violet-700 hover:underline sm:text-[11px]"
+          >
+            Gestionar equipo →
+          </Link>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-stretch">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/90 p-2.5 sm:p-3">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-[10px] font-bold text-violet-800 ring-1 ring-violet-200/60"
+              aria-hidden
+            >
+              {initialsFromDisplayName(displayNameFromEmail(usage?.account?.email))}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="text-xs font-semibold text-slate-900 sm:text-sm">
+                  {displayNameFromEmail(usage?.account?.email)} (Tú)
+                </p>
+                <span className="rounded-md bg-violet-100 px-1.5 py-px text-[9px] font-semibold text-violet-800">
+                  Admin
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-[10px] text-slate-500 sm:text-[11px]">
+                {usage?.account?.email ?? 'Sin email en sesión'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-200 bg-white px-2.5 py-3 text-center">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
+              <Plus className="h-3.5 w-3.5 text-violet-600" aria-hidden />
+            </span>
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed text-[11px] font-semibold text-violet-700"
+            >
+              Invitar miembro
+            </button>
+            <p className="text-[9px] leading-snug text-slate-500">Hasta 2 miembros en plan Free.</p>
+            <p className="text-[9px] leading-snug text-slate-500">
+              Solo podés <span className="font-medium text-slate-600">invitar a 1 persona</span> más.
+            </p>
+          </div>
+
+          <div className="flex flex-1 flex-col justify-center gap-1.5 rounded-xl border border-violet-100 bg-violet-50/90 p-2.5 sm:p-3">
+            <div className="flex gap-2">
+              <Lock className="mt-0.5 h-3 w-3 shrink-0 text-violet-600" aria-hidden />
+              <p className="text-[10px] leading-snug text-violet-950 sm:text-[11px]">
+                Premium permite hasta 10 miembros del equipo.
+              </p>
+            </div>
+            <Link
+              href="/planes"
+              className="pl-[1.25rem] text-[10px] font-semibold text-violet-700 hover:underline sm:text-[11px]"
+            >
+              Actualizar plan →
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
   const freeMainColumn = (
     <div className="min-w-0 space-y-4">
       <PortalPlanFreeHeaderKpis
@@ -749,6 +824,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
       />
 
           <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+            <div className="flex min-w-0 flex-col gap-4">
             <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
               <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
@@ -775,6 +851,10 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                 Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.
               </LockFooter>
             </section>
+
+            {equipoFreeSection}
+
+            </div>
 
             <section
               className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
@@ -925,79 +1005,6 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             </section>
           </div>
 
-          <section
-            id="equipo"
-            className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
-          >
-            <div className="p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-bold text-slate-900">Equipo (1/2 miembros usados)</h2>
-                <Link
-                  href={`/portal-crecimiento/reporte/${runId}/premium/equipo`}
-                  className="text-[11px] font-semibold text-violet-700 hover:underline"
-                >
-                  Gestionar equipo →
-                </Link>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-stretch">
-                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/90 p-3">
-                  <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-[11px] font-bold text-violet-800 ring-1 ring-violet-200/60"
-                    aria-hidden
-                  >
-                    {initialsFromDisplayName(displayNameFromEmail(usage?.account?.email))}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {displayNameFromEmail(usage?.account?.email)} (Tú)
-                      </p>
-                      <span className="rounded-md bg-violet-100 px-1.5 py-px text-[10px] font-semibold text-violet-800">
-                        Admin
-                      </span>
-                    </div>
-                    <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                      {usage?.account?.email ?? 'Sin email en sesión'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-200 bg-white px-3 py-3.5 text-center">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-                    <Plus className="h-4 w-4 text-violet-600" aria-hidden />
-                  </span>
-                  <button
-                    type="button"
-                    disabled
-                    className="cursor-not-allowed text-xs font-semibold text-violet-700"
-                  >
-                    Invitar miembro
-                  </button>
-                  <p className="max-w-[14rem] text-[10px] leading-snug text-slate-500">
-                    En plan Free podés tener hasta 2 miembros;{' '}
-                    <span className="font-medium text-slate-600">solo podés invitar a 1 persona</span> más desde acá.
-                  </p>
-                </div>
-
-                <div className="flex flex-1 flex-col justify-center gap-2 rounded-xl border border-violet-100 bg-violet-50/90 p-3">
-                  <div className="flex gap-2">
-                    <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" aria-hidden />
-                    <p className="text-[11px] leading-snug text-violet-950">
-                      Premium permite hasta 10 miembros del equipo.
-                    </p>
-                  </div>
-                  <Link
-                    href="/planes"
-                    className="pl-[1.375rem] text-[11px] font-semibold text-violet-700 hover:underline"
-                  >
-                    Actualizar plan →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 via-white to-violet-50/80 p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2">
@@ -1114,32 +1121,35 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
         id="resumen-ejecutivo"
         className="scroll-mt-24 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2 lg:items-stretch"
       >
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50/40">
-          <div className="flex flex-1 flex-col p-3.5 sm:p-4">
-            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-              <p className="text-xs font-bold text-slate-900">Cleexs Score</p>
-              <span className="text-[11px] font-normal text-slate-500">(vista parcial)</span>
-            </div>
-            <div className="mt-3 grid flex-1 items-center gap-3 sm:grid-cols-2 sm:gap-4">
-              <div className="flex flex-col items-center">
-                <SemiGauge value={currentScore} showNeedle={false} />
-                <p className={`mt-0.5 text-center text-[11px] font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50/40">
+            <div className="flex flex-1 flex-col p-3.5 sm:p-4">
+              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                <p className="text-xs font-bold text-slate-900">Cleexs Score</p>
+                <span className="text-[11px] font-normal text-slate-500">(vista parcial)</span>
               </div>
-              <p className="self-center text-[11px] leading-relaxed text-slate-600">
-                Probabilidad de que una IA recomiende o priorice esta marca frente a otras opciones.
-              </p>
+              <div className="mt-3 grid flex-1 items-center gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="flex flex-col items-center">
+                  <SemiGauge value={currentScore} showNeedle={false} />
+                  <p className={`mt-0.5 text-center text-[11px] font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
+                </div>
+                <p className="self-center text-[11px] leading-relaxed text-slate-600">
+                  Probabilidad de que una IA recomiende o priorice esta marca frente a otras opciones.
+                </p>
+              </div>
             </div>
+            <LockFooter
+              className="rounded-b-xl"
+              action={
+                <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                  Actualizar plan →
+                </Link>
+              }
+            >
+              Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.
+            </LockFooter>
           </div>
-          <LockFooter
-            className="rounded-b-xl"
-            action={
-              <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-                Actualizar plan →
-              </Link>
-            }
-          >
-            Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.
-          </LockFooter>
+          {equipoFreeSection}
         </div>
         <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50/40">
           <div className="flex flex-1 flex-col p-3.5 sm:p-4">
@@ -1287,16 +1297,6 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
         >
           Ver informe completo (Top 3 y anexo por prompt) →
         </Link>
-
-        <div id="equipo" className="scroll-mt-24 mt-6 border-t border-slate-100 pt-4">
-          <h3 className="text-sm font-bold text-slate-900">Equipo</h3>
-          <p className="mt-1 text-xs text-slate-600">
-            Plan Free: hasta 2 miembros.{' '}
-            <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-              Ampliar plan →
-            </Link>
-          </p>
-        </div>
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
