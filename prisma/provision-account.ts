@@ -64,6 +64,7 @@ type CliArgs = {
   grantCourtesyCrecimiento: boolean;
   portalPassword: string;
   passwordFromCli: boolean;
+  referredBySlug?: string | null;
 };
 
 function parseArgs(argv: string[]): CliArgs {
@@ -100,6 +101,8 @@ function parseArgs(argv: string[]): CliArgs {
   const passwordArg = (map.get('--password') || '').trim();
   const portalPassword = passwordArg || randomPortalPassword();
 
+  const refRaw = (map.get('--ref') || map.get('--referrer') || '').trim();
+
   if (!email || !email.includes('@')) {
     throw new Error(
       'Falta --email válido. Ejemplos: --email=raul@hind.com   o   --email raul@hind.com',
@@ -116,6 +119,7 @@ function parseArgs(argv: string[]): CliArgs {
     grantCourtesyCrecimiento,
     portalPassword,
     passwordFromCli: Boolean(passwordArg),
+    referredBySlug: refRaw || undefined,
   };
 }
 

@@ -3,6 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  capturePortalReferralFromLocation,
+  clearPortalReferralSlug,
+  peekPortalReferralSlug,
+} from '@/lib/portal-referral-client';
+import { PortalReferralUpsell } from '@/components/portal/portal-referral-upsell';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -39,6 +45,7 @@ export default function PortalClienteHomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    capturePortalReferralFromLocation();
     try {
       const t = sessionStorage.getItem(TOKEN_KEY);
       setToken(t && t.length > 20 ? t : null);
@@ -103,12 +110,17 @@ export default function PortalClienteHomePage() {
       const res = await fetch(`${API_URL}/api/auth/portal/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          referralSlug: peekPortalReferralSlug(),
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
       if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
       if (!body.token) throw new Error('Respuesta inválida del servidor.');
       sessionStorage.setItem(TOKEN_KEY, body.token);
+      clearPortalReferralSlug();
       setPassword('');
       setToken(body.token);
     } catch (err) {
@@ -214,6 +226,8 @@ export default function PortalClienteHomePage() {
             Cerrar sesión
           </button>
         </header>
+
+        <PortalReferralUpsell />
 
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>

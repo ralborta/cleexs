@@ -38,9 +38,18 @@ model Tenant {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
+  // Slug único para enlaces ?ref= del programa portal referidos (portal cliente).
+  referralSlug                 String?   @unique @map("referral_slug")
+  referredByTenantId           String?   @map("referred_by_tenant_id")
+  referralCount                Int       @default(0) @map("referral_count")
+  referralRewardAt             DateTime? @map("referral_reward_at")
+  referralUpsellDismissedAt    DateTime? @map("referral_upsell_dismissed_at")
+
   // Relations
   parent          Tenant?       @relation("TenantHierarchy", fields: [parentTenantId], references: [id])
   children        Tenant[]      @relation("TenantHierarchy")
+  referredByTenant Tenant?      @relation("TenantReferralInvites", fields: [referredByTenantId], references: [id])
+  referredTenants  Tenant[]     @relation("TenantReferralInvites")
   plan            Plan          @relation(fields: [planId], references: [id])
   users           User[]
   brands          Brand[]
@@ -57,6 +66,7 @@ model Tenant {
   @@index([tenantCode])
   @@index([tenantPath])
   @@index([tenantType])
+  @@index([referredByTenantId])
   @@map("tenants")
 }
 

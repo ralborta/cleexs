@@ -24,6 +24,8 @@ import {
 import { SemiGauge } from '@/components/portal/cleexs-semi-gauge';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
+import { PortalReferralUpsell } from '@/components/portal/portal-referral-upsell';
+import { capturePortalReferralFromLocation } from '@/lib/portal-referral-client';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -390,6 +392,10 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   const [premiumRedirect, setPremiumRedirect] = useState(false);
   const [runningMes, setRunningMes] = useState(false);
   const [hubActionError, setHubActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (shell === 'portal-cliente') capturePortalReferralFromLocation();
+  }, [shell]);
 
   useEffect(() => {
     if (!runId) return;
@@ -776,6 +782,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const freeMainColumn = (
     <div className="min-w-0 space-y-4">
+      {shell === 'portal-cliente' ? <PortalReferralUpsell /> : null}
       <PortalPlanFreeHeaderKpis
         run={run}
         latestReport={latestReport}

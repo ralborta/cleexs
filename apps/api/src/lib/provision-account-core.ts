@@ -2,6 +2,11 @@ import type { PrismaClient } from '@prisma/client';
 import { TenantType, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import {
+  allocateUniqueReferralSlugForTenant,
+  bumpReferrerAfterSuccessfulReferral,
+  normalizePortalReferralSlug,
+} from './portal-referral';
 
 export type ProvisionAccountInput = {
   email: string;
@@ -10,6 +15,8 @@ export type ProvisionAccountInput = {
   grantCourtesyCrecimiento: boolean;
   portalPassword: string;
   passwordFromCli: boolean;
+  /** Slug del tenant referidor (programa portal cliente). Opcional. */
+  referredBySlug?: string | null;
 };
 
 export type ProvisionAccountResult = {
@@ -87,24 +94,52 @@ export async function provisionAccount(
     include: { tenant: true },
   });
 
-  let tenantId = existingUser?.tenantId;
-  let tenantCode = existingUser?.tenant?.tenantCode ?? null;
+  let tenantId: string | undefined = existingUser?.tenantId;
+  let tenantCode: string | null = existingUser?.tenant?.tenantCode ?? null;
 
   if (!tenantId) {
     const codeBase = normalizedDomain.split('.')[0] || 'tenant-local';
-    tenantCode = await nextAvailableTenantCode(prisma, codeBase);
-    const tenant = await prisma.tenant.create({
-      data: {
-        tenantCode,
-        tenantPath: `${rootTenant.tenantPath}/${tenantCode}`,
-        parentTenantId: rootTenant.id,
-        tenantType: TenantType.DIRECT_CLIENT,
-        planId: rootTenant.planId,
-        status: 'active',
-      },
+    const assignedCode = await nextAvailableTenantCode(prisma, codeBase);
+
+    await prisma.$transaction(async (tx) => {
+      const referrerSlug = normalizePortalReferralSlug(args.referredBySlug);
+      let referrerId: string | undefined;
+      if (referrerSlug) {
+        const ref = await tx.tenant.findFirst({
+          where: { referralSlug: referrerSlug },
+          select: { id: true },
+        });
+        if (ref) referrerId = ref.id;
+      }
+
+      const referralSlugNew = await allocateUniqueReferralSlugForTenant(tx);
+
+      const tenant = await tx.tenant.create({
+        data: {
+          tenantCode: assignedCode,
+          tenantPath: `${rootTenant.tenantPath}/${assignedCode}`,
+          parentTenantId: rootTenant.id,
+          tenantType: TenantType.DIRECT_CLIENT,
+          planId: rootTenant.planId,
+          status: 'active',
+          referralSlug: referralSlugNew,
+          referredByTenantId: referrerId,
+        },
+      });
+      tenantId = tenant.id;
+
+      if (referrerId) {
+        await bumpReferrerAfterSuccessfulReferral(tx, referrerId);
+      }
     });
-    tenantId = tenant.id;
+    tenantCode = assignedCode;
   }
+
+  if (!tenantId) {
+    throw new Error('Fallo interno al crear tenant.');
+  }
+
+  const tenantIdResolved = tenantId;
 
   const passwordHash = await bcrypt.hash(args.portalPassword, 12);
   const setPasswordOnUpdate = args.passwordFromCli || !existingUser?.passwordHash;
@@ -112,7 +147,7 @@ export async function provisionAccount(
   const user = await prisma.user.upsert({
     where: { email: args.email },
     update: {
-      tenantId,
+      tenantId: tenantIdResolved,
       role: UserRole.owner,
       name: companyName,
       ...(setPasswordOnUpdate ? { passwordHash } : {}),
@@ -120,14 +155,14 @@ export async function provisionAccount(
     create: {
       email: args.email,
       name: companyName,
-      tenantId,
+      tenantId: tenantIdResolved,
       role: UserRole.owner,
       passwordHash,
     },
   });
 
   const existingBrand = await prisma.brand.findFirst({
-    where: { tenantId, OR: [{ name: companyName }, { domain: normalizedDomain }] },
+    where: { tenantId: tenantIdResolved, OR: [{ name: companyName }, { domain: normalizedDomain }] },
     select: { id: true },
   });
 
@@ -144,7 +179,7 @@ export async function provisionAccount(
       })
     : await prisma.brand.create({
         data: {
-          tenantId,
+          tenantId: tenantIdResolved,
           name: companyName,
           domain: normalizedDomain,
           industry: 'Servicios',
@@ -159,13 +194,13 @@ export async function provisionAccount(
     await prisma.tenantBrandAccess.upsert({
       where: {
         tenantId_brandId: {
-          tenantId,
+          tenantId: tenantIdResolved,
           brandId: brand.id,
         },
       },
       update: {},
       create: {
-        tenantId,
+        tenantId: tenantIdResolved,
         brandId: brand.id,
         source: 'provision-script',
       },
@@ -182,7 +217,7 @@ export async function provisionAccount(
   if (args.grantCourtesyCrecimiento) {
     try {
       const existingOverride = await prisma.entitlementOverride.findFirst({
-        where: { tenantId, userId: user.id, active: true },
+        where: { tenantId: tenantIdResolved, userId: user.id, active: true },
         orderBy: { createdAt: 'desc' },
         select: { id: true },
       });
@@ -201,7 +236,7 @@ export async function provisionAccount(
       } else {
         await prisma.entitlementOverride.create({
           data: {
-            tenantId,
+            tenantId: tenantIdResolved,
             userId: user.id,
             grantPlan: 'crecimiento',
             active: true,
@@ -225,7 +260,7 @@ export async function provisionAccount(
   return {
     ok: true,
     email: user.email,
-    tenantId,
+    tenantId: tenantIdResolved,
     tenantCode,
     brandId: brand.id,
     brandDomain: brand.domain,

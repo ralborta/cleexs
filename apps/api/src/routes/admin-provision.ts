@@ -19,6 +19,8 @@ const provisionBody = z.object({
   plan: z.enum(['free', 'crecimiento']).default('crecimiento'),
   password: z.string().min(8).max(200).optional(),
   grantCourtesyCrecimiento: z.boolean().optional(),
+  /** Slug del referidor (GET /api/me/referral → referralSlug). Solo en alta de tenant nuevo. */
+  referredBySlug: z.string().max(64).optional(),
 });
 
 const adminProvisionRoutes: FastifyPluginAsync = async (fastify) => {
@@ -46,6 +48,7 @@ const adminProvisionRoutes: FastifyPluginAsync = async (fastify) => {
         grantCourtesyCrecimiento,
         portalPassword,
         passwordFromCli,
+        referredBySlug: parsed.data.referredBySlug?.trim() || undefined,
       });
       return result;
     } catch (e) {

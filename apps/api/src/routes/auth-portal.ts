@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { maybeAttachReferralForTenant } from '../lib/portal-referral';
 import { prisma } from '../lib/prisma';
 import { signPortalToken } from '../lib/portal-jwt';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
@@ -8,6 +9,7 @@ import { resolvePortalUserFromRequest } from '../lib/portal-user';
 const loginBody = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
+  referralSlug: z.string().max(64).optional(),
 });
 
 const authPortalRoutes: FastifyPluginAsync = async (fastify) => {
@@ -28,6 +30,8 @@ const authPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
     const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
     if (!ok) return reply.code(401).send({ error: 'Credenciales incorrectas.' });
+
+    await maybeAttachReferralForTenant(prisma, user.tenantId, parsed.data.referralSlug);
 
     let token: string;
     try {
