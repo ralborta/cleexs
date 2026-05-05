@@ -824,8 +824,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
       />
 
           <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
-            <div className="flex min-w-0 flex-col gap-4">
-            <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+            <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
               <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
                   <h2 className="text-xs font-bold text-slate-900 sm:text-sm">Cleexs Score</h2>
@@ -851,10 +850,6 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                 Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.
               </LockFooter>
             </section>
-
-            {equipoFreeSection}
-
-            </div>
 
             <section
               className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
@@ -1004,6 +999,8 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               </LockFooter>
             </section>
           </div>
+
+          {equipoFreeSection}
 
           <section className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 via-white to-violet-50/80 p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
