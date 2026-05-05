@@ -61,6 +61,7 @@ model Tenant {
   brandAccesses   TenantBrandAccess[]
   entitlementOverrides EntitlementOverride[]
   profileClaims   ProfileClaim[]
+  cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
 
   @@index([parentTenantId])
   @@index([tenantCode])
@@ -133,6 +134,7 @@ model User {
   usageEvents UsageLedger[]
   claims      ProfileClaim[]
   entitlementOverrides EntitlementOverride[]
+  cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
 
   @@index([tenantId])
   @@index([email])
@@ -603,3 +605,62 @@ model LeadEmail {
   @@index([leadContactId])
   @@map("lead_emails")
 }
+
+// ============================================
+// CLEEXS INTERNO — secuencia email / auditoría (solo operaciones Cleexs)
+// ============================================
+
+enum CleexsEmailScoreBucket {
+  low
+  mid
+  high
+  all
+}
+
+enum CleexsEmailSendStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+model CleexsInternalEmailCampaign {
+  id              String                 @id @default(uuid())
+  slug            String                 @unique
+  weekIndex       Int                    @map("week_index")
+  scoreBucket     CleexsEmailScoreBucket @map("score_bucket")
+  title           String
+  description     String?                @db.Text
+  espTemplateId   String?                @map("esp_template_id")
+  active          Boolean                @default(true)
+  priority        Int                    @default(0)
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  @@index([weekIndex, scoreBucket, active])
+  @@map("cleexs_internal_email_campaigns")
+}
+
+model CleexsInternalEmailSendLog {
+  id             String                 @id @default(uuid())
+  recipientEmail String                 @map("recipient_email")
+  userId         String?                @map("user_id")
+  tenantId       String?                @map("tenant_id")
+  campaignSlug   String                 @map("campaign_slug")
+  scoreBucket    String?                @map("score_bucket")
+  cleexsScore    Int?                   @map("cleexs_score")
+  mergeSummary   Json?                  @map("merge_summary")
+  status         CleexsEmailSendStatus
+  externalId     String?                @map("external_id")
+  errorMessage   String?                @map("error_message") @db.Text
+  createdAt      DateTime               @default(now()) @map("created_at")
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([campaignSlug, createdAt])
+  @@index([recipientEmail, createdAt])
+  @@index([status])
+  @@map("cleexs_internal_email_send_logs")
+}
+

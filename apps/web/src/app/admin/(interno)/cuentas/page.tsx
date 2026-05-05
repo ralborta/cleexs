@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -157,6 +158,11 @@ export default function AdminCuentasPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Admin · Cuentas y cortesías</h1>
             <p className="text-sm text-slate-600">Provisioná usuarios y overrides sin usar la terminal.</p>
+            <div className="mt-2 flex flex-wrap gap-3 text-sm">
+              <Link href="/admin/email" className="font-medium text-violet-700 hover:underline">
+                Email secuencia (interno) →
+              </Link>
+            </div>
           </div>
           <button
             type="button"
