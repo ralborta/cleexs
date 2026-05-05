@@ -1095,7 +1095,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
           />
         </div>
 
-        <div>
+        <div id="competidores" className="scroll-mt-24">
           <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Ranking del panel</h3>
           {sortedPanel.length === 0 ? (
             <p className="mt-2 text-xs text-slate-600">Sin filas del panel comparativo.</p>
@@ -1143,6 +1143,16 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
         >
           Ver informe completo (Top 3 y anexo por prompt) →
         </Link>
+
+        <div id="equipo" className="scroll-mt-24 mt-6 border-t border-slate-100 pt-4">
+          <h3 className="text-sm font-bold text-slate-900">Equipo</h3>
+          <p className="mt-1 text-xs text-slate-600">
+            Plan Free: hasta 2 miembros.{' '}
+            <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+              Ampliar plan →
+            </Link>
+          </p>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">

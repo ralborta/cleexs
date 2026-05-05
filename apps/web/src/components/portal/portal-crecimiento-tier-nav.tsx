@@ -8,6 +8,7 @@ import {
   FileBarChart2,
   History,
   LayoutDashboard,
+  Lock,
   MessageSquare,
   Scale,
   Sparkles,
@@ -26,28 +27,48 @@ export type PortalCrecimientoTierNavProps = {
   renewalLabel: string;
 };
 
+type NavSuffix = 'free' | 'disponible' | 'lock' | null;
+
 function NavRow({
   href,
   icon: Icon,
   children,
   active,
   anchor,
+  suffix,
 }: {
   href: string;
   icon: ComponentType<{ className?: string }>;
   children: React.ReactNode;
   active?: boolean;
   anchor?: boolean;
+  suffix?: NavSuffix;
 }) {
-  const cls = `flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+  const cls = `flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${
     active ? 'bg-violet-50 font-semibold text-violet-900' : 'text-slate-600 hover:bg-slate-50'
   }`;
+  const right =
+    suffix === 'free' ? (
+      <span className="shrink-0 rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+        Free
+      </span>
+    ) : suffix === 'disponible' ? (
+      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
+        Disponible
+      </span>
+    ) : suffix === 'lock' ? (
+      <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+    ) : null;
+
   const inner = (
     <>
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-        <Icon className="h-3.5 w-3.5 text-violet-700" aria-hidden />
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+          <Icon className="h-3.5 w-3.5 text-violet-700" aria-hidden />
+        </span>
+        <span className="truncate">{children}</span>
       </span>
-      <span>{children}</span>
+      {right}
     </>
   );
   if (anchor) {
@@ -60,6 +81,20 @@ function NavRow({
   return (
     <Link href={href} className={cls}>
       {inner}
+    </Link>
+  );
+}
+
+function NavSubscriptionRow({ href, children }: { href: string; children: React.ReactNode }) {
+  const cls =
+    'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50';
+  return (
+    <Link href={href} className={cls}>
+      <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+        <CreditCard className="h-3.5 w-3.5 text-violet-700" aria-hidden />
+      </span>
+      <span className="truncate">{children}</span>
     </Link>
   );
 }
@@ -87,34 +122,41 @@ export function PortalCrecimientoTierNav({
         <p className="font-bold text-slate-900">Cleexs</p>
       </div>
       <nav className="space-y-1 text-sm">
-        <NavRow href={`/portal-crecimiento/reporte/${runId}/cliente`} icon={LayoutDashboard} active={onCliente}>
+        <NavRow
+          href={`/portal-crecimiento/reporte/${runId}/cliente`}
+          icon={LayoutDashboard}
+          active={onCliente}
+          suffix="free"
+        >
           Portal cliente
         </NavRow>
-        <NavRow href={premium} icon={Sparkles}>
+        <NavRow href={premium} icon={Sparkles} suffix="lock">
           Interpretación
         </NavRow>
-        <NavRow href={`${base}#comparacion`} icon={Scale} anchor>
+        <NavRow href={`${base}#comparacion`} icon={Scale} anchor suffix="disponible">
           Comparación
         </NavRow>
-        <NavRow href={`${premium}/prompts`} icon={MessageSquare}>
+        <NavRow href={`${premium}/prompts`} icon={MessageSquare} suffix="lock">
           Prompts
         </NavRow>
-        <NavRow href={`${premium}/competidores`} icon={Target}>
+        <NavRow href={`${base}#competidores`} icon={Target} anchor suffix="disponible">
           Competidores
         </NavRow>
-        <NavRow href={`${premium}/historial`} icon={History}>
+        <NavRow href={`${premium}/historial`} icon={History} suffix="lock">
           Historial
         </NavRow>
-        <NavRow href={`${premium}/reportes`} icon={FileBarChart2}>
+        <NavRow href={`${premium}/reportes`} icon={FileBarChart2} suffix="lock">
           Reportes
         </NavRow>
-        <NavRow href={`${premium}/suscripcion`} icon={CreditCard}>
-          Suscripción
-        </NavRow>
-        <NavRow href={`${premium}/equipo`} icon={Users}>
+
+        <div className="my-2 border-t border-slate-100" role="separator" />
+
+        <NavSubscriptionRow href={`${premium}/suscripcion`}>Suscripción</NavSubscriptionRow>
+
+        <NavRow href={`${base}#equipo`} icon={Users} anchor suffix="disponible">
           Equipo
         </NavRow>
-        <NavRow href={`${premium}/herramientas`} icon={Wrench}>
+        <NavRow href={`${premium}/herramientas`} icon={Wrench} suffix="lock">
           Herramientas
         </NavRow>
       </nav>
