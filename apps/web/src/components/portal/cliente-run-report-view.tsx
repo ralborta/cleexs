@@ -1,9 +1,24 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useState } from 'react';
-import { ArrowUpRight, Lock, Sparkles, TrendingUp, UserPlus } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import {
+  ArrowUpRight,
+  BarChart3,
+  CalendarClock,
+  Gauge,
+  LineChart,
+  ListChecks,
+  Lock,
+  Medal,
+  Rocket,
+  Sparkles,
+  TrendingUp,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 
@@ -163,6 +178,31 @@ function LockFooter({ children }: { children: React.ReactNode }) {
   );
 }
 
+function HubMetricCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
+          <Icon className="h-3.5 w-3.5 text-violet-700" aria-hidden />
+        </span>
+        <p className="text-[11px] font-semibold text-slate-600">{label}</p>
+      </div>
+      <p className="mt-2 text-xl font-bold text-slate-900">{value}</p>
+      {sub ? <p className="text-[11px] text-slate-500">{sub}</p> : null}
+    </div>
+  );
+}
+
 export type ClienteRunReportShell = 'portal-cliente' | 'portal-crecimiento';
 
 /** Misma vista principal (plan Free / vista parcial); el menú lateral cambía según el portal de entrada. */
@@ -177,6 +217,8 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [premiumRedirect, setPremiumRedirect] = useState(false);
+  const [runningMes, setRunningMes] = useState(false);
+  const [hubActionError, setHubActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!runId) return;
@@ -356,6 +398,59 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
     });
   }, [sortedPanel, leaderRow]);
 
+  const competitorRowsPanel = useMemo(
+    () => (panel?.compareRows ?? []).filter((row) => row.tag === 'competidor'),
+    [panel],
+  );
+  const miEmpresaRow = useMemo(
+    () => (panel?.compareRows ?? []).find((row) => row.tag === 'mi_empresa') ?? null,
+    [panel],
+  );
+  const rank = miEmpresaRow?.rank ?? null;
+  const competitorScores = competitorRowsPanel.filter((c) => c.score != null).map((c) => Number(c.score));
+  const leaderCompetitor = competitorScores.length > 0 ? Math.max(...competitorScores) : null;
+  const avgIntentionScore =
+    intentionScores.length > 0
+      ? Math.round(intentionScores.reduce((acc, row) => acc + row.score, 0) / intentionScores.length)
+      : currentScore;
+  const gapVsLeader =
+    leaderCompetitor != null && Number.isFinite(currentScore)
+      ? Math.round((currentScore - leaderCompetitor) * 10) / 10
+      : null;
+
+  const runNewDiagnostic = useCallback(async () => {
+    if (!run?.brand?.id) {
+      setHubActionError('No se pudo identificar la marca para ejecutar una nueva corrida.');
+      return;
+    }
+    let token: string | null = null;
+    try {
+      token = sessionStorage.getItem(TOKEN_KEY);
+    } catch {
+      token = null;
+    }
+    if (!token) {
+      setHubActionError('Sesión vencida. Volvé al portal e iniciá sesión.');
+      return;
+    }
+    setRunningMes(true);
+    setHubActionError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/runs/portal/mes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ brandId: run.brand.id }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(body.message || body.error || `Error HTTP ${res.status}`);
+      window.location.href = '/portal-crecimiento';
+    } catch (e) {
+      setHubActionError(e instanceof Error ? e.message : 'Error al iniciar la corrida');
+    } finally {
+      setRunningMes(false);
+    }
+  }, [run?.brand?.id]);
+
   const configuredCompetitors = run?.brand.competitors ?? [];
   const analysesUsed = usage?.usage?.scoreViews ?? 0;
   const analysesLimit = usage?.limits?.scoreViews ?? 2;
@@ -417,7 +512,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const portalEyebrow = 'Portal cliente (plan Free)';
 
-  const mainColumn = (
+  const freeMainColumn = (
     <div className="min-w-0 space-y-4">
           <div id="portal-cliente" className="scroll-mt-24 space-y-4">
             <header className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-6">
@@ -826,37 +921,284 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
     </div>
   );
 
-  return (
-    <main className="min-h-screen scroll-smooth bg-[#f4f6f9] p-3 sm:p-5">
-      <div
-        className={`mx-auto gap-5 ${
-          shell === 'portal-cliente'
-            ? 'grid max-w-[1280px] lg:grid-cols-[minmax(0,252px)_minmax(0,1fr)]'
-            : 'grid max-w-[1280px] lg:grid-cols-[minmax(0,1fr)_minmax(0,280px)]'
-        }`}
+
+  const hubMainColumn = (
+    <div className="min-w-0 space-y-4">
+      <div id="portal-cliente" className="scroll-mt-24 space-y-4">
+        <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Portal cliente</p>
+              <h1 className="text-2xl font-bold text-slate-900">{run.brand.name}</h1>
+              <p className="text-xs text-slate-600">
+                {run.brand.domain || 'sin dominio'} · Plan Free · Estado{' '}
+                <span className="font-semibold text-emerald-700">{run.status}</span>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/portal-crecimiento/reporte/${latestReport?.id || run.id}`}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Ver último diagnóstico
+              </Link>
+              <button
+                type="button"
+                onClick={() => void runNewDiagnostic()}
+                disabled={runningMes || !run.brand?.id}
+                className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {runningMes ? 'Iniciando…' : 'Generar nuevo análisis'}
+              </button>
+              <Link
+                href={`/portal-crecimiento/reporte/${run.id}`}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Compartir reporte
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <HubMetricCard
+            icon={CalendarClock}
+            label="Último análisis"
+            value={latestReport ? new Date(latestReport.createdAt).toLocaleDateString('es-AR') : '—'}
+          />
+          <HubMetricCard
+            icon={LineChart}
+            label="Comparación previa"
+            value={deltaVsPrevious == null ? 'Sin base' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious} pts`}
+            sub={
+              previousComparable ? new Date(previousComparable.createdAt).toLocaleDateString('es-AR') : undefined
+            }
+          />
+          <HubMetricCard icon={ListChecks} label="Reportes disponibles" value={String(brandReports.length)} />
+          <HubMetricCard icon={BarChart3} label="Prompts activos" value={String(run.promptResults.length)} />
+          <HubMetricCard icon={Users} label="Competidores" value={String(competitorRowsPanel.length)} />
+        </section>
+      </div>
+
+      {hubActionError ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{hubActionError}</p>
+      ) : null}
+
+      <div className="rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-[11px] text-amber-950">
+        Plan Free: algunas lecturas son parciales. Desbloqueá el detalle completo con{' '}
+        <Link href="/planes" className="font-semibold text-violet-700 underline">
+          Premium
+        </Link>
+        .
+      </div>
+
+      <section
+        id="resumen-ejecutivo"
+        className="scroll-mt-24 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2"
       >
-        {shell === 'portal-cliente' ? (
-          <>
-            <PortalFreeTierNav
-              basePath={base}
-              analysesUsed={analysesUsed}
-              analysesLimit={analysesLimit ?? null}
-              renewalLabel={nextRenewalLabel()}
-            />
-            {mainColumn}
-          </>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+          <p className="text-sm font-bold text-slate-900">Cleexs Score</p>
+          <div className="mt-4 space-y-2">
+            <div className="h-4 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500"
+                style={{ width: `${Math.max(0, Math.min(100, currentScore))}%` }}
+              />
+            </div>
+            <p className="text-4xl font-black text-slate-900">{currentScore}</p>
+            <p className={`text-xs font-semibold ${scoreLevelClass}`}>{scoreLevel}</p>
+            <p className="text-xs text-slate-600">
+              Probabilidad de que una IA recomiende o priorice esta marca frente a otras opciones.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+          <p className="text-sm font-bold text-slate-900">Desempeño por intención</p>
+          {intentionScores.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-600">Sin datos por intención en esta corrida.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {intentionScores.map((row) => (
+                <li key={row.key}>
+                  <div className="mb-0.5 flex items-center justify-between text-xs text-slate-700">
+                    <span>{row.label}</span>
+                    <span className="font-semibold">{Math.round(row.score)}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-violet-600"
+                      style={{ width: `${Math.max(0, Math.min(100, row.score))}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      <section id="comparacion" className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">Comparación</h2>
+          <p className="mt-1 text-xs text-slate-600">
+            Evolución frente a tu última corrida y posición en el panel comparativo (vista resumida · plan Free).
+          </p>
+        </div>
+
+        {previousComparable ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-[11px] text-slate-500">Corrida actual</p>
+              <p className="text-2xl font-bold text-slate-900">{currentScore}</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-[11px] text-slate-500">Corrida anterior</p>
+              <p className="text-2xl font-bold text-slate-900">{Math.round(toPct(previousComparable.score))}</p>
+              <p className="mt-1 text-[10px] text-slate-500">
+                {new Date(previousComparable.createdAt).toLocaleString('es-AR')}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-[11px] text-slate-500">Diferencia</p>
+              <p
+                className={`text-2xl font-bold ${deltaVsPrevious != null && deltaVsPrevious >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}
+              >
+                {deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious}`}
+              </p>
+            </div>
+          </div>
         ) : (
-          <>
-            {mainColumn}
-            <PortalCrecimientoTierNav
-              basePath={base}
-              runId={runId}
-              analysesUsed={analysesUsed}
-              analysesLimit={analysesLimit ?? null}
-              renewalLabel={nextRenewalLabel()}
-            />
-          </>
+          <p className="text-xs text-slate-600">No hay una corrida anterior con score disponible para comparar.</p>
         )}
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <HubMetricCard icon={Gauge} label="Cleexs Score" value={String(currentScore)} sub={scoreLevel} />
+          <HubMetricCard
+            icon={Medal}
+            label="Ranking"
+            value={rank ? `#${rank}` : '—'}
+            sub={`de ${Math.max(1, panel?.compareRows.length ?? 0)} marcas`}
+          />
+          <HubMetricCard icon={ListChecks} label="Reportes generados" value={String(brandReports.length)} />
+          <HubMetricCard icon={BarChart3} label="Promedio desempeño" value={`${avgIntentionScore}%`} />
+          <HubMetricCard
+            icon={LineChart}
+            label="Brecha vs líder"
+            value={gapVsLeader == null ? '—' : `${gapVsLeader > 0 ? '+' : ''}${gapVsLeader} pts`}
+            sub={gapVsLeader == null ? 'Sin datos' : undefined}
+          />
+          <HubMetricCard
+            icon={Rocket}
+            label="Mejor intención"
+            value={intentionScores[0] ? intentionScores[0].label : '—'}
+            sub={intentionScores[0] ? `${Math.round(intentionScores[0].score)}%` : 'Sin dato'}
+          />
+        </div>
+
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Ranking del panel</h3>
+          {sortedPanel.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-600">Sin filas del panel comparativo.</p>
+          ) : (
+            <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full min-w-[320px] text-left text-xs">
+                <thead className="bg-slate-50 text-[10px] font-semibold uppercase text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2">#</th>
+                    <th className="px-3 py-2">Marca</th>
+                    <th className="px-3 py-2">Tipo</th>
+                    <th className="px-3 py-2 text-right">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedPanel.map((row) => (
+                    <tr key={`${row.rank}-${row.name}`} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-medium text-slate-700">{row.rank}</td>
+                      <td className="px-3 py-2 text-slate-900">{row.name}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={
+                            row.tag === 'mi_empresa'
+                              ? 'rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800'
+                              : 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700'
+                          }
+                        >
+                          {row.tag === 'mi_empresa' ? 'Tu marca' : 'Competidor'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold text-slate-900">
+                        {row.score == null ? '—' : Math.round(Number(row.score))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <Link
+          href={`/portal-crecimiento/reporte/${run.id}`}
+          className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+        >
+          Ver informe completo (Top 3 y anexo por prompt) →
+        </Link>
+      </section>
+
+      <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-violet-950">Más datos con Premium</p>
+          <Link
+            href="/planes"
+            className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-900"
+          >
+            Ver planes y precios →
+          </Link>
+        </div>
+        <p className="mt-1 text-xs text-violet-900/80">
+          Desbloqueá interpretación ampliada, prompts, histórico y exportaciones desde el mismo hub.
+        </p>
+      </section>
+
+      <p className="text-center text-[11px] text-slate-400">
+        <Link href="/portal-crecimiento" className="text-violet-600 hover:underline">
+          ← Inicio Crecimiento
+        </Link>
+        {' · '}
+        <Link href={`/portal-cliente/reporte/${runId}`} className="text-violet-600 hover:underline">
+          Vista menú Free
+        </Link>
+        {' · '}
+        <Link href={`/portal-crecimiento/reporte/${runId}`} className="text-violet-600 hover:underline">
+          Anexo técnico
+        </Link>
+      </p>
+    </div>
+  );
+
+  const mainColumn = shell === 'portal-cliente' ? freeMainColumn : hubMainColumn;
+
+  return (
+    <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
+      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[220px_1fr]">
+        {shell === 'portal-cliente' ? (
+          <PortalFreeTierNav
+            basePath={base}
+            analysesUsed={analysesUsed}
+            analysesLimit={analysesLimit ?? null}
+            renewalLabel={nextRenewalLabel()}
+          />
+        ) : (
+          <PortalCrecimientoTierNav
+            basePath={base}
+            runId={runId}
+            planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+            analysesUsed={analysesUsed}
+            analysesLimit={analysesLimit ?? null}
+            renewalLabel={nextRenewalLabel()}
+          />
+        )}
+        {mainColumn}
       </div>
     </main>
   );
