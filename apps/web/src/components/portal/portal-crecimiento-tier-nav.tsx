@@ -126,7 +126,7 @@ export function PortalCrecimientoTierNav({
           </NavRow>
         </div>
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
-          <NavRow href={`${base}#comparacion`} icon={Scale} anchor suffix="disponible">
+          <NavRow href={`${base}/comparacion`} icon={Scale} active={pathname?.includes('/comparacion') ?? false} suffix="disponible">
             Comparación
           </NavRow>
           <NavRow href={`${base}#competidores`} icon={Target} anchor suffix="disponible">
