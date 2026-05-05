@@ -51,27 +51,27 @@ function NavRow({
   anchor?: boolean;
   suffix?: NavSuffix;
 }) {
-  const cls = `flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${
+  const cls = `flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${
     active ? 'bg-violet-50 font-semibold text-violet-900' : 'text-slate-600 hover:bg-slate-50'
   }`;
   const right =
     suffix === 'free' ? (
-      <span className="shrink-0 rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+      <span className="shrink-0 rounded-full bg-violet-200/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-900">
         Free
       </span>
     ) : suffix === 'disponible' ? (
-      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
+      <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
         Disponible
       </span>
     ) : suffix === 'lock' ? (
-      <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+      <Lock className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
     ) : null;
 
   const inner = (
     <>
-      <span className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-          <Icon className="h-3.5 w-3.5 text-violet-700" aria-hidden />
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-violet-100">
+          <Icon className="h-3 w-3 text-violet-700" aria-hidden />
         </span>
         <span className="min-w-0 flex-1 break-words leading-snug">{children}</span>
       </span>
@@ -88,20 +88,6 @@ function NavRow({
   return (
     <Link href={href} className={cls}>
       {inner}
-    </Link>
-  );
-}
-
-function NavSubscriptionRow({ href, children }: { href: string; children: React.ReactNode }) {
-  const cls =
-    'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50';
-  return (
-    <Link href={href} className={cls}>
-      <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-        <CreditCard className="h-3.5 w-3.5 text-violet-700" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1 break-words leading-snug">{children}</span>
     </Link>
   );
 }
@@ -124,12 +110,12 @@ export function PortalCrecimientoTierNav({
 
   return (
     <aside className="flex h-fit flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-5">
-      <div className="mb-4 flex items-center gap-2">
-        <CleexsMark className="h-6 w-6" />
-        <p className="font-bold text-slate-900">Cleexs</p>
+      <div className="mb-3 flex items-center gap-2">
+        <CleexsMark className="h-5 w-5" />
+        <p className="text-sm font-bold text-slate-900">Cleexs</p>
       </div>
-      <nav className="space-y-2.5 text-sm">
-        <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
+      <nav className="space-y-2 text-xs">
+        <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
           <NavRow
             href={`/portal-crecimiento/reporte/${runId}/cliente`}
             icon={LayoutDashboard}
@@ -138,33 +124,33 @@ export function PortalCrecimientoTierNav({
           >
             Portal cliente
           </NavRow>
-          <NavRow href={premium} icon={Sparkles} suffix="lock">
-            Interpretación
-          </NavRow>
+        </div>
+        <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
           <NavRow href={`${base}#comparacion`} icon={Scale} anchor suffix="disponible">
             Comparación
           </NavRow>
-        </div>
-        <div className="space-y-1">
-          <NavRow href={`${premium}/prompts`} icon={MessageSquare} suffix="lock">
-            Prompts
-          </NavRow>
           <NavRow href={`${base}#competidores`} icon={Target} anchor suffix="disponible">
             Competidores
+          </NavRow>
+          <NavRow href={`${base}#equipo`} icon={Users} anchor suffix="disponible">
+            Equipo
+          </NavRow>
+          <NavRow href={`${premium}/suscripcion`} icon={CreditCard} suffix="disponible">
+            Suscripción
+          </NavRow>
+        </div>
+        <div className="space-y-1">
+          <NavRow href={premium} icon={Sparkles} suffix="lock">
+            Interpretación
+          </NavRow>
+          <NavRow href={`${premium}/prompts`} icon={MessageSquare} suffix="lock">
+            Prompts
           </NavRow>
           <NavRow href={`${premium}/historial`} icon={History} suffix="lock">
             Historial
           </NavRow>
           <NavRow href={`${premium}/reportes`} icon={FileBarChart2} suffix="lock">
             Reportes
-          </NavRow>
-
-          <div className="my-2 border-t border-slate-100" role="separator" />
-
-          <NavSubscriptionRow href={`${premium}/suscripcion`}>Suscripción</NavSubscriptionRow>
-
-          <NavRow href={`${base}#equipo`} icon={Users} anchor suffix="disponible">
-            Equipo
           </NavRow>
           <NavRow href={`${premium}/herramientas`} icon={Wrench} suffix="lock">
             Herramientas
@@ -174,9 +160,9 @@ export function PortalCrecimientoTierNav({
 
       <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <p className="text-xs text-slate-500">Plan actual</p>
-        <p className="font-semibold text-slate-900">{planCardLabel(planLabel)}</p>
+        <p className="text-sm font-semibold text-slate-900">{planCardLabel(planLabel)}</p>
         <p className="mt-2 text-[11px] text-slate-600">Uso mensual (scores vistos)</p>
-        <p className="text-sm font-semibold tabular-nums text-slate-900">{analysesLabel}</p>
+        <p className="text-xs font-semibold tabular-nums text-slate-900">{analysesLabel}</p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">
           <div
             className="h-full rounded-full bg-violet-600 transition-all"
