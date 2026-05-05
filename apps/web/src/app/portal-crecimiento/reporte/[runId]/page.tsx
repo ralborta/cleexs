@@ -551,7 +551,16 @@ export default function PortalReporteRunPage() {
                 </Link>
                 .
               </p>
-              <div className="pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Link
+                  href={`/portal-crecimiento/reporte/${runId}/cliente`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-indigo-200/90 bg-indigo-50/90 px-3 py-2 text-xs font-semibold text-indigo-950 shadow-sm ring-1 ring-indigo-100/60 transition hover:bg-indigo-100/90"
+                >
+                  Vista cliente
+                  <span className="rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800 ring-1 ring-indigo-200">
+                    Menú Crecimiento
+                  </span>
+                </Link>
                 <Link
                   href={`/portal-crecimiento/reporte/${runId}/premium`}
                   className="inline-flex items-center gap-2 rounded-xl border border-violet-200/90 bg-violet-50/90 px-3 py-2 text-xs font-semibold text-violet-950 shadow-sm ring-1 ring-violet-100/60 transition hover:bg-violet-100/90"

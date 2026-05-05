@@ -377,9 +377,18 @@ export default function PortalReportePremiumInterpretacionPage() {
             <p className="font-bold text-slate-900">Cleexs</p>
           </div>
           <nav className="space-y-1 text-sm">
-            <a href="#portal-cliente" className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">
+            <Link
+              href={`/portal-crecimiento/reporte/${runId}/cliente`}
+              className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50"
+            >
               Portal cliente
-            </a>
+            </Link>
+            <Link
+              href={`/portal-crecimiento/reporte/${runId}/premium`}
+              className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900"
+            >
+              Interpretación
+            </Link>
             <Link href={`/portal-crecimiento/reporte/${runId}/premium/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
               Comparación
             </Link>
