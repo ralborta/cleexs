@@ -35,6 +35,11 @@ export function PortalFreeTierNav({
   const analysesLabel =
     analysesLimit == null ? `${analysesUsed} (sin tope declarado)` : `${analysesUsed} / ${analysesLimit}`;
   const base = basePath.replace(/\/$/, '');
+  const firstSegmentAfterBase =
+    pathname && pathname.startsWith(base)
+      ? pathname.slice(base.length).replace(/^\//, '').split('/')[0] ?? ''
+      : '__';
+  const onPortalClienteHome = !firstSegmentAfterBase || firstSegmentAfterBase === '';
   const onComparacionPage = pathname?.includes('/comparacion') ?? false;
   const onEquipoPage = pathname?.includes('/equipo') ?? false;
   const onSuscripcionPage = pathname?.includes('/suscripcion') ?? false;
@@ -49,10 +54,21 @@ export function PortalFreeTierNav({
         <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
           <a
             href={`${base}#portal-cliente`}
-            className="flex items-center justify-between gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60"
+            className={
+              onPortalClienteHome
+                ? 'flex items-center justify-between gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
+                : 'group flex items-center justify-between gap-1.5 rounded-xl px-2.5 py-1.5 text-slate-700 hover:bg-white/80'
+            }
           >
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 font-semibold text-violet-700">
-              <Users className="h-3.5 w-3.5 shrink-0 text-violet-600" aria-hidden />
+            <span
+              className={`flex min-w-0 flex-1 items-center gap-1.5 ${
+                onPortalClienteHome ? 'font-semibold text-violet-700' : 'group-hover:text-slate-900'
+              }`}
+            >
+              <Users
+                className={`h-3.5 w-3.5 shrink-0 ${onPortalClienteHome ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
+                aria-hidden
+              />
               <span className="min-w-0 break-words leading-snug">Portal cliente</span>
             </span>
             <span className="shrink-0 rounded-full bg-violet-200/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-900">

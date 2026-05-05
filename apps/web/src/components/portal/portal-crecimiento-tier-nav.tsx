@@ -103,7 +103,11 @@ export function PortalCrecimientoTierNav({
 }: PortalCrecimientoTierNavProps) {
   const pathname = usePathname();
   const base = basePath.replace(/\/$/, '');
-  const onCliente = pathname?.includes('/cliente') ?? false;
+  const firstSegmentAfterBase =
+    pathname && pathname.startsWith(base)
+      ? pathname.slice(base.length).replace(/^\//, '').split('/')[0] ?? ''
+      : '__';
+  const onPortalClienteHome = !firstSegmentAfterBase || firstSegmentAfterBase === '';
   const premium = `/portal-crecimiento/reporte/${runId}/premium`;
   const analysesLabel =
     analysesLimit == null ? `${analysesUsed} (sin tope declarado)` : `${analysesUsed} / ${analysesLimit}`;
@@ -119,7 +123,7 @@ export function PortalCrecimientoTierNav({
           <NavRow
             href={`/portal-crecimiento/reporte/${runId}/cliente`}
             icon={LayoutDashboard}
-            active={onCliente}
+            active={onPortalClienteHome}
             suffix="free"
           >
             Portal cliente
