@@ -116,7 +116,7 @@ function SemiGauge({ value, showNeedle = true }: { value: number; showNeedle?: b
   const v = Math.min(100, Math.max(0, value));
   const angleDeg = -90 + (v / 100) * 180;
   return (
-    <div className="relative mx-auto flex h-[168px] w-full max-w-[280px] justify-center">
+    <div className="relative mx-auto flex h-[132px] w-full max-w-[220px] justify-center sm:h-[140px] sm:max-w-[236px]">
       <svg viewBox="0 0 120 72" className="h-full w-full" aria-hidden>
         <defs>
           <linearGradient id={`g-${gradId}`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -129,14 +129,14 @@ function SemiGauge({ value, showNeedle = true }: { value: number; showNeedle?: b
           d="M 14 64 A 46 46 0 0 1 106 64"
           fill="none"
           stroke="#f1f5f9"
-          strokeWidth="10"
+          strokeWidth="9"
           strokeLinecap="round"
         />
         <path
           d="M 14 64 A 46 46 0 0 1 106 64"
           fill="none"
           stroke={`url(#g-${gradId})`}
-          strokeWidth="10"
+          strokeWidth="9"
           strokeLinecap="round"
           pathLength={100}
           strokeDasharray={`${v} ${100 - v}`}
@@ -144,15 +144,15 @@ function SemiGauge({ value, showNeedle = true }: { value: number; showNeedle?: b
         {showNeedle ? (
           <>
             <g transform={`rotate(${angleDeg} 60 64)`}>
-              <line x1="60" y1="64" x2="60" y2="26" stroke="#1e293b" strokeWidth="2.2" strokeLinecap="round" />
+              <line x1="60" y1="64" x2="60" y2="26" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
             </g>
-            <circle cx="60" cy="64" r="5" fill="#1e293b" />
+            <circle cx="60" cy="64" r="4.5" fill="#1e293b" />
           </>
         ) : null}
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-end pb-0.5">
-        <p className="text-4xl font-black tabular-nums leading-none text-slate-900">{Math.round(v)}</p>
-        <p className="mt-1 text-[11px] font-medium text-slate-500">de 100</p>
+      <div className="absolute inset-0 flex flex-col items-center justify-end pb-0">
+        <p className="text-2xl font-black tabular-nums leading-none text-slate-900 sm:text-[1.65rem]">{Math.round(v)}</p>
+        <p className="mt-0.5 text-[10px] font-medium text-slate-500">de 100</p>
       </div>
     </div>
   );
@@ -185,10 +185,10 @@ function LockFooter({
 }) {
   return (
     <div
-      className={`mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-violet-100/90 bg-violet-50/80 px-5 py-3.5 text-xs leading-relaxed text-violet-950 ${className ?? 'rounded-b-2xl'}`}
+      className={`mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-violet-100/90 bg-violet-50/80 px-4 py-2.5 text-[11px] leading-snug text-violet-950 ${className ?? 'rounded-b-2xl'}`}
     >
-      <div className="flex min-w-0 flex-1 items-start gap-2.5">
-        <Lock className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" aria-hidden />
+      <div className="flex min-w-0 flex-1 items-start gap-2">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" aria-hidden />
         <div className="min-w-0">{children}</div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -662,17 +662,17 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
           <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
             <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-              <div className="flex flex-1 flex-col p-5 sm:p-6">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <h2 className="text-base font-bold text-slate-900">Cleexs Score</h2>
-                  <span className="text-sm font-normal text-slate-500">(vista parcial)</span>
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                  <h2 className="text-xs font-bold text-slate-900 sm:text-sm">Cleexs Score</h2>
+                  <span className="text-[11px] font-normal text-slate-500">(vista parcial)</span>
                 </div>
-                <div className="mt-5 grid flex-1 items-center gap-6 sm:grid-cols-2">
+                <div className="mt-4 grid flex-1 items-center gap-4 sm:grid-cols-2 sm:gap-5">
                   <div className="flex flex-col items-center justify-center">
                     <SemiGauge value={currentScore} showNeedle={false} />
-                    <p className={`mt-1 text-center text-sm font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
+                    <p className={`mt-0.5 text-center text-[11px] font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
                   </div>
-                  <p className="self-center text-sm leading-relaxed text-slate-600">
+                  <p className="self-center text-[11px] leading-relaxed text-slate-600 sm:text-xs">
                     Probabilidad de que una IA recomiende o priorice tu marca frente a otras opciones.
                   </p>
                 </div>
@@ -691,24 +691,22 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             <section
               className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
             >
-              <div className="flex flex-1 flex-col p-5 sm:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-base font-bold text-slate-900">Desempeño por intención (vista parcial)</h2>
-                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                    Vista parcial
-                  </span>
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                  <h2 className="text-xs font-bold text-slate-900 sm:text-sm">Desempeño por intención</h2>
+                  <span className="text-[11px] font-normal text-slate-500">(vista parcial)</span>
                 </div>
                 {intentionScores.length === 0 ? (
-                  <p className="mt-6 text-sm text-slate-600">Sin datos por intención en esta corrida.</p>
+                  <p className="mt-4 text-[11px] text-slate-600 sm:text-xs">Sin datos por intención en esta corrida.</p>
                 ) : (
-                  <ul className="mt-6 space-y-4">
+                  <ul className="mt-4 space-y-3">
                     {intentionScores.map((row) => (
                       <li key={row.key}>
-                        <div className="mb-1.5 flex justify-between text-sm text-slate-800">
+                        <div className="mb-1 flex justify-between text-[11px] text-slate-800 sm:text-xs">
                           <span className="font-medium">{row.label}</span>
                           <span className="font-semibold tabular-nums text-slate-900">{Math.round(row.score)}%</span>
                         </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                           <div
                             className="h-full rounded-full bg-violet-600"
                             style={{ width: `${Math.min(100, row.score)}%` }}
@@ -719,11 +717,14 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                   </ul>
                 )}
               </div>
-              <LockFooter>
-                Ver análisis completo por intención y recomendaciones.{' '}
-                <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-                  Actualizar plan →
-                </Link>
+              <LockFooter
+                action={
+                  <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                    Actualizar plan →
+                  </Link>
+                }
+              >
+                Ver análisis completo por intención y recomendaciones.
               </LockFooter>
             </section>
           </div>
@@ -1016,17 +1017,17 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
         className="scroll-mt-24 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-2 lg:items-stretch"
       >
         <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50/40">
-          <div className="flex flex-1 flex-col p-4 sm:p-5">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <p className="text-sm font-bold text-slate-900">Cleexs Score</p>
-              <span className="text-xs font-normal text-slate-500">(vista parcial)</span>
+          <div className="flex flex-1 flex-col p-3.5 sm:p-4">
+            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+              <p className="text-xs font-bold text-slate-900">Cleexs Score</p>
+              <span className="text-[11px] font-normal text-slate-500">(vista parcial)</span>
             </div>
-            <div className="mt-4 grid flex-1 items-center gap-5 sm:grid-cols-2">
+            <div className="mt-3 grid flex-1 items-center gap-3 sm:grid-cols-2 sm:gap-4">
               <div className="flex flex-col items-center">
                 <SemiGauge value={currentScore} showNeedle={false} />
-                <p className={`mt-1 text-center text-xs font-bold sm:text-sm ${scoreLevelClass}`}>{scoreLevel}</p>
+                <p className={`mt-0.5 text-center text-[11px] font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
               </div>
-              <p className="self-center text-xs leading-relaxed text-slate-600 sm:text-sm">
+              <p className="self-center text-[11px] leading-relaxed text-slate-600">
                 Probabilidad de que una IA recomiende o priorice esta marca frente a otras opciones.
               </p>
             </div>
@@ -1042,28 +1043,43 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.
           </LockFooter>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-          <p className="text-sm font-bold text-slate-900">Desempeño por intención</p>
-          {intentionScores.length === 0 ? (
-            <p className="mt-2 text-xs text-slate-600">Sin datos por intención en esta corrida.</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {intentionScores.map((row) => (
-                <li key={row.key}>
-                  <div className="mb-0.5 flex items-center justify-between text-xs text-slate-700">
-                    <span>{row.label}</span>
-                    <span className="font-semibold">{Math.round(row.score)}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-violet-600"
-                      style={{ width: `${Math.max(0, Math.min(100, row.score))}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50/40">
+          <div className="flex flex-1 flex-col p-3.5 sm:p-4">
+            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+              <p className="text-xs font-bold text-slate-900">Desempeño por intención</p>
+              <span className="text-[11px] font-normal text-slate-500">(vista parcial)</span>
+            </div>
+            {intentionScores.length === 0 ? (
+              <p className="mt-3 text-[11px] text-slate-600">Sin datos por intención en esta corrida.</p>
+            ) : (
+              <ul className="mt-3 space-y-2.5">
+                {intentionScores.map((row) => (
+                  <li key={row.key}>
+                    <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-700">
+                      <span className="font-medium">{row.label}</span>
+                      <span className="font-semibold tabular-nums">{Math.round(row.score)}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-violet-600"
+                        style={{ width: `${Math.max(0, Math.min(100, row.score))}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <LockFooter
+            className="rounded-b-xl"
+            action={
+              <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                Actualizar plan →
+              </Link>
+            }
+          >
+            Ver análisis completo por intención y recomendaciones.
+          </LockFooter>
         </div>
       </section>
 
