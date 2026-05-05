@@ -39,56 +39,60 @@ export function PortalFreeTierNav({
         <CleexsMark className="h-8 w-8" />
         <p className="text-lg font-bold tracking-tight text-slate-900">Cleexs</p>
       </div>
-      <nav className="space-y-1 text-sm">
-        <a
-          href={`${base}#portal-cliente`}
-          className="flex items-center justify-between gap-2 rounded-xl bg-violet-50 px-3 py-2.5 ring-1 ring-violet-200/60"
-        >
-          <span className="flex min-w-0 items-center gap-2.5 font-semibold text-violet-700">
-            <Users className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
-            Portal cliente
-          </span>
-          <span className="shrink-0 rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
-            Free
-          </span>
-        </a>
+      <nav className="space-y-2.5 text-sm">
+        <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
+          <a
+            href={`${base}#portal-cliente`}
+            className="flex items-center justify-between gap-2 rounded-xl bg-violet-50 px-3 py-2.5 ring-1 ring-violet-200/60"
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2.5 font-semibold text-violet-700">
+              <Users className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
+              <span className="min-w-0 break-words leading-snug">Portal cliente</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+              Free
+            </span>
+          </a>
 
-        <a
-          href={`${base}#comparacion`}
-          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <Scale className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
-            Comparación
-          </span>
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
-            Disponible
-          </span>
-        </a>
-        <a
-          href={`${base}#competidores`}
-          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <Target className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
-            Competidores
-          </span>
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
-            Disponible
-          </span>
-        </a>
-        <a
-          href={`${base}#equipo`}
-          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <UserSquare2 className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
-            Equipo
-          </span>
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
-            Disponible
-          </span>
-        </a>
+          <a
+            href={`${base}#comparacion`}
+            className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2.5">
+              <Scale className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
+              <span className="min-w-0 break-words leading-snug">Comparación</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
+              Disponible
+            </span>
+          </a>
+          <a
+            href={`${base}#competidores`}
+            className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2.5">
+              <Target className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
+              <span className="min-w-0 break-words leading-snug">Competidores</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
+              Disponible
+            </span>
+          </a>
+        </div>
+
+        <div className="space-y-1">
+          <a
+            href={`${base}#equipo`}
+            className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2.5">
+              <UserSquare2 className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
+              <span className="min-w-0 break-words leading-snug">Equipo</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
+              Disponible
+            </span>
+          </a>
 
         {(
           [
@@ -119,6 +123,7 @@ export function PortalFreeTierNav({
         >
           <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
           Suscripción
+        </div>
         </div>
       </nav>
 

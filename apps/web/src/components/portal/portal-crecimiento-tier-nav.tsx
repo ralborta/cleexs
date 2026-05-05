@@ -18,6 +18,13 @@ import {
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
+function planCardLabel(display: string): string {
+  const t = display.trim();
+  if (/^siempre gratis$/i.test(t)) return 'Gratis';
+  if (/^free$/i.test(t)) return 'Gratis';
+  return display;
+}
+
 export type PortalCrecimientoTierNavProps = {
   basePath: string;
   runId: string;
@@ -62,11 +69,11 @@ function NavRow({
 
   const inner = (
     <>
-      <span className="flex min-w-0 items-center gap-2">
+      <span className="flex min-w-0 flex-1 items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
           <Icon className="h-3.5 w-3.5 text-violet-700" aria-hidden />
         </span>
-        <span className="truncate">{children}</span>
+        <span className="min-w-0 flex-1 break-words leading-snug">{children}</span>
       </span>
       {right}
     </>
@@ -94,7 +101,7 @@ function NavSubscriptionRow({ href, children }: { href: string; children: React.
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
         <CreditCard className="h-3.5 w-3.5 text-violet-700" aria-hidden />
       </span>
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 flex-1 break-words leading-snug">{children}</span>
     </Link>
   );
 }
@@ -121,49 +128,53 @@ export function PortalCrecimientoTierNav({
         <CleexsMark className="h-6 w-6" />
         <p className="font-bold text-slate-900">Cleexs</p>
       </div>
-      <nav className="space-y-1 text-sm">
-        <NavRow
-          href={`/portal-crecimiento/reporte/${runId}/cliente`}
-          icon={LayoutDashboard}
-          active={onCliente}
-          suffix="free"
-        >
-          Portal cliente
-        </NavRow>
-        <NavRow href={premium} icon={Sparkles} suffix="lock">
-          Interpretación
-        </NavRow>
-        <NavRow href={`${base}#comparacion`} icon={Scale} anchor suffix="disponible">
-          Comparación
-        </NavRow>
-        <NavRow href={`${premium}/prompts`} icon={MessageSquare} suffix="lock">
-          Prompts
-        </NavRow>
-        <NavRow href={`${base}#competidores`} icon={Target} anchor suffix="disponible">
-          Competidores
-        </NavRow>
-        <NavRow href={`${premium}/historial`} icon={History} suffix="lock">
-          Historial
-        </NavRow>
-        <NavRow href={`${premium}/reportes`} icon={FileBarChart2} suffix="lock">
-          Reportes
-        </NavRow>
+      <nav className="space-y-2.5 text-sm">
+        <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
+          <NavRow
+            href={`/portal-crecimiento/reporte/${runId}/cliente`}
+            icon={LayoutDashboard}
+            active={onCliente}
+            suffix="free"
+          >
+            Portal cliente
+          </NavRow>
+          <NavRow href={premium} icon={Sparkles} suffix="lock">
+            Interpretación
+          </NavRow>
+          <NavRow href={`${base}#comparacion`} icon={Scale} anchor suffix="disponible">
+            Comparación
+          </NavRow>
+        </div>
+        <div className="space-y-1">
+          <NavRow href={`${premium}/prompts`} icon={MessageSquare} suffix="lock">
+            Prompts
+          </NavRow>
+          <NavRow href={`${base}#competidores`} icon={Target} anchor suffix="disponible">
+            Competidores
+          </NavRow>
+          <NavRow href={`${premium}/historial`} icon={History} suffix="lock">
+            Historial
+          </NavRow>
+          <NavRow href={`${premium}/reportes`} icon={FileBarChart2} suffix="lock">
+            Reportes
+          </NavRow>
 
-        <div className="my-2 border-t border-slate-100" role="separator" />
+          <div className="my-2 border-t border-slate-100" role="separator" />
 
-        <NavSubscriptionRow href={`${premium}/suscripcion`}>Suscripción</NavSubscriptionRow>
+          <NavSubscriptionRow href={`${premium}/suscripcion`}>Suscripción</NavSubscriptionRow>
 
-        <NavRow href={`${base}#equipo`} icon={Users} anchor suffix="disponible">
-          Equipo
-        </NavRow>
-        <NavRow href={`${premium}/herramientas`} icon={Wrench} suffix="lock">
-          Herramientas
-        </NavRow>
+          <NavRow href={`${base}#equipo`} icon={Users} anchor suffix="disponible">
+            Equipo
+          </NavRow>
+          <NavRow href={`${premium}/herramientas`} icon={Wrench} suffix="lock">
+            Herramientas
+          </NavRow>
+        </div>
       </nav>
 
       <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <p className="text-xs text-slate-500">Plan actual</p>
-        <p className="font-semibold text-slate-900">{planLabel}</p>
+        <p className="font-semibold text-slate-900">{planCardLabel(planLabel)}</p>
         <p className="mt-2 text-[11px] text-slate-600">Uso mensual (scores vistos)</p>
         <p className="text-sm font-semibold tabular-nums text-slate-900">{analysesLabel}</p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">

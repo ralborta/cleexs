@@ -1190,7 +1190,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[220px_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
         {shell === 'portal-cliente' ? (
           <PortalFreeTierNav
             basePath={base}
