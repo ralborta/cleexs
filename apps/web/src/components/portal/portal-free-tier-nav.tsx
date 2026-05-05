@@ -36,6 +36,8 @@ export function PortalFreeTierNav({
     analysesLimit == null ? `${analysesUsed} (sin tope declarado)` : `${analysesUsed} / ${analysesLimit}`;
   const base = basePath.replace(/\/$/, '');
   const onComparacionPage = pathname?.includes('/comparacion') ?? false;
+  const onEquipoPage = pathname?.includes('/equipo') ?? false;
+  const onSuscripcionPage = pathname?.includes('/suscripcion') ?? false;
 
   return (
     <aside className="flex h-fit flex-col rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:sticky lg:top-5">
@@ -60,29 +62,6 @@ export function PortalFreeTierNav({
         </div>
 
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
-          <Link
-            href={`${base}/comparacion`}
-            className={
-              onComparacionPage
-                ? 'group flex items-center justify-between gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
-                : 'group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50'
-            }
-          >
-            <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <Scale
-                className={`h-3.5 w-3.5 shrink-0 ${onComparacionPage ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
-                aria-hidden
-              />
-              <span
-                className={`min-w-0 break-words leading-snug ${onComparacionPage ? 'font-semibold text-violet-800' : ''}`}
-              >
-                Comparación
-              </span>
-            </span>
-            <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
-              Disponible
-            </span>
-          </Link>
           <a
             href={`${base}#competidores`}
             className="group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50"
@@ -95,25 +74,47 @@ export function PortalFreeTierNav({
               Disponible
             </span>
           </a>
-          <a
-            href={`${base}#equipo`}
-            className="group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50"
+          <Link
+            href={`${base}/equipo`}
+            className={
+              onEquipoPage
+                ? 'group flex items-center justify-between gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
+                : 'group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50'
+            }
           >
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <UserSquare2 className="h-3.5 w-3.5 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
-              <span className="min-w-0 break-words leading-snug">Equipo</span>
+              <UserSquare2
+                className={`h-3.5 w-3.5 shrink-0 ${onEquipoPage ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
+                aria-hidden
+              />
+              <span
+                className={`min-w-0 break-words leading-snug ${onEquipoPage ? 'font-semibold text-violet-800' : ''}`}
+              >
+                Equipo
+              </span>
             </span>
             <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
               Disponible
             </span>
-          </a>
+          </Link>
           <Link
-            href="/planes"
-            className="group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50"
+            href={`${base}/suscripcion`}
+            className={
+              onSuscripcionPage
+                ? 'group flex items-center justify-between gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
+                : 'group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50'
+            }
           >
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
-              <span className="min-w-0 break-words leading-snug">Suscripción</span>
+              <CreditCard
+                className={`h-3.5 w-3.5 shrink-0 ${onSuscripcionPage ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
+                aria-hidden
+              />
+              <span
+                className={`min-w-0 break-words leading-snug ${onSuscripcionPage ? 'font-semibold text-violet-800' : ''}`}
+              >
+                Suscripción
+              </span>
             </span>
             <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
               Disponible
@@ -122,26 +123,41 @@ export function PortalFreeTierNav({
         </div>
 
         <div className="space-y-1">
-        {(
-          [
-            { label: 'Prompts' as const, Icon: MessageSquare },
+          <Link
+            href={`${base}/comparacion`}
+            className={
+              onComparacionPage
+                ? 'flex items-center justify-between gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-slate-700 ring-1 ring-slate-200/80'
+                : 'flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-600 hover:bg-slate-50'
+            }
+            title="Vista previa limitada. Plan Crecimiento desbloquea el análisis completo."
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Scale className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+              <span className="min-w-0 break-words leading-snug">Comparación</span>
+            </span>
+            <Lock className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+          </Link>
+          {(
+            [
+              { label: 'Prompts' as const, Icon: MessageSquare },
             { label: 'Historial' as const, Icon: History },
             { label: 'Reportes' as const, Icon: FileBarChart2 },
             { label: 'Herramientas' as const, Icon: Wrench },
           ] as const
         ).map(({ label, Icon }) => (
-          <div
-            key={label}
-            className="flex cursor-not-allowed items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-600"
-            title="Incluido en plan Crecimiento / Premium"
-          >
-            <span className="flex min-w-0 items-center gap-1.5">
-              <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-              {label}
-            </span>
-            <Lock className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
-          </div>
-        ))}
+            <div
+              key={label}
+              className="flex cursor-not-allowed items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-600"
+              title="Incluido en plan Crecimiento / Premium"
+            >
+              <span className="flex min-w-0 items-center gap-1.5">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                {label}
+              </span>
+              <Lock className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+            </div>
+          ))}
         </div>
       </nav>
 

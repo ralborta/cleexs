@@ -126,22 +126,32 @@ export function PortalCrecimientoTierNav({
           </NavRow>
         </div>
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
-          <NavRow href={`${base}/comparacion`} icon={Scale} active={pathname?.includes('/comparacion') ?? false} suffix="disponible">
-            Comparación
-          </NavRow>
           <NavRow href={`${base}#competidores`} icon={Target} anchor suffix="disponible">
             Competidores
           </NavRow>
-          <NavRow href={`${base}#equipo`} icon={Users} anchor suffix="disponible">
+          <NavRow href={`${base}/equipo`} icon={Users} active={pathname?.includes('/equipo') ?? false} suffix="disponible">
             Equipo
           </NavRow>
-          <NavRow href={`${premium}/suscripcion`} icon={CreditCard} suffix="disponible">
+          <NavRow
+            href={`${base}/suscripcion`}
+            icon={CreditCard}
+            active={pathname?.includes('/suscripcion') ?? false}
+            suffix="disponible"
+          >
             Suscripción
           </NavRow>
         </div>
         <div className="space-y-1">
           <NavRow href={premium} icon={Sparkles} suffix="lock">
             Interpretación
+          </NavRow>
+          <NavRow
+            href={`${base}/comparacion`}
+            icon={Scale}
+            active={pathname?.includes('/comparacion') ?? false}
+            suffix="lock"
+          >
+            Comparación
           </NavRow>
           <NavRow href={`${premium}/prompts`} icon={MessageSquare} suffix="lock">
             Prompts

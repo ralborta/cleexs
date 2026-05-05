@@ -754,7 +754,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             </h2>
           </div>
           <Link
-            href={`/portal-crecimiento/reporte/${runId}/premium/equipo`}
+            href={`${base}/equipo`}
             className="text-[10px] font-semibold text-violet-700 hover:underline sm:text-[11px]"
           >
             Gestionar equipo →
