@@ -19,6 +19,7 @@ import profileRoutes from './routes/profile';
 import adminEntitlementRoutes from './routes/admin-entitlements';
 import adminProvisionRoutes from './routes/admin-provision';
 import adminEmailRoutes from './routes/admin-email';
+import adminDashboardRoutes from './routes/admin-dashboard';
 import authPortalRoutes from './routes/auth-portal';
 import meReferralRoutes from './routes/me-referral';
 
@@ -90,6 +91,7 @@ async function bootstrap() {
   await server.register(adminEntitlementRoutes, { prefix: '/api/admin' });
   await server.register(adminProvisionRoutes, { prefix: '/api/admin' });
   await server.register(adminEmailRoutes, { prefix: '/api/admin' });
+  await server.register(adminDashboardRoutes, { prefix: '/api/admin' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server

@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 type CampaignRow = {
@@ -35,7 +33,6 @@ type Stats = {
 };
 
 export default function AdminEmailOpsPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -55,11 +52,8 @@ export default function AdminEmailOpsPage() {
   const [logScore, setLogScore] = useState('');
   const [logStatus, setLogStatus] = useState<'pending' | 'sent' | 'failed' | 'skipped'>('sent');
 
-  const logout = useCallback(async () => {
-    await fetch('/api/admin-ui/logout', { method: 'POST' });
-    router.replace('/admin/login');
-    router.refresh();
-  }, [router]);
+  const [testEmail, setTestEmail] = useState('');
+  const [testBusy, setTestBusy] = useState(false);
 
   const loadAll = useCallback(async () => {
     setBusy(true);
@@ -89,6 +83,28 @@ export default function AdminEmailOpsPage() {
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  async function sendTestEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setTestBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin-ui/email/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
+      setMessage(`Envío de prueba OK:\n${JSON.stringify(data, null, 2)}`);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setTestBusy(false);
+    }
+  }
 
   async function runSeed() {
     setMessage(null);
@@ -193,37 +209,28 @@ export default function AdminEmailOpsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Admin · Email (interno)</h1>
-            <p className="text-sm text-slate-600">
-              Secuencia semanal MVP: campañas por semana y bucket de score, auditoría de envíos y stats. El envío real va
-              contra tu ESP en una fase siguiente.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-3 text-sm">
-              <Link href="/admin/cuentas" className="font-medium text-violet-700 hover:underline">
-                ← Cuentas y cortesías
-              </Link>
-              <button
-                type="button"
-                onClick={() => void loadAll()}
-                disabled={busy}
-                className="font-medium text-slate-700 hover:underline disabled:opacity-50"
-              >
-                Refrescar
-              </button>
-            </div>
-          </div>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-300/90">Administración</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">Email · secuencia interna</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Campañas por semana y bucket de score, auditoría de envíos y estadísticas. El envío masivo contra Resend u otro
+            ESP se cablea en el worker; acá va la configuración y los logs.
+          </p>
           <button
             type="button"
-            onClick={() => void logout()}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            onClick={() => void loadAll()}
+            disabled={busy}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:opacity-50"
           >
-            Cerrar sesión admin
+            Refrescar datos
           </button>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xl shadow-slate-900/[0.06] ring-1 ring-slate-900/[0.04] md:p-8">
+        <div className="space-y-8">
 
         {error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>
@@ -231,6 +238,36 @@ export default function AdminEmailOpsPage() {
         {message ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 text-sm text-slate-800">{message}</div>
         ) : null}
+
+        <section className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/90 to-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Prueba de envío (API)</h2>
+          <p className="mt-1 text-xs text-slate-600">
+            Usa <strong className="font-semibold text-slate-800">Resend REST</strong> si hay{' '}
+            <code className="rounded bg-violet-100 px-1 font-mono text-[11px]">RESEND_API_KEY</code>; si no,{' '}
+            <strong className="font-semibold text-slate-800">SMTP</strong> (p. ej. smtp.resend.com). El envío queda en logs con slug{' '}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">admin-send-test</code>.
+          </p>
+          <form onSubmit={sendTestEmail} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex-1">
+              <span className="text-xs font-medium text-slate-600">Email destino</span>
+              <input
+                type="email"
+                required
+                value={testEmail}
+                onChange={(ev) => setTestEmail(ev.target.value)}
+                placeholder="vos@ejemplo.com"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={testBusy}
+              className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-600/20 hover:bg-violet-700 disabled:opacity-50"
+            >
+              {testBusy ? 'Enviando…' : 'Enviar prueba'}
+            </button>
+          </form>
+        </section>
 
         {stats ? (
           <section className="grid gap-3 sm:grid-cols-3">
@@ -437,8 +474,9 @@ export default function AdminEmailOpsPage() {
             </table>
           </div>
         </section>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
 

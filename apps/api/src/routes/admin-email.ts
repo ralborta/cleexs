@@ -6,6 +6,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { z } from 'zod';
+import { sendAdminTestEmail } from '../lib/internal-email-send';
 import { prisma } from '../lib/prisma';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
@@ -52,7 +53,34 @@ const createLogBody = z.object({
   errorMessage: z.string().trim().max(8000).optional(),
 });
 
+const sendTestBody = z.object({
+  to: z.string().email(),
+});
+
 const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.post<{ Body: z.infer<typeof sendTestBody> }>('/email/send-test', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = sendTestBody.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    try {
+      const result = await sendAdminTestEmail(parsed.data.to);
+      return { ok: true, ...result };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error';
+      const code =
+        e && typeof e === 'object' && 'statusCode' in e ? Number((e as { statusCode: unknown }).statusCode) || 502 : 502;
+      return reply.code(code).send({ error: msg });
+    }
+  });
+
   fastify.post('/email/campaigns/seed-defaults', async (request, reply) => {
     if (!requireAdminSecret(request)) {
       return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({

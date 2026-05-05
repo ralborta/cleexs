@@ -20,6 +20,36 @@ export function isEmailConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== 'localhost' && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+/** Remitente transaccional (diagnóstico, admin, SMTP). */
+export function buildTransactionalFromAddress(): string {
+  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
+  const fromName = process.env.SMTP_FROM_NAME;
+  return fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
+}
+
+/** Envío SMTP genérico (misma config que diagnóstico). */
+export async function sendSmtpMail(opts: {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}): Promise<{ messageId?: string }> {
+  if (isEmailDisabled()) {
+    throw Object.assign(new Error('emails_disabled'), { statusCode: 400 });
+  }
+  if (!isEmailConfigured()) {
+    throw Object.assign(new Error('smtp_not_configured'), { statusCode: 503 });
+  }
+  const info = await transporter.sendMail({
+    from: buildTransactionalFromAddress(),
+    to: opts.to,
+    subject: opts.subject,
+    text: opts.text,
+    html: opts.html,
+  });
+  return { messageId: info.messageId };
+}
+
 /** Análisis simple (Freemium o parte de Gold). goldFallback = Gold pedido pero solo OpenAI disponible */
 export interface SingleAnalysisForEmail {
   goldFallback?: true;
@@ -295,9 +325,7 @@ export async function sendDiagnosticLink(
   if (isEmailDisabled()) return;
   if (!isEmailConfigured()) return;
   const link = `${baseUrl.replace(/\/$/, '')}/ver-resultado?diagnosticId=${diagnosticId}`;
-  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
-  const fromName = process.env.SMTP_FROM_NAME;
-  const from = fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
+  const from = buildTransactionalFromAddress();
 
   const hasAnalysis = analysis && typeof analysis === 'object';
   const analysisText = hasAnalysis ? '\n\n---\n\n' + buildAnalysisText(analysis) + '\n\n---\n\n' : '';
@@ -409,9 +437,7 @@ export async function sendShareCleexsFollowUpEmail(
   const ref = shareRefFromDiagnosticId(diagnosticId);
   const origin = baseUrl.replace(/\/$/, '');
   const shareUrl = `${origin}/diagnostico/crear?ref=${encodeURIComponent(ref)}&utm_source=email&utm_medium=followup&utm_campaign=compartir_cleexs`;
-  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
-  const fromName = process.env.SMTP_FROM_NAME;
-  const from = fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
+  const from = buildTransactionalFromAddress();
   const label = brandLabel?.trim() || 'tu marca';
 
   await transporter.sendMail({
