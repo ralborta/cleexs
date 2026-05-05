@@ -33,6 +33,25 @@ function loadDatabaseUrlFromEnvFiles(): void {
   }
 }
 
+function assertDatabaseUrlLooksReal(urlRaw: string): void {
+  const u = urlRaw.trim();
+  if (!/^postgres(ql)?:\/\//i.test(u)) {
+    console.error(`
+DATABASE_URL tiene que empezar con postgresql:// (valor del Postgres en Railway → Variables).
+`);
+    process.exit(1);
+  }
+  if (
+    /PEGA_AQUI|LA_URL|URL_COMPLETA|usuario:clave@host|placeholder|changeme|TU_API/i.test(u) ||
+    /\bpeg[aá](_|)?.{0,3}aqu[ií]/i.test(u)
+  ) {
+    console.error(`
+Parece que pegaste texto de ejemplo, no la URL real de Postgres (Railway → Postgres → Variables → DATABASE_URL).
+`);
+    process.exit(1);
+  }
+}
+
 function parseArgs(argv: string[]): { email: string; password: string } {
   let email = '';
   let password = '';
@@ -58,19 +77,17 @@ async function main() {
 
   if (!process.env.DATABASE_URL?.trim()) {
     console.error(`
-Falta DATABASE_URL.
+Falta DATABASE_URL en el entorno.
 
-1) Railway (o Neon) → tu **Postgres** → Connect / Variables → copiá la URL.
-2) Creá archivo **.env** en la carpeta **Cleexs** (raíz del repo) con UNA línea:
+Sin crear ningún archivo: copiá la URL desde Railway (Postgres o servicio API) y ejecutá:
 
-   DATABASE_URL="postgresql://...pegá acá la url completa..."
+  DATABASE_URL="postgresql://..." npm run db:set-portal-password -- --email=raul@hind.com --password=Cleexs123
 
-3) Volvé a ejecutar:
-
-   npm run db:set-portal-password -- --email=raul@hinds.com --password=Cleexs123
+Opcional: archivo .env en Cleexs o apps/api/.env con DATABASE_URL="..."
 `);
     process.exit(1);
   }
+  assertDatabaseUrlLooksReal(process.env.DATABASE_URL!);
 
   if (!email.includes('@') || password.length < 8) {
     console.error(`

@@ -141,7 +141,7 @@ export default function PortalCrecimientoPage() {
         panelRes.json(),
       ]);
 
-      setUsage(usageData);
+      setUsage(usageData as UsageResponse);
       setPanel(panelData as PanelResponse);
       const list = Array.isArray(brandsData) ? brandsData : [];
       setBrands(list);
@@ -396,10 +396,10 @@ export default function PortalCrecimientoPage() {
                   </Link>
                 ) : (
                   <Link
-                    href={`/portal-cliente/reporte/${latestReport.id}`}
-                    className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                    href={`/portal-crecimiento/reporte/${latestReport.id}/cliente`}
+                    className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
                   >
-                    Portal cliente (Free)
+                    Vista cliente (menú Crecimiento)
                   </Link>
                 )}
               </>
@@ -713,10 +713,10 @@ export default function PortalCrecimientoPage() {
                           </Link>
                         ) : (
                           <Link
-                            href={`/portal-cliente/reporte/${r.id}`}
-                            className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-center text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                            href={`/portal-crecimiento/reporte/${r.id}/cliente`}
+                            className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
                           >
-                            Portal cliente
+                            Vista cliente
                           </Link>
                         )}
                       </div>

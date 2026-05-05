@@ -17,11 +17,11 @@ Portal Cleexs (multiusuario)
 2) Web — definir en Railway (servicio Next):
    NEXT_PUBLIC_API_URL=https://tu-api.up.railway.app
 
-3) Crear o actualizar usuario con contraseña de portal:
+3) Crear o actualizar usuario con contraseña de portal (necesitás DATABASE_URL):
    DATABASE_URL="postgresql://..." npm run db:provision:account -- \\
      --email=tu@empresa.com --domain=empresa.com --password=TuClaveSegura123
 
-4) Entrar en /portal-crecimiento con email + contraseña.
+4) Entrar en /portal-cliente o /portal-crecimiento con email + contraseña.
 
 Opcional (solo dev): ALLOW_USAGE_ACTOR_QUERY=true en la API para llamadas con ?tenantId= sin Bearer.
 `);
