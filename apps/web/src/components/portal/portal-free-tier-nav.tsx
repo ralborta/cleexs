@@ -1,7 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Headphones, Lock } from 'lucide-react';
+import {
+  FileBarChart2,
+  Headphones,
+  History,
+  Lock,
+  MessageSquare,
+  Scale,
+  Target,
+  Users,
+  UserSquare2,
+  Wrench,
+} from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
 export type PortalFreeTierNavProps = {
@@ -31,59 +42,93 @@ export function PortalFreeTierNav({
       <nav className="space-y-1 text-sm">
         <a
           href={`${base}#portal-cliente`}
-          className="flex items-center justify-between gap-2 rounded-xl bg-violet-50 px-3 py-2.5 font-semibold text-violet-950 ring-1 ring-violet-100/80"
+          className="flex items-center justify-between gap-2 rounded-xl bg-violet-50 px-3 py-2.5 ring-1 ring-violet-200/60"
         >
-          Portal cliente
-          <span className="rounded-md bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          <span className="flex min-w-0 items-center gap-2.5 font-semibold text-violet-700">
+            <Users className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
+            Portal cliente
+          </span>
+          <span className="shrink-0 rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
             Free
           </span>
         </a>
+
         <a
           href={`${base}#comparacion`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
+          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
-          Comparación
-          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <Scale className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
+            Comparación
+          </span>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
             Disponible
           </span>
         </a>
         <a
           href={`${base}#competidores`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
+          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
-          Competidores
-          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <Target className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
+            Competidores
+          </span>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
             Disponible
           </span>
         </a>
         <a
           href={`${base}#equipo`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
+          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
-          Equipo
-          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <UserSquare2 className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
+            Equipo
+          </span>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
             Disponible
           </span>
         </a>
-        {(['Prompts', 'Historial', 'Reportes', 'Herramientas', 'Suscripción'] as const).map((label) => (
+
+        {(
+          [
+            { label: 'Prompts' as const, Icon: MessageSquare },
+            { label: 'Historial' as const, Icon: History },
+            { label: 'Reportes' as const, Icon: FileBarChart2 },
+            { label: 'Herramientas' as const, Icon: Wrench },
+          ] as const
+        ).map(({ label, Icon }) => (
           <div
             key={label}
-            className="flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-slate-400"
+            className="flex cursor-not-allowed items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-600"
             title="Incluido en plan Crecimiento / Premium"
           >
-            <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {label}
+            <span className="flex min-w-0 items-center gap-2.5">
+              <Icon className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+              {label}
+            </span>
+            <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
           </div>
         ))}
+
+        <div className="my-2 border-t border-slate-100" role="separator" />
+
+        <div
+          className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-slate-600"
+          title="Incluido en plan Crecimiento / Premium"
+        >
+          <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+          Suscripción
+        </div>
       </nav>
 
       <div className="mt-6 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/80 to-white p-4">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-medium text-slate-500">Plan actual</p>
-          <span className="rounded-md bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          <span className="rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
             Free
           </span>
-          <span className="rounded-md border border-amber-200/80 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+          <span className="rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
             Limitado
           </span>
         </div>
