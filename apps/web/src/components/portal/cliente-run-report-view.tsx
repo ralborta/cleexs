@@ -118,7 +118,7 @@ function SemiGauge({ value, showNeedle = true }: { value: number; showNeedle?: b
   const v = Math.min(100, Math.max(0, value));
   const angleDeg = -90 + (v / 100) * 180;
   return (
-    <div className="relative mx-auto flex h-[132px] w-full max-w-[220px] justify-center sm:h-[140px] sm:max-w-[236px]">
+    <div className="relative mx-auto flex h-[118px] w-full max-w-[200px] justify-center sm:h-[128px] sm:max-w-[218px]">
       <svg viewBox="0 0 120 72" className="h-full w-full" aria-hidden>
         <defs>
           <linearGradient id={`g-${gradId}`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -153,8 +153,8 @@ function SemiGauge({ value, showNeedle = true }: { value: number; showNeedle?: b
         ) : null}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-0">
-        <p className="text-2xl font-black tabular-nums leading-none text-slate-900 sm:text-[1.65rem]">{Math.round(v)}</p>
-        <p className="mt-0.5 text-[10px] font-medium text-slate-500">de 100</p>
+        <p className="text-xl font-black tabular-nums leading-none text-slate-900 sm:text-[1.35rem]">{Math.round(v)}</p>
+        <p className="mt-0.5 text-[9px] font-medium text-slate-500">de 100</p>
       </div>
     </div>
   );
@@ -263,34 +263,34 @@ function PortalPlanFreeHeaderKpis({
       <header className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0 xl:max-w-[46%]">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-600 sm:text-[11px]">
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-violet-600 sm:text-[10px]">
               PORTAL CLIENTE (PLAN FREE)
             </p>
-            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-[1.65rem]">
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:mt-1.5 sm:text-2xl">
               {run.brand.name}
             </h1>
-            <p className="mt-1.5 text-xs text-slate-600 sm:text-sm">
+            <p className="mt-1 text-[11px] leading-snug text-slate-600 sm:mt-1.5 sm:text-xs">
               {domainLine} · Plan Free · Estado{' '}
               <span className="font-semibold lowercase text-emerald-600">{run.status}</span>
             </p>
           </div>
-          <div className="flex w-full min-w-0 flex-1 flex-col gap-3 rounded-xl border border-violet-200/70 bg-violet-50/95 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
-            <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 ring-1 ring-violet-200/50">
-                <Sparkles className="h-5 w-5 text-violet-600" aria-hidden />
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-2.5 rounded-xl border border-violet-200/70 bg-violet-50/95 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3.5">
+            <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 ring-1 ring-violet-200/50">
+                <Sparkles className="h-4 w-4 text-violet-600" aria-hidden />
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-bold leading-snug text-slate-900">
+                <p className="text-xs font-bold leading-snug text-slate-900 sm:text-[13px]">
                   Desbloqueá todo el potencial de Cleexs
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                <p className="mt-0.5 text-[10px] leading-relaxed text-slate-600 sm:text-[11px]">
                   Accedé a reportes completos, prompts, histórico y análisis avanzados.
                 </p>
               </div>
             </div>
             <Link
               href="/planes"
-              className="inline-flex w-full shrink-0 items-center justify-center rounded-lg bg-violet-600 px-4 py-2.5 text-center text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 sm:w-auto sm:self-center"
+              className="inline-flex w-full shrink-0 items-center justify-center rounded-lg bg-violet-600 px-3 py-2 text-center text-[11px] font-semibold text-white shadow-sm transition hover:bg-violet-700 sm:w-auto sm:self-center sm:px-3.5 sm:py-2"
             >
               Actualizar plan →
             </Link>
@@ -299,96 +299,96 @@ function PortalPlanFreeHeaderKpis({
       </header>
 
       <section className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-            <CalendarClock className="h-4 w-4 text-violet-600" aria-hidden />
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100">
+            <CalendarClock className="h-3.5 w-3.5 text-violet-600" aria-hidden />
           </div>
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Último análisis</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{lastRunDate}</p>
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">Último análisis</p>
+          <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">{lastRunDate}</p>
           {latestDetailHref ? (
             <Link
               href={latestDetailHref}
-              className="mt-2 inline-flex text-[11px] font-semibold text-violet-700 hover:underline"
+              className="mt-1.5 inline-flex text-[10px] font-semibold text-violet-700 hover:underline"
             >
               Ver detalle →
             </Link>
           ) : null}
         </div>
 
-        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-            <Gauge className="h-4 w-4 text-violet-600" aria-hidden />
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100">
+            <Gauge className="h-3.5 w-3.5 text-violet-600" aria-hidden />
           </div>
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Cleexs Score</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className="text-lg font-bold tabular-nums text-slate-900">{currentScore}</p>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">Cleexs Score</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <p className="text-base font-bold tabular-nums text-slate-900 sm:text-[1.05rem]">{currentScore}</p>
+            <span className="rounded-full bg-amber-100 px-1.5 py-px text-[9px] font-semibold text-amber-900">
               Vista parcial
             </span>
           </div>
-          <p className="mt-1.5 text-[10px] text-slate-500">Actualizado: {lastRunDate}</p>
+          <p className="mt-1 text-[9px] text-slate-500">Actualizado: {lastRunDate}</p>
         </div>
 
-        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-            <LineChart className="h-4 w-4 text-violet-600" aria-hidden />
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100">
+            <LineChart className="h-3.5 w-3.5 text-violet-600" aria-hidden />
           </div>
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comparación previa</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">Comparación previa</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             <p
-              className={`text-lg font-bold tabular-nums ${comparisonUp ? 'text-emerald-600' : comparisonDown ? 'text-rose-600' : 'text-slate-900'}`}
+              className={`text-base font-bold tabular-nums sm:text-[1.05rem] ${comparisonUp ? 'text-emerald-600' : comparisonDown ? 'text-rose-600' : 'text-slate-900'}`}
             >
               {deltaVsPrevious == null ? '—' : `${deltaVsPrevious > 0 ? '+' : ''}${deltaVsPrevious} pts`}
             </p>
             {deltaVsPrevious != null && deltaVsPrevious !== 0 ? (
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full ${comparisonUp ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                className={`flex h-5 w-5 items-center justify-center rounded-full ${comparisonUp ? 'bg-emerald-500' : 'bg-rose-500'}`}
                 aria-hidden
               >
                 {comparisonUp ? (
-                  <ArrowUp className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                  <ArrowUp className="h-3 w-3 text-white" strokeWidth={2.5} />
                 ) : (
-                  <ArrowDown className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                  <ArrowDown className="h-3 w-3 text-white" strokeWidth={2.5} />
                 )}
               </span>
             ) : null}
           </div>
           {previousComparable ? (
-            <p className="mt-1.5 text-[10px] text-slate-500">
+            <p className="mt-1 text-[9px] text-slate-500">
               vs {new Date(previousComparable.createdAt).toLocaleDateString('es-AR')}
             </p>
           ) : (
-            <p className="mt-1.5 text-[10px] text-slate-500">Sin base anterior</p>
+            <p className="mt-1 text-[9px] text-slate-500">Sin base anterior</p>
           )}
         </div>
 
-        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+        <div className="relative rounded-xl border border-slate-200/90 bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-              <ListChecks className="h-4 w-4 text-violet-600" aria-hidden />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100">
+              <ListChecks className="h-3.5 w-3.5 text-violet-600" aria-hidden />
             </div>
             <span title="Uso y tope de análisis según tu cuenta y plan." className="text-slate-400">
-              <Info className="h-4 w-4 shrink-0" aria-hidden />
+              <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
             </span>
           </div>
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Análisis disponibles</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{analysesLabel}</p>
-          <Link href="/planes" className="mt-2 inline-flex text-[11px] font-semibold text-violet-700 hover:underline">
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">Análisis disponibles</p>
+          <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900 sm:text-[1.05rem]">{analysesLabel}</p>
+          <Link href="/planes" className="mt-1.5 inline-flex text-[10px] font-semibold text-violet-700 hover:underline">
             Ver plan →
           </Link>
         </div>
 
-        <div className="relative min-h-[7.5rem] rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-            <BarChart3 className="h-4 w-4 text-violet-600" aria-hidden />
+        <div className="relative min-h-[6.75rem] rounded-xl border border-slate-200/90 bg-white p-3 pb-9 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100">
+            <BarChart3 className="h-3.5 w-3.5 text-violet-600" aria-hidden />
           </div>
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Límite del plan</p>
-          <p className="mt-1 pr-12 text-lg font-bold leading-tight text-slate-900">
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">Límite del plan</p>
+          <p className="mt-0.5 pr-11 text-base font-bold leading-tight text-slate-900 sm:text-[1.05rem]">
             {analysesLimit == null || analysesLimit <= 0 ? '—' : `${analysesLimit} análisis / mes`}
           </p>
-          <p className="mt-1.5 text-[10px] text-slate-500">Usados: {analysesUsed}</p>
+          <p className="mt-1 text-[9px] text-slate-500">Usados: {analysesUsed}</p>
           {analysesLimit != null && analysesLimit > 0 ? (
-            <div className="absolute right-3 top-3 h-11 w-11">
+            <div className="absolute right-2.5 top-2.5 h-10 w-10">
               <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90" aria-hidden>
                 <circle
                   cx="18"
@@ -1046,7 +1046,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
           <>
             <Link
               href={`/portal-crecimiento/reporte/${latestReport?.id || run.id}`}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
             >
               Ver último diagnóstico
             </Link>
@@ -1054,13 +1054,13 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               type="button"
               onClick={() => void runNewDiagnostic()}
               disabled={runningMes || !run.brand?.id}
-              className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+              className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
             >
               {runningMes ? 'Iniciando…' : 'Generar nuevo análisis'}
             </button>
             <Link
               href={`/portal-crecimiento/reporte/${run.id}`}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
             >
               Compartir reporte
             </Link>
