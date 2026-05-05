@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ExternalLink, Headphones, Lock } from 'lucide-react';
+import { ExternalLink, Headphones, Sparkles } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
 export type PortalCrecimientoTierNavProps = {
@@ -12,10 +12,7 @@ export type PortalCrecimientoTierNavProps = {
   renewalLabel: string;
 };
 
-/**
- * Menú lateral para la misma “vista cliente” que el portal Free, pero con estética Crecimiento
- * y anclas pensadas para vivir a la DERECHA del contenido (columna layout).
- */
+/** Menú derecho: mismos anclas que Free; enlaces al hub Premium y anexo técnico. Estética alineada al portal cliente. */
 export function PortalCrecimientoTierNav({
   basePath,
   runId,
@@ -28,51 +25,53 @@ export function PortalCrecimientoTierNav({
   const base = basePath.replace(/\/$/, '');
 
   return (
-    <aside className="flex flex-col rounded-2xl border border-indigo-200/80 bg-gradient-to-b from-white to-indigo-50/40 p-4 shadow-sm">
-      <div className="mb-4 flex items-center gap-2">
-        <CleexsMark className="h-7 w-7" />
+    <aside className="flex h-fit flex-col rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:sticky lg:top-5">
+      <div className="mb-4 flex items-center gap-2.5">
+        <CleexsMark className="h-8 w-8" />
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">Cleexs</p>
-          <p className="font-bold leading-tight text-slate-900">Crecimiento</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-violet-700">Cleexs</p>
+          <p className="text-base font-bold leading-tight text-slate-900">Crecimiento</p>
         </div>
       </div>
       <nav className="space-y-1 text-sm">
         <a
           href={`${base}#portal-cliente`}
-          className="flex items-center justify-between gap-2 rounded-lg bg-indigo-100 px-3 py-2 font-semibold text-indigo-950"
+          className="flex items-center justify-between gap-2 rounded-xl bg-violet-50 px-3 py-2.5 font-semibold text-violet-950 ring-1 ring-violet-100/80"
         >
           Resumen cuenta
-          <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">CRECIÁ</span>
+          <span className="rounded-md bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Hub
+          </span>
         </a>
         <a
           href={`${base}#comparacion`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-white/80"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           Comparación
-          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900">
+          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
             Disponible
           </span>
         </a>
         <a
           href={`${base}#competidores`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-white/80"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           Competidores
-          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900">
+          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
             Disponible
           </span>
         </a>
         <a
           href={`${base}#equipo`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-white/80"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           Equipo
-          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900">
+          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
             Disponible
           </span>
         </a>
 
-        <div className="pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Panel ampliado</div>
+        <p className="pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Panel ampliado</p>
         {[
           { label: 'Prompts', href: `/portal-crecimiento/reporte/${runId}/premium/prompts` },
           { label: 'Historial', href: `/portal-crecimiento/reporte/${runId}/premium/historial` },
@@ -82,45 +81,49 @@ export function PortalCrecimientoTierNav({
           <Link
             key={label}
             href={href}
-            className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-600 hover:bg-white/90"
+            className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
           >
-            <span className="flex items-center gap-1.5">
-              <ExternalLink className="h-3 w-3 shrink-0 text-indigo-500" aria-hidden />
+            <span className="flex items-center gap-2">
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-violet-600" aria-hidden />
               {label}
             </span>
-            <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900">
-              Ir
-            </span>
+            <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-900">Ir</span>
           </Link>
         ))}
         <Link
           href={`/portal-crecimiento/reporte/${runId}/premium/suscripcion`}
-          className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-600 hover:bg-white/90"
+          className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
-          <span>Suscripción</span>
-          <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900">Ir</span>
+          <span className="flex items-center gap-2">
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-violet-600" aria-hidden />
+            Suscripción
+          </span>
+          <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-900">Ir</span>
         </Link>
 
-        <div
-          className="flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-slate-400"
-          title="Ya estás en la vista principal tipo portal cliente"
+        <Link
+          href={`/portal-cliente/reporte/${runId}`}
+          className="mt-1 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-100/80"
         >
-          <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Duplicar vista Free
-        </div>
+          Misma vista con menú Free (izquierda)
+        </Link>
       </nav>
 
-      <div className="mt-6 rounded-xl border border-indigo-100 bg-white/90 p-3 shadow-sm">
-        <p className="text-xs font-medium text-slate-500">Esta columna</p>
-        <p className="mt-1 text-sm font-bold text-indigo-950">Menú Crecimiento</p>
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
-          El centro es la misma vista que el portal Free; acá accedés al hub ampliado y al anexo técnico.
-        </p>
-        <p className="mt-2 text-[11px] text-slate-600">Uso mensual (scores vistos)</p>
-        <p className="text-sm font-semibold text-slate-900">{analysesLabel}</p>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-indigo-100">
+      <div className="mt-6 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/90 to-white p-4 shadow-sm">
+        <div className="flex items-start gap-2">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" aria-hidden />
+          <div>
+            <p className="text-xs font-bold text-violet-950">Menú Crecimiento</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+              El centro replica el portal cliente Free; desde acá entrás al panel Premium y al informe técnico de la corrida.
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-[11px] font-medium text-slate-500">Uso mensual (scores vistos)</p>
+        <p className="text-sm font-bold tabular-nums text-slate-900">{analysesLabel}</p>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">
           <div
-            className="h-full rounded-full bg-indigo-600 transition-all"
+            className="h-full rounded-full bg-violet-600 transition-all"
             style={{
               width: `${analysesLimit ? Math.min(100, (analysesUsed / Math.max(1, analysesLimit)) * 100) : 50}%`,
             }}
@@ -129,22 +132,22 @@ export function PortalCrecimientoTierNav({
         <p className="mt-2 text-[11px] text-slate-500">Corte {renewalLabel}</p>
         <Link
           href={`/portal-crecimiento/reporte/${runId}`}
-          className="mt-3 block w-full rounded-lg border border-indigo-200 bg-white py-2 text-center text-xs font-semibold text-indigo-900 hover:bg-indigo-50"
+          className="mt-3 block w-full rounded-lg border border-slate-200 bg-white py-2.5 text-center text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
         >
           Anexo técnico (corrida)
         </Link>
         <Link
           href={`/portal-crecimiento/reporte/${runId}/premium`}
-          className="mt-2 block w-full rounded-lg bg-indigo-600 py-2 text-center text-xs font-semibold text-white hover:bg-indigo-700"
+          className="mt-2 block w-full rounded-lg bg-violet-600 py-2.5 text-center text-xs font-semibold text-white shadow-sm hover:bg-violet-700"
         >
           Panel Premium
         </Link>
       </div>
 
-      <div className="mt-4 flex flex-1 flex-col justify-end pt-6">
-        <div className="flex items-center gap-2 rounded-lg border border-indigo-100/80 bg-white/70 px-3 py-2 text-xs text-slate-600">
-          <Headphones className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
-          <span>Soporte Crecimiento</span>
+      <div className="mt-4 flex flex-1 flex-col justify-end pt-4">
+        <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+          <Headphones className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
+          <span>¿Necesitás ayuda? Contactá a nuestro equipo</span>
         </div>
       </div>
     </aside>

@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, Lock, Sparkles, TrendingUp } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { ArrowUpRight, Lock, Sparkles, TrendingUp, UserPlus } from 'lucide-react';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 
@@ -90,41 +90,49 @@ function displayNameFromEmail(email?: string) {
   return pretty || 'Tu cuenta';
 }
 
+function initialsFromDisplayName(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase() || '?';
+}
+
 function SemiGauge({ value }: { value: number }) {
+  const gradId = useId().replace(/:/g, '');
   const v = Math.min(100, Math.max(0, value));
   const angleDeg = -90 + (v / 100) * 180;
   return (
-    <div className="relative mx-auto flex h-[140px] w-full max-w-[260px] justify-center">
+    <div className="relative mx-auto flex h-[160px] w-full max-w-[280px] justify-center">
       <svg viewBox="0 0 120 72" className="h-full w-full" aria-hidden>
         <defs>
-          <linearGradient id="portalClienteGaugeArc" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#a78bfa" />
-            <stop offset="100%" stopColor="#7c3aed" />
+          <linearGradient id={`g-${gradId}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="45%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#22c55e" />
           </linearGradient>
         </defs>
         <path
           d="M 14 64 A 46 46 0 0 1 106 64"
           fill="none"
-          stroke="#ede9fe"
+          stroke="#f1f5f9"
           strokeWidth="10"
           strokeLinecap="round"
         />
         <path
           d="M 14 64 A 46 46 0 0 1 106 64"
           fill="none"
-          stroke="url(#portalClienteGaugeArc)"
+          stroke={`url(#g-${gradId})`}
           strokeWidth="10"
           strokeLinecap="round"
           pathLength={100}
           strokeDasharray={`${v} ${100 - v}`}
         />
         <g transform={`rotate(${angleDeg} 60 64)`}>
-          <line x1="60" y1="64" x2="60" y2="28" stroke="#4c1d95" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="60" y1="64" x2="60" y2="26" stroke="#1e293b" strokeWidth="2.2" strokeLinecap="round" />
         </g>
-        <circle cx="60" cy="64" r="5" fill="#4c1d95" />
+        <circle cx="60" cy="64" r="5" fill="#1e293b" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
-        <p className="text-3xl font-black tabular-nums text-violet-950">{Math.round(v)}</p>
+        <p className="text-3xl font-black tabular-nums text-slate-900">{Math.round(v)}</p>
         <p className="text-[10px] font-medium text-slate-500">de 100</p>
       </div>
     </div>
@@ -148,9 +156,9 @@ function MiniSpark() {
 
 function LockFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-b-xl border-t border-violet-100 bg-violet-50/90 px-4 py-3 text-xs text-violet-950">
+    <div className="mt-auto flex items-start gap-2.5 rounded-b-2xl border-t border-violet-100/90 bg-violet-50/80 px-5 py-3.5 text-xs leading-relaxed text-violet-950">
       <Lock className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" aria-hidden />
-      <div className="leading-relaxed">{children}</div>
+      <div>{children}</div>
     </div>
   );
 }
@@ -357,6 +365,15 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   const scoreLevel =
     currentScore >= 80 ? 'Nivel excelente' : currentScore >= 60 ? 'Nivel alto' : currentScore >= 40 ? 'Nivel medio' : 'Nivel inicial';
 
+  const scoreLevelClass =
+    currentScore >= 80
+      ? 'text-emerald-700'
+      : currentScore >= 60
+        ? 'text-primary-700'
+        : currentScore >= 40
+          ? 'text-amber-700'
+          : 'text-slate-700';
+
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 p-6">
@@ -398,34 +415,39 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
       ? `/portal-cliente/reporte/${runId}`
       : `/portal-crecimiento/reporte/${runId}/cliente`;
 
+  const portalEyebrow = 'Portal cliente (plan Free)';
+
   const mainColumn = (
     <div className="min-w-0 space-y-4">
           <div id="portal-cliente" className="scroll-mt-24 space-y-4">
-            <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">
-                    {shell === 'portal-cliente'
-                      ? 'Portal cliente (plan Free)'
-                      : 'Misma vista · acceso Cleexs Crecimiento'}
+            <header className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-violet-700">
+                    {portalEyebrow}
                   </p>
-                  <h1 className="mt-1 text-2xl font-bold text-slate-900">{run.brand.name}</h1>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{run.brand.name}</h1>
+                  <p className="mt-2 text-sm text-slate-600">
                     {run.brand.domain || 'sin dominio'} · Plan Free · Estado{' '}
                     <span className="font-semibold capitalize text-emerald-700">{run.status}</span>
                   </p>
                 </div>
-                <div className="max-w-sm rounded-xl border border-violet-100 bg-violet-50/80 p-4 text-sm text-violet-950 shadow-sm">
-                  <p className="font-medium">Desbloqueá todo el potencial de Cleexs.</p>
-                  <p className="mt-1 text-xs leading-relaxed text-violet-900/85">
-                    Accedé a reportes completos, prompts, histórico y análisis avanzados.
-                  </p>
-                  <Link
-                    href="/planes"
-                    className="mt-3 inline-flex rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700"
-                  >
-                    Actualizar plan
-                  </Link>
+                <div className="flex max-w-md shrink-0 items-start gap-3 rounded-xl border border-violet-200/80 bg-gradient-to-br from-violet-50 to-violet-100/60 p-4 text-violet-950 shadow-sm">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
+                    <Sparkles className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-snug">Desbloqueá todo el potencial de Cleexs.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-violet-900/90">
+                      Accedé a reportes completos, prompts, histórico y análisis avanzados.
+                    </p>
+                    <Link
+                      href="/planes"
+                      className="mt-3 inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                    >
+                      Actualizar plan <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  </div>
                 </div>
               </div>
             </header>
@@ -471,9 +493,9 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               ].map((card, i) => (
                 <div
                   key={i}
-                  className="relative rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="relative rounded-xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{card.title}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{card.title}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <p
                       className={`text-xl font-bold tabular-nums ${'highlight' in card && card.highlight ? 'text-emerald-600' : 'text-slate-900'}`}
@@ -481,7 +503,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                       {'value' in card ? card.value : ''}
                     </p>
                     {'tag' in card && card.tag ? (
-                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                      <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
                         {card.tag}
                       </span>
                     ) : null}
@@ -525,177 +547,215 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             </section>
           </div>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-slate-900">Cleexs Score</h2>
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">
-                  Vista parcial
-                </span>
-              </div>
-              <div className="mt-4 grid gap-6 lg:grid-cols-2">
-                <div className="flex flex-col items-center justify-center">
-                  <SemiGauge value={currentScore} />
-                  <p className="mt-2 text-center text-sm font-semibold text-slate-800">{scoreLevel}</p>
-                  <p className="mx-auto mt-2 max-w-md text-center text-xs leading-relaxed text-slate-600">
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+            <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-bold text-slate-900">Cleexs Score (vista parcial)</h2>
+                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                    Vista parcial
+                  </span>
+                </div>
+                <div className="mt-5 grid flex-1 items-center gap-6 sm:grid-cols-2">
+                  <div className="flex flex-col items-center justify-center sm:items-center">
+                    <SemiGauge value={currentScore} />
+                    <p className={`mt-3 text-center text-sm font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
+                  </div>
+                  <p className="self-center text-sm leading-relaxed text-slate-600">
                     Probabilidad de que una IA recomiende o priorice tu marca frente a otras opciones.
                   </p>
                 </div>
-                <div className="hidden lg:block" aria-hidden />
               </div>
-            </div>
-            <LockFooter>
-              Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.{' '}
-              <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-                Actualizar plan →
-              </Link>
-            </LockFooter>
-          </section>
+              <LockFooter>
+                Accedé al detalle por intención, evolución y factores que impactan tu score con el plan Premium.{' '}
+                <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                  Actualizar plan →
+                </Link>
+              </LockFooter>
+            </section>
 
-          <section id="comparacion" className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-slate-900">Desempeño por intención</h2>
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">
-                  Vista parcial
-                </span>
-              </div>
-              {intentionScores.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-600">Sin datos por intención en esta corrida.</p>
-              ) : (
-                <ul className="mt-4 space-y-3">
-                  {intentionScores.map((row) => (
-                    <li key={row.key}>
-                      <div className="mb-1 flex justify-between text-xs text-slate-700">
-                        <span>{row.label}</span>
-                        <span className="font-semibold tabular-nums">{Math.round(row.score)}%</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-violet-500"
-                          style={{ width: `${Math.min(100, row.score)}%` }}
-                        />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <LockFooter>
-              Ver análisis completo por intención y recomendaciones.{' '}
-              <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-                Actualizar plan →
-              </Link>
-            </LockFooter>
-          </section>
-
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-slate-900">Comparación con competidores</h2>
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">
-                  Vista parcial
-                </span>
-              </div>
-              {comparisonRows.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-600">Aún no hay filas en el panel comparativo.</p>
-              ) : (
-                <div className="mt-4 overflow-x-auto rounded-lg border border-slate-100">
-                  <table className="w-full min-w-[360px] text-left text-sm">
-                    <thead className="border-b border-slate-100 bg-slate-50 text-[11px] font-semibold uppercase text-slate-500">
-                      <tr>
-                        <th className="px-3 py-2">#</th>
-                        <th className="px-3 py-2">Marca</th>
-                        <th className="px-3 py-2 text-right">Cleexs Score</th>
-                        <th className="px-3 py-2 text-right">Diferencia</th>
-                        <th className="px-3 py-2">Tendencia</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparisonRows.map((row) => (
-                        <tr key={`${row.rank}-${row.name}`} className="border-b border-slate-50">
-                          <td className="px-3 py-2.5 text-slate-600">{row.rank}</td>
-                          <td className="px-3 py-2.5 font-medium text-slate-900">
-                            {row.name}
-                            {row.tag === 'mi_empresa' ? (
-                              <span className="ml-2 text-xs font-normal text-violet-600">(Tú)</span>
-                            ) : null}
-                          </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums font-semibold">
-                            {row.displayScore ?? '—'}
-                          </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums text-slate-600">
-                            {row.diff == null ? '—' : row.diff > 0 ? `+${row.diff}` : row.diff}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <MiniSpark />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <section
+              className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+            >
+              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-bold text-slate-900">Desempeño por intención (vista parcial)</h2>
+                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                    Vista parcial
+                  </span>
                 </div>
-              )}
-            </div>
-            <LockFooter>
-              Desbloqueá el ranking completo, detalle por prompt y brecha vs líder.{' '}
-              <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-                Actualizar plan →
-              </Link>
-            </LockFooter>
-          </section>
-
-          <section id="competidores" className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="p-4 sm:p-5">
-              <h2 className="text-base font-bold text-slate-900">
-                Competidores ({Math.min(configuredCompetitors.length, 5)}/5)
-              </h2>
-              <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-100">
-                {configuredCompetitors.length === 0 ? (
-                  <li className="px-3 py-3 text-sm text-slate-600">Sin competidores configurados en cuenta.</li>
+                {intentionScores.length === 0 ? (
+                  <p className="mt-6 text-sm text-slate-600">Sin datos por intención en esta corrida.</p>
                 ) : (
-                  configuredCompetitors.map((c) => (
-                    <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 text-sm">
-                      <div>
-                        <p className="font-semibold text-slate-900">{c.name}</p>
-                        <p className="text-xs text-slate-500">{c.domain || 'sin dominio'}</p>
-                      </div>
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                        Activo
-                      </span>
-                    </li>
-                  ))
+                  <ul className="mt-6 space-y-4">
+                    {intentionScores.map((row) => (
+                      <li key={row.key}>
+                        <div className="mb-1.5 flex justify-between text-sm text-slate-800">
+                          <span className="font-medium">{row.label}</span>
+                          <span className="font-semibold tabular-nums text-slate-900">{Math.round(row.score)}%</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-violet-600"
+                            style={{ width: `${Math.min(100, row.score)}%` }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </ul>
-            </div>
-            <LockFooter>
-              Detectá nuevos competidores y recibí alertas.{' '}
-              <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
-                Actualizar plan →
-              </Link>
-            </LockFooter>
-          </section>
+              </div>
+              <LockFooter>
+                Ver análisis completo por intención y recomendaciones.{' '}
+                <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                  Actualizar plan →
+                </Link>
+              </LockFooter>
+            </section>
+          </div>
 
-          <section id="equipo" className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="p-4 sm:p-5">
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+            <section
+              id="comparacion"
+              className="flex h-full flex-col scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+            >
+              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-bold text-slate-900">
+                    Comparación con competidores (vista parcial)
+                  </h2>
+                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                    Vista parcial
+                  </span>
+                </div>
+                {comparisonRows.length === 0 ? (
+                  <p className="mt-6 text-sm text-slate-600">Aún no hay filas en el panel comparativo.</p>
+                ) : (
+                  <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100">
+                    <table className="w-full min-w-[360px] text-left text-sm">
+                      <thead className="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th className="px-3 py-3">#</th>
+                          <th className="px-3 py-3">Marca</th>
+                          <th className="px-3 py-3 text-right">Cleexs Score</th>
+                          <th className="px-3 py-3 text-right">Diferencia</th>
+                          <th className="px-3 py-3">Tendencia</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonRows.map((row) => (
+                          <tr key={`${row.rank}-${row.name}`} className="border-b border-slate-50 last:border-0">
+                            <td className="px-3 py-3 text-slate-600">{row.rank}</td>
+                            <td className="px-3 py-3 font-medium text-slate-900">
+                              {row.name}
+                              {row.tag === 'mi_empresa' ? (
+                                <span className="ml-2 text-xs font-normal text-violet-600">(Tú)</span>
+                              ) : null}
+                            </td>
+                            <td className="px-3 py-3 text-right tabular-nums font-semibold">
+                              {row.displayScore ?? '—'}
+                            </td>
+                            <td className="px-3 py-3 text-right tabular-nums text-slate-600">
+                              {row.diff == null ? '—' : row.diff > 0 ? `+${row.diff}` : row.diff}
+                            </td>
+                            <td className="px-3 py-3">
+                              <MiniSpark />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <LockFooter>
+                Desbloqueá el ranking completo, detalle por prompt y brecha vs líder.{' '}
+                <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                  Actualizar plan →
+                </Link>
+              </LockFooter>
+            </section>
+
+            <section
+              id="competidores"
+              className="flex h-full flex-col scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+            >
+              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-bold text-slate-900">
+                    Competidores ({Math.min(configuredCompetitors.length, 5)}/5)
+                  </h2>
+                  {configuredCompetitors.length > 0 ? (
+                    <Link
+                      href={`${base}#competidores`}
+                      className="text-xs font-semibold text-violet-700 hover:underline"
+                    >
+                      Ver todos →
+                    </Link>
+                  ) : null}
+                </div>
+                <ul className="mt-6 divide-y divide-slate-100 rounded-xl border border-slate-100">
+                  {configuredCompetitors.length === 0 ? (
+                    <li className="px-4 py-4 text-sm text-slate-600">Sin competidores configurados en cuenta.</li>
+                  ) : (
+                    configuredCompetitors.map((c) => (
+                      <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5 text-sm">
+                        <div>
+                          <p className="font-semibold text-slate-900">{c.name}</p>
+                          <p className="text-xs text-slate-500">{c.domain || 'sin dominio'}</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                          Activo
+                        </span>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+              <LockFooter>
+                Detectá nuevos competidores y recibí alertas.{' '}
+                <Link href="/planes" className="font-semibold text-violet-700 hover:underline">
+                  Actualizar plan →
+                </Link>
+              </LockFooter>
+            </section>
+          </div>
+
+          <section
+            id="equipo"
+            className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+          >
+            <div className="p-5 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-base font-bold text-slate-900">Equipo (1/2 miembros usados)</h2>
                 <Lock className="h-4 w-4 text-slate-400" aria-hidden />
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-                <div>
-                  <p className="font-semibold text-slate-900">{displayNameFromEmail(usage?.account?.email)} (Tú)</p>
-                  <p className="text-xs text-violet-700">Admin</p>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/90 p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white shadow-sm"
+                    aria-hidden
+                  >
+                    {initialsFromDisplayName(displayNameFromEmail(usage?.account?.email))}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">
+                      {displayNameFromEmail(usage?.account?.email)} (Tú)
+                    </p>
+                    <p className="text-xs font-medium text-violet-700">Admin</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   disabled
-                  className="cursor-not-allowed rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400"
+                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400"
                 >
+                  <UserPlus className="h-3.5 w-3.5" aria-hidden />
                   Invitar miembro
                 </button>
               </div>
-              <p className="mt-2 text-xs text-slate-500">Hasta 2 miembros en plan Free</p>
+              <p className="mt-3 text-xs text-slate-500">Hasta 2 miembros en plan Free</p>
             </div>
             <LockFooter>
               Premium permite hasta 10 miembros del equipo.{' '}
@@ -705,7 +765,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             </LockFooter>
           </section>
 
-          <section className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 p-5 shadow-sm">
+          <section className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 via-white to-violet-50/80 p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 h-5 w-5 text-violet-600" aria-hidden />
@@ -767,12 +827,12 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   );
 
   return (
-    <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
+    <main className="min-h-screen scroll-smooth bg-[#f4f6f9] p-3 sm:p-5">
       <div
-        className={`mx-auto grid max-w-7xl gap-4 ${
+        className={`mx-auto gap-5 ${
           shell === 'portal-cliente'
-            ? 'lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]'
-            : 'lg:grid-cols-[minmax(0,1fr)_minmax(0,260px)]'
+            ? 'grid max-w-[1280px] lg:grid-cols-[minmax(0,252px)_minmax(0,1fr)]'
+            : 'grid max-w-[1280px] lg:grid-cols-[minmax(0,1fr)_minmax(0,280px)]'
         }`}
       >
         {shell === 'portal-cliente' ? (

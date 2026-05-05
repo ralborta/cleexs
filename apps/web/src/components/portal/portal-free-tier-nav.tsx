@@ -23,43 +23,45 @@ export function PortalFreeTierNav({
   const base = basePath.replace(/\/$/, '');
 
   return (
-    <aside className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-4 flex items-center gap-2">
-        <CleexsMark className="h-7 w-7" />
-        <p className="font-bold text-slate-900">Cleexs</p>
+    <aside className="flex h-fit flex-col rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:sticky lg:top-5">
+      <div className="mb-4 flex items-center gap-2.5">
+        <CleexsMark className="h-8 w-8" />
+        <p className="text-lg font-bold tracking-tight text-slate-900">Cleexs</p>
       </div>
       <nav className="space-y-1 text-sm">
         <a
           href={`${base}#portal-cliente`}
-          className="flex items-center justify-between gap-2 rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900"
+          className="flex items-center justify-between gap-2 rounded-xl bg-violet-50 px-3 py-2.5 font-semibold text-violet-950 ring-1 ring-violet-100/80"
         >
           Portal cliente
-          <span className="rounded bg-violet-200 px-1.5 py-0.5 text-[10px] font-bold text-violet-900">FREE</span>
+          <span className="rounded-md bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Free
+          </span>
         </a>
         <a
           href={`${base}#comparacion`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           Comparación
-          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
             Disponible
           </span>
         </a>
         <a
           href={`${base}#competidores`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           Competidores
-          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
             Disponible
           </span>
         </a>
         <a
           href={`${base}#equipo`}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           Equipo
-          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+          <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
             Disponible
           </span>
         </a>
@@ -75,11 +77,16 @@ export function PortalFreeTierNav({
         ))}
       </nav>
 
-      <div className="mt-6 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
-        <p className="text-xs font-medium text-slate-500">Plan actual</p>
-        <p className="mt-1 text-sm font-bold text-violet-950">
-          Free <span className="font-normal text-slate-600">(Limitado)</span>
-        </p>
+      <div className="mt-6 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/80 to-white p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-medium text-slate-500">Plan actual</p>
+          <span className="rounded-md bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Free
+          </span>
+          <span className="rounded-md border border-amber-200/80 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+            Limitado
+          </span>
+        </div>
         <p className="mt-2 text-[11px] text-slate-600">Análisis usados este mes</p>
         <p className="text-sm font-semibold text-slate-900">{analysesLabel} análisis</p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">
@@ -93,7 +100,7 @@ export function PortalFreeTierNav({
         <p className="mt-2 text-[11px] text-slate-500">Renueva el {renewalLabel}</p>
         <Link
           href="/planes"
-          className="mt-3 block w-full rounded-lg bg-violet-600 py-2 text-center text-xs font-semibold text-white hover:bg-violet-700"
+          className="mt-3 block w-full rounded-lg border-2 border-violet-500 bg-white py-2.5 text-center text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
         >
           Actualizar plan
         </Link>
