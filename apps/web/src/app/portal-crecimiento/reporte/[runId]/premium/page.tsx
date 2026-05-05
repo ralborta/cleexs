@@ -13,8 +13,9 @@ import {
   Rocket,
   Users,
 } from 'lucide-react';
-import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 import { InterpretacionAmpliadaCorridasBlock } from '@/components/report/interpretacion-ampliada-corridas-block';
+import { SemiGauge } from '@/components/portal/cleexs-semi-gauge';
 import {
   computeInterpretacionAmpliada,
   type CorridasPromptRow,
@@ -51,6 +52,8 @@ type PortalRunDetail = {
 type UsageResponse = {
   planKey?: string;
   planDisplay?: string;
+  usage?: { scoreViews?: number };
+  limits?: { scoreViews?: number | null };
 };
 
 type ReportItem = {
@@ -255,6 +258,16 @@ export default function PortalReportePremiumInterpretacionPage() {
   const competitorScores = competitorRows.filter((c) => c.score != null).map((c) => Number(c.score));
   const leaderCompetitor = competitorScores.length > 0 ? Math.max(...competitorScores) : null;
   const currentScore = Math.round(cleexsScoreHint ?? toPct(latestReport?.score ?? null));
+  const scoreLevel =
+    currentScore >= 80 ? 'Nivel excelente' : currentScore >= 60 ? 'Nivel alto' : currentScore >= 40 ? 'Nivel medio' : 'Nivel inicial';
+  const scoreLevelClass =
+    currentScore >= 80
+      ? 'text-emerald-700'
+      : currentScore >= 60
+        ? 'text-primary-700'
+        : currentScore >= 40
+          ? 'text-amber-700'
+          : 'text-slate-700';
   const avgIntentionScore =
     intentionScores.length > 0
       ? Math.round(intentionScores.reduce((acc, row) => acc + row.score, 0) / intentionScores.length)
@@ -309,8 +322,16 @@ export default function PortalReportePremiumInterpretacionPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ brandId: run.brand.id }),
       });
-      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+        runId?: string;
+      };
       if (!res.ok) throw new Error(body.message || body.error || `Error HTTP ${res.status}`);
+      if (body.runId) {
+        window.location.href = `/portal-crecimiento/reporte/${body.runId}/premium`;
+        return;
+      }
       window.location.href = '/portal-crecimiento';
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Error al iniciar la corrida');
@@ -371,54 +392,7 @@ export default function PortalReportePremiumInterpretacionPage() {
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <CleexsMark className="h-6 w-6" />
-            <p className="font-bold text-slate-900">Cleexs</p>
-          </div>
-          <nav className="space-y-1 text-sm">
-            <Link
-              href={`/portal-crecimiento/reporte/${runId}/cliente`}
-              className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50"
-            >
-              Portal cliente
-            </Link>
-            <Link
-              href={`/portal-crecimiento/reporte/${runId}/premium`}
-              className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900"
-            >
-              Interpretación
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Comparación
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Prompts
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Competidores
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Historial
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Reportes
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/suscripcion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Suscripción
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/equipo`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Equipo
-            </Link>
-            <Link href={`/portal-crecimiento/reporte/${runId}/premium/herramientas`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-              Herramientas
-            </Link>
-          </nav>
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Plan actual</p>
-            <p className="font-semibold text-slate-900">{usage?.planDisplay || usage?.planKey || 'Premium'}</p>
-          </div>
-        </aside>
+        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
 
         <div className="space-y-4">
           <div id="portal-cliente" className="scroll-mt-24 space-y-4">
@@ -483,15 +457,14 @@ export default function PortalReportePremiumInterpretacionPage() {
           >
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
               <p className="text-sm font-bold text-slate-900">Cleexs Score</p>
-              <div className="mt-4 space-y-2">
-                <div className="h-4 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500"
-                    style={{ width: `${Math.max(0, Math.min(100, currentScore))}%` }}
-                  />
+              <div className="mt-4 grid flex-1 items-center gap-4 sm:grid-cols-2 sm:gap-5">
+                <div className="flex flex-col items-center justify-center">
+                  <SemiGauge value={currentScore} showNeedle={false} />
+                  <p className={`mt-0.5 text-center text-[11px] font-bold ${scoreLevelClass}`}>{scoreLevel}</p>
                 </div>
-                <p className="text-4xl font-black text-slate-900">{currentScore}</p>
-                <p className="text-xs text-slate-600">Probabilidad de que una IA recomiende o priorice esta marca.</p>
+                <p className="self-center text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                  Probabilidad de que una IA recomiende o priorice tu marca frente a otras opciones.
+                </p>
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">

@@ -12,7 +12,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -20,7 +20,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const PLAN_LIMIT = 10;
 const EXTRA_USER_PRICE = 3;
 
-type UsageResponse = { planKey?: string; planDisplay?: string };
+type UsageResponse = {
+  planKey?: string;
+  planDisplay?: string;
+  usage?: { scoreViews?: number };
+  limits?: { scoreViews?: number | null };
+};
 
 type Role = 'Administrador' | 'Editor' | 'Analista' | 'Viewer';
 
@@ -272,30 +277,7 @@ export default function EquipoPage() {
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
 
-        {/* ── Sidebar ──────────────────────────────────────────────── */}
-        <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <CleexsMark className="h-6 w-6" />
-            <p className="font-bold text-slate-900">Cleexs</p>
-          </div>
-          <nav className="space-y-1 text-sm">
-            <Link href={`/portal-crecimiento/reporte/${runId}/cliente`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Portal cliente</Link>
-            <Link href={`${basePath}/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Comparación</Link>
-            <Link href={`${basePath}/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Prompts</Link>
-            <Link href={`${basePath}/competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Competidores</Link>
-            <Link href={`${basePath}/historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Historial</Link>
-            <Link href={`${basePath}/reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Reportes</Link>
-            <Link href={`${basePath}/suscripcion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Suscripción</Link>
-            <Link href={`${basePath}/equipo`} className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900">Equipo</Link>
-            <Link href={`${basePath}/herramientas`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">Herramientas</Link>
-          </nav>
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Plan actual</p>
-            <p className="font-semibold text-slate-900">
-              {loadingUsage ? '…' : (usage?.planDisplay || usage?.planKey || 'Premium')}
-            </p>
-          </div>
-        </aside>
+        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loadingUsage} />
 
         {/* ── Contenido ────────────────────────────────────────────── */}
         <div className="space-y-4">

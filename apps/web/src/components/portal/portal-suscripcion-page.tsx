@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Check, Info, Sparkles } from 'lucide-react';
-import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
+import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -171,53 +171,7 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
         {shell === 'premium' ? (
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <CleexsMark className="h-6 w-6" />
-              <p className="font-bold text-slate-900">Cleexs</p>
-            </div>
-            <nav className="space-y-1 text-sm">
-              <Link
-                href={`/portal-crecimiento/reporte/${runId}/cliente`}
-                className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50"
-              >
-                Portal cliente
-              </Link>
-              <Link href={`${basePathPremium}/comparacion`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Comparación
-              </Link>
-              <Link href={`${basePathPremium}/prompts`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Prompts
-              </Link>
-              <Link href={`${basePathPremium}/competidores`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Competidores
-              </Link>
-              <Link href={`${basePathPremium}/historial`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Historial
-              </Link>
-              <Link href={`${basePathPremium}/reportes`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Reportes
-              </Link>
-              <Link
-                href={`${basePathPremium}/suscripcion`}
-                className="block rounded-lg bg-violet-50 px-3 py-2 font-semibold text-violet-900"
-              >
-                Suscripción
-              </Link>
-              <Link href={`${basePathPremium}/equipo`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Equipo
-              </Link>
-              <Link href={`${basePathPremium}/herramientas`} className="block rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">
-                Herramientas
-              </Link>
-            </nav>
-            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs text-slate-500">Plan actual</p>
-              <p className="font-semibold text-slate-900">
-                {loading ? '…' : (usage?.planDisplay || usage?.planKey || 'Premium')}
-              </p>
-            </div>
-          </aside>
+          <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
         ) : shell === 'portal-cliente' ? (
           <PortalFreeTierNav
             basePath={baseCliente}
