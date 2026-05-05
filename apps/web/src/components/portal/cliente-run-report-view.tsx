@@ -741,7 +741,18 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
     >
       <div className="p-3.5 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xs font-bold text-slate-900 sm:text-sm">Equipo (1/2 miembros usados)</h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600"
+              aria-hidden
+            >
+              <Users className="h-4 w-4" strokeWidth={2} />
+            </span>
+            <h2 className="flex flex-wrap items-baseline gap-x-1 text-sm font-bold text-slate-900">
+              <span>Equipo</span>
+              <span className="text-[11px] font-normal text-slate-500 sm:text-xs">(1/2 miembros usados)</span>
+            </h2>
+          </div>
           <Link
             href={`/portal-crecimiento/reporte/${runId}/premium/equipo`}
             className="text-[10px] font-semibold text-violet-700 hover:underline sm:text-[11px]"
@@ -899,7 +910,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             >
               <div className="flex flex-1 flex-col p-5 sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-base font-bold text-slate-900">
+                  <h2 className="text-sm font-bold text-slate-900">
                     Comparación con competidores (vista parcial)
                   </h2>
                   <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
@@ -960,7 +971,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
             >
               <div className="flex flex-1 flex-col p-5 sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-base font-bold text-slate-900">
+                  <h2 className="text-sm font-bold text-slate-900">
                     Competidores ({Math.min(configuredCompetitors.length, 5)}/5)
                   </h2>
                   {configuredCompetitors.length > 0 ? (
@@ -1002,13 +1013,13 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
           {equipoFreeSection}
 
-          <section className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 via-white to-violet-50/80 p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <section className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 via-white to-violet-50/80 p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 h-5 w-5 text-violet-600" aria-hidden />
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" aria-hidden />
                 <div>
-                  <p className="font-semibold text-violet-950">Más datos. Mejores decisiones.</p>
-                  <p className="mt-1 text-sm text-violet-900/85">
+                  <p className="text-sm font-semibold text-violet-950">Más datos. Mejores decisiones.</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-violet-900/80">
                     Desbloqueá prompts, historial completo, reportes avanzados, exportaciones y más.
                   </p>
                 </div>
@@ -1016,15 +1027,15 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/planes"
-                  className="inline-flex items-center justify-center rounded-lg border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-900 shadow-sm hover:bg-violet-50"
+                  className="inline-flex items-center justify-center rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 shadow-sm hover:bg-violet-50"
                 >
                   Ver planes y precios
                 </Link>
                 <Link
                   href="/planes"
-                  className="inline-flex items-center justify-center gap-1 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700"
+                  className="inline-flex items-center justify-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-violet-700"
                 >
-                  Actualizar plan <ArrowUpRight className="h-4 w-4" aria-hidden />
+                  Actualizar plan <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                 </Link>
               </div>
             </div>
