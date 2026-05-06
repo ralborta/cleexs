@@ -18,10 +18,12 @@
     "@prisma/client": "^5.7.0",
     "bcryptjs": "^2.4.3",
     "fastify": "^4.24.3",
+    "fastify-raw-body": "^4.3.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.1",
     "prisma": "^5.7.0",
     "resend": "^6.12.2",
+    "svix": "^1.92.2",
     "tsx": "^4.7.0",
     "zod": "^3.22.4"
   },

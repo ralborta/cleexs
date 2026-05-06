@@ -6,6 +6,7 @@ log('1/7 Proceso iniciado, cargando módulos...');
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import fastifyRawBody from 'fastify-raw-body';
 import tenantRoutes from './routes/tenants';
 import brandRoutes from './routes/brands';
 import promptRoutes from './routes/prompts';
@@ -20,6 +21,7 @@ import adminEntitlementRoutes from './routes/admin-entitlements';
 import adminProvisionRoutes from './routes/admin-provision';
 import adminEmailRoutes from './routes/admin-email';
 import adminDashboardRoutes from './routes/admin-dashboard';
+import webhooksResendRoutes from './routes/webhooks-resend';
 import authPortalRoutes from './routes/auth-portal';
 import meReferralRoutes from './routes/me-referral';
 
@@ -70,6 +72,13 @@ async function bootstrap() {
   log('5/7 CORS OK, registrando Helmet y rutas...');
   await server.register(helmet);
 
+  await server.register(fastifyRawBody, {
+    field: 'rawBody',
+    global: false,
+    encoding: 'utf8',
+    runFirst: true,
+  });
+
   // Health check
   server.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
@@ -92,6 +101,7 @@ async function bootstrap() {
   await server.register(adminProvisionRoutes, { prefix: '/api/admin' });
   await server.register(adminEmailRoutes, { prefix: '/api/admin' });
   await server.register(adminDashboardRoutes, { prefix: '/api/admin' });
+  await server.register(webhooksResendRoutes, { prefix: '/api' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server

@@ -3,14 +3,20 @@
 import {
   Activity,
   Building2,
+  ClipboardList,
+  Gift,
   Loader2,
   Mail,
   RefreshCw,
+  Search,
   ShieldCheck,
   Sparkles,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { AdminAuthExpiredCard, AdminCallout, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
+import { AdminPanelSection } from '@/components/admin/admin-panel-section';
 
 type EmailOps =
   | {
@@ -63,8 +69,8 @@ type OverrideRow = {
 const field =
   'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15';
 const labelCls = 'text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500';
-const panel =
-  'rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xl shadow-slate-900/[0.06] ring-1 ring-slate-900/[0.04] md:p-8';
+const panelOuter =
+  'rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-slate-900/[0.05] backdrop-blur-sm md:p-9';
 
 export default function AdminCuentasPage() {
   const [message, setMessage] = useState<string | null>(null);
@@ -362,27 +368,35 @@ export default function AdminCuentasPage() {
         </div>
       </div>
 
-      <div className={`${panel} space-y-10 text-slate-900`}>
+      <div className={`${panelOuter} space-y-8 text-slate-900`}>
         {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{error}</div>
+          looksLikeAdminAuthError(error) ? (
+            <AdminAuthExpiredCard />
+          ) : (
+            <AdminCallout variant="error">{error}</AdminCallout>
+          )
         ) : null}
         {message ? (
-          <pre className="max-h-64 overflow-auto rounded-xl border border-emerald-200/80 bg-emerald-50/90 p-4 font-mono text-xs text-slate-800">
-            {message}
-          </pre>
+          <AdminCallout variant="success">
+            <pre className="max-h-52 overflow-auto whitespace-pre-wrap font-mono text-[11px]">{message}</pre>
+          </AdminCallout>
         ) : null}
 
-        <section>
-          <div className="flex flex-col gap-1 border-b border-slate-100 pb-5 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Nueva cuenta</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Equivale a <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px]">db:provision-account</code>.
-                Contraseña opcional (mín. 8); si omitís, la API puede generar una.
-              </p>
-            </div>
-          </div>
-          <form onSubmit={runProvision} className="mt-6 grid gap-5 sm:grid-cols-2">
+        <AdminPanelSection
+          icon={UserPlus}
+          accent="violet"
+          title="Nueva cuenta"
+          description={
+            <>
+              Equivale a{' '}
+              <code className="rounded-md bg-violet-100/80 px-1.5 py-0.5 font-mono text-[11px] text-violet-900">
+                db:provision-account
+              </code>
+              . Contraseña opcional (mín. 8); si omitís, la API puede generar una.
+            </>
+          }
+        >
+          <form onSubmit={runProvision} className="grid gap-5 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className={labelCls}>Email</span>
               <input
@@ -415,14 +429,14 @@ export default function AdminCuentasPage() {
                 <option value="free">Siempre gratis</option>
               </select>
             </label>
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 sm:mt-7">
+            <label className="flex min-h-[46px] cursor-pointer items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3 ring-1 ring-violet-100/80 sm:mt-[26px]">
               <input
                 type="checkbox"
                 checked={pCourtesy}
                 onChange={(ev) => setPCourtesy(ev.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
               />
-              <span className="text-sm font-medium text-slate-700">Cortesía Premium (override 1 año)</span>
+              <span className="text-sm font-medium text-slate-800">Cortesía Premium (override 1 año)</span>
             </label>
             <label className="block sm:col-span-2">
               <span className={labelCls}>Contraseña portal (opcional)</span>
@@ -444,12 +458,15 @@ export default function AdminCuentasPage() {
               </button>
             </div>
           </form>
-        </section>
+        </AdminPanelSection>
 
-        <section className="border-t border-slate-100 pt-10">
-          <h2 className="text-lg font-bold text-slate-900">Buscar usuarios</h2>
-          <p className="mt-1 text-xs text-slate-500">Fragmento de email para copiar tenantId / userId.</p>
-          <form onSubmit={runSearchUsers} className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+        <AdminPanelSection
+          icon={Search}
+          accent="slate"
+          title="Buscar usuarios"
+          description="Fragmento de email para copiar tenantId / userId."
+        >
+          <form onSubmit={runSearchUsers} className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
             <input
               type="text"
               value={searchQ}
@@ -484,12 +501,15 @@ export default function AdminCuentasPage() {
               ))}
             </ul>
           ) : null}
-        </section>
+        </AdminPanelSection>
 
-        <section className="border-t border-slate-100 pt-10">
-          <h2 className="text-lg font-bold text-slate-900">Nueva cortesía</h2>
-          <p className="mt-1 text-xs text-slate-500">Override de plan por tenant (y opcionalmente por usuario).</p>
-          <form onSubmit={runOverride} className="mt-6 grid gap-5 sm:grid-cols-2">
+        <AdminPanelSection
+          icon={Gift}
+          accent="amber"
+          title="Nueva cortesía"
+          description="Override de plan por tenant (y opcionalmente por usuario)."
+        >
+          <form onSubmit={runOverride} className="grid gap-5 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className={labelCls}>tenantId (UUID)</span>
               <input
@@ -525,11 +545,15 @@ export default function AdminCuentasPage() {
               </button>
             </div>
           </form>
-        </section>
+        </AdminPanelSection>
 
-        <section className="border-t border-slate-100 pt-10">
-          <h2 className="text-lg font-bold text-slate-900">Overrides recientes</h2>
-          <form onSubmit={loadOverrides} className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <AdminPanelSection
+          icon={ClipboardList}
+          accent="indigo"
+          title="Overrides recientes"
+          description="Listado desde la API; podés filtrar por tenant."
+        >
+          <form onSubmit={loadOverrides} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="flex-1">
               <span className={labelCls}>Filtrar por tenantId (opcional)</span>
               <input
@@ -556,8 +580,13 @@ export default function AdminCuentasPage() {
                 </li>
               ))}
             </ul>
-          ) : null}
-        </section>
+          ) : (
+            <p className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
+              Todavía no cargaste overrides. Usá <span className="font-medium text-slate-700">Listar</span> sin filtro o con
+              tenantId.
+            </p>
+          )}
+        </AdminPanelSection>
       </div>
     </div>
   );

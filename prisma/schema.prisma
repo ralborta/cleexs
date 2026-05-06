@@ -664,3 +664,20 @@ model CleexsInternalEmailSendLog {
   @@map("cleexs_internal_email_send_logs")
 }
 
+model CleexsResendWebhookEvent {
+  id             String    @id @default(uuid())
+  svixId         String    @unique @map("svix_id")
+  eventType      String    @map("event_type")
+  emailId        String?   @map("email_id")
+  recipientEmail String?   @map("recipient_email")
+  occurredAt     DateTime? @map("occurred_at")
+  payload        Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([eventType, occurredAt])
+  @@index([emailId])
+  @@index([occurredAt])
+  @@map("cleexs_resend_webhook_events")
+}
+

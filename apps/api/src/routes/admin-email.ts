@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { z } from 'zod';
 import { sendAdminTestEmail } from '../lib/internal-email-send';
+import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { prisma } from '../lib/prisma';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
@@ -270,11 +271,14 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
     const campaigns = await prisma.cleexsInternalEmailCampaign.count();
     const logsTotal = await prisma.cleexsInternalEmailSendLog.count();
 
+    const resendWebhook = await buildResendWebhookStats(30);
+
     return {
       windowDays: 30,
       campaignsConfigured: campaigns,
       logsAllTime: logsTotal,
       byStatusLast30Days: Object.fromEntries(grouped.map((g) => [g.status, g._count._all])),
+      resendWebhook,
     };
   });
 };
