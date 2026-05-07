@@ -100,6 +100,10 @@ export default function AdminCuentasPage() {
   const [overrides, setOverrides] = useState<OverrideRow[]>([]);
   const [lBusy, setLBusy] = useState(false);
 
+  /** Etiqueta legible cuando el admin eligió un usuario desde la búsqueda */
+  const [courtesyClientLabel, setCourtesyClientLabel] = useState<string | null>(null);
+  const [overridesFilterLabel, setOverridesFilterLabel] = useState<string | null>(null);
+
   const loadDashboard = useCallback(async () => {
     setDashBusy(true);
     try {
@@ -212,6 +216,19 @@ export default function AdminCuentasPage() {
     } finally {
       setLBusy(false);
     }
+  }
+
+  function fillCourtesyFromSearch(u: UserRow) {
+    setOTenantId(u.tenantId);
+    setOUserId(u.id);
+    setCourtesyClientLabel(`${u.email} · empresa ${u.tenantCode}`);
+    setError(null);
+  }
+
+  function fillOverridesFilterFromSearch(u: UserRow) {
+    setListTenant(u.tenantId);
+    setOverridesFilterLabel(`${u.email} · empresa ${u.tenantCode}`);
+    setError(null);
   }
 
   const windowDays = dash?.windowDays ?? 30;
@@ -464,14 +481,14 @@ export default function AdminCuentasPage() {
           icon={Search}
           accent="slate"
           title="Buscar usuarios"
-          description="Fragmento de email para copiar tenantId / userId."
+          description="Escribí parte del correo del cliente. Después tocá el botón para cargar la cortesía o ver solo sus overrides: no hace falta saber códigos internos."
         >
           <form onSubmit={runSearchUsers} className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
             <input
               type="text"
               value={searchQ}
               onChange={(ev) => setSearchQ(ev.target.value)}
-              placeholder="ej. ralborta"
+              placeholder="ej. nombre o dominio del mail"
               className={`${field} sm:flex-1`}
             />
             <button
@@ -490,13 +507,39 @@ export default function AdminCuentasPage() {
                   className="rounded-xl border border-slate-100 bg-slate-50/90 p-4 text-sm shadow-sm transition hover:border-violet-200/80 hover:bg-white"
                 >
                   <p className="font-semibold text-slate-900">{u.email}</p>
-                  <p className="mt-2 font-mono text-[11px] text-slate-600">
-                    userId: <span className="select-all">{u.id}</span>
-                  </p>
-                  <p className="mt-1 font-mono text-[11px] text-slate-600">
-                    tenantId: <span className="select-all">{u.tenantId}</span> · {u.tenantCode}
+                  <p className="mt-1 text-xs text-slate-600">
+                    Empresa en sistema: <span className="font-medium text-slate-800">{u.tenantCode}</span>
                   </p>
                   <p className="mt-2 text-xs text-slate-500">Portal: {u.hasPortalPassword ? 'tiene clave' : 'sin clave'}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fillCourtesyFromSearch(u)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/90 px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-amber-400"
+                    >
+                      <Gift className="h-3.5 w-3.5" aria-hidden />
+                      Usar para nueva cortesía
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillOverridesFilterFromSearch(u)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                    >
+                      <ClipboardList className="h-3.5 w-3.5" aria-hidden />
+                      Ver overrides de este cliente
+                    </button>
+                  </div>
+                  <details className="mt-3 text-[11px] text-slate-400">
+                    <summary className="cursor-pointer select-none text-slate-500 hover:text-slate-700">
+                      Datos técnicos (soporte)
+                    </summary>
+                    <p className="mt-2 font-mono text-[11px] text-slate-600">
+                      usuario: <span className="select-all">{u.id}</span>
+                    </p>
+                    <p className="mt-1 font-mono text-[11px] text-slate-600">
+                      empresa (id): <span className="select-all">{u.tenantId}</span>
+                    </p>
+                  </details>
                 </li>
               ))}
             </ul>
@@ -507,28 +550,47 @@ export default function AdminCuentasPage() {
           icon={Gift}
           accent="amber"
           title="Nueva cortesía"
-          description="Override de plan por tenant (y opcionalmente por usuario)."
+          description="Extendemos el plan de una empresa (y, si hace falta, de un usuario concreto). Lo más simple es elegir al cliente desde «Buscar usuarios»."
         >
           <form onSubmit={runOverride} className="grid gap-5 sm:grid-cols-2">
+            {courtesyClientLabel ? (
+              <p className="sm:col-span-2 rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+                <span className="font-semibold">Cliente elegido:</span> {courtesyClientLabel}
+              </p>
+            ) : null}
             <label className="block sm:col-span-2">
-              <span className={labelCls}>tenantId (UUID)</span>
+              <span className={labelCls}>Empresa en sistema (rellená desde la búsqueda)</span>
               <input
                 required
                 value={oTenantId}
-                onChange={(ev) => setOTenantId(ev.target.value)}
+                onChange={(ev) => {
+                  setOTenantId(ev.target.value);
+                  setCourtesyClientLabel(null);
+                }}
+                placeholder="Se completa solo al tocar «Usar para nueva cortesía»"
                 className={`${field} font-mono text-xs`}
               />
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                Es un código interno de la empresa; no hace falta copiarlo si usás la búsqueda por correo.
+              </p>
             </label>
             <label className="block sm:col-span-2">
-              <span className={labelCls}>userId (opcional)</span>
+              <span className={labelCls}>Usuario concreto (opcional)</span>
               <input
                 value={oUserId}
-                onChange={(ev) => setOUserId(ev.target.value)}
+                onChange={(ev) => {
+                  setOUserId(ev.target.value);
+                  setCourtesyClientLabel(null);
+                }}
+                placeholder="Vacío = cortesía a nivel empresa"
                 className={`${field} font-mono text-xs`}
               />
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                Solo necesario si la cortesía es para una persona en particular; también se puede rellenar desde la búsqueda.
+              </p>
             </label>
             <label className="block">
-              <span className={labelCls}>grantPlan</span>
+              <span className={labelCls}>Plan otorgado</span>
               <input value={oGrant} onChange={(ev) => setOGrant(ev.target.value)} className={field} />
             </label>
             <label className="block">
@@ -551,16 +613,38 @@ export default function AdminCuentasPage() {
           icon={ClipboardList}
           accent="indigo"
           title="Overrides recientes"
-          description="Listado desde la API; podés filtrar por tenant."
+          description="Historial de cortesías y cambios de plan. Para ver solo las de un cliente, usá «Ver overrides de este cliente» en los resultados de búsqueda."
         >
+          {overridesFilterLabel ? (
+            <p className="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-950">
+              <span className="font-semibold">Filtrando por cliente:</span> {overridesFilterLabel}
+              <button
+                type="button"
+                onClick={() => {
+                  setListTenant('');
+                  setOverridesFilterLabel(null);
+                }}
+                className="ml-3 text-xs font-semibold text-indigo-700 underline decoration-indigo-400 underline-offset-2 hover:text-indigo-900"
+              >
+                Quitar filtro
+              </button>
+            </p>
+          ) : null}
           <form onSubmit={loadOverrides} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="flex-1">
-              <span className={labelCls}>Filtrar por tenantId (opcional)</span>
+              <span className={labelCls}>Código interno de empresa (opcional)</span>
               <input
                 value={listTenant}
-                onChange={(ev) => setListTenant(ev.target.value)}
+                onChange={(ev) => {
+                  setListTenant(ev.target.value);
+                  setOverridesFilterLabel(null);
+                }}
+                placeholder="Solo si soporte te pasó un ID; si no, usá la búsqueda"
                 className={`${field} font-mono text-xs`}
               />
+              <p className="mt-1.5 text-xs text-slate-500">
+                Equivale al filtro técnico por empresa; lo habitual es no tocar este campo.
+              </p>
             </label>
             <button
               type="submit"
@@ -582,8 +666,8 @@ export default function AdminCuentasPage() {
             </ul>
           ) : (
             <p className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
-              Todavía no cargaste overrides. Usá <span className="font-medium text-slate-700">Listar</span> sin filtro o con
-              tenantId.
+              Todavía no cargaste overrides. Tocá <span className="font-medium text-slate-700">Listar</span> para ver todos,
+              o elegí un cliente en la búsqueda y <span className="font-medium text-slate-700">Ver overrides de este cliente</span>.
             </p>
           )}
         </AdminPanelSection>
