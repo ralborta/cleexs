@@ -400,47 +400,49 @@ export default function AdminEmailOpsPage() {
               }
             >
               {!stats.resendWebhook.secretConfigured ? (
-                <AdminCallout variant="warning">
-                  <p className="font-semibold text-amber-950">Sin datos porque el webhook no puede guardarse</p>
-                  <p className="mt-2 text-sm leading-relaxed">
-                    La API devuelve <strong className="font-semibold">503</strong> a Resend si falta{' '}
-                    <code className="rounded bg-amber-100/80 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code>. Sin eventos en
-                    base, estos números quedan en <strong className="font-semibold">0</strong>.
+                <div className="rounded-xl border border-amber-200/90 bg-amber-50/40 px-4 py-3 text-sm leading-relaxed text-amber-950">
+                  <p>
+                    <strong className="font-semibold">Sin métricas aquí:</strong> falta{' '}
+                    <code className="rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-amber-200/70">
+                      RESEND_WEBHOOK_SECRET
+                    </code>{' '}
+                    en Railway (debe coincidir con el Signing secret de Resend). La API responde 503 al webhook y no se guardan
+                    eventos.
                   </p>
-                  <ol className="mt-3 list-decimal space-y-2 pl-4 text-sm leading-relaxed">
-                    <li>
-                      En el dashboard de Resend → Webhooks, copiá el <strong className="font-semibold">Signing secret</strong>{' '}
-                      (formato <code className="font-mono text-[11px]">whsec_…</code>).
-                    </li>
-                    <li>
-                      En Railway (servicio de la <strong className="font-semibold">API Cleexs</strong>), creá la variable{' '}
-                      <code className="rounded bg-amber-100/80 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code> con ese valor y
-                      redeploy.
-                    </li>
-                    <li>
-                      La URL del webhook en Resend debe ser la de tu API pública (Railway/Vercel no puede ser{' '}
-                      <code className="font-mono text-[11px]">localhost</code>) +{' '}
-                      <code className="font-mono text-[11px]">{stats.resendWebhook.ingestUrl}</code>
-                      {stats.resendWebhook.ingestAbsoluteUrl ? (
-                        <>
-                          :{' '}
-                          <code className="mt-1 block w-fit max-w-full select-all break-all rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-800 ring-1 ring-amber-200/80">
+                  <details className="mt-2">
+                    <summary className="cursor-pointer select-none text-xs font-semibold text-amber-900 underline decoration-amber-400 underline-offset-2 hover:text-amber-950">
+                      Pasos detallados
+                    </summary>
+                    <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed">
+                      <li>
+                        Resend → Webhooks: copiá el <strong className="font-semibold">Signing secret</strong> (
+                        <code className="font-mono text-[11px]">whsec_…</code>).
+                      </li>
+                      <li>
+                        Railway (API Cleexs): variable{' '}
+                        <code className="rounded bg-white/90 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code> con ese valor →
+                        redeploy.
+                      </li>
+                      <li>
+                        URL del webhook en Resend = tu API pública +{' '}
+                        <code className="font-mono text-[11px]">{stats.resendWebhook.ingestUrl}</code>
+                        {stats.resendWebhook.ingestAbsoluteUrl ? (
+                          <code className="mt-1 block max-w-full select-all break-all rounded-md bg-white/90 px-2 py-1 font-mono text-[11px] ring-1 ring-amber-200/70">
                             {stats.resendWebhook.ingestAbsoluteUrl}
                           </code>
-                        </>
-                      ) : (
-                        <>
-                          . Si acá no ves la URL completa, definí en la API{' '}
-                          <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> con la base pública (
-                          ejemplo <code className="font-mono text-[11px]">https://xxx.up.railway.app</code>).
-                        </>
-                      )}
-                    </li>
-                  </ol>
-                </AdminCallout>
+                        ) : (
+                          <>
+                            . Si falta la URL completa, definí{' '}
+                            <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> en la API.
+                          </>
+                        )}
+                      </li>
+                    </ol>
+                  </details>
+                </div>
               ) : null}
 
-              <div className={`flex flex-wrap items-center gap-2 ${!stats.resendWebhook.secretConfigured ? 'mt-5' : ''}`}>
+              <div className={`flex flex-wrap items-center gap-2 ${!stats.resendWebhook.secretConfigured ? 'mt-4' : ''}`}>
                 <span
                   className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                     stats.resendWebhook.secretConfigured
