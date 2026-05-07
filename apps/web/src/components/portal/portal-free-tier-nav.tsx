@@ -42,6 +42,7 @@ export function PortalFreeTierNav({
       : '__';
   const onPortalClienteHome = !firstSegmentAfterBase || firstSegmentAfterBase === '';
   const onComparacionPage = pathname?.includes('/comparacion') ?? false;
+  const onCompetidoresPage = pathname?.includes('/competidores') ?? false;
   const onEquipoPage = pathname?.includes('/equipo') ?? false;
   const onSuscripcionPage = pathname?.includes('/suscripcion') ?? false;
 
@@ -79,18 +80,29 @@ export function PortalFreeTierNav({
         </div>
 
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
-          <a
-            href={`${base}#competidores`}
-            className="group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50"
+          <Link
+            href={`${base}/competidores`}
+            className={
+              onCompetidoresPage
+                ? 'group flex items-center justify-between gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
+                : 'group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50'
+            }
           >
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <Target className="h-3.5 w-3.5 shrink-0 text-slate-500 group-hover:text-slate-600" aria-hidden />
-              <span className="min-w-0 break-words leading-snug">Competidores</span>
+              <Target
+                className={`h-3.5 w-3.5 shrink-0 ${onCompetidoresPage ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
+                aria-hidden
+              />
+              <span
+                className={`min-w-0 break-words leading-snug ${onCompetidoresPage ? 'font-semibold text-violet-800' : ''}`}
+              >
+                Competidores
+              </span>
             </span>
             <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
               Disponible
             </span>
-          </a>
+          </Link>
           <Link
             href={`${base}/equipo`}
             className={

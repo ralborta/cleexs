@@ -936,7 +936,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                   </h2>
                   {configuredCompetitors.length > 0 ? (
                     <Link
-                      href={`${base}#competidores`}
+                      href={`${base}/competidores`}
                       className="text-xs font-semibold text-violet-700 hover:underline"
                     >
                       Ver todos →
