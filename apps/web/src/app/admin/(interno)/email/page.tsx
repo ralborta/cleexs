@@ -8,7 +8,6 @@ import {
   LayoutList,
   MailCheck,
   MousePointerClick,
-  PieChart,
   ScrollText,
   Send,
   Activity,
@@ -79,7 +78,6 @@ type Stats = {
 
 export default function AdminEmailOpsPage() {
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
@@ -134,7 +132,6 @@ export default function AdminEmailOpsPage() {
     e.preventDefault();
     setTestBusy(true);
     setError(null);
-    setMessage(null);
     try {
       const res = await adminUiFetch('/api/admin-ui/email/send-test', {
         method: 'POST',
@@ -143,7 +140,6 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
-      setMessage(`Envío de prueba OK:\n${JSON.stringify(data, null, 2)}`);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -153,13 +149,11 @@ export default function AdminEmailOpsPage() {
   }
 
   async function runSeed() {
-    setMessage(null);
     setError(null);
     try {
       const res = await adminUiFetch('/api/admin-ui/email/campaigns/seed-defaults', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
-      setMessage(`Plantillas base: ${JSON.stringify(data)}`);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -206,7 +200,6 @@ export default function AdminEmailOpsPage() {
     }
     setCampaignPreviewBusyId(c.id);
     setError(null);
-    setMessage(null);
     try {
       const res = await adminUiFetch('/api/admin-ui/email/send-campaign-test', {
         method: 'POST',
@@ -215,7 +208,6 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
-      setMessage(`Prueba de campaña (${c.slug}) OK:\n${JSON.stringify(data, null, 2)}`);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -227,7 +219,6 @@ export default function AdminEmailOpsPage() {
   async function createCampaign(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setMessage(null);
     try {
       const body = {
         slug: nSlug.trim(),
@@ -244,7 +235,6 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
-      setMessage('Campaña creada.');
       setNSlug('');
       setNTitle('');
       setNEsp('');
@@ -257,7 +247,6 @@ export default function AdminEmailOpsPage() {
   async function addManualLog(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setMessage(null);
     try {
       const body: Record<string, unknown> = {
         recipientEmail: logEmail.trim().toLowerCase(),
@@ -273,12 +262,20 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
-      setMessage(`Log creado: ${data.id}`);
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error');
     }
   }
+
+  const sentLastWindow = stats != null ? Number(stats.byStatusLast30Days.sent) || 0 : 0;
+  const otherStatusSummary =
+    stats != null
+      ? Object.entries(stats.byStatusLast30Days)
+          .filter(([k, v]) => k !== 'sent' && typeof v === 'number' && v > 0)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(' · ')
+      : '';
 
   return (
     <div className="space-y-8">
@@ -309,11 +306,6 @@ export default function AdminEmailOpsPage() {
             ) : (
               <AdminCallout variant="error">{error}</AdminCallout>
             )
-          ) : null}
-          {message ? (
-            <AdminCallout variant="success">
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap font-mono text-[11px]">{message}</pre>
-            </AdminCallout>
           ) : null}
 
           <AdminPanelSection
@@ -364,11 +356,12 @@ export default function AdminEmailOpsPage() {
                 <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{stats.logsAllTime}</p>
               </div>
               <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm ring-1 ring-slate-900/[0.03]">
-                <PieChart className="absolute right-4 top-4 h-8 w-8 text-emerald-200" aria-hidden />
-                <p className={`${labelCls} text-slate-500`}>Por estado ({stats.windowDays} días)</p>
-                <pre className="mt-2 max-h-24 overflow-auto rounded-lg bg-slate-900/[0.04] p-2 font-mono text-[10px] leading-relaxed text-slate-700">
-                  {JSON.stringify(stats.byStatusLast30Days, null, 2)}
-                </pre>
+                <MailCheck className="absolute right-4 top-4 h-8 w-8 text-violet-200" aria-hidden />
+                <p className={`${labelCls} text-slate-500`}>Enviados ({stats.windowDays} días)</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{sentLastWindow}</p>
+                {otherStatusSummary ? (
+                  <p className="mt-2 text-[11px] leading-snug text-slate-500">{otherStatusSummary}</p>
+                ) : null}
               </div>
             </section>
           ) : null}
