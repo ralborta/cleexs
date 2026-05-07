@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
-import { adminCookieOptions, COOKIE_NAME, createAdminSessionToken } from '@/lib/admin-session';
+import { adminCookieOptions, COOKIE_NAME, createAdminSessionToken, legacyAdminCookieClearOptions } from '@/lib/admin-session';
 
 export async function POST(request: Request) {
   const expected = process.env.ADMIN_UI_PASSWORD?.trim();
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
   }
 
   const res = NextResponse.json({ ok: true });
+  res.cookies.set(COOKIE_NAME, '', legacyAdminCookieClearOptions());
   res.cookies.set(COOKIE_NAME, token, adminCookieOptions());
   return res;
 }

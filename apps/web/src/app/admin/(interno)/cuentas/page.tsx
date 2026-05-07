@@ -17,6 +17,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { AdminAuthExpiredCard, AdminCallout, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { AdminPanelSection } from '@/components/admin/admin-panel-section';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 type EmailOps =
   | {
@@ -107,7 +108,7 @@ export default function AdminCuentasPage() {
   const loadDashboard = useCallback(async () => {
     setDashBusy(true);
     try {
-      const res = await fetch('/api/admin-ui/dashboard', { cache: 'no-store' });
+      const res = await adminUiFetch('/api/admin-ui/dashboard', { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || 'No se pudo cargar el dashboard');
       setDash(data as DashboardSummary);
@@ -137,7 +138,7 @@ export default function AdminCuentasPage() {
       };
       if (pPassword.trim().length >= 8) body.password = pPassword.trim();
 
-      const res = await fetch('/api/admin-ui/provision', {
+      const res = await adminUiFetch('/api/admin-ui/provision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -159,7 +160,7 @@ export default function AdminCuentasPage() {
     setUBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin-ui/users?q=${encodeURIComponent(searchQ.trim())}`);
+      const res = await adminUiFetch(`/api/admin-ui/users?q=${encodeURIComponent(searchQ.trim())}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
       setUsers(Array.isArray(data) ? data : []);
@@ -184,7 +185,7 @@ export default function AdminCuentasPage() {
       };
       if (oUserId.trim()) body.userId = oUserId.trim();
 
-      const res = await fetch('/api/admin-ui/overrides', {
+      const res = await adminUiFetch('/api/admin-ui/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -206,7 +207,7 @@ export default function AdminCuentasPage() {
     setError(null);
     try {
       const qs = listTenant.trim() ? `?tenantId=${encodeURIComponent(listTenant.trim())}` : '';
-      const res = await fetch(`/api/admin-ui/overrides${qs}`);
+      const res = await adminUiFetch(`/api/admin-ui/overrides${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
       setOverrides(Array.isArray(data) ? data : []);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function AdminLoginPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin-ui/login', {
+      const res = await adminUiFetch('/api/admin-ui/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),

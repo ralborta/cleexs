@@ -17,6 +17,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { AdminAuthExpiredCard, AdminCallout, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { AdminPanelSection } from '@/components/admin/admin-panel-section';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 const panelOuter =
   'rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-slate-900/[0.05] backdrop-blur-sm md:p-9';
@@ -104,9 +105,9 @@ export default function AdminEmailOpsPage() {
     setError(null);
     try {
       const [sRes, cRes, lRes] = await Promise.all([
-        fetch('/api/admin-ui/email/stats'),
-        fetch('/api/admin-ui/email/campaigns'),
-        fetch('/api/admin-ui/email/logs?limit=80'),
+        adminUiFetch('/api/admin-ui/email/stats'),
+        adminUiFetch('/api/admin-ui/email/campaigns'),
+        adminUiFetch('/api/admin-ui/email/logs?limit=80'),
       ]);
       const sData = await sRes.json().catch(() => ({}));
       const cData = await cRes.json().catch(() => ({}));
@@ -134,7 +135,7 @@ export default function AdminEmailOpsPage() {
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch('/api/admin-ui/email/send-test', {
+      const res = await adminUiFetch('/api/admin-ui/email/send-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: testEmail.trim().toLowerCase() }),
@@ -154,7 +155,7 @@ export default function AdminEmailOpsPage() {
     setMessage(null);
     setError(null);
     try {
-      const res = await fetch('/api/admin-ui/email/campaigns/seed-defaults', { method: 'POST' });
+      const res = await adminUiFetch('/api/admin-ui/email/campaigns/seed-defaults', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
       setMessage(`Plantillas base: ${JSON.stringify(data)}`);
@@ -167,7 +168,7 @@ export default function AdminEmailOpsPage() {
   async function toggleCampaign(c: CampaignRow) {
     setError(null);
     try {
-      const res = await fetch(`/api/admin-ui/email/campaigns/${encodeURIComponent(c.id)}`, {
+      const res = await adminUiFetch(`/api/admin-ui/email/campaigns/${encodeURIComponent(c.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !c.active }),
@@ -183,7 +184,7 @@ export default function AdminEmailOpsPage() {
   async function saveEspTemplate(c: CampaignRow, espTemplateId: string) {
     setError(null);
     try {
-      const res = await fetch(`/api/admin-ui/email/campaigns/${encodeURIComponent(c.id)}`, {
+      const res = await adminUiFetch(`/api/admin-ui/email/campaigns/${encodeURIComponent(c.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ espTemplateId: espTemplateId.trim() || null }),
@@ -209,7 +210,7 @@ export default function AdminEmailOpsPage() {
         espTemplateId: nEsp.trim() || undefined,
         active: true,
       };
-      const res = await fetch('/api/admin-ui/email/campaigns', {
+      const res = await adminUiFetch('/api/admin-ui/email/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -238,7 +239,7 @@ export default function AdminEmailOpsPage() {
       };
       const sc = logScore.trim();
       if (sc) body.cleexsScore = Number(sc);
-      const res = await fetch('/api/admin-ui/email/logs', {
+      const res = await adminUiFetch('/api/admin-ui/email/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

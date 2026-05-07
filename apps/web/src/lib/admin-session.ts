@@ -51,3 +51,14 @@ export function adminCookieOptions() {
     maxAge,
   };
 }
+
+/** Cookie antigua (solo path `/admin`): hay que borrarla en login/logout para evitar duplicados. */
+export function legacyAdminCookieClearOptions() {
+  return {
+    httpOnly: true as const,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/admin' as const,
+    maxAge: 0,
+  };
+}

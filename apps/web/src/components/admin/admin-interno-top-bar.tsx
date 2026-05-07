@@ -2,12 +2,13 @@
 
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 export function AdminInternoTopBar() {
   const router = useRouter();
 
   async function logout() {
-    await fetch('/api/admin-ui/logout', { method: 'POST' });
+    await adminUiFetch('/api/admin-ui/logout', { method: 'POST' });
     router.replace('/admin/login');
     router.refresh();
   }

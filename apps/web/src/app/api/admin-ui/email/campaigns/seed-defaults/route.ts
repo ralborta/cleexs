@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { assertAdminUiSession, forwardToCleexsApi } from '@/lib/admin-api';
 
-export async function POST() {
-  if (!assertAdminUiSession()) {
+export async function POST(request: Request) {
+  if (!assertAdminUiSession(request)) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 

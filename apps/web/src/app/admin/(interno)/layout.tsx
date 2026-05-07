@@ -1,13 +1,13 @@
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AdminInternoNav } from '@/components/admin/admin-interno-nav';
 import { AdminInternoTopBar } from '@/components/admin/admin-interno-top-bar';
-import { COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-session';
+import { assertAdminUiSession } from '@/lib/admin-api';
+
+export const dynamic = 'force-dynamic';
 
 export default function AdminInternoLayout({ children }: { children: React.ReactNode }) {
-  const token = cookies().get(COOKIE_NAME)?.value;
-  if (!verifyAdminSessionToken(token)) {
+  if (!assertAdminUiSession()) {
     redirect('/admin/login');
   }
 
