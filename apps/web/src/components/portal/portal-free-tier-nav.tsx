@@ -16,6 +16,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
 
 export type PortalFreeTierNavProps = {
   /** Ruta base para anclas (#portal-cliente, #comparacion, …). Sin barra final. */
@@ -206,11 +207,12 @@ export function PortalFreeTierNav({
         </Link>
       </div>
 
-        <div className="mt-4 flex flex-1 flex-col justify-end pt-6">
+      <div className="mt-6 flex flex-col gap-4 border-t border-slate-100/80 pt-6">
         <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
           <Headphones className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
           <span>¿Necesitás ayuda? Contactá a nuestro equipo</span>
         </div>
+        <PortalSignOutButton />
       </div>
     </aside>
   );

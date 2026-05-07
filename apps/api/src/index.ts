@@ -79,9 +79,15 @@ async function bootstrap() {
     runFirst: true,
   });
 
-  // Health check
+  // Health check (Railway + diagnóstico sin panel)
   server.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      integrations: {
+        resendWebhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
+      },
+    };
   });
 
   // Routes

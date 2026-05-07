@@ -15,6 +15,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
 import { ReportSectionTitle } from '@/components/report/report-section';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
 
@@ -523,13 +524,19 @@ export default function PortalReporteRunPage() {
           >
             ← Volver al panel
           </Link>
-          <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <PortalSignOutButton
+              landing="/portal-crecimiento"
+              className="inline-flex w-auto shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:py-2"
+            />
+            <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 shadow-sm">
             <p className="text-xs text-slate-500">
               <span className="font-mono text-slate-700">{run.id.slice(0, 8)}…</span>
               <span className="mx-1.5 text-slate-300">·</span>
               {run.status}
             </p>
             <CleexsMark className="h-6 w-6 shrink-0" />
+            </div>
           </div>
         </div>
 

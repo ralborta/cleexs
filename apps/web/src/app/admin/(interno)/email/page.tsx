@@ -419,9 +419,9 @@ export default function AdminEmailOpsPage() {
                         <code className="font-mono text-[11px]">whsec_…</code>).
                       </li>
                       <li>
-                        Railway (API Cleexs): variable{' '}
+                        Railway (servicio que ejecuta esta API, no el front): variable{' '}
                         <code className="rounded bg-white/90 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code> con ese valor →
-                        redeploy.
+                        redeploy obligatorio (sin redeploy el proceso puede seguir sin verla).
                       </li>
                       <li>
                         URL del webhook en Resend = tu API pública +{' '}
@@ -436,6 +436,12 @@ export default function AdminEmailOpsPage() {
                             <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> en la API.
                           </>
                         )}
+                      </li>
+                      <li>
+                        Comprobación: en la misma base URL de la API,{' '}
+                        <code className="font-mono text-[11px]">GET /health</code> debe devolver{' '}
+                        <code className="font-mono text-[11px]">integrations.resendWebhookSecretConfigured: true</code>. Si sigue en{' '}
+                        <code className="font-mono text-[11px]">false</code>, la variable no está en ese despliegue (servicio equivocado o sin redeploy).
                       </li>
                     </ol>
                   </details>

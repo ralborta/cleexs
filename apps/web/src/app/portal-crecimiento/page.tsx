@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
-const TOKEN_KEY = 'cleexs_portal_token';
+import { PORTAL_SESSION_TOKEN_KEY, signOutPortalSession } from '@/components/portal/portal-sign-out';
 
 type UsageResponse = {
   usage?: { scoreViews?: number; deepReportsGenerated?: number };
@@ -68,10 +68,12 @@ export default function PortalCrecimientoPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [runningMes, setRunningMes] = useState(false);
+  /** false hasta conocer redirect vs panel “primera corrida” */
+  const [portalBootstrapped, setPortalBootstrapped] = useState(false);
 
   useEffect(() => {
     try {
-      const t = sessionStorage.getItem(TOKEN_KEY);
+      const t = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
       setToken(t && t.length > 20 ? t : null);
     } catch {
       setToken(null);
@@ -95,6 +97,7 @@ export default function PortalCrecimientoPage() {
       headers: { ...authHeaders(token) },
     };
 
+    let redirected = false;
     try {
       const panelQs = brandId ? `?brandId=${encodeURIComponent(brandId)}` : '';
       const [usageRes, reportsRes] = await Promise.all([
@@ -103,7 +106,7 @@ export default function PortalCrecimientoPage() {
       ]);
 
       if (usageRes.status === 401 || reportsRes.status === 401) {
-        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(PORTAL_SESSION_TOKEN_KEY);
         setToken(null);
         setError('Sesión vencida o inválida. Volvé a iniciar sesión.');
         return;
@@ -121,15 +124,22 @@ export default function PortalCrecimientoPage() {
       ]);
 
       const premiumUser = isPremiumPlan((usageData as UsageResponse).planKey);
-      if (!premiumUser) {
-        router.replace('/portal-cliente');
-        return;
-      }
-
       const reportsList = Array.isArray(reportsData) ? reportsData : [];
       const latestReport =
         [...reportsList].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0] || null;
+
+      if (!premiumUser) {
+        redirected = true;
+        if (latestReport) {
+          router.replace(`/portal-cliente/reporte/${latestReport.id}`);
+        } else {
+          router.replace('/portal-cliente');
+        }
+        return;
+      }
+
       if (latestReport) {
+        redirected = true;
         router.replace(`/portal-crecimiento/reporte/${latestReport.id}/premium`);
         return;
       }
@@ -140,7 +150,7 @@ export default function PortalCrecimientoPage() {
       ]);
 
       if (brandsRes.status === 401 || panelRes.status === 401) {
-        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(PORTAL_SESSION_TOKEN_KEY);
         setToken(null);
         setError('Sesión vencida o inválida. Volvé a iniciar sesión.');
         return;
@@ -172,7 +182,10 @@ export default function PortalCrecimientoPage() {
       }
     } finally {
       clearTimeout(timeoutId);
-      setLoading(false);
+      if (!redirected) {
+        setLoading(false);
+        setPortalBootstrapped(true);
+      }
     }
   }, [token, brandId, router]);
 
@@ -183,6 +196,7 @@ export default function PortalCrecimientoPage() {
       setBrands([]);
       setBrandId('');
       setPanel(null);
+      setPortalBootstrapped(false);
     }
   }, [token, loadData]);
 
@@ -201,7 +215,7 @@ export default function PortalCrecimientoPage() {
         throw new Error(body.error || `Error ${res.status}`);
       }
       if (!body.token) throw new Error('Respuesta inválida del servidor.');
-      sessionStorage.setItem(TOKEN_KEY, body.token);
+      sessionStorage.setItem(PORTAL_SESSION_TOKEN_KEY, body.token);
       setPassword('');
       setToken(body.token);
     } catch (err) {
@@ -212,13 +226,7 @@ export default function PortalCrecimientoPage() {
   }
 
   function onLogout() {
-    sessionStorage.removeItem(TOKEN_KEY);
-    setToken(null);
-    setUsage(null);
-    setBrands([]);
-    setBrandId('');
-    setPanel(null);
-    setError(null);
+    signOutPortalSession('/portal-crecimiento');
   }
 
   async function generateDeepReport() {
@@ -364,6 +372,19 @@ export default function PortalCrecimientoPage() {
     );
   }
 
+  if (!portalBootstrapped) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-6">
+        <p className="text-center text-sm text-slate-600">Abriendo tu cuenta…</p>
+        {error ? (
+          <div className="mx-auto mt-4 max-w-xl rounded-xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+      </main>
+    );
+  }
+
   const planUpper = (usage?.planDisplay || usage?.planKey || 'Plan').toUpperCase();
 
   return (
@@ -383,7 +404,7 @@ export default function PortalCrecimientoPage() {
             onClick={onLogout}
             className="self-start rounded-md border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20"
           >
-            Cerrar sesión
+            Salir de la cuenta
           </button>
         </header>
 

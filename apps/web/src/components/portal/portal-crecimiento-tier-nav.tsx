@@ -17,6 +17,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
+import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
 
 function planCardLabel(display: string): string {
   const t = display.trim();
@@ -200,6 +201,8 @@ export function PortalCrecimientoTierNav({
       >
         Abrir con menú portal Free →
       </Link>
+
+      <PortalSignOutButton className="mt-4" />
     </aside>
   );
 }

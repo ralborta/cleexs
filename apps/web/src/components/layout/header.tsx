@@ -19,9 +19,10 @@ function isPublicDiagnosticPath(pathname: string | null): boolean {
   return false;
 }
 
+/** Portales usuario final: mismo header mínimo que diagnóstico (solo logo), sin menú interno Cleexs */
 function isStandalonePortalPath(pathname: string | null): boolean {
   if (!pathname) return false;
-  return pathname.startsWith('/portal-crecimiento');
+  return pathname.startsWith('/portal-crecimiento') || pathname.startsWith('/portal-cliente');
 }
 
 function isAdminPath(pathname: string | null): boolean {
@@ -29,16 +30,29 @@ function isAdminPath(pathname: string | null): boolean {
   return pathname.startsWith('/admin');
 }
 
+/** Logo lleva al inicio coherente con la zona (portales ≠ app interna). */
+function logoHrefForPath(pathname: string | null): string {
+  if (!pathname) return '/';
+  if (pathname.startsWith('/portal-cliente')) return '/portal-cliente';
+  if (pathname.startsWith('/portal-crecimiento')) return '/portal-crecimiento';
+  return '/';
+}
+
 export function Header() {
   const pathname = usePathname();
-  if (isStandalonePortalPath(pathname) || isAdminPath(pathname)) return null;
-  const minimal = isPublicDiagnosticPath(pathname);
+  if (isAdminPath(pathname)) return null;
+  const minimal = isPublicDiagnosticPath(pathname) || isStandalonePortalPath(pathname);
+  const logoHref = logoHrefForPath(pathname);
 
   if (minimal) {
     return (
       <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
         <div className="container mx-auto flex h-full items-center px-6">
-          <Link href="/" className="flex items-center text-foreground no-underline hover:opacity-90" aria-label="Cleexs">
+          <Link
+            href={logoHref}
+            className="flex items-center text-foreground no-underline hover:opacity-90"
+            aria-label="Cleexs"
+          >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
               <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
             </div>

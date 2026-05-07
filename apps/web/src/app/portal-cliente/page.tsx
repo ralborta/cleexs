@@ -10,7 +10,8 @@ import {
 } from '@/lib/portal-referral-client';
 import { PortalReferralUpsell } from '@/components/portal/portal-referral-upsell';
 
-const TOKEN_KEY = 'cleexs_portal_token';
+import { PORTAL_SESSION_TOKEN_KEY, signOutPortalSession } from '@/components/portal/portal-sign-out';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 type UsageResponse = {
@@ -41,13 +42,13 @@ export default function PortalClienteHomePage() {
   const [password, setPassword] = useState('');
   const [loginBusy, setLoginBusy] = useState(false);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [portalBootstrapped, setPortalBootstrapped] = useState(false);
 
   useEffect(() => {
     capturePortalReferralFromLocation();
     try {
-      const t = sessionStorage.getItem(TOKEN_KEY);
+      const t = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
       setToken(t && t.length > 20 ? t : null);
     } catch {
       setToken(null);
@@ -57,8 +58,10 @@ export default function PortalClienteHomePage() {
 
   const loadData = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
+    setPortalBootstrapped(false);
     setError(null);
+    /** Evita pintar estado “sin corridas” o cabeceras mientras vuele el replace() */
+    let redirected = false;
     try {
       const headers = { Authorization: `Bearer ${token}` };
       const [usageRes, reportsRes] = await Promise.all([
@@ -66,7 +69,7 @@ export default function PortalClienteHomePage() {
         fetch(`${API_URL}/api/reports/app/reports`, { cache: 'no-store', headers }),
       ]);
       if (usageRes.status === 401 || reportsRes.status === 401) {
-        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(PORTAL_SESSION_TOKEN_KEY);
         setToken(null);
         setError('Sesión vencida. Volvé a iniciar sesión.');
         return;
@@ -76,14 +79,20 @@ export default function PortalClienteHomePage() {
       }
       const usageData = (await usageRes.json()) as UsageResponse;
       const reportsData = (await reportsRes.json()) as ReportItem[];
-      if (isPremiumPlan(usageData.planKey)) {
-        router.replace('/portal-crecimiento');
-        return;
-      }
       const list = Array.isArray(reportsData) ? reportsData : [];
       const latest =
         [...list].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0] || null;
+      if (isPremiumPlan(usageData.planKey)) {
+        redirected = true;
+        if (latest) {
+          router.replace(`/portal-crecimiento/reporte/${latest.id}/premium`);
+        } else {
+          router.replace('/portal-crecimiento');
+        }
+        return;
+      }
       if (latest) {
+        redirected = true;
         router.replace(`/portal-cliente/reporte/${latest.id}`);
         return;
       }
@@ -91,7 +100,7 @@ export default function PortalClienteHomePage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al cargar');
     } finally {
-      setLoading(false);
+      if (!redirected) setPortalBootstrapped(true);
     }
   }, [token, router]);
 
@@ -99,6 +108,7 @@ export default function PortalClienteHomePage() {
     if (token) void loadData();
     else {
       setUsage(null);
+      setPortalBootstrapped(false);
     }
   }, [token, loadData]);
 
@@ -119,7 +129,7 @@ export default function PortalClienteHomePage() {
       const body = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
       if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
       if (!body.token) throw new Error('Respuesta inválida del servidor.');
-      sessionStorage.setItem(TOKEN_KEY, body.token);
+      sessionStorage.setItem(PORTAL_SESSION_TOKEN_KEY, body.token);
       clearPortalReferralSlug();
       setPassword('');
       setToken(body.token);
@@ -131,8 +141,7 @@ export default function PortalClienteHomePage() {
   }
 
   function onLogout() {
-    sessionStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+    signOutPortalSession('/portal-cliente');
   }
 
   if (booting) {
@@ -207,6 +216,48 @@ export default function PortalClienteHomePage() {
     );
   }
 
+  if (!portalBootstrapped) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-6">
+        <p className="text-center text-sm text-slate-600">Abriendo tu portal…</p>
+        {error ? (
+          <div className="mx-auto mt-4 max-w-lg rounded-xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+      </main>
+    );
+  }
+
+  if (!usage) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-4 pb-12 sm:p-6">
+        <div className="mx-auto max-w-lg space-y-4">
+          {error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+          ) : null}
+          <p className="text-center text-sm text-slate-600">No se pudieron cargar los datos.</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
+            >
+              Reintentar
+            </button>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+            >
+              Salir de la cuenta
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 p-4 pb-12 sm:p-6">
       <div className="mx-auto max-w-lg space-y-6">
@@ -223,7 +274,7 @@ export default function PortalClienteHomePage() {
             onClick={onLogout}
             className="self-start rounded-md border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20"
           >
-            Cerrar sesión
+            Salir de la cuenta
           </button>
         </header>
 
@@ -231,17 +282,13 @@ export default function PortalClienteHomePage() {
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
         ) : null}
 
-        {loading ? (
-          <p className="text-center text-sm text-slate-600">Abriendo tu portal…</p>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-            <p className="text-sm font-medium text-slate-900">Todavía no hay análisis en tu cuenta</p>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              Cuando exista una corrida completada, al iniciar sesión vas a entrar directo al panel del portal
-              cliente (plan Free).
-            </p>
-          </div>
-        )}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-sm font-medium text-slate-900">Todavía no hay análisis en tu cuenta</p>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            Cuando exista una corrida completada, al iniciar sesión vas a entrar directo al panel del portal
+            cliente (plan Free).
+          </p>
+        </div>
 
         <p className="text-center text-xs text-slate-400">
           ¿Contrato Cleexs Crecimiento?{' '}
