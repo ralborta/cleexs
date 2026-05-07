@@ -26,13 +26,47 @@ export type ResendWebhookStats =
       reason: string;
     };
 
+function stripTrailingSlash(s: string): string {
+  return s.replace(/\/$/, '');
+}
+
+/** Resend ejecuta webhooks desde internet; no mostrar localhost como URL “oficial”. */
+function looksLikeLoopbackBase(raw: string): boolean {
+  const s = raw.trim().toLowerCase();
+  try {
+    const withProto = /^https?:\/\//i.test(s) ? s : `http://${s}`;
+    const hostname = new URL(withProto).hostname;
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '[::1]' ||
+      hostname.endsWith('.localhost')
+    );
+  } catch {
+    return s.includes('localhost') || s.includes('127.0.0.1');
+  }
+}
+
 function resolveWebhookIngestAbsolute(): string | null {
   const explicit = process.env.PUBLIC_WEBHOOK_BASE_URL?.trim();
-  const api = process.env.API_URL?.trim();
-  const railway = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
-  const base = explicit || api || (railway ? `https://${railway.replace(/^https?:\/\//, '')}` : '');
-  if (!base) return null;
-  return `${base.replace(/\/$/, '')}/api/webhooks/resend`;
+  const railwayDom = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+  const railwayStatic = process.env.RAILWAY_STATIC_URL?.trim(); // algunos proyectos exponen esta URL pública
+  const apiUrl = process.env.API_URL?.trim();
+
+  const candidates: string[] = [];
+  if (explicit) candidates.push(explicit);
+  if (railwayDom) candidates.push(stripTrailingSlash(`https://${railwayDom.replace(/^https?:\/\//, '')}`));
+  if (railwayStatic) candidates.push(stripTrailingSlash(railwayStatic));
+  if (apiUrl) candidates.push(stripTrailingSlash(apiUrl));
+
+  for (const c of candidates) {
+    const base = stripTrailingSlash(c);
+    if (!base || looksLikeLoopbackBase(base)) continue;
+    return `${base}/api/webhooks/resend`;
+  }
+
+  return null;
 }
 
 export async function buildResendWebhookStats(windowDays: number): Promise<ResendWebhookStats> {

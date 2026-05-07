@@ -397,19 +397,23 @@ export default function AdminEmailOpsPage() {
                       redeploy.
                     </li>
                     <li>
-                      La URL del webhook en Resend debe ser{' '}
+                      La URL del webhook en Resend debe ser la de tu API pública (Railway/Vercel no puede ser{' '}
+                      <code className="font-mono text-[11px]">localhost</code>) +{' '}
+                      <code className="font-mono text-[11px]">{stats.resendWebhook.ingestUrl}</code>
                       {stats.resendWebhook.ingestAbsoluteUrl ? (
-                        <code className="mt-1 block w-fit max-w-full select-all break-all rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-800 ring-1 ring-amber-200/80">
-                          {stats.resendWebhook.ingestAbsoluteUrl}
-                        </code>
+                        <>
+                          :{' '}
+                          <code className="mt-1 block w-fit max-w-full select-all break-all rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-800 ring-1 ring-amber-200/80">
+                            {stats.resendWebhook.ingestAbsoluteUrl}
+                          </code>
+                        </>
                       ) : (
-                        <span>
-                          <code className="font-mono text-[11px]">https://&lt;tu-api-pública&gt;</code>
-                          {stats.resendWebhook.ingestUrl}
-                        </span>
+                        <>
+                          . Si acá no ves la URL completa, definí en la API{' '}
+                          <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> con la base pública (
+                          ejemplo <code className="font-mono text-[11px]">https://xxx.up.railway.app</code>).
+                        </>
                       )}
-                      . Opcional: variable <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> en la API si el dominio
-                      público no coincide con <code className="font-mono text-[11px]">API_URL</code>.
                     </li>
                   </ol>
                 </AdminCallout>
