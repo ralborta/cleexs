@@ -8,6 +8,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Cleexs',
   description: 'AI Recommendation Index Platform',
+  icons: {
+    icon: [{ url: '/favicon.png', type: 'image/png', sizes: 'any' }],
+    shortcut: '/favicon.png',
+    apple: '/CleexsLogo.png',
+  },
 };
 
 export default function RootLayout({
