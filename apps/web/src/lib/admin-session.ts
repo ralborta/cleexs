@@ -39,6 +39,7 @@ export function verifyAdminSessionToken(token: string | undefined | null): boole
   }
 }
 
+/** Path debe incluir `/api/admin-ui/*`: si fuera solo `/admin`, el navegador no envía la cookie en fetch al proxy API y todas las rutas admin-ui devuelven 401. */
 export function adminCookieOptions() {
   const maxAge = 8 * 60 * 60;
   const secure = process.env.NODE_ENV === 'production';
@@ -46,7 +47,7 @@ export function adminCookieOptions() {
     httpOnly: true as const,
     secure,
     sameSite: 'lax' as const,
-    path: '/admin',
+    path: '/' as const,
     maxAge,
   };
 }
