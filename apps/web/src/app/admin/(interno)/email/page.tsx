@@ -99,6 +99,13 @@ export default function AdminEmailOpsPage() {
   const [testEmail, setTestEmail] = useState('');
   const [testBusy, setTestBusy] = useState(false);
   const [campaignPreviewBusyId, setCampaignPreviewBusyId] = useState<string | null>(null);
+  const [sendActionHint, setSendActionHint] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sendActionHint) return;
+    const id = window.setTimeout(() => setSendActionHint(null), 12000);
+    return () => window.clearTimeout(id);
+  }, [sendActionHint]);
 
   const loadAll = useCallback(async () => {
     setBusy(true);
@@ -141,6 +148,9 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
+      setSendActionHint(
+        'Envío aceptado por la API. Si no ves cambios, tocá «Refrescar datos». Las tarjetas de arriba y la tabla de auditoría son logs internos; «Resend · engagement» solo cambia cuando Resend puede llamar al webhook (RESEND_WEBHOOK_SECRET en Railway).',
+      );
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -209,6 +219,9 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
+      setSendActionHint(
+        `Prueba «${c.slug}» aceptada. Revisá auditoría y tarjetas; «Resend · engagement» solo con webhook configurado.`,
+      );
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -318,7 +331,8 @@ export default function AdminEmailOpsPage() {
                 Usa <strong className="font-semibold text-slate-800">Resend REST</strong> si hay{' '}
                 <code className="rounded-md bg-violet-100 px-1.5 py-0.5 font-mono text-[11px]">RESEND_API_KEY</code>; si no,{' '}
                 <strong className="font-semibold text-slate-800">SMTP</strong>. El envío queda en logs con slug{' '}
-                <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px]">admin-send-test</code>.
+                <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px]">admin-send-test</code>: actualiza las
+                tarjetas y la auditoría de abajo. La zona «Resend · engagement» es otro canal (webhooks) y puede seguir en cero.
               </>
             }
           >
@@ -342,6 +356,11 @@ export default function AdminEmailOpsPage() {
                 {testBusy ? 'Enviando…' : 'Enviar prueba'}
               </button>
             </form>
+            {sendActionHint ? (
+              <p className="mt-3 text-xs leading-relaxed text-slate-600" role="status">
+                {sendActionHint}
+              </p>
+            ) : null}
           </AdminPanelSection>
 
           {stats ? (
@@ -374,7 +393,9 @@ export default function AdminEmailOpsPage() {
               title={`Resend · entregas y engagement (${stats.resendWebhook.windowDays} días)`}
               description={
                 <span className="text-slate-600">
-                  Métricas solo desde webhooks guardados en Cleexs (no desde la API de Resend).
+                  Eventos que Resend envía por POST y esta API guarda tras verificar la firma. Independiente del envío por API:
+                  podés mandar correos y seguir viendo ceros aquí si falta <code className="font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code>{' '}
+                  o el webhook en Resend.
                 </span>
               }
             >
