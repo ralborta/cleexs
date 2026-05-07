@@ -5,7 +5,10 @@ export type ResendWebhookStats =
       available: true;
       windowDays: number;
       secretConfigured: boolean;
+      /** Path relativo */
       ingestUrl: string;
+      /** URL completa para pegar en Resend (si la API pudo deducir el dominio público) */
+      ingestAbsoluteUrl: string | null;
       eventsTotalLastWindow: number;
       eventsByTypeLastWindow: Record<string, number>;
       uniqueEmailsByStageLastWindow: {
@@ -22,6 +25,15 @@ export type ResendWebhookStats =
       available: false;
       reason: string;
     };
+
+function resolveWebhookIngestAbsolute(): string | null {
+  const explicit = process.env.PUBLIC_WEBHOOK_BASE_URL?.trim();
+  const api = process.env.API_URL?.trim();
+  const railway = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+  const base = explicit || api || (railway ? `https://${railway.replace(/^https?:\/\//, '')}` : '');
+  if (!base) return null;
+  return `${base.replace(/\/$/, '')}/api/webhooks/resend`;
+}
 
 export async function buildResendWebhookStats(windowDays: number): Promise<ResendWebhookStats> {
   const since = new Date();
@@ -66,6 +78,7 @@ export async function buildResendWebhookStats(windowDays: number): Promise<Resen
       windowDays,
       secretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
       ingestUrl: '/api/webhooks/resend',
+      ingestAbsoluteUrl: resolveWebhookIngestAbsolute(),
       eventsTotalLastWindow: eventsTotal,
       eventsByTypeLastWindow: Object.fromEntries(grouped.map((g) => [g.eventType, g._count._all])),
       uniqueEmailsByStageLastWindow: {
@@ -77,7 +90,7 @@ export async function buildResendWebhookStats(windowDays: number): Promise<Resen
         failed: uniqueFailed,
       },
       note:
-        'Ventana por recepción del webhook en Cleexs (created_at). En Resend: endpoint POST https://TU_API/api/webhooks/resend y variable RESEND_WEBHOOK_SECRET igual al signing secret. Activá tracking en el dominio para opens/clicks.',
+        'Solo cuenta eventos que lleguen por POST verificado (Svix). Sin RESEND_WEBHOOK_SECRET en Railway la API no guarda eventos: métricas quedan en 0. En Resend · Webhooks: misma URL que ingestAbsoluteUrl y el signing secret como variable.',
     };
   } catch (e) {
     return {

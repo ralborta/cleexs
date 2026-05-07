@@ -54,6 +54,7 @@ type ResendWebhookStats =
       windowDays: number;
       secretConfigured: boolean;
       ingestUrl: string;
+      ingestAbsoluteUrl: string | null;
       eventsTotalLastWindow: number;
       eventsByTypeLastWindow: Record<string, number>;
       uniqueEmailsByStageLastWindow: {
@@ -369,11 +370,52 @@ export default function AdminEmailOpsPage() {
           {stats?.resendWebhook?.available ? (
             <AdminPanelSection
               icon={Activity}
-              accent="emerald"
+              accent="indigo"
               title={`Resend · entregas y engagement (${stats.resendWebhook.windowDays} días)`}
-              description={<span className="text-slate-600">{stats.resendWebhook.note}</span>}
+              description={
+                <span className="text-slate-600">
+                  Métricas solo desde webhooks guardados en Cleexs (no desde la API de Resend).
+                </span>
+              }
             >
-              <div className="mb-5 flex flex-wrap items-center gap-2">
+              {!stats.resendWebhook.secretConfigured ? (
+                <AdminCallout variant="warning">
+                  <p className="font-semibold text-amber-950">Sin datos porque el webhook no puede guardarse</p>
+                  <p className="mt-2 text-sm leading-relaxed">
+                    La API devuelve <strong className="font-semibold">503</strong> a Resend si falta{' '}
+                    <code className="rounded bg-amber-100/80 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code>. Sin eventos en
+                    base, estos números quedan en <strong className="font-semibold">0</strong>.
+                  </p>
+                  <ol className="mt-3 list-decimal space-y-2 pl-4 text-sm leading-relaxed">
+                    <li>
+                      En el dashboard de Resend → Webhooks, copiá el <strong className="font-semibold">Signing secret</strong>{' '}
+                      (formato <code className="font-mono text-[11px]">whsec_…</code>).
+                    </li>
+                    <li>
+                      En Railway (servicio de la <strong className="font-semibold">API Cleexs</strong>), creá la variable{' '}
+                      <code className="rounded bg-amber-100/80 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code> con ese valor y
+                      redeploy.
+                    </li>
+                    <li>
+                      La URL del webhook en Resend debe ser{' '}
+                      {stats.resendWebhook.ingestAbsoluteUrl ? (
+                        <code className="mt-1 block w-fit max-w-full select-all break-all rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-800 ring-1 ring-amber-200/80">
+                          {stats.resendWebhook.ingestAbsoluteUrl}
+                        </code>
+                      ) : (
+                        <span>
+                          <code className="font-mono text-[11px]">https://&lt;tu-api-pública&gt;</code>
+                          {stats.resendWebhook.ingestUrl}
+                        </span>
+                      )}
+                      . Opcional: variable <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> en la API si el dominio
+                      público no coincide con <code className="font-mono text-[11px]">API_URL</code>.
+                    </li>
+                  </ol>
+                </AdminCallout>
+              ) : null}
+
+              <div className={`flex flex-wrap items-center gap-2 ${!stats.resendWebhook.secretConfigured ? 'mt-5' : ''}`}>
                 <span
                   className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                     stats.resendWebhook.secretConfigured
@@ -381,18 +423,24 @@ export default function AdminEmailOpsPage() {
                       : 'bg-amber-100 text-amber-900 ring-amber-200'
                   }`}
                 >
-                  {stats.resendWebhook.secretConfigured ? 'Signing secret en API' : 'Definí RESEND_WEBHOOK_SECRET'}
+                  {stats.resendWebhook.secretConfigured ? 'Webhook configurado en API' : 'Falta RESEND_WEBHOOK_SECRET'}
                 </span>
-                <code className="rounded-lg bg-slate-900/[0.06] px-2 py-1 font-mono text-[11px] text-slate-700">
-                  POST …{stats.resendWebhook.ingestUrl}
-                </code>
+                {stats.resendWebhook.ingestAbsoluteUrl ? (
+                  <code className="max-w-full select-all break-all rounded-lg bg-slate-900/[0.06] px-2 py-1 font-mono text-[11px] text-slate-700">
+                    POST {stats.resendWebhook.ingestAbsoluteUrl}
+                  </code>
+                ) : (
+                  <code className="rounded-lg bg-slate-900/[0.06] px-2 py-1 font-mono text-[11px] text-slate-700">
+                    POST …{stats.resendWebhook.ingestUrl}
+                  </code>
+                )}
                 <span className="text-xs text-slate-500">
-                  Eventos webhook recibidos:{' '}
+                  Eventos guardados (ventana):{' '}
                   <strong className="text-slate-800">{stats.resendWebhook.eventsTotalLastWindow}</strong>
                 </span>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {(
                   [
                     ['Enviados (email.sent)', Send, stats.resendWebhook.uniqueEmailsByStageLastWindow.sent],
@@ -405,9 +453,9 @@ export default function AdminEmailOpsPage() {
                 ).map(([label, Icon, v]) => (
                   <div
                     key={label}
-                    className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-emerald-50/30 p-4 shadow-sm ring-1 ring-slate-900/[0.03]"
+                    className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-indigo-50/25 p-4 shadow-sm ring-1 ring-slate-900/[0.03]"
                   >
-                    <Icon className="h-4 w-4 text-emerald-700/90" aria-hidden />
+                    <Icon className="h-4 w-4 text-indigo-700/90" aria-hidden />
                     <p className={`mt-2 ${labelCls} leading-snug text-slate-500`}>{label}</p>
                     <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{v}</p>
                     <p className="mt-1 text-[10px] leading-tight text-slate-400">Por email_id distinto en Cleexs</p>
@@ -417,9 +465,13 @@ export default function AdminEmailOpsPage() {
 
               <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/90 p-4">
                 <p className={`${labelCls} mb-2 text-slate-500`}>Conteo por tipo de evento</p>
-                <pre className="max-h-40 overflow-auto font-mono text-[10px] leading-relaxed text-slate-700">
-                  {JSON.stringify(stats.resendWebhook.eventsByTypeLastWindow, null, 2)}
-                </pre>
+                {Object.keys(stats.resendWebhook.eventsByTypeLastWindow).length === 0 ? (
+                  <p className="text-sm text-slate-500">Ningún evento en esta ventana.</p>
+                ) : (
+                  <pre className="max-h-40 overflow-auto font-mono text-[10px] leading-relaxed text-slate-700">
+                    {JSON.stringify(stats.resendWebhook.eventsByTypeLastWindow, null, 2)}
+                  </pre>
+                )}
               </div>
             </AdminPanelSection>
           ) : stats?.resendWebhook && !stats.resendWebhook.available ? (
