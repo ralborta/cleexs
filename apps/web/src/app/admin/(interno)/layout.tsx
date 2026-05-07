@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { unstable_noStore as noStore } from 'next/cache';
 import { AdminInternoNav } from '@/components/admin/admin-interno-nav';
 import { AdminInternoTopBar } from '@/components/admin/admin-interno-top-bar';
 import { assertAdminUiSession } from '@/lib/admin-api';
@@ -7,6 +8,7 @@ import { assertAdminUiSession } from '@/lib/admin-api';
 export const dynamic = 'force-dynamic';
 
 export default function AdminInternoLayout({ children }: { children: React.ReactNode }) {
+  noStore();
   if (!assertAdminUiSession()) {
     redirect('/admin/login');
   }

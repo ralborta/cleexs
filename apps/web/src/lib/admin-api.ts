@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-session';
 
@@ -30,8 +31,18 @@ export function adminApiSecret(): string {
   return s;
 }
 
-/** Valida sesión admin: cookie store y cabecera `Cookie` (por si el store difiere del request). */
+/** Lee cookie del objeto Request de Next (Route Handlers); prioridad sobre `cookies()` del contexto. */
+function cookieFromNextRequest(request: Request | undefined): string | undefined {
+  if (!request || !('cookies' in request)) return undefined;
+  const jar = (request as NextRequest).cookies;
+  return jar?.get(COOKIE_NAME)?.value;
+}
+
+/** Valida sesión admin: NextRequest.cookies, cookie store de headers(), cabecera Cookie. */
 export function assertAdminUiSession(request?: Request): boolean {
+  const fromReqCookie = cookieFromNextRequest(request);
+  if (verifyAdminSessionToken(fromReqCookie)) return true;
+
   const fromJar = cookies().get(COOKIE_NAME)?.value;
   if (verifyAdminSessionToken(fromJar)) return true;
 
