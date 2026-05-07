@@ -99,6 +99,7 @@ export default function AdminEmailOpsPage() {
 
   const [testEmail, setTestEmail] = useState('');
   const [testBusy, setTestBusy] = useState(false);
+  const [campaignPreviewBusyId, setCampaignPreviewBusyId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     setBusy(true);
@@ -194,6 +195,32 @@ export default function AdminEmailOpsPage() {
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
+    }
+  }
+
+  async function sendCampaignPreview(c: CampaignRow) {
+    const to = testEmail.trim().toLowerCase();
+    if (!to) {
+      setError('Completá el email destino arriba (misma caja que la prueba genérica).');
+      return;
+    }
+    setCampaignPreviewBusyId(c.id);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/email/send-campaign-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, campaignId: c.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
+      setMessage(`Prueba de campaña (${c.slug}) OK:\n${JSON.stringify(data, null, 2)}`);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setCampaignPreviewBusyId(null);
     }
   }
 
@@ -415,7 +442,13 @@ export default function AdminEmailOpsPage() {
             title="Campañas (sem × bucket)"
             description={
               <>
-                Duplicá filas con slug propio para <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">low</code> /{' '}
+                Sin ID en Resend igual hay <strong className="font-semibold text-slate-800">HTML incluido por semana</strong> (botón
+                Probar). Con plantilla en Resend, pegá el id y usá variables{' '}
+                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">WEEK</code>,{' '}
+                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">TITLE</code>,{' '}
+                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">PREHEADER</code>,{' '}
+                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">SLUG</code>. Duplicá filas con slug propio para{' '}
+                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">low</code> /{' '}
                 <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">mid</code> /{' '}
                 <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">high</code> cuando definan umbrales de score.
               </>
@@ -457,12 +490,20 @@ export default function AdminEmailOpsPage() {
                       <th className="py-3 pr-2">Slug</th>
                       <th className="py-3 pr-2">Título</th>
                       <th className="py-3 pr-2">ESP template id</th>
+                      <th className="py-3 pr-2">Prueba</th>
                       <th className="py-3 pr-2">Activo</th>
                     </tr>
                   </thead>
                   <tbody>
                     {campaigns.map((c) => (
-                      <CampaignEspRow key={c.id} c={c} onToggle={() => void toggleCampaign(c)} onSaveEsp={saveEspTemplate} />
+                      <CampaignEspRow
+                        key={c.id}
+                        c={c}
+                        previewBusy={campaignPreviewBusyId === c.id}
+                        onToggle={() => void toggleCampaign(c)}
+                        onSaveEsp={saveEspTemplate}
+                        onSendPreview={() => void sendCampaignPreview(c)}
+                      />
                     ))}
                   </tbody>
                 </table>
@@ -641,12 +682,16 @@ export default function AdminEmailOpsPage() {
 
 function CampaignEspRow({
   c,
+  previewBusy,
   onToggle,
   onSaveEsp,
+  onSendPreview,
 }: {
   c: CampaignRow;
+  previewBusy: boolean;
   onToggle: () => void;
   onSaveEsp: (c: CampaignRow, esp: string) => Promise<void>;
+  onSendPreview: () => void;
 }) {
   const [localEsp, setLocalEsp] = useState(c.espTemplateId ?? '');
   useEffect(() => {
@@ -679,6 +724,16 @@ function CampaignEspRow({
             Guardar
           </button>
         </div>
+      </td>
+      <td className="py-2.5 pr-2">
+        <button
+          type="button"
+          disabled={previewBusy}
+          onClick={onSendPreview}
+          className="rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-semibold text-violet-900 transition hover:bg-violet-100 disabled:opacity-50"
+        >
+          {previewBusy ? 'Enviando…' : 'Probar'}
+        </button>
       </td>
       <td className="py-2.5 pr-2">
         <button

@@ -6,6 +6,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { z } from 'zod';
+import { sendInternalCampaignTestEmail } from '../lib/internal-email-campaign-send';
 import { sendAdminTestEmail } from '../lib/internal-email-send';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { prisma } from '../lib/prisma';
@@ -58,6 +59,11 @@ const sendTestBody = z.object({
   to: z.string().email(),
 });
 
+const sendCampaignTestBody = z.object({
+  to: z.string().email(),
+  campaignId: z.string().uuid(),
+});
+
 const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof sendTestBody> }>('/email/send-test', async (request, reply) => {
     if (!requireAdminSecret(request)) {
@@ -82,6 +88,36 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.post<{ Body: z.infer<typeof sendCampaignTestBody> }>('/email/send-campaign-test', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = sendCampaignTestBody.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    const campaign = await prisma.cleexsInternalEmailCampaign.findUnique({
+      where: { id: parsed.data.campaignId },
+    });
+    if (!campaign) {
+      return reply.code(404).send({ error: 'Campaña no encontrada' });
+    }
+
+    try {
+      const result = await sendInternalCampaignTestEmail(parsed.data.to, campaign);
+      return { ok: true, slug: campaign.slug, ...result };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const code =
+        e && typeof e === 'object' && 'statusCode' in e ? Number((e as { statusCode: unknown }).statusCode) || 502 : 502;
+      return reply.code(code).send({ error: msg });
+    }
+  });
+
   fastify.post('/email/campaigns/seed-defaults', async (request, reply) => {
     if (!requireAdminSecret(request)) {
       return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
@@ -100,7 +136,7 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
           scoreBucket: CleexsEmailScoreBucket.all,
           title: `Semana ${w} — plantilla base (todas las bandas de score)`,
           description:
-            'Definí esp_template_id en admin cuando conectes el ESP. Personalización por score: duplicá campañas con bucket low/mid/high.',
+            'Incluye HTML por defecto al probar desde admin (sin id Resend). Con plantilla en Resend: definí esp_template_id y variables WEEK, TITLE, PREHEADER, SLUG. Personalización por score: duplicá campañas con bucket low/mid/high.',
           active: true,
           priority: 0,
         },
