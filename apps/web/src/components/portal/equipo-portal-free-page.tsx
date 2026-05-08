@@ -96,10 +96,12 @@ function InviteModalFree({
   onClose,
   onAdd,
   remaining,
+  suscripcionHref,
 }: {
   onClose: () => void;
   onAdd: (member: Omit<TeamMember, 'id' | 'joinedAt' | 'status'>) => void;
   remaining: number;
+  suscripcionHref: string;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -173,7 +175,7 @@ function InviteModalFree({
               con el mismo diseño y flujos avanzados.
             </span>
           </p>
-          <Link href="/planes" className="mt-2 inline-block text-[11px] font-semibold text-violet-700 hover:underline">
+          <Link href={suscripcionHref} className="mt-2 inline-block text-[11px] font-semibold text-violet-700 hover:underline">
             Ver planes y ampliar equipo →
           </Link>
         </div>
@@ -325,6 +327,7 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
     shell === 'portal-cliente'
       ? `/portal-cliente/reporte/${runId}`
       : `/portal-crecimiento/reporte/${runId}/cliente`;
+  const suscripcionHref = `${base}/suscripcion`;
 
   const used = members.length;
   const remaining = Math.max(0, FREE_SEAT_LIMIT - used);
@@ -431,7 +434,7 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
                   </span>
                 </div>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  Con <Link href="/planes" className="font-semibold text-violet-700 hover:underline">Premium</Link>: hasta{' '}
+                  Con <Link href={suscripcionHref} className="font-semibold text-violet-700 hover:underline">Premium</Link>: hasta{' '}
                   {PREMIUM_SEAT_LIMIT} personas.
                 </p>
               </div>
@@ -478,7 +481,7 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
                   Mismos controles de equipo y permisos, con cupo ampliado y funciones de Crecimiento.
                 </p>
                 <Link
-                  href="/planes"
+                  href={suscripcionHref}
                   className="mt-2 inline-flex text-[11px] font-semibold text-violet-700 hover:underline"
                 >
                   Comparar planes →
@@ -635,7 +638,7 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
                 </div>
 
                 <Link
-                  href="/planes"
+                  href={suscripcionHref}
                   className="mt-3 flex w-full items-center justify-center rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
                 >
                   Pasar a Premium
@@ -643,7 +646,7 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
 
                 <div className="mt-2 flex items-start gap-1.5 text-[10px] text-slate-500">
                   <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-                  El cobro y la facturación siguen las condiciones del plan que elijas en /planes.
+                  El cobro y la facturación siguen las condiciones del plan que elijas en Suscripción.
                 </div>
               </div>
             </div>
@@ -658,7 +661,12 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
       </div>
 
       {inviteOpen && (
-        <InviteModalFree onClose={() => setInviteOpen(false)} onAdd={handleAdd} remaining={remaining} />
+        <InviteModalFree
+          onClose={() => setInviteOpen(false)}
+          onAdd={handleAdd}
+          remaining={remaining}
+          suscripcionHref={suscripcionHref}
+        />
       )}
     </main>
   );

@@ -204,7 +204,7 @@ export function PortalFreeTierNav({
         </div>
         <p className="mt-2 text-[11px] text-slate-500">Renueva el {renewalLabel}</p>
         <Link
-          href="/planes"
+          href={`${base}/suscripcion`}
           className="mt-3 block w-full rounded-lg border-2 border-violet-500 bg-white py-2.5 text-center text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
         >
           Actualizar plan

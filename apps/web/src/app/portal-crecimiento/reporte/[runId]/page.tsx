@@ -1083,7 +1083,11 @@ export default function PortalReporteRunPage() {
           </div>
           <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Link
-              href="/planes"
+              href={
+                isPremiumPlan(planKey)
+                  ? `/portal-crecimiento/reporte/${runId}/premium/suscripcion`
+                  : `/portal-crecimiento/reporte/${runId}/cliente/suscripcion`
+              }
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
             >
               <Rocket className="h-4 w-4 shrink-0" aria-hidden />

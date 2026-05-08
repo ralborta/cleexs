@@ -378,7 +378,7 @@ export default function PortalReportePremiumInterpretacionPage() {
               actualmente tiene el plan <strong>{usage?.planDisplay || usage?.planKey || 'Plan'}</strong>.
             </p>
             <Link
-              href="/planes"
+              href={`/portal-crecimiento/reporte/${runId}/cliente/suscripcion`}
               className="mt-4 inline-flex rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
             >
               Ver Plan y Premium
