@@ -131,14 +131,6 @@ export function PortalCrecimientoTierNav({
           </NavRow>
         </div>
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
-          <NavRow
-            href={`${base}/competidores`}
-            icon={Target}
-            active={pathname?.includes('/competidores') ?? false}
-            suffix="disponible"
-          >
-            Competidores
-          </NavRow>
           <NavRow href={`${base}/equipo`} icon={Users} active={pathname?.includes('/equipo') ?? false} suffix="disponible">
             Equipo
           </NavRow>
@@ -152,6 +144,14 @@ export function PortalCrecimientoTierNav({
           </NavRow>
         </div>
         <div className="space-y-1">
+          <NavRow
+            href={`${base}/competidores`}
+            icon={Target}
+            active={pathname?.includes('/competidores') ?? false}
+            suffix="lock"
+          >
+            Competidores
+          </NavRow>
           <NavRow href={premium} icon={Sparkles} suffix="lock">
             Interpretación
           </NavRow>

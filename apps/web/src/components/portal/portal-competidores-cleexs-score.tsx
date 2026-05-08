@@ -27,17 +27,9 @@ import {
   YAxis,
 } from 'recharts';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
-import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
-import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-function nextRenewalLabel() {
-  const d = new Date();
-  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-  return next.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric', year: 'numeric' });
-}
 
 type UsageResponse = {
   planKey?: string;
@@ -360,36 +352,11 @@ function escapeCsv(cell: string) {
   return s;
 }
 
-export type PortalCompetidoresCleexsShell = 'premium' | 'portal-cliente' | 'portal-crecimiento-cliente';
-
-function portalPaths(runId: string, shell: PortalCompetidoresCleexsShell) {
-  const premiumBase = `/portal-crecimiento/reporte/${runId}/premium`;
-  const clienteFreeBase = `/portal-cliente/reporte/${runId}`;
-  const crecimientoClienteBase = `/portal-crecimiento/reporte/${runId}/cliente`;
-  const basePath =
-    shell === 'premium' ? premiumBase : shell === 'portal-cliente' ? clienteFreeBase : crecimientoClienteBase;
-  const informeTop3Href =
-    shell === 'premium'
-      ? `/portal-crecimiento/reporte/${runId}`
-      : shell === 'portal-cliente'
-        ? clienteFreeBase
-        : crecimientoClienteBase;
-  const portalHomeHref = shell === 'portal-cliente' ? '/portal-cliente' : '/portal-crecimiento';
-  const promptsDetailHref = shell === 'premium' ? `${premiumBase}/prompts` : `${basePath}#resumen-ejecutivo`;
-  return { basePath, informeTop3Href, portalHomeHref, promptsDetailHref };
-}
-
-export function PortalCompetidoresCleexsScore({
-  runId,
-  shell,
-}: {
-  runId: string;
-  shell: PortalCompetidoresCleexsShell;
-}) {
-  const { basePath, informeTop3Href, portalHomeHref, promptsDetailHref } = useMemo(
-    () => portalPaths(runId, shell),
-    [runId, shell],
-  );
+export function PortalCompetidoresCleexsScore({ runId }: { runId: string }) {
+  const basePath = `/portal-crecimiento/reporte/${runId}/premium`;
+  const informeTop3Href = `/portal-crecimiento/reporte/${runId}`;
+  const portalHomeHref = '/portal-crecimiento';
+  const promptsDetailHref = `${basePath}/prompts`;
 
   const [run, setRun] = useState<ExpandedRun | null>(null);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
@@ -699,25 +666,7 @@ export function PortalCompetidoresCleexsScore({
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        {shell === 'premium' ? (
-          <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-        ) : shell === 'portal-cliente' ? (
-          <PortalFreeTierNav
-            basePath={`/portal-cliente/reporte/${runId}`}
-            analysesUsed={usage?.usage?.scoreViews ?? 0}
-            analysesLimit={usage?.limits?.scoreViews ?? null}
-            renewalLabel={nextRenewalLabel()}
-          />
-        ) : (
-          <PortalCrecimientoTierNav
-            basePath={`/portal-crecimiento/reporte/${runId}/cliente`}
-            runId={runId}
-            planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
-            analysesUsed={usage?.usage?.scoreViews ?? 0}
-            analysesLimit={usage?.limits?.scoreViews ?? null}
-            renewalLabel={nextRenewalLabel()}
-          />
-        )}
+        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
 
         <div className="min-w-0 space-y-4">
           <nav className="flex flex-wrap items-center gap-x-2 text-xs text-violet-700">

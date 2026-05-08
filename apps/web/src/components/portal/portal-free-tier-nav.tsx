@@ -81,29 +81,6 @@ export function PortalFreeTierNav({
 
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
           <Link
-            href={`${base}/competidores`}
-            className={
-              onCompetidoresPage
-                ? 'group flex items-center justify-between gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
-                : 'group flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50'
-            }
-          >
-            <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <Target
-                className={`h-3.5 w-3.5 shrink-0 ${onCompetidoresPage ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
-                aria-hidden
-              />
-              <span
-                className={`min-w-0 break-words leading-snug ${onCompetidoresPage ? 'font-semibold text-violet-800' : ''}`}
-              >
-                Competidores
-              </span>
-            </span>
-            <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
-              Disponible
-            </span>
-          </Link>
-          <Link
             href={`${base}/equipo`}
             className={
               onEquipoPage
@@ -152,6 +129,21 @@ export function PortalFreeTierNav({
         </div>
 
         <div className="space-y-1">
+          <Link
+            href={`${base}/competidores`}
+            className={
+              onCompetidoresPage
+                ? 'flex items-center justify-between gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-slate-700 ring-1 ring-slate-200/80'
+                : 'flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-600 hover:bg-slate-50'
+            }
+            title="Incluido en plan Crecimiento / Premium"
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Target className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+              <span className="min-w-0 break-words leading-snug">Competidores</span>
+            </span>
+            <Lock className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+          </Link>
           <Link
             href={`${base}/comparacion`}
             className={

@@ -148,7 +148,14 @@ function MetricTile({
 
 export type ComparacionColdPaywallShell = 'portal-cliente' | 'portal-crecimiento';
 
-export function ComparacionColdPaywallPage({ shell }: { shell: ComparacionColdPaywallShell }) {
+export function ComparacionColdPaywallPage({
+  shell,
+  pageContext = 'comparacion',
+}: {
+  shell: ComparacionColdPaywallShell;
+  /** Misma pantalla de upsell; título de fondo distinto para Competidores vs Comparación */
+  pageContext?: 'comparacion' | 'competidores';
+}) {
   const params = useParams();
   const router = useRouter();
   const runId = params.runId as string;
@@ -189,7 +196,11 @@ export function ComparacionColdPaywallPage({ shell }: { shell: ComparacionColdPa
         if (!cancelled) {
           setUsage(data);
           if (isPremiumPlan(data.planKey)) {
-            router.replace(`/portal-crecimiento/reporte/${runId}/premium/comparacion`);
+            const premiumTarget =
+              pageContext === 'competidores'
+                ? `/portal-crecimiento/reporte/${runId}/premium/competidores`
+                : `/portal-crecimiento/reporte/${runId}/premium/comparacion`;
+            router.replace(premiumTarget);
             return;
           }
         }
@@ -202,7 +213,7 @@ export function ComparacionColdPaywallPage({ shell }: { shell: ComparacionColdPa
     return () => {
       cancelled = true;
     };
-  }, [runId, router, shell]);
+  }, [runId, router, shell, pageContext]);
 
   const analysesUsed = usage?.usage?.scoreViews ?? 0;
   const analysesLimitRaw = usage?.limits?.scoreViews;
@@ -240,7 +251,9 @@ export function ComparacionColdPaywallPage({ shell }: { shell: ComparacionColdPa
   if (!isFreePortalPlan(usage?.planKey)) {
     return (
       <main className="min-h-screen bg-slate-50 p-6">
-        <p className="text-center text-sm text-slate-600">Redirigiendo a Comparación Premium…</p>
+        <p className="text-center text-sm text-slate-600">
+          {pageContext === 'competidores' ? 'Redirigiendo a Competidores Premium…' : 'Redirigiendo a Comparación Premium…'}
+        </p>
       </main>
     );
   }
@@ -281,9 +294,13 @@ export function ComparacionColdPaywallPage({ shell }: { shell: ComparacionColdPa
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-base font-bold text-slate-900 sm:text-lg">Comparación</h1>
+                <h1 className="text-base font-bold text-slate-900 sm:text-lg">
+                  {pageContext === 'competidores' ? 'Competidores' : 'Comparación'}
+                </h1>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
-                  Evolución frente a tu última corrida con score y posición relativa frente al grupo.
+                  {pageContext === 'competidores'
+                    ? 'Cleexs Score del panel, ranking y visibilidad en Top 3 frente a competidores en esta corrida.'
+                    : 'Evolución frente a tu última corrida con score y posición relativa frente al grupo.'}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -550,7 +567,8 @@ export function ComparacionColdPaywallPage({ shell }: { shell: ComparacionColdPa
 
           <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 px-5 py-3 text-[10px] text-slate-500">
             <Lock className="h-3 w-3 shrink-0 text-slate-400" />
-            Tu plan actual es Free. Actualizá para desbloquear esta vista completa.
+            Tu plan actual es Free. Actualizá para desbloquear{' '}
+            {pageContext === 'competidores' ? 'el análisis completo de competidores' : 'esta vista completa'}.
           </p>
         </div>
       </div>

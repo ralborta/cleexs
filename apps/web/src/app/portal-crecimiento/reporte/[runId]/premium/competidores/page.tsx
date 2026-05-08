@@ -6,5 +6,5 @@ import { PortalCompetidoresCleexsScore } from '@/components/portal/portal-compet
 export default function CompetidoresPremiumRoutePage() {
   const params = useParams();
   const runId = params.runId as string;
-  return <PortalCompetidoresCleexsScore runId={runId} shell="premium" />;
+  return <PortalCompetidoresCleexsScore runId={runId} />;
 }
