@@ -8,7 +8,7 @@ import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from '../lib/pria';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
-import { executeRun, resolveActivePromptVersion } from '../lib/run-executor';
+import { executeRun, loadPromptsForRunExecution, resolveActivePromptVersion } from '../lib/run-executor';
 
 const runRoutes: FastifyPluginAsync = async (fastify) => {
   /** Portal cliente: crea run mensual y ejecuta análisis (mismos prompts que el dashboard). */
@@ -293,6 +293,8 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
     periodStart: z.string().datetime(),
     periodEnd: z.string().datetime(),
     runType: z.string().optional().default('monthly'),
+    /** Snapshot opcional: fija qué prompt guardado del portal se usa (además de weekly_portal + selección en marca) */
+    weeklyPortalSavedPromptId: z.string().uuid().optional().nullable(),
   });
 
   fastify.post<{ Body: z.infer<typeof createRunSchema> }>('/', async (request, reply) => {
@@ -304,6 +306,17 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(403).send({ error: canCreate.reason });
     }
 
+    if (data.weeklyPortalSavedPromptId) {
+      const sp = await prisma.brandPortalSavedPrompt.findFirst({
+        where: { id: data.weeklyPortalSavedPromptId, brandId: data.brandId },
+      });
+      if (!sp) {
+        return reply.code(400).send({
+          error: 'weeklyPortalSavedPromptId no pertenece a esta marca o no existe.',
+        });
+      }
+    }
+
     const run = await prisma.run.create({
       data: {
         tenantId: data.tenantId,
@@ -311,6 +324,7 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         periodStart: new Date(data.periodStart),
         periodEnd: new Date(data.periodEnd),
         runType: data.runType,
+        weeklyPortalSavedPromptId: data.weeklyPortalSavedPromptId ?? undefined,
         status: 'pending',
       },
       include: {
@@ -476,13 +490,20 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'No hay versión de prompts activa' });
       }
 
-      const prompts = await prisma.prompt.findMany({
-        where: {
-          promptVersionId: promptVersion.id,
-          active: true,
-        },
-        orderBy: { createdAt: 'asc' },
-      });
+      let prompts;
+      try {
+        prompts = await loadPromptsForRunExecution(
+          {
+            runType: run.runType,
+            weeklyPortalSavedPromptId: run.weeklyPortalSavedPromptId,
+            brand: { selectedWeeklyPortalPromptId: run.brand.selectedWeeklyPortalPromptId },
+          },
+          promptVersion.id
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Error resolviendo prompts';
+        return reply.code(400).send({ error: msg });
+      }
 
       if (prompts.length === 0) {
         return reply.code(400).send({ error: 'No hay prompts activos en la versión seleccionada' });

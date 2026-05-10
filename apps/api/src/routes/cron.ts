@@ -88,6 +88,8 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         tenantId: true,
         name: true,
+        selectedWeeklyPortalPromptId: true,
+        runSchedule: true,
       },
     });
 
@@ -97,6 +99,9 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       brandName: b.name,
       periodStart: periodStart.toISOString(),
       periodEnd: periodEnd.toISOString(),
+      selectedWeeklyPortalPromptId: b.selectedWeeklyPortalPromptId,
+      /** Al crear el run, usar runType `weekly_portal` y opcionalmente weeklyPortalSavedPromptId = este valor (snapshot) */
+      suggestedRunType: frequency === 'semanal' ? 'weekly_portal' : 'monthly',
     }));
 
     return { items, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() };

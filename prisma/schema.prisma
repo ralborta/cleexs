@@ -188,6 +188,8 @@ model Brand {
   autoDetected Boolean      @default(false) @map("auto_detected")
   classifierMeta Json?      @map("classifier_meta")
   runSchedule  RunSchedule? @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
+  /// Prompt guardado en portal (1 de 5) usado en corridas `weekly_portal` cuando está seleccionado
+  selectedWeeklyPortalPromptId String? @map("selected_weekly_portal_prompt_id")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
@@ -196,6 +198,8 @@ model Brand {
   aliases     BrandAlias[]
   competitors Competitor[]
   runs        Run[]
+  portalSavedPrompts              BrandPortalSavedPrompt[] @relation("BrandPortalSavedPrompts")
+  selectedWeeklyPortalPrompt      BrandPortalSavedPrompt?  @relation("BrandSelectedWeeklyPrompt", fields: [selectedWeeklyPortalPromptId], references: [id], onDelete: SetNull)
   priaReports PRIAReport[]
   leadSources LeadSource[]
   usageEvents UsageLedger[]
@@ -206,7 +210,28 @@ model Brand {
   @@index([runSchedule])
   @@index([domain])
   @@index([businessType])
+  @@index([selectedWeeklyPortalPromptId])
   @@map("brands")
+}
+
+/// Hasta 5 prompts guardados por marca (slots 0–4) para corridas semanales tipo `weekly_portal`
+model BrandPortalSavedPrompt {
+  id         String   @id @default(uuid())
+  brandId    String   @map("brand_id")
+  slot       Int // 0..4
+  title      String   @default("")
+  promptText String   @db.Text @map("prompt_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  brand                Brand    @relation("BrandPortalSavedPrompts", fields: [brandId], references: [id], onDelete: Cascade)
+  shadowPrompt         Prompt?
+  brandsSelectingThis  Brand[]  @relation("BrandSelectedWeeklyPrompt")
+  runsSnapshot         Run[]    @relation("RunWeeklyPortalPrompt")
+
+  @@unique([brandId, slot])
+  @@index([brandId])
+  @@map("brand_portal_saved_prompts")
 }
 
 model BrandAlias {
@@ -293,12 +318,15 @@ model Prompt {
   name            String?  // nombre corto por tipo, ej. "Urgencia (30%) - Recomendación"
   promptText      String   @db.Text @map("prompt_text")
   active          Boolean  @default(true)
+  /// Enlaza el prompt técnico (inactivo) generado desde BrandPortalSavedPrompt
+  brandPortalSavedPromptId String? @unique @map("brand_portal_saved_prompt_id")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   // Relations
   promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
   category        PromptCategory? @relation(fields: [categoryId], references: [id])
+  brandPortalSavedPrompt BrandPortalSavedPrompt? @relation(fields: [brandPortalSavedPromptId], references: [id], onDelete: SetNull)
   promptResults   PromptResult[]
   leadSources     LeadSource[]
 
@@ -326,6 +354,8 @@ model Run {
   periodStart DateTime    @map("period_start")
   periodEnd   DateTime    @map("period_end")
   runType     String      @default("monthly") @map("run_type")
+  /// Si se setea al crear el run, executeRun usa solo ese prompt guardado (snapshot)
+  weeklyPortalSavedPromptId String? @map("weekly_portal_saved_prompt_id")
   status      RunStatus   @default(pending)
   modelMeta   Json?       @map("model_meta") // { model, temperature, etc }
   tokensUsed  Int?        @default(0) @map("tokens_used")
@@ -336,6 +366,7 @@ model Run {
   // Relations
   tenant      Tenant      @relation(fields: [tenantId], references: [id])
   brand       Brand       @relation(fields: [brandId], references: [id])
+  weeklyPortalSavedPrompt BrandPortalSavedPrompt? @relation("RunWeeklyPortalPrompt", fields: [weeklyPortalSavedPromptId], references: [id], onDelete: SetNull)
   promptResults PromptResult[]
   priaReports PRIAReport[]
   leadSources LeadSource[]
@@ -344,6 +375,7 @@ model Run {
   @@index([brandId])
   @@index([tenantId, periodStart, periodEnd])
   @@index([status])
+  @@index([weeklyPortalSavedPromptId])
   @@map("runs")
 }
 

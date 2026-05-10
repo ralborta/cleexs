@@ -36,6 +36,45 @@ export interface ExecuteRunOptions {
   onProgress?: (completed: number, total: number, promptName?: string) => void;
 }
 
+type RunForPromptLoad = {
+  runType: string;
+  weeklyPortalSavedPromptId: string | null;
+  brand: { selectedWeeklyPortalPromptId: string | null };
+};
+
+/** Prompts a ejecutar: conjunto activo de la versión, o un solo “sombra” si es corrida portal semanal. */
+export async function loadPromptsForRunExecution(
+  run: RunForPromptLoad,
+  promptVersionId: string
+): Promise<Awaited<ReturnType<typeof prisma.prompt.findMany>>> {
+  const savedId =
+    run.weeklyPortalSavedPromptId ??
+    (run.runType === 'weekly_portal' ? run.brand.selectedWeeklyPortalPromptId : null);
+
+  if (savedId) {
+    const shadow = await prisma.prompt.findFirst({
+      where: { brandPortalSavedPromptId: savedId },
+    });
+    if (!shadow?.promptText?.trim()) {
+      throw new Error(
+        'Corrida weekly_portal: el prompt elegido no está disponible. Volvé a guardarlo en el portal premium o elegí otra opción.'
+      );
+    }
+    return [shadow];
+  }
+
+  if (run.runType === 'weekly_portal') {
+    throw new Error(
+      'Corrida weekly_portal: no hay prompt guardado seleccionado. Elegí una de las 5 opciones en el portal premium (Prompts) o enviá weeklyPortalSavedPromptId al crear el run.'
+    );
+  }
+
+  return prisma.prompt.findMany({
+    where: { promptVersionId, active: true },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
 /**
  * Ejecuta un Run: llama a OpenAI por cada prompt, guarda resultados y actualiza PRIA.
  * Usado por el endpoint de runs y por el flujo de diagnóstico público.
@@ -66,10 +105,7 @@ export async function executeRun(
 
   if (!promptVersion) throw new Error('No hay versión de prompts activa');
 
-  const prompts = await prisma.prompt.findMany({
-    where: { promptVersionId: promptVersion.id, active: true },
-    orderBy: { createdAt: 'asc' },
-  });
+  const prompts = await loadPromptsForRunExecution(run, promptVersion.id);
 
   if (prompts.length === 0) throw new Error('No hay prompts activos');
 
@@ -260,10 +296,7 @@ export async function executeRunGemini(
 
   if (!promptVersion) throw new Error('No hay versión de prompts activa');
 
-  const prompts = await prisma.prompt.findMany({
-    where: { promptVersionId: promptVersion.id, active: true },
-    orderBy: { createdAt: 'asc' },
-  });
+  const prompts = await loadPromptsForRunExecution(run, promptVersion.id);
 
   if (prompts.length === 0) throw new Error('No hay prompts activos');
 

@@ -12,17 +12,33 @@ import {
   Download,
   Loader2,
   MessageSquare,
+  Pencil,
   Sparkles,
   Target,
+  Trash2,
   Wand2,
   XCircle,
 } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 
-const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const DRAFT_KEY = 'cleexs_custom_prompt_draft';
+type WeeklySlotApi = {
+  slot: number;
+  id: string | null;
+  title: string;
+  promptText: string;
+  updatedAt: string | null;
+};
+
+type WeeklyPromptsPayload = {
+  brandId: string;
+  runSchedule: string | null;
+  selectedWeeklyPortalPromptId: string | null;
+  maxSlots: number;
+  slots: WeeklySlotApi[];
+};
 
 type UsageResponse = {
   planKey?: string;
@@ -186,20 +202,13 @@ export default function PromptsCorridaPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [draftOpen, setDraftOpen] = useState(false);
-  const [draftText, setDraftText] = useState('');
-  const [draftNotice, setDraftNotice] = useState(false);
-
-  useEffect(() => {
-    if (!run) return;
-    try {
-      const key = `${DRAFT_KEY}:${run.brand?.id ?? run.brand?.name ?? 'default'}`;
-      const s = localStorage.getItem(key);
-      if (s?.trim()) setDraftNotice(true);
-    } catch {
-      /* ignore */
-    }
-  }, [run]);
+  const [weeklyData, setWeeklyData] = useState<WeeklyPromptsPayload | null>(null);
+  const [weeklyLoadError, setWeeklyLoadError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorSlot, setEditorSlot] = useState(0);
+  const [editorTitle, setEditorTitle] = useState('');
+  const [editorText, setEditorText] = useState('');
+  const [weeklySaving, setWeeklySaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,7 +216,7 @@ export default function PromptsCorridaPage() {
       try {
         let token: string | null = null;
         try {
-          token = sessionStorage.getItem(TOKEN_KEY);
+          token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
         } catch {
           token = null;
         }
@@ -222,7 +231,7 @@ export default function PromptsCorridaPage() {
           fetch(`${API_URL}/api/me/usage`, { cache: 'no-store', headers }),
         ]);
         if (runRes.status === 401 || usageRes.status === 401) {
-          sessionStorage.removeItem(TOKEN_KEY);
+          sessionStorage.removeItem(PORTAL_SESSION_TOKEN_KEY);
           setLoadError('Sesión vencida.');
           setLoading(false);
           return;
@@ -252,6 +261,52 @@ export default function PromptsCorridaPage() {
       cancelled = true;
     };
   }, [runId]);
+
+  useEffect(() => {
+    const brandId = run?.brand?.id;
+    if (!brandId) {
+      setWeeklyData(null);
+      setWeeklyLoadError(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        let token: string | null = null;
+        try {
+          token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+        } catch {
+          token = null;
+        }
+        if (!token) return;
+        const res = await fetch(`${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts`, {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        if (res.status === 401) {
+          sessionStorage.removeItem(PORTAL_SESSION_TOKEN_KEY);
+          return;
+        }
+        if (!res.ok) {
+          const b = await res.json().catch(() => ({}));
+          setWeeklyLoadError((b as { error?: string }).error || `Error ${res.status}`);
+          setWeeklyData(null);
+          return;
+        }
+        setWeeklyLoadError(null);
+        setWeeklyData((await res.json()) as WeeklyPromptsPayload);
+      } catch {
+        if (!cancelled) {
+          setWeeklyLoadError('No se pudieron cargar los prompts guardados.');
+          setWeeklyData(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [run?.brand?.id]);
 
   const aliases = run?.brand.aliases?.map((a) => a.alias).filter(Boolean) ?? [];
   const brandName = run?.brand.name ?? '';
@@ -362,23 +417,96 @@ export default function PromptsCorridaPage() {
     URL.revokeObjectURL(url);
   }
 
-  function openDraft() {
-    try {
-      const stored = localStorage.getItem(`${DRAFT_KEY}:${run?.brand?.id ?? run?.brand?.name ?? 'default'}`);
-      setDraftText(stored ?? '');
-    } catch {
-      setDraftText('');
-    }
-    setDraftOpen(true);
+  function openEditorForSlot(slot: number) {
+    const row = weeklyData?.slots.find((s) => s.slot === slot);
+    setEditorSlot(slot);
+    setEditorTitle(row?.title ?? '');
+    setEditorText(row?.promptText ?? '');
+    setEditorOpen(true);
   }
 
-  function saveDraft() {
+  async function persistWeeklyPayload(): Promise<boolean> {
+    const brandId = run?.brand?.id;
+    if (!brandId) return false;
+    const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+    if (!token) return false;
+    const res = await fetch(`${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts`, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setWeeklyData((await res.json()) as WeeklyPromptsPayload);
+    return res.ok;
+  }
+
+  async function saveEditorSlot() {
+    const brandId = run?.brand?.id;
+    if (!brandId) return;
+    const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+    if (!token) return;
+    const text = editorText.trim();
+    if (!text) return;
+    setWeeklySaving(true);
     try {
-      localStorage.setItem(`${DRAFT_KEY}:${run?.brand?.id ?? run?.brand?.name ?? 'default'}`, draftText.trim());
-      setDraftNotice(true);
-      setDraftOpen(false);
-    } catch {
-      /* ignore */
+      const res = await fetch(
+        `${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts/${editorSlot}`,
+        {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: editorTitle.trim(), promptText: text }),
+        },
+      );
+      if (res.ok) {
+        setEditorOpen(false);
+        await persistWeeklyPayload();
+      } else {
+        const b = await res.json().catch(() => ({}));
+        setWeeklyLoadError((b as { error?: string }).error || 'No se pudo guardar.');
+      }
+    } finally {
+      setWeeklySaving(false);
+    }
+  }
+
+  async function deleteSlot(slot: number) {
+    const brandId = run?.brand?.id;
+    if (!brandId) return;
+    const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+    if (!token) return;
+    if (!confirm('¿Borrar esta opción guardada?')) return;
+    setWeeklySaving(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts/${slot}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (res.ok || res.status === 204) await persistWeeklyPayload();
+    } finally {
+      setWeeklySaving(false);
+    }
+  }
+
+  async function setWeeklySelection(savedPromptId: string | null) {
+    const brandId = run?.brand?.id;
+    if (!brandId) return;
+    const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+    if (!token) return;
+    setWeeklySaving(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts/selection`,
+        {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ savedPromptId }),
+        },
+      );
+      if (res.ok) await persistWeeklyPayload();
+      else {
+        const b = await res.json().catch(() => ({}));
+        setWeeklyLoadError((b as { error?: string }).error || 'No se pudo actualizar la selección.');
+      }
+    } finally {
+      setWeeklySaving(false);
     }
   }
 
@@ -500,34 +628,130 @@ export default function PromptsCorridaPage() {
                 <StatCard icon={<BarChart3 className="h-4 w-4 text-blue-600" />} label="Promedio desempeño" value={`${avgPct}%`} sub="Sobre todas las consultas" />
               </div>
 
-              {(draftNotice || draftText.trim()) && (
+              {weeklyLoadError ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
-                  Tenés un <strong>borrador de prompt personalizado</strong> guardado en este navegador. La corrida oficial no cambia hasta que ejecutes una nueva desde el portal.
+                  {weeklyLoadError}
                 </div>
-              )}
+              ) : null}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm">
-                <div className="flex items-start gap-3">
+              <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
                     <Wand2 className="h-5 w-5 text-violet-700" />
                   </span>
-                  <div>
-                    <p className="font-semibold text-slate-900">Generá tu propio prompt</p>
-                    <p className="mt-1 max-w-xl text-xs text-slate-600">
-                      Probá una consulta personalizada y definí cómo medirías un escenario concreto de marca. Tu borrador
-                      no modifica esta corrida; queda solo en este dispositivo hasta que lo pegues en una nueva corrida o
-                      lo compartas con tu equipo.
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-900">Hasta 5 prompts guardados · corrida semanal</p>
+                    <p className="mt-1 max-w-3xl text-xs text-slate-600">
+                      Guardá consultas en la cuenta (no solo en el navegador). Elegí <strong>una</strong> para las corridas
+                      programadas con <code className="rounded bg-violet-100 px-1">runType: weekly_portal</code> (n8n /
+                      API). La corrida mensual del portal sigue usando el set completo de prompts del tenant.
                     </p>
+                    {weeklyData?.runSchedule === 'semanal' ? (
+                      <p className="mt-2 text-xs font-medium text-violet-800">
+                        Esta marca tiene frecuencia <strong>semanal</strong> configurada: asegurate de tener un prompt
+                        seleccionado y de crear el run con tipo <code className="rounded bg-white px-1">weekly_portal</code>.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={openDraft}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
-                >
-                  Crear prompt personalizado
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+
+                {!run.brand?.id ? (
+                  <p className="mt-4 text-sm text-slate-500">No hay marca asociada al reporte; no se pueden guardar prompts.</p>
+                ) : !weeklyData ? (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+                    Cargando opciones guardadas…
+                  </div>
+                ) : (
+                  <ul className="mt-4 space-y-2">
+                    {weeklyData.slots.map((s) => {
+                      const filled = Boolean(s.id && s.promptText.trim());
+                      const selected = filled && weeklyData.selectedWeeklyPortalPromptId === s.id;
+                      return (
+                        <li
+                          key={s.slot}
+                          className={`flex flex-wrap items-start gap-3 rounded-xl border p-3 ${
+                            selected ? 'border-violet-400 bg-violet-50/60' : 'border-slate-200 bg-white'
+                          }`}
+                        >
+                          <div className="flex min-w-0 flex-1 flex-col gap-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-slate-400">Opción {s.slot + 1}</span>
+                              {filled ? (
+                                <span className="truncate text-sm font-semibold text-slate-900">
+                                  {s.title?.trim() || 'Sin título'}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-slate-500">Vacío</span>
+                              )}
+                            </div>
+                            {filled ? (
+                              <p className="line-clamp-2 text-xs text-slate-600">{s.promptText}</p>
+                            ) : (
+                              <p className="text-xs text-slate-500">Guardá un texto para usarlo en corridas semanales.</p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            {filled ? (
+                              <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-violet-800">
+                                <input
+                                  type="radio"
+                                  name="weekly-prompt-pick"
+                                  checked={selected}
+                                  disabled={weeklySaving}
+                                  onChange={() => void setWeeklySelection(s.id)}
+                                  className="text-violet-600"
+                                />
+                                Usar en semanal
+                              </label>
+                            ) : null}
+                            <button
+                              type="button"
+                              disabled={weeklySaving}
+                              onClick={() => openEditorForSlot(s.slot)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              {filled ? 'Editar' : 'Agregar'}
+                            </button>
+                            {filled ? (
+                              <button
+                                type="button"
+                                disabled={weeklySaving}
+                                onClick={() => void deleteSlot(s.slot)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-rose-100 bg-rose-50 px-2 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Borrar
+                              </button>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {weeklyData?.selectedWeeklyPortalPromptId ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <p className="text-[11px] text-slate-600">
+                      Selección activa para <strong>weekly_portal</strong>. Podés cambiarla con otro radio o quitarla.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={weeklySaving}
+                      onClick={() => void setWeeklySelection(null)}
+                      className="text-[11px] font-semibold text-violet-700 underline hover:text-violet-900 disabled:opacity-50"
+                    >
+                      Quitar selección
+                    </button>
+                  </div>
+                ) : weeklyData ? (
+                  <p className="mt-3 text-[11px] text-slate-500">
+                    Ningún prompt seleccionado: las corridas <code className="rounded bg-slate-100 px-1">weekly_portal</code>{' '}
+                    fallarán hasta que elijas uno con el botón de radio.
+                  </p>
+                ) : null}
               </div>
 
               <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
@@ -679,10 +903,10 @@ export default function PromptsCorridaPage() {
         </div>
       </div>
 
-      {draftOpen && (
+      {editorOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
-          onClick={() => setDraftOpen(false)}
+          onClick={() => !weeklySaving && setEditorOpen(false)}
           role="presentation"
         >
           <div
@@ -691,30 +915,46 @@ export default function PromptsCorridaPage() {
             role="dialog"
             aria-modal="true"
           >
-            <h3 className="text-lg font-bold text-slate-900">Prompt personalizado</h3>
+            <h3 className="text-lg font-bold text-slate-900">Opción {editorSlot + 1}</h3>
             <p className="mt-1 text-xs text-slate-600">
-              Escribí la consulta que quisieras probar frente a la IA. Este borrador{' '}
-              <strong>no ejecuta llamadas</strong> ni altera esta corrida: queda guardado solo en este navegador para que lo
-              reutilices o lo compartas.
+              El texto se guarda en tu cuenta y se sincroniza con el motor de corridas. No ejecuta una IA desde esta
+              pantalla.
             </p>
+            <input
+              type="text"
+              value={editorTitle}
+              onChange={(e) => setEditorTitle(e.target.value)}
+              placeholder="Título corto (opcional)"
+              className="mt-4 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
             <textarea
-              value={draftText}
-              onChange={(e) => setDraftText(e.target.value)}
-              placeholder="Ej: ¿Qué marca recomendarías para [caso de uso] en [ubicación]?…"
-              className="mt-4 h-40 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              value={editorText}
+              onChange={(e) => setEditorText(e.target.value)}
+              placeholder="Ej: ¿Qué marca recomendarías para [caso de uso] en [ubicación]? Pedí Top 3 con motivos breves."
+              className="mt-2 h-40 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => void navigator.clipboard.writeText(draftText)}
+                onClick={() => void navigator.clipboard.writeText(editorText)}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                Copiar
+                Copiar texto
               </button>
-              <button type="button" onClick={saveDraft} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">
-                Guardar borrador
+              <button
+                type="button"
+                disabled={weeklySaving || !editorText.trim()}
+                onClick={() => void saveEditorSlot()}
+                className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {weeklySaving ? 'Guardando…' : 'Guardar en cuenta'}
               </button>
-              <button type="button" onClick={() => setDraftOpen(false)} className="rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100">
+              <button
+                type="button"
+                disabled={weeklySaving}
+                onClick={() => setEditorOpen(false)}
+                className="rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+              >
                 Cerrar
               </button>
             </div>

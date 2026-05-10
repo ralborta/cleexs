@@ -24,6 +24,7 @@ import adminDashboardRoutes from './routes/admin-dashboard';
 import webhooksResendRoutes from './routes/webhooks-resend';
 import authPortalRoutes from './routes/auth-portal';
 import meReferralRoutes from './routes/me-referral';
+import portalWeeklyPromptsRoutes from './routes/portal-weekly-prompts';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -102,6 +103,7 @@ async function bootstrap() {
   await server.register(authPortalRoutes, { prefix: '/api/auth' });
   await server.register(usageRoutes, { prefix: '/api' });
   await server.register(meReferralRoutes, { prefix: '/api' });
+  await server.register(portalWeeklyPromptsRoutes, { prefix: '/api/portal' });
   await server.register(profileRoutes, { prefix: '/api' });
   await server.register(adminEntitlementRoutes, { prefix: '/api/admin' });
   await server.register(adminProvisionRoutes, { prefix: '/api/admin' });
