@@ -1231,6 +1231,9 @@ export default function PromptsCorridaPage() {
                 ))}
               </div>
             ) : null}
+            <input
+              type="text"
+              value={editorTitle}
               onChange={(e) => setEditorTitle(e.target.value)}
               placeholder="Título corto (opcional)"
               className="mt-4 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
