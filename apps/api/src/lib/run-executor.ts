@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import type { PromptResultFlags, Top3Entry } from '@cleexs/shared';
 import { prisma } from './prisma';
 import { parseTop3 } from './parsing';
 import { calculateScore } from '@cleexs/shared';
@@ -42,28 +43,26 @@ type RunForPromptLoad = {
   brand: { selectedWeeklyPortalPromptId: string | null };
 };
 
-/** Prompts a ejecutar: conjunto activo de la versión, o un solo “sombra” si es corrida portal semanal. */
+/** Prompts a ejecutar: conjunto activo de la versión, o un solo “sombra” solo si runType === weekly_portal. */
 export async function loadPromptsForRunExecution(
   run: RunForPromptLoad,
   promptVersionId: string
 ): Promise<Awaited<ReturnType<typeof prisma.prompt.findMany>>> {
-  const savedId =
-    run.weeklyPortalSavedPromptId ??
-    (run.runType === 'weekly_portal' ? run.brand.selectedWeeklyPortalPromptId : null);
-
-  if (savedId) {
-    const shadow = await prisma.prompt.findFirst({
-      where: { brandPortalSavedPromptId: savedId },
-    });
-    if (!shadow?.promptText?.trim()) {
-      throw new Error(
-        'Corrida weekly_portal: el prompt elegido no está disponible. Volvé a guardarlo en el portal premium o elegí otra opción.'
-      );
-    }
-    return [shadow];
-  }
-
   if (run.runType === 'weekly_portal') {
+    const savedId = run.weeklyPortalSavedPromptId ?? run.brand.selectedWeeklyPortalPromptId;
+
+    if (savedId) {
+      const shadow = await prisma.prompt.findFirst({
+        where: { brandPortalSavedPromptId: savedId },
+      });
+      if (!shadow?.promptText?.trim()) {
+        throw new Error(
+          'Corrida weekly_portal: el prompt elegido no está disponible. Volvé a guardarlo en el portal premium o elegí otra opción.'
+        );
+      }
+      return [shadow];
+    }
+
     throw new Error(
       'Corrida weekly_portal: no hay prompt guardado seleccionado. Elegí una de las 5 opciones en el portal premium (Prompts) o enviá weeklyPortalSavedPromptId al crear el run.'
     );
@@ -73,6 +72,100 @@ export async function loadPromptsForRunExecution(
     where: { promptVersionId, active: true },
     orderBy: { createdAt: 'asc' },
   });
+}
+
+const OPENAI_RANKING_SYSTEM =
+  'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
+  'Incluí marcas y luego un breve motivo por cada una.';
+
+export type OpenAIRankingInput = {
+  promptText: string;
+  brandName: string;
+  competitors: Array<{ name: string; aliases?: string[] }>;
+  brandAliases: string[];
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+};
+
+/**
+ * Una sola consulta contra OpenAI (mismo formato que executeRun): sin Persistir Run ni PromptResult.
+ * Para previews del portal antes de guardar el texto en BrandPortalSavedPrompt.
+ */
+export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Promise<{
+  responseText: string;
+  top3: Top3Entry[];
+  flags: PromptResultFlags;
+  score: number;
+  brandPosition: number | null;
+  totalTokens: number;
+}> {
+  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY no configurada');
+
+  const competitors = input.competitors.map((c) => ({
+    name: c.name,
+    aliases: (c.aliases as string[]) || [],
+  }));
+  const competitorList = competitors.map((c) => c.name).join(', ');
+  const brandAliases = input.brandAliases;
+  const model = input.model ?? 'gpt-4o-mini';
+  const temperature = input.temperature ?? 0.2;
+  const maxTokens = input.maxTokens ?? 800;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90_000);
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    signal: controller.signal,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: OPENAI_RANKING_SYSTEM },
+        {
+          role: 'user',
+          content:
+            `${input.promptText}\n\n` +
+            `Marca a medir: ${input.brandName}.\n` +
+            `Competidores: ${competitorList || 'no informados'}.`,
+        },
+      ],
+    }),
+  }).finally(() => clearTimeout(timeoutId));
+
+  const responseJson = (await response.json()) as {
+    error?: { message?: string };
+    usage?: { total_tokens?: number };
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  if (!response.ok) {
+    throw new Error(responseJson?.error?.message || 'Error en OpenAI');
+  }
+
+  const totalTokens = responseJson?.usage?.total_tokens ?? 0;
+  const raw = responseJson?.choices?.[0]?.message?.content?.trim() || '';
+
+  const { top3, flags } = parseTop3(raw, input.brandName, competitors);
+  const brandPosition =
+    top3.find(
+      (e) =>
+        e.name.toLowerCase() === input.brandName.toLowerCase() ||
+        brandAliases.some((a) => a.toLowerCase() === e.name.toLowerCase())
+    )?.position ?? null;
+
+  const score = calculateScore(brandPosition);
+  const maxSize = 100 * 1024;
+  const truncated = raw.length > maxSize;
+  const responseText = truncated ? raw.slice(0, maxSize) : raw;
+
+  return { responseText, top3, flags, score, brandPosition, totalTokens };
 }
 
 /**
@@ -155,9 +248,7 @@ export async function executeRun(
         messages: [
           {
             role: 'system',
-            content:
-              'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
-              'Incluí marcas y luego un breve motivo por cada una.',
+            content: OPENAI_RANKING_SYSTEM,
           },
           {
             role: 'user',

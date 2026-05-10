@@ -307,6 +307,11 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (data.weeklyPortalSavedPromptId) {
+      if (data.runType !== 'weekly_portal') {
+        return reply.code(400).send({
+          error: 'weeklyPortalSavedPromptId solo puede usarse cuando runType es weekly_portal.',
+        });
+      }
       const sp = await prisma.brandPortalSavedPrompt.findFirst({
         where: { id: data.weeklyPortalSavedPromptId, brandId: data.brandId },
       });

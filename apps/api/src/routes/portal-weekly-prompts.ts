@@ -1,8 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { EntitlementAction, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { syncShadowPromptForSaved } from '../lib/portal-weekly-prompt-sync';
+import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
+import { canCreateRun } from '../lib/tenant';
+import { executeOpenAIRankingPrompt } from '../lib/run-executor';
 
 const MAX_SLOT = 4;
 
@@ -50,6 +55,102 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       slots,
     };
   });
+
+  const promptTryBody = z.object({
+    promptText: z.string().min(5).max(20000),
+  });
+
+  /** Una consulta rápida: misma IA que corridas pero sin crear Run ni guardar; consume un score_generate como portal/mes. */
+  fastify.post<{ Params: { brandId: string }; Body: unknown }>(
+    '/brands/:brandId/prompt-try',
+    async (request, reply) => {
+      const portalUser = await resolvePortalUserFromRequest(request);
+      if (!portalUser) return reply.code(401).send({ error: 'Autenticación requerida.' });
+
+      const parsedBody = promptTryBody.safeParse(request.body ?? {});
+      if (!parsedBody.success) return reply.code(400).send({ error: 'promptText inválido.', details: parsedBody.error.flatten() });
+
+      const { tenantId, userId } = portalUser;
+      const brandId = request.params.brandId;
+
+      const brand = await prisma.brand.findFirst({
+        where: { id: brandId, tenantId },
+        include: {
+          aliases: true,
+          competitors: true,
+        },
+      });
+      if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
+
+      const canCreate = await canCreateRun(tenantId);
+      if (!canCreate.allowed) {
+        return reply.code(403).send({ error: canCreate.reason || 'No podés ejecutar una consulta ahora.' });
+      }
+
+      const genCheck = await checkEntitlement(prisma, {
+        actor: { tenantId, userId },
+        action: EntitlementAction.score_generate,
+      });
+      if (!genCheck.allowed) {
+        return reply.code(403).send({
+          error: genCheck.reason || 'Límite de análisis alcanzado.',
+          code: genCheck.code,
+          usage: genCheck.usage,
+          limit: genCheck.limit,
+        });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(503).send({ error: 'OPENAI_API_KEY no configurada en el servidor.' });
+      }
+
+      try {
+        await consumeEntitlement(prisma, {
+          actor: { tenantId, userId },
+          action: EntitlementAction.score_generate,
+          brandId,
+          dedupeKey: `portal-prompt-try:${userId}:${randomUUID()}`,
+          metaJson: { brandId, kind: 'portal_prompt_try' },
+        });
+      } catch (err) {
+        fastify.log.error({ err }, 'consumeEntitlement portal prompt-try');
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
+          return reply.code(503).send({
+            error: 'usage_ledger_requerido',
+            message: 'Falta la tabla usage_ledger. Ejecutá migraciones en la API.',
+          });
+        }
+        throw err;
+      }
+
+      try {
+        const competitors = brand.competitors.map((c) => ({
+          name: c.name,
+          aliases: (c.aliases as string[]) || [],
+        }));
+
+        const out = await executeOpenAIRankingPrompt({
+          promptText: parsedBody.data.promptText.trim(),
+          brandName: brand.name,
+          competitors,
+          brandAliases: brand.aliases.map((a) => a.alias),
+        });
+
+        return {
+          score: out.score,
+          brandPosition: out.brandPosition,
+          top3: out.top3,
+          flags: out.flags,
+          responseText: out.responseText,
+          totalTokens: out.totalTokens,
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Error al ejecutar la consulta';
+        fastify.log.error({ err: e, brandId }, 'executeOpenAIRankingPrompt portal');
+        return reply.code(502).send({ error: msg });
+      }
+    }
+  );
 
   const putBody = z.object({
     title: z.string().max(160).optional().default(''),
@@ -184,6 +285,14 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       if (!row) return reply.code(400).send({ error: 'Ese prompt no pertenece a esta marca.' });
       if (!row.promptText.trim()) {
         return reply.code(400).send({ error: 'El prompt está vacío; guardá texto antes de seleccionarlo.' });
+      }
+
+      try {
+        await syncShadowPromptForSaved(portalUser.tenantId, row);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'No se pudo sincronizar el prompt técnico';
+        fastify.log.error({ err: e, savedId: row.id }, 'syncShadowPromptForSaved on selection');
+        return reply.code(503).send({ error: msg });
       }
 
       await prisma.brand.update({
