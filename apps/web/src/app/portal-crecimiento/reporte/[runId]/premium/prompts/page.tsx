@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   BarChart3,
+  CalendarClock,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -13,6 +14,7 @@ import {
   Loader2,
   MessageSquare,
   Pencil,
+  Save,
   Sparkles,
   Target,
   Trash2,
@@ -253,6 +255,54 @@ function ScoreBandBar({ scorePct }: { scorePct: number }) {
   );
 }
 
+function firstEmptyWeeklySlot(slots: WeeklySlotApi[]): number | null {
+  for (let i = 0; i <= 4; i++) {
+    const row = slots.find((s) => s.slot === i);
+    if (!row?.id || !row.promptText.trim()) return i;
+  }
+  return null;
+}
+
+/** Barras simples Top 3 + presencia de la marca (visual rápido). */
+function QuickTop3Bars({
+  top3,
+  brandName,
+  aliases,
+}: {
+  top3: QuickTryTopRow[];
+  brandName: string;
+  aliases: string[];
+}) {
+  const rows = top3.slice(0, 3);
+  const heightsPx = [52, 72, 92] as const;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-slate-700">Podio sugerido</p>
+      <div className="flex h-[110px] items-end justify-between gap-2 rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white px-4 pb-2 pt-3">
+        {rows.map((row, idx) => {
+          const isYou =
+            normalizeName(row.name) === normalizeName(brandName) ||
+            aliases.some((a) => normalizeName(row.name) === normalizeName(a));
+          const h = heightsPx[idx] ?? 48;
+          return (
+            <div key={`${row.position}-${row.name}`} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+              <div
+                className={`w-full max-w-[56px] rounded-t-lg shadow-sm transition-all ${isYou ? 'bg-gradient-to-t from-violet-600 to-violet-400' : 'bg-gradient-to-t from-slate-400 to-slate-300'}`}
+                style={{ height: h }}
+                title={row.name}
+              />
+              <span className="truncate text-center text-[9px] font-bold text-slate-600">{idx + 1}º</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] leading-snug text-slate-500">
+        Barra violeta: tu marca en esa posición. Gris: competidores u otras marcas.
+      </p>
+    </div>
+  );
+}
+
 export default function PromptsCorridaPage() {
   const params = useParams();
   const runId = params.runId as string;
@@ -279,6 +329,7 @@ export default function PromptsCorridaPage() {
   const [quickTryError, setQuickTryError] = useState<string | null>(null);
   const [quickResult, setQuickResult] = useState<QuickTryPayload | null>(null);
   const [openedFromQuickTry, setOpenedFromQuickTry] = useState(false);
+  const [inlineOk, setInlineOk] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -453,6 +504,11 @@ export default function PromptsCorridaPage() {
     }));
   }, [donutCounts]);
 
+  const hasSavedWeeklyPrompts = useMemo(
+    () => Boolean(weeklyData?.slots.some((s) => s.id && s.promptText.trim())),
+    [weeklyData],
+  );
+
   function csvEscape(s: string) {
     const t = String(s ?? '').replace(/"/g, '""');
     return `"${t}"`;
@@ -571,6 +627,99 @@ export default function PromptsCorridaPage() {
     });
     if (res.ok) setWeeklyData((await res.json()) as WeeklyPromptsPayload);
     return res.ok;
+  }
+
+  /** PUT slot; refresca lista. Devuelve id del guardado o null si falla. */
+  async function putWeeklySlot(slot: number, title: string, promptText: string): Promise<string | null> {
+    const brandId = run?.brand?.id;
+    if (!brandId) return null;
+    const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+    if (!token) return null;
+    const res = await fetch(
+      `${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts/${slot}`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim(), promptText: promptText.trim() }),
+      },
+    );
+    const b = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setWeeklyLoadError((b as { error?: string }).error || 'No se pudo guardar.');
+      return null;
+    }
+    setWeeklyLoadError(null);
+    const id = (b as { id?: string }).id;
+    await persistWeeklyPayload();
+    return id ?? null;
+  }
+
+  async function saveDraftFromToolbar() {
+    setWeeklyLoadError(null);
+    setInlineOk(null);
+    setQuickTryError(null);
+    const text = draftPrompt.trim();
+    if (text.length < 1) {
+      setQuickTryError('Escribí un texto para guardar.');
+      return;
+    }
+    if (!run?.brand?.id || !weeklyData) {
+      setQuickTryError('Esperá a que carguen los datos de la marca.');
+      return;
+    }
+    const slot = firstEmptyWeeklySlot(weeklyData.slots);
+    if (slot === null) {
+      setWeeklyLoadError('Las 5 opciones están llenas. Editá o borrá una en el panel de la derecha.');
+      return;
+    }
+    setWeeklySaving(true);
+    try {
+      const id = await putWeeklySlot(slot, '', text);
+      if (id) setInlineOk(`Guardado en la opción ${slot + 1}.`);
+    } finally {
+      setWeeklySaving(false);
+    }
+  }
+
+  async function saveDraftAndWeeklyFromToolbar() {
+    setWeeklyLoadError(null);
+    setInlineOk(null);
+    setQuickTryError(null);
+    const text = draftPrompt.trim();
+    if (text.length < 1) {
+      setQuickTryError('Escribí un texto para la ejecución semanal.');
+      return;
+    }
+    if (!run?.brand?.id || !weeklyData) return;
+    const slot = firstEmptyWeeklySlot(weeklyData.slots);
+    if (slot === null) {
+      setWeeklyLoadError('Las 5 opciones están llenas. Liberá un espacio para guardar y marcar semanal.');
+      return;
+    }
+    setWeeklySaving(true);
+    try {
+      const id = await putWeeklySlot(slot, '', text);
+      if (!id) return;
+      const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+      if (!token) return;
+      const sel = await fetch(
+        `${API_URL}/api/portal/brands/${encodeURIComponent(run.brand.id)}/weekly-prompts/selection`,
+        {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ savedPromptId: id }),
+        },
+      );
+      if (!sel.ok) {
+        const b = await sel.json().catch(() => ({}));
+        setWeeklyLoadError((b as { error?: string }).error || 'No se pudo marcar para semanal.');
+        return;
+      }
+      await persistWeeklyPayload();
+      setInlineOk(`Opción ${slot + 1} guardada y elegida para corridas weekly_portal.`);
+    } finally {
+      setWeeklySaving(false);
+    }
   }
 
   async function saveEditorSlot() {
@@ -747,55 +896,116 @@ export default function PromptsCorridaPage() {
                 </div>
               ) : null}
 
-              <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] xl:items-start xl:gap-5">
+              <div
+                className={
+                  hasSavedWeeklyPrompts
+                    ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] xl:items-start xl:gap-5'
+                    : ''
+                }
+              >
                 <div className="min-w-0 space-y-5">
-                  <section className="rounded-2xl border border-violet-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex flex-wrap items-start gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
-                        <Zap className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <h2 className="text-lg font-bold text-slate-900">Consulta rápida</h2>
-                        <p className="mt-1 text-xs text-slate-600">
-                          Escribí una pregunta como la haría un usuario ante la IA. Usá la{' '}
-                          <strong>misma lógica de score Cleexs</strong> (Top 3) que las corridas. Consume{' '}
-                          <strong>cupo de generación</strong> como cualquier otro análisis.
-                        </p>
+                  <section className="relative overflow-hidden rounded-3xl border border-violet-200/70 bg-white shadow-[0_12px_40px_-12px_rgba(91,33,182,0.18)]">
+                    <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-to-br from-violet-400/25 via-fuchsia-300/15 to-transparent blur-2xl" />
+                    <div className="pointer-events-none absolute -bottom-24 -left-16 h-48 w-48 rounded-full bg-gradient-to-tr from-indigo-400/20 to-transparent blur-2xl" />
+                    <div className="relative border-b border-violet-100/80 bg-gradient-to-r from-violet-50/90 via-white to-fuchsia-50/40 px-5 py-4 sm:px-7 sm:py-5">
+                      <div className="flex flex-wrap items-start gap-4">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/30">
+                          <Zap className="h-6 w-6" strokeWidth={2.2} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-bold tracking-tight text-slate-900">Consulta rápida</h2>
+                            <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                              Cleexs score
+                            </span>
+                          </div>
+                          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600">
+                            Escribí como preguntaría un usuario real. <strong>Ejecutar</strong> usa IA y cupo de generación.
+                            <strong> Guardar</strong> solo guarda el texto en tu cuenta.{' '}
+                            <strong>Ejecución semanal</strong> guarda y lo marca para <code className="rounded bg-white/80 px-1 text-[11px]">weekly_portal</code>.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    {!run.brand?.id ? (
-                      <p className="text-sm text-amber-800">Este informe no tiene marca vinculada.</p>
-                    ) : (
-                      <>
-                        <textarea
-                          value={draftPrompt}
-                          onChange={(e) => setDraftPrompt(e.target.value)}
-                          placeholder={
-                            'Ej: Estoy comprando cremas hidratantes en Argentina.\n¿Qué marcas recomendarías y por qué?'
-                          }
-                          rows={9}
-                          className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm leading-relaxed outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
-                        />
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={quickTryLoading || !draftPrompt.trim() || draftPrompt.trim().length < 5}
-                            onClick={() => void runQuickConsulta()}
-                            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
-                          >
-                            {quickTryLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Sparkles className="h-4 w-4" />
-                            )}
-                            {quickTryLoading ? 'Ejecutando…' : 'Ejecutar y ver resultado'}
-                          </button>
-                        </div>
-                        {quickTryError ? (
-                          <p className="mt-2 text-xs font-medium text-rose-600">{quickTryError}</p>
-                        ) : null}
-                      </>
-                    )}
+                    <div className="relative p-5 sm:p-7 sm:pt-6">
+                      {!run.brand?.id ? (
+                        <p className="text-sm text-amber-800">Este informe no tiene marca vinculada.</p>
+                      ) : (
+                        <>
+                          <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                            Tu consulta
+                          </label>
+                          <textarea
+                            value={draftPrompt}
+                            onChange={(e) => {
+                              setDraftPrompt(e.target.value);
+                              setInlineOk(null);
+                            }}
+                            placeholder="Ej: Estoy comparando marcas de café en Colombia. ¿Cuáles recomendarías en el top 3 y por qué?"
+                            rows={8}
+                            className="w-full resize-y rounded-2xl border-2 border-slate-200/90 bg-slate-50/80 px-4 py-3.5 text-[15px] leading-relaxed text-slate-900 shadow-inner outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white focus:shadow-[0_0_0_4px_rgba(139,92,246,0.12)]"
+                          />
+                          <div className="mt-4 flex flex-wrap items-stretch gap-2">
+                            <button
+                              type="button"
+                              disabled={
+                                quickTryLoading ||
+                                weeklySaving ||
+                                !draftPrompt.trim() ||
+                                draftPrompt.trim().length < 5
+                              }
+                              onClick={() => void runQuickConsulta()}
+                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 min-[480px]:flex-none"
+                            >
+                              {quickTryLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-4 w-4" />
+                              )}
+                              {quickTryLoading ? 'Ejecutando…' : 'Ejecutar'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                weeklySaving ||
+                                quickTryLoading ||
+                                !draftPrompt.trim() ||
+                                !weeklyData
+                              }
+                              onClick={() => void saveDraftFromToolbar()}
+                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-violet-200 hover:bg-violet-50/50 disabled:opacity-50 min-[480px]:flex-none"
+                            >
+                              {weeklySaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+                              ) : (
+                                <Save className="h-4 w-4 text-violet-600" />
+                              )}
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                weeklySaving ||
+                                quickTryLoading ||
+                                !draftPrompt.trim() ||
+                                !weeklyData
+                              }
+                              onClick={() => void saveDraftAndWeeklyFromToolbar()}
+                              className="inline-flex flex-1 basis-full items-center justify-center gap-2 rounded-2xl border-2 border-violet-200 bg-violet-50/80 px-4 py-3 text-sm font-semibold text-violet-900 shadow-sm transition hover:bg-violet-100 disabled:opacity-50 sm:basis-auto"
+                            >
+                              <CalendarClock className="h-4 w-4 shrink-0" />
+                              Ejecución semanal
+                            </button>
+                          </div>
+                          {inlineOk ? (
+                            <p className="mt-3 text-xs font-medium text-emerald-700">{inlineOk}</p>
+                          ) : null}
+                          {quickTryError ? (
+                            <p className="mt-2 text-xs font-medium text-rose-600">{quickTryError}</p>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
                   </section>
 
                   {quickResult ? (
@@ -827,8 +1037,9 @@ export default function PromptsCorridaPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="grid gap-6 md:grid-cols-2">
+                      <div className="grid gap-6 lg:grid-cols-3">
                         <ScoreBandBar scorePct={toPct(quickResult.score)} />
+                        <QuickTop3Bars top3={quickResult.top3} brandName={brandName} aliases={aliases} />
                         <div>
                           <p className="text-xs font-semibold text-slate-700">Ranking sugerido (modelo)</p>
                           <ul className="mt-3 space-y-2">
@@ -1074,6 +1285,7 @@ export default function PromptsCorridaPage() {
                   </div>
                 </div>
 
+                {hasSavedWeeklyPrompts && run.brand?.id ? (
                 <aside className="xl:sticky xl:top-4 xl:self-start">
                   <div className="rounded-2xl border border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-4 shadow-sm">
                     <div className="mb-3 flex items-center gap-2">
@@ -1183,7 +1395,16 @@ export default function PromptsCorridaPage() {
                     ) : null}
                   </div>
                 </aside>
+                ) : null}
               </div>
+
+              {!hasSavedWeeklyPrompts && run.brand?.id && weeklyData ? (
+                <p className="text-center text-[11px] text-slate-500 xl:text-left">
+                  Guardá un prompt con <strong className="text-slate-700">Guardar</strong> o{' '}
+                  <strong className="text-slate-700">Ejecución semanal</strong> para ver aquí el panel de tus opciones y la marca para{' '}
+                  <code className="rounded bg-slate-100 px-1">weekly_portal</code>.
+                </p>
+              ) : null}
             </>
           )}
         </div>
