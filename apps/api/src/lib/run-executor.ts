@@ -79,7 +79,8 @@ export async function loadPromptsForRunExecution(
 
 const OPENAI_RANKING_SYSTEM =
   'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
-  'Incluí marcas y luego un breve motivo por cada una.';
+  'Incluí marcas y luego un breve motivo por cada una. ' +
+  'Usá exclusivamente la marca medida y las marcas listadas como competidores. No agregues marcas externas ni inventadas.';
 
 const OPENAI_FREEFORM_SYSTEM =
   'Respondé en español a la consulta del usuario usando el contexto de la empresa solo para entender qué hace la marca. ' +
@@ -92,6 +93,7 @@ const PORTAL_CONTEXTUAL_RANKING_SYSTEM =
   'Reglas estrictas:\n' +
   '- Leé el bloque CONTEXTO DEL NEGOCIO: ahí está el rubro, mercado y descripción real del cliente.\n' +
   '- La marca del cliente y los competidores listados pertenecen a ESE mismo universo. No la compares con empresas de sectores totalmente ajenos (ej. software vs cemento) salvo que la consulta del usuario lo pida explícitamente.\n' +
+  '- Usá exclusivamente la marca del cliente y la lista de competidores entregada. No agregues marcas externas.\n' +
   '- Si la consulta es ambigua, interpretala favoreciendo el sector y el tipo de negocio del contexto.\n' +
   'Respondé en español con un Top 3 numerado (1. 2. 3.) con nombre de marca y un motivo breve por ítem.';
 
@@ -207,6 +209,7 @@ export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Pro
     aliases: (c.aliases as string[]) || [],
   }));
   const competitorList = competitors.map((c) => c.name).join(', ');
+  const allowedBrands = [input.brandName, ...competitors.map((c) => c.name)].filter(Boolean).join(', ');
   const brandAliases = input.brandAliases;
   const model = input.model ?? 'gpt-4o-mini';
   const temperature = input.temperature ?? 0.2;
@@ -223,12 +226,14 @@ export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Pro
       ? `${input.brandContextBlock!.trim()}\n\n--- Consulta del usuario ---\n${input.promptText}\n\nMarca del cliente: ${input.brandName}.`
       : `${input.brandContextBlock!.trim()}\n\n--- Consulta simulada (usuario ante una IA) ---\n${input.promptText}\n\n` +
         `Marca del cliente a tener en cuenta: ${input.brandName}.\n` +
-        `Competidores de referencia (si aplica): ${competitorList || 'ver contexto'}.`
+        `Competidores de referencia (si aplica): ${competitorList || 'ver contexto'}.\n` +
+        `Marcas permitidas para rankear: ${allowedBrands || input.brandName}.`
     : isFreeform
       ? `Marca del cliente: ${input.brandName}.\n\nConsulta del usuario:\n${input.promptText}`
       : `${input.promptText}\n\n` +
         `Marca a medir: ${input.brandName}.\n` +
-        `Competidores: ${competitorList || 'no informados'}.`;
+        `Competidores: ${competitorList || 'no informados'}.\n` +
+        `Marcas permitidas para rankear: ${allowedBrands || input.brandName}.`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 90_000);
@@ -675,6 +680,7 @@ export async function executeRun(
     aliases: (c.aliases as string[]) || [],
   }));
   const competitorList = competitors.map((c: any) => c.name).join(', ');
+  const allowedBrands = [currentBrand.name, ...competitors.map((c: any) => c.name)].filter(Boolean).join(', ');
   const brandAliases = currentBrand.aliases.map((a: any) => a.alias);
   const useFreeformPromptMode = run.runType === 'weekly_portal';
   const freeformBrandContextBlock = useFreeformPromptMode
@@ -726,7 +732,8 @@ export async function executeRun(
                 ? `${freeformBrandContextBlock}\n\n--- Consulta del usuario ---\n${prompt.promptText}\n\nMarca del cliente: ${currentBrand.name}.`
                 : `${prompt.promptText}\n\n` +
                   `Marca a medir: ${currentBrand.name}.\n` +
-                  `Competidores: ${competitorList || 'no informados'}.`,
+                  `Competidores: ${competitorList || 'no informados'}.\n` +
+                  `Marcas permitidas para rankear: ${allowedBrands || currentBrand.name}.`,
           },
         ],
       }),

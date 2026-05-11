@@ -109,10 +109,11 @@ export function buildDiagnosticPrompts(
 
   for (const intentionItem of intentions) {
     const prefix = `Intención: ${intentionItem.label} (${intentionItem.weight}%). Tipo:`;
+    const allowedBrandsLine = `Usá solo esta lista de marcas: ${brandName}${competitors.length ? `, ${competitorText}` : ''}. No agregues otras marcas.`;
     const texts: string[] = [
-      `${prefix} Comparativo.\n${intentionItem.context}\n${marketLine}\nCompará y rankeá Top 3 en esta categoría. Marca medida: ${brandName}. Competidores: ${competitorText}. Respondé 1., 2., 3. con motivo breve.`,
-      `${prefix} Recomendación.\n${intentionItem.context}\n${marketLine}\nSi tuvieras que recomendar para alguien con esta necesidad, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. Respondé 1., 2., 3. con motivo breve por cada uno.`,
-      `${prefix} Defensibilidad.\n${intentionItem.context}\n${marketLine}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. Indicá 1., 2., 3. con motivo breve.`,
+      `${prefix} Comparativo.\n${intentionItem.context}\n${marketLine}\nCompará y rankeá Top 3 en esta categoría. Marca medida: ${brandName}. Competidores: ${competitorText}. ${allowedBrandsLine} Respondé 1., 2., 3. con motivo breve.`,
+      `${prefix} Recomendación.\n${intentionItem.context}\n${marketLine}\nSi tuvieras que recomendar para alguien con esta necesidad, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. ${allowedBrandsLine} Respondé 1., 2., 3. con motivo breve por cada uno.`,
+      `${prefix} Defensibilidad.\n${intentionItem.context}\n${marketLine}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. ${allowedBrandsLine} Indicá 1., 2., 3. con motivo breve.`,
     ];
     types.forEach((tipo, i) => {
       prompts.push({
