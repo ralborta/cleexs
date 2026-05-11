@@ -35,7 +35,7 @@ export default function DiagnosticoDashboardPage() {
             </h1>
             <p className="text-slate-600">
               {data
-                ? `${data.brandName}${data.industry ? ` · ${data.industry}` : ''}`
+                ? data.brandName
                 : 'Cargando...'}
             </p>
           </div>

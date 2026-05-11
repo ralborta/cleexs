@@ -13,10 +13,8 @@ const DEFAULT_WEIGHTS = {
 
 export type IntentionType = 'urgencia' | 'consideracion';
 
-/**
- * Mantiene una intención inicial estable y genérica para no sesgar el diagnóstico por rubro.
- */
-export function getIntentionForIndustry(_industry: string): IntentionType {
+/** Intención inicial fija para mantener el diagnóstico estable y simple. */
+export function getDefaultDiagnosticIntention(): IntentionType {
   return 'consideracion';
 }
 
@@ -53,7 +51,6 @@ function getIntentionContexts(intention: IntentionType) {
  */
 export function buildDiagnosticPrompts(
   brandName: string,
-  _industry: string,
   competitors: string[],
   intention: IntentionType,
   country?: string

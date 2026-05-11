@@ -8,7 +8,7 @@ import {
   normalizeDomain,
 } from '../lib/classifier';
 import { resolveBrandAnalysisContext } from '../lib/diagnostic-ai';
-import { buildDiagnosticPrompts, getIntentionForIndustry } from '../lib/diagnostic-prompts';
+import { buildDiagnosticPrompts, getDefaultDiagnosticIntention } from '../lib/diagnostic-prompts';
 
 const normalizeSuggestion = (value: string) =>
   value
@@ -283,10 +283,9 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         name: c.name,
         reason: 'Detectado desde contexto real del sitio',
       }));
-      const intention = getIntentionForIndustry(analysisContext.industry);
+      const intention = getDefaultDiagnosticIntention();
       const generatedPrompts = buildDiagnosticPrompts(
         brandName,
-        analysisContext.industry,
         analysisContext.competitors.map((c) => c.name),
         intention,
         analysisContext.country

@@ -686,7 +686,6 @@ function VerResultadoContent() {
                 </CardTitle>
                 <CardDescription className="mt-1 text-xs sm:text-sm">
                   <span className="font-medium">{diagnostic.brandName}</span>
-                  {diagnostic.industry && ` · ${diagnostic.industry}`}
                   {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
                 </CardDescription>
               </div>

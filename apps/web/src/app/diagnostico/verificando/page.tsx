@@ -124,7 +124,6 @@ function VerificandoContent() {
   const progress = diagnostic?.progressPercent ?? 0;
   const brandLabel = diagnostic?.brandName ?? null;
   const domain = diagnostic?.domain ?? '';
-  const industry = diagnostic?.industry ?? null;
   const isRunning = diagnostic?.status === 'running';
   const allStepsDone = stepsList.length > 0 && stepsList.every((s) => s.completed);
   const isFinalizing = isRunning && allStepsDone;
@@ -134,9 +133,8 @@ function VerificandoContent() {
     () => ({
       brandName: brandLabel,
       domain: domain || '',
-      industry,
     }),
-    [brandLabel, domain, industry]
+    [brandLabel, domain]
   );
   const domainShort = (domain || '').replace(/^https?:\/\//, '');
   const activeStepForCards = useMemo(() => {
@@ -567,7 +565,6 @@ function VerificandoContent() {
                   onQuiz1={onQuiz1}
                   onQuiz2={onQuiz2}
                   onPredict={onPredict}
-                  industry={industry}
                 />
               )}
 

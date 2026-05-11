@@ -47,13 +47,13 @@ export interface RunContextInput {
     brand: { name: string; competitors: { name: string }[] };
   };
   priaReport: PRIAReport | null;
-  industry: string;
+  businessContext?: string | null;
 }
 
 function buildContextForAI(ctx: RunContext): string {
-  const parts: string[] = [
+  const parts: Array<string | null> = [
     `Marca: ${ctx.brandName}`,
-    `Industria: ${ctx.industry || 'General'}`,
+    ctx.businessContext ? `Contexto del negocio: ${ctx.businessContext}` : null,
     `Cleexs Score total: ${ctx.cleexsScore} (0-100, mayor = mejor posicionamiento en IA)`,
     `Competidores evaluados: ${ctx.competitors.join(', ') || 'ninguno'}`,
     '',
@@ -68,12 +68,12 @@ function buildContextForAI(ctx: RunContext): string {
       (r) =>
         `- ${r.name} (${r.type}): ${r.appearances} apariciones, posición media ${r.averagePosition.toFixed(2)}, ${r.share.toFixed(1)}% del Top 3${r.sampleReason ? `. Motivo ejemplo: ${r.sampleReason}` : ''}`
     ),
-  ];
+  ].filter((part): part is string => Boolean(part));
   return parts.join('\n');
 }
 
 export function buildRunContext(input: RunContextInput): RunContext {
-  const { run, priaReport, industry } = input;
+  const { run, priaReport, businessContext } = input;
   const cleexsScore = priaReport?.priaTotal ?? 0;
   const results = run.promptResults;
   const brandName = run.brand.name;
@@ -124,7 +124,7 @@ export function buildRunContext(input: RunContextInput): RunContext {
 
   return {
     brandName,
-    industry: industry || 'General',
+    businessContext: businessContext?.trim() || undefined,
     cleexsScore,
     competitors,
     intentionScores,
@@ -172,7 +172,7 @@ function isGoldFormat(a: unknown): a is DiagnosticAnalysisGold {
 
 interface RunContext {
   brandName: string;
-  industry: string;
+  businessContext?: string;
   cleexsScore: number;
   competitors: string[];
   intentionScores: Array<{ key: string; label: string; score: number; weight: number }>;

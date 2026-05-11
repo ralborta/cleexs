@@ -473,7 +473,6 @@ export interface PublicDiagnostic {
   id: string;
   domain: string;
   brandName: string;
-  industry?: string | null;
   status: 'pending' | 'running' | 'completed' | 'failed';
   tier?: 'gold' | 'freemium';
   isFirstRun?: boolean;
@@ -504,7 +503,6 @@ export interface PublicDiagnosticShareResponse {
   slug: string;
   diagnosticId: string;
   brandName: string;
-  industry?: string | null;
   domain: string;
   status: string;
   tier: 'gold' | 'freemium';

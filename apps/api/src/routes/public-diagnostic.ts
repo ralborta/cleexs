@@ -10,7 +10,7 @@ import { runOutreachForRun } from '../lib/outreach';
 import {
   resolveBrandAnalysisContext,
 } from '../lib/diagnostic-ai';
-import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
+import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satellite-client';
 
@@ -671,33 +671,24 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             knownCountry: countryFromTld || undefined,
           }
         );
-        const marketProfile = {
-          country: analysisContext.country,
-          industry: analysisContext.industry,
-          confidence: analysisContext.confidence,
-          verticalSummary: analysisContext.verticalSummary,
-          customerSegment: analysisContext.customerSegment,
-        };
-        const marketCountry = countryFromTld ?? (marketProfile.confidence >= marketConfidenceMin ? marketProfile.country || defaultCountry : defaultCountry);
-        const industry = marketProfile.industry || 'General';
+        const marketCountry =
+          countryFromTld ??
+          (analysisContext.confidence >= marketConfidenceMin
+            ? analysisContext.country || defaultCountry
+            : defaultCountry);
         fastify.log.info(
           {
             diagnosticId: diagnostic.id,
             brandName: brandForRun,
             marketCountry,
-            industry,
             countryFromTld: countryFromTld ?? undefined,
-            verticalSummary: marketProfile.verticalSummary,
-            customerSegment: marketProfile.customerSegment,
-            marketConfidence: marketProfile.confidence,
+            verticalSummary: analysisContext.verticalSummary,
+            customerSegment: analysisContext.customerSegment,
+            marketConfidence: analysisContext.confidence,
             marketConfidenceMin,
           },
-          'Perfil de mercado unificado desde sitio + país'
+          'Contexto competitivo resuelto desde sitio + país'
         );
-        await prisma.publicDiagnostic.update({
-          where: { id: diagnostic.id },
-          data: { industry },
-        });
 
         // 2. IA elige competidores desde el mismo contexto común del sistema
         const competitors = analysisContext.competitors.map((c) => c.name).filter(Boolean);
@@ -708,7 +699,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             tenantId: rootTenant.id,
             name: brandForRun,
             domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
-            industry,
+            industry: null,
             country: marketCountry,
             description: analysisContext.verticalSummary || null,
           },
@@ -727,11 +718,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        // 3b. Intención automática (Urgencia vs Consideración) según industria
-        const intention = getIntentionForIndustry(industry);
+        // 3b. Intención inicial fija y simple
+        const intention = getDefaultDiagnosticIntention();
         const diagnosticPrompts = buildDiagnosticPrompts(
           brandForRun,
-          industry,
           competitors,
           intention,
           marketCountry
@@ -850,7 +840,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             const ctx = buildRunContext({
               run: fullRun,
               priaReport,
-              industry: industry || diagnostic.industry || 'General',
+              businessContext: analysisContext.verticalSummary,
             });
             // Primera corrida del dominio = análisis completo: OpenAI + Gemini + perspectiva ambos (uno por uno y después juntos). Sin depender de Gold.
             const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
@@ -1172,7 +1162,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         domain: true,
         brandName: true,
-        industry: true,
         status: true,
         tier: true,
         runId: true,
@@ -1321,7 +1310,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       slug,
       diagnosticId: row.id,
       brandName: row.brandName,
-      industry: row.industry,
       domain: row.domain,
       status: row.status,
       tier,
@@ -1403,7 +1391,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         domain: true,
         brandName: true,
-        industry: true,
         status: true,
         tier: true,
         runId: true,
@@ -1460,7 +1447,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       id: string;
       domain: string;
       brandName: string;
-      industry?: string | null;
       status: string;
       tier: 'gold' | 'freemium';
       isFirstRun: boolean;
@@ -1481,7 +1467,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       id: diagnostic.id,
       domain: diagnostic.domain,
       brandName: diagnostic.brandName,
-      industry: diagnostic.industry,
       status: diagnostic.status,
       tier,
       isFirstRun,
@@ -1523,13 +1508,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
       const completedCount = run?.promptResults.length ?? 0;
-      const preCompleted = (!!diagnostic.industry ? 1 : 0) + (!!diagnostic.runId ? 1 : 0);
+      const siteContextReady = !!diagnostic.runId || diagnostic.status === 'completed';
+      const preCompleted = (siteContextReady ? 1 : 0) + (!!diagnostic.runId ? 1 : 0);
       const analysisStepsCount = DIAGNOSTIC_STEP_LABELS.length - 2;
 
       steps = DIAGNOSTIC_STEP_LABELS.map((label, idx) => {
         let completed: boolean;
         if (idx < 2) {
-          completed = idx === 0 ? !!diagnostic.industry : !!diagnostic.runId;
+          completed = idx === 0 ? siteContextReady : !!diagnostic.runId;
         } else {
           completed = completedCount > idx - 2;
         }
@@ -1627,11 +1613,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
     } else {
-      const preCompleted = (!!diagnostic.industry ? 1 : 0) + (!!diagnostic.runId ? 1 : 0);
+      const siteContextReady = !!diagnostic.runId || diagnostic.status === 'completed';
+      const preCompleted = (siteContextReady ? 1 : 0) + (!!diagnostic.runId ? 1 : 0);
       steps = DIAGNOSTIC_STEP_LABELS.map((label, idx) => ({
         id: `step-${idx + 1}`,
         label,
-        completed: idx < 2 && (idx === 0 ? !!diagnostic.industry : !!diagnostic.runId),
+        completed: idx < 2 && (idx === 0 ? siteContextReady : !!diagnostic.runId),
       }));
       progressPercent = Math.round((preCompleted / DIAGNOSTIC_STEP_LABELS.length) * 100);
       base.steps = steps;

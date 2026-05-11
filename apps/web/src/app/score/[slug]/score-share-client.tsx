@@ -277,7 +277,6 @@ export function ScoreShareClient({ slug }: { slug: string }) {
                 </CardTitle>
                 <CardDescription className="mt-2 text-base">
                   <span className="font-medium text-foreground">{data.brandName}</span>
-                  {data.industry ? ` · ${data.industry}` : ''}
                   {!data.domain.startsWith('brand-') ? ` · ${data.domain}` : ''}
                 </CardDescription>
               </div>

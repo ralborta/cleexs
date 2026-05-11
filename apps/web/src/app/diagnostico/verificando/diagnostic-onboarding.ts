@@ -26,7 +26,6 @@ export const ONBOARDING_STEP_COUNT = ONBOARDING_STEP_LABELS.length;
 export type SitePreviewContext = {
   brandName: string | null;
   domain: string;
-  industry: string | null;
 };
 
 /**

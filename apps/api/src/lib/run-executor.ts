@@ -6,7 +6,7 @@ import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from './pria';
 import { persistSavedPromptExecutionSnapshot } from './portal-saved-prompt-history';
 import { resolveBrandAnalysisContext } from './diagnostic-ai';
-import { buildDiagnosticPrompts, getIntentionForIndustry } from './diagnostic-prompts';
+import { buildDiagnosticPrompts, getDefaultDiagnosticIntention } from './diagnostic-prompts';
 
 /** Versión de prompts activa del tenant, o la del tenant root (000) si el cliente no tiene la suya. */
 export async function resolveActivePromptVersion(
@@ -487,7 +487,7 @@ async function prepareDynamicMonthlyRunContext(input: {
     domain: c.domain,
     aliases: [],
     businessType: input.brand.businessType,
-    category: resolved.industry,
+    category: null,
     subcategory: input.brand.subcategory,
     geoMarket: input.brand.geoMarket,
     autoDetected: true,
@@ -498,9 +498,8 @@ async function prepareDynamicMonthlyRunContext(input: {
   const competitorNames = allCompetitors.map((c) => c.name).filter(Boolean);
   const promptsToCreate = buildDiagnosticPrompts(
     input.brand.name,
-    resolved.industry,
     competitorNames,
-    getIntentionForIndustry(resolved.industry),
+    getDefaultDiagnosticIntention(),
     resolved.country
   );
 
@@ -508,7 +507,6 @@ async function prepareDynamicMonthlyRunContext(input: {
     await tx.brand.update({
       where: { id: input.brand.id },
       data: {
-        industry: resolved.industry,
         country: resolved.country,
         ...(resolved.verticalSummary ? { description: resolved.verticalSummary } : {}),
         classifierMeta: {
@@ -572,7 +570,6 @@ async function prepareDynamicMonthlyRunContext(input: {
     prompts: dynamic.prompts,
     brand: {
       ...input.brand,
-      industry: resolved.industry,
       country: resolved.country,
       description: resolved.verticalSummary || input.brand.description,
       competitors: allCompetitors,

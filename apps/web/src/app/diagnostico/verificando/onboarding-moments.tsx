@@ -20,11 +20,10 @@ type Props = {
   onQuiz1: (value: string) => void;
   onQuiz2: (value: string) => void;
   onPredict: (range: string) => void;
-  industry?: string | null;
   className?: string;
 };
 
-export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPredict, industry, className }: Props) {
+export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPredict, className }: Props) {
   if (moment.type === 'idle') return null;
 
   const QuestionCard = ({
@@ -137,7 +136,7 @@ export function OnboardingMomentStack({ moment, onClose, onQuiz1, onQuiz2, onPre
       {moment.type === 'social' && (
         <QuestionCard
           title="El terreno se mueve"
-          description={`Otras empresas${industry ? ` en ${industry}` : ' de tu industria'} ya compiten en cómo responde la IA. Cada análisis suma señal frente a tu competencia.`}
+          description="Otras empresas ya compiten en cómo responde la IA. Cada análisis suma señal frente a tu competencia."
           Icon={Compass}
         >
           <Button

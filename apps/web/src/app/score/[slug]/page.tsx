@@ -21,7 +21,6 @@ async function fetchShareMeta(slug: string) {
     return (await res.json()) as {
       brandName: string;
       cleexsScore: number | null;
-      industry?: string | null;
       resumenTeaser: string;
     };
   } catch {
@@ -40,7 +39,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const teaser = (meta.resumenTeaser || '').replace(/\s+/g, ' ').trim().slice(0, 120);
   const desc =
     meta.cleexsScore != null
-      ? `${meta.brandName}: score ${Math.round(meta.cleexsScore)}/100.${meta.industry ? ` ${meta.industry}.` : ''} ${teaser}`
+      ? `${meta.brandName}: score ${Math.round(meta.cleexsScore)}/100. ${teaser}`
       : `Diagnóstico Cleexs de ${meta.brandName}. ${teaser}`;
   const description = desc.slice(0, 160);
   return {

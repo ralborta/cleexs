@@ -8,6 +8,9 @@ export interface IndustryResult {
 
 export interface CompetitorsResult {
   competitors: string[];
+  country?: string;
+  verticalSummary?: string;
+  customerSegment?: 'B2B' | 'B2C' | 'B2B2C' | 'mixto' | 'desconocido';
 }
 
 export interface CompetitorDomainResolution {
@@ -45,14 +48,17 @@ interface WebsiteEvidence {
   metaDescription?: string;
   h1?: string;
   h2?: string;
+  bodyTextExcerpt?: string;
   sourceUrl?: string;
 }
 
 async function callOpenAI(
   messages: Array<{ role: string; content: string }>,
   JsonSchema?: object,
-  maxTokens = 500
+  maxTokens = 500,
+  model?: string
 ): Promise<string> {
+  const resolvedModel = model?.trim() || process.env.DIAGNOSTIC_AI_OPENAI_MODEL?.trim() || 'gpt-4o-mini';
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -60,7 +66,7 @@ async function callOpenAI(
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: resolvedModel,
       temperature: 0.2,
       max_tokens: maxTokens,
       messages: messages.map((m) => ({ role: m.role as 'system' | 'user', content: m.content })),
@@ -94,6 +100,14 @@ function extractFirstMatch(html: string, regex: RegExp): string | undefined {
   return stripHtml(raw).slice(0, 220);
 }
 
+function extractBodyTextExcerpt(html: string): string | undefined {
+  const match = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const raw = match?.[1] ?? html;
+  const text = stripHtml(raw).replace(/\s+/g, ' ').trim();
+  if (!text) return undefined;
+  return text.slice(0, 2400);
+}
+
 async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | null> {
   if (!url) return null;
   const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
@@ -117,7 +131,8 @@ async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | nul
       extractFirstMatch(html, /<meta[^>]+content=["']([\s\S]*?)["'][^>]*name=["']description["'][^>]*>/i);
     const h1 = extractFirstMatch(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i);
     const h2 = extractFirstMatch(html, /<h2[^>]*>([\s\S]*?)<\/h2>/i);
-    return { title, metaDescription, h1, h2, sourceUrl: normalized };
+    const bodyTextExcerpt = extractBodyTextExcerpt(html);
+    return { title, metaDescription, h1, h2, bodyTextExcerpt, sourceUrl: normalized };
   } catch {
     return null;
   } finally {
@@ -129,30 +144,50 @@ async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | nul
  * Búsqueda web (Serper) para inferir país/origen de la marca cuando el dominio es genérico (.com, .net).
  * Devuelve texto con snippets para incluir en el prompt. Si no hay API key o falla, devuelve string vacío.
  */
-export async function fetchSearchEvidence(brandName: string): Promise<string> {
+export async function fetchSearchEvidence(
+  brandName: string,
+  websiteUrl?: string,
+  countryHint?: string
+): Promise<string> {
   const apiKey = process.env.SERPER_API_KEY;
   if (!apiKey?.trim()) return '';
 
-  const query = `"${brandName}" país origen sede marca`;
+  const siteHint = websiteUrl?.trim()
+    ? websiteUrl.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '')
+    : '';
+  const countryPart = countryHint?.trim() ? ` "${countryHint.trim()}"` : '';
+  const queries = [
+    `"${brandName}"${countryPart} país origen sede marca ${siteHint}`.trim(),
+    `"${brandName}"${countryPart} competidores alternativas mercado local ${siteHint}`.trim(),
+  ];
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await fetch('https://google.serper.dev/search', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ q: query, num: 8 }),
-      signal: controller.signal,
-    });
-    if (!response.ok) return '';
-    const data = (await response.json()) as {
-      organic?: Array<{ title?: string; snippet?: string; link?: string }>;
-    };
-    const organic = data?.organic ?? [];
-    const parts = organic.slice(0, 8).map((o) => [o.title, o.snippet].filter(Boolean).join(': ')).filter(Boolean);
-    return parts.length ? `Resultados de búsqueda (origen/país de la marca):\n${parts.join('\n')}` : '';
+    const blocks: string[] = [];
+    for (const query of queries) {
+      const response = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ q: query, num: 6 }),
+        signal: controller.signal,
+      });
+      if (!response.ok) continue;
+      const data = (await response.json()) as {
+        organic?: Array<{ title?: string; snippet?: string; link?: string }>;
+      };
+      const organic = data?.organic ?? [];
+      const parts = organic
+        .slice(0, 6)
+        .map((o) => [o.title, o.snippet].filter(Boolean).join(': '))
+        .filter(Boolean);
+      if (parts.length) {
+        blocks.push(`Consulta: ${query}\n${parts.join('\n')}`);
+      }
+    }
+    return blocks.length ? `Resultados de búsqueda web relevantes:\n${blocks.join('\n\n')}` : '';
   } catch {
     return '';
   } finally {
@@ -202,7 +237,9 @@ export async function getTop5Competitors(input: {
   siteMarkdown?: string;
   industryHint?: string;
   niche?: { verticalSummary?: string; customerSegment?: string };
+  searchEvidence?: string;
 }): Promise<CompetitorsResult> {
+  const competitorModel = process.env.DIAGNOSTIC_COMPETITORS_OPENAI_MODEL?.trim() || 'gpt-4o';
   const marketContext = input.country?.trim()
     ? `País/mercado principal: ${input.country.trim()}. Usalo como filtro fuerte para elegir competidores del mismo mercado.`
     : 'País/mercado principal: no informado. Si inferís uno con alta confianza desde el sitio, usalo; si no, evitá asumir.';
@@ -214,6 +251,7 @@ export async function getTop5Competitors(input: {
         siteEvidence.metaDescription ? `Meta description: ${siteEvidence.metaDescription}` : '',
         siteEvidence.h1 ? `H1 principal: ${siteEvidence.h1}` : '',
         siteEvidence.h2 ? `H2 destacado: ${siteEvidence.h2}` : '',
+        siteEvidence.bodyTextExcerpt ? `Texto visible del sitio: ${siteEvidence.bodyTextExcerpt}` : '',
       ]
         .filter(Boolean)
         .join('\n')
@@ -226,6 +264,7 @@ export async function getTop5Competitors(input: {
     input.niche?.customerSegment?.trim()
       ? `Tipo de cliente principal (pista secundaria): ${input.niche.customerSegment.trim()}.`
       : '',
+    input.searchEvidence?.trim() ? input.searchEvidence.trim() : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -235,10 +274,16 @@ export async function getTop5Competitors(input: {
     {
       role: 'system',
       content: useUrlFirstPrompt
-        ? 'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
-          'Analizá la URL y la evidencia principal del sitio para identificar competidores DIRECTOS y REALES de esta empresa. ' +
-          'Primero inferí cuál es la oferta principal de la empresa y a qué tipo de cliente vende. Luego elegí solo marcas que compitan por esa misma oferta principal. ' +
+        ? 'Respondé SOLO con un JSON válido. Ejemplo: {"country":"Bolivia","verticalSummary":"Urbanizadora que vende lotes y proyectos inmobiliarios a familias e inversionistas.","customerSegment":"B2C","competitors":["Marca A","Marca B","Marca C"]}. ' +
+          'Analizá únicamente la URL y el contenido visible del sitio para entender qué vende esta empresa y a quién le vende. ' +
+          'Primero identificá la oferta principal y el tipo de cliente. Después elegí solo competidores DIRECTOS y REALES que compitan por esa misma necesidad principal. ' +
+          'country: si viene informado, usá exactamente ese valor; si no viene, inferilo solo si es claro por el sitio o la URL; si no, devolvé null. ' +
+          'verticalSummary: 1-2 frases en español sobre qué vende la empresa y a quién. ' +
+          'customerSegment: exactamente uno de B2B, B2C, B2B2C, mixto, desconocido. ' +
+          'Aplicá filtro local estricto: priorizá misma ciudad o zona si aparece en el sitio; si no, mismo país. No elijas marcas extranjeras ni cadenas globales si no operan claramente en el país detectado. ' +
+          'Aplicá filtro de producto exacto: no alcanza con la misma categoría amplia. Tienen que competir por la misma oferta principal. Ejemplo: un restaurante de pollos en Bolivia debe compararse con restaurantes de pollos en Bolivia, no con cadenas internacionales ni comidas generales. ' +
           'Ignorá por completo clientes, partners, integraciones, marcas mencionadas como casos de éxito, certificaciones, proveedores, medios, distribuidores, revendedores y marketplaces generales. ' +
+          'No mezcles industrias ni categorías vecinas. ' +
           'No inventes ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
           'Devolvé solo nombres de marcas/empresas.'
         : 'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
@@ -258,8 +303,10 @@ export async function getTop5Competitors(input: {
       content: useUrlFirstPrompt
         ? `Principales competidores directos de ${input.websiteUrl}\n\n` +
           `Marca / empresa: ${input.brandName}\n\n` +
+          (input.country?.trim() ? `País/mercado confirmado: ${input.country.trim()}\n\n` : '') +
           `Evidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
-          'Devolvé un JSON con la forma {"competitors":["..."]} con hasta 5 competidores directos del mismo rubro y misma oferta principal.'
+          (hintBlock ? `Evidencia adicional:\n${hintBlock}\n\n` : '') +
+          'Devolvé un JSON con la forma {"country":"..."|null,"verticalSummary":"...","customerSegment":"B2B|B2C|B2B2C|mixto|desconocido","competitors":["..."]} con hasta 5 competidores directos de la misma oferta principal y para el mismo tipo de cliente.'
         : `Marca: ${input.brandName}\n` +
           `${marketContext}\n` +
           (input.websiteUrl ? `Sitio web: ${input.websiteUrl}\n` : '') +
@@ -267,16 +314,36 @@ export async function getTop5Competitors(input: {
           (hintBlock ? `Pistas secundarias:\n${hintBlock}\n\n` : '') +
           'Devolvé un JSON con la forma {"competitors":["..."]} incluyendo solo competidores directos reales de esta empresa.',
     },
-  ]);
+  ], undefined, 500, competitorModel);
 
   try {
-    const parsed = JSON.parse(content) as { competitors?: string[] };
+    const parsed = JSON.parse(content) as {
+      competitors?: string[];
+      country?: string | null;
+      verticalSummary?: string;
+      customerSegment?: string;
+    };
     const raw = Array.isArray(parsed.competitors) ? parsed.competitors : [];
     const competitors = raw
       .slice(0, 5)
       .map((c) => `${c}`.trim())
       .filter(Boolean);
-    return { competitors };
+    const country = `${parsed.country || ''}`.trim() || undefined;
+    const verticalSummary = `${parsed.verticalSummary || ''}`.trim().slice(0, 600) || undefined;
+    const seg = `${parsed.customerSegment || ''}`.trim().toLowerCase();
+    const segMap: Record<string, NonNullable<CompetitorsResult['customerSegment']>> = {
+      b2b: 'B2B',
+      b2c: 'B2C',
+      b2b2c: 'B2B2C',
+      mixto: 'mixto',
+      desconocido: 'desconocido',
+    };
+    return {
+      competitors,
+      ...(country ? { country } : {}),
+      ...(verticalSummary ? { verticalSummary } : {}),
+      ...(segMap[seg] ? { customerSegment: segMap[seg] } : {}),
+    };
   } catch {
     return { competitors: [] };
   }
@@ -512,28 +579,57 @@ export async function resolveBrandAnalysisContext(input: {
   let sourceUrls: string[] = [];
 
   let competitorNames: string[] = [];
+  let country = knownCountry || fallbackCountry;
+  let industry = fallbackIndustry;
+  let confidence = knownCountry ? 90 : 0;
+  let verticalSummary: string | undefined;
+  let customerSegment: ResolvedBrandAnalysisContext['customerSegment'];
+  const searchEvidence = await fetchSearchEvidence(input.brandName, input.websiteUrl, knownCountry);
+
   if (hasWebsite) {
     const firstPass = await getTop5Competitors({
       brandName: input.brandName,
       websiteUrl: input.websiteUrl,
+      country: knownCountry,
+      searchEvidence: searchEvidence || undefined,
     });
     competitorNames = firstPass.competitors;
-  }
-
-  const searchEvidence = hasWebsite || knownCountry ? '' : await fetchSearchEvidence(input.brandName);
-  const marketProfile = await determineMarketProfileForBrand(
-    input.brandName,
-    fallbackCountry,
-    hasWebsite ? 'General' : fallbackIndustry,
-    input.websiteUrl,
-    hasWebsite ? undefined : searchEvidence || undefined,
-    hasWebsite ? undefined : knownCountry
-  );
-  const country = hasWebsite
-    ? marketProfile.country || fallbackCountry
-    : knownCountry || marketProfile.country || fallbackCountry;
-  const industry = marketProfile.industry || fallbackIndustry;
-  if (!hasWebsite) {
+    country = knownCountry || firstPass.country || fallbackCountry;
+    industry = '';
+    verticalSummary = firstPass.verticalSummary;
+    customerSegment = firstPass.customerSegment;
+    confidence = knownCountry ? 95 : firstPass.country ? 85 : competitorNames.length > 0 ? 70 : 40;
+    if (country || verticalSummary || customerSegment) {
+      const refinedPass = await getTop5Competitors({
+        brandName: input.brandName,
+        websiteUrl: input.websiteUrl,
+        country,
+        niche: {
+          verticalSummary,
+          customerSegment,
+        },
+        searchEvidence: searchEvidence || undefined,
+      });
+      if (refinedPass.competitors.length > 0) competitorNames = refinedPass.competitors;
+      if (refinedPass.country) country = refinedPass.country;
+      if (refinedPass.verticalSummary) verticalSummary = refinedPass.verticalSummary;
+      if (refinedPass.customerSegment) customerSegment = refinedPass.customerSegment;
+      confidence = Math.max(confidence, refinedPass.country ? 90 : confidence);
+    }
+  } else {
+    const marketProfile = await determineMarketProfileForBrand(
+      input.brandName,
+      fallbackCountry,
+      fallbackIndustry,
+      input.websiteUrl,
+      searchEvidence || undefined,
+      knownCountry
+    );
+    country = knownCountry || marketProfile.country || fallbackCountry;
+    industry = marketProfile.industry || fallbackIndustry;
+    verticalSummary = marketProfile.verticalSummary;
+    customerSegment = marketProfile.customerSegment;
+    confidence = marketProfile.confidence;
     const followup = await getTop5Competitors({
       brandName: input.brandName,
       country,
@@ -548,17 +644,17 @@ export async function resolveBrandAnalysisContext(input: {
   }
   const competitors = await resolveCompetitorDomains(
     competitorNames,
-    hasWebsite ? undefined : country,
+    country,
     hasWebsite ? undefined : industry,
-    hasWebsite ? undefined : marketProfile.verticalSummary
+    verticalSummary
   );
 
   return {
     country,
     industry,
-    confidence: marketProfile.confidence,
-    ...(marketProfile.verticalSummary ? { verticalSummary: marketProfile.verticalSummary } : {}),
-    ...(marketProfile.customerSegment ? { customerSegment: marketProfile.customerSegment } : {}),
+    confidence,
+    ...(verticalSummary ? { verticalSummary } : {}),
+    ...(customerSegment ? { customerSegment } : {}),
     sourceUrls,
     competitors,
   };
