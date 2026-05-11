@@ -83,7 +83,7 @@ async function selectBestCompetitors(input: {
   candidates: string[];
 }): Promise<string[]> {
   const uniqueCandidates = mergeUniqueCompetitorNames(input.candidates);
-  if (uniqueCandidates.length <= 5) return uniqueCandidates;
+  if (uniqueCandidates.length <= 1) return uniqueCandidates;
 
   const classificationLines = input.classification
     ? [
@@ -147,6 +147,92 @@ async function selectBestCompetitors(input: {
     return filtered.slice(0, 5);
   } catch {
     return uniqueCandidates.slice(0, 5);
+  }
+}
+
+async function expandCompetitorCandidates(input: {
+  brandName: string;
+  websiteUrl?: string;
+  country?: string;
+  industry?: string;
+  verticalSummary?: string;
+  customerSegment?: string;
+  searchEvidence?: string;
+  classification?: BrandClassification;
+  existing: string[];
+  targetCount?: number;
+}): Promise<string[]> {
+  const existing = mergeUniqueCompetitorNames(input.existing);
+  const targetCount = Math.max(1, input.targetCount ?? 5);
+  const missing = targetCount - existing.length;
+  if (missing <= 0) return [];
+
+  const classificationLines = input.classification
+    ? [
+        `Tipo de negocio: ${input.classification.businessType}`,
+        `Categoría: ${input.classification.category}${input.classification.subcategory ? ` > ${input.classification.subcategory}` : ''}`,
+        `Mercado: ${input.classification.geoMarket}`,
+        `Segmento: ${input.classification.sizeSegment}`,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : '';
+  const evidenceParts = [
+    input.country?.trim() ? `País/mercado: ${input.country.trim()}` : '',
+    input.industry?.trim() ? `Industria: ${input.industry.trim()}` : '',
+    input.verticalSummary?.trim() ? `Resumen del negocio: ${input.verticalSummary.trim()}` : '',
+    input.customerSegment?.trim() ? `Tipo de cliente: ${input.customerSegment.trim()}` : '',
+    input.websiteUrl?.trim() ? `Sitio web: ${input.websiteUrl.trim()}` : '',
+    classificationLines,
+    input.searchEvidence?.trim()
+      ? `Resultados de búsqueda / evidencia externa:\n${input.searchEvidence.trim().slice(0, 3000)}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const content = await callOpenAI(
+    [
+      {
+        role: 'system',
+        content:
+          'Respondé SOLO con JSON válido. Ejemplo: {"competitors":["Marca D","Marca E"]}. ' +
+          'Tu tarea es proponer competidores ADICIONALES para completar una lista total de 5 competidores directos y locales. ' +
+          'Reglas estrictas: ' +
+          '1) NO repitas marcas ya listadas. ' +
+          '2) Priorizá el mismo producto/servicio principal, mismo mercado y mismo tipo de cliente. ' +
+          '3) Excluí holdings, directorios, asociaciones, medios, comparadores, partners, proveedores y categorías vecinas. ' +
+          '4) Si el mercado es común y la evidencia alcanza, devolvé exactamente la cantidad faltante. ' +
+          '5) Si no alcanza para completar todo, devolvé los adicionales más probables, pero no inventes basura.',
+      },
+      {
+        role: 'user',
+        content:
+          `Marca analizada: ${input.brandName}\n\n` +
+          `${evidenceParts}\n\n` +
+          `Competidores ya detectados:\n${existing.map((name, index) => `${index + 1}. ${name}`).join('\n')}\n\n` +
+          `Faltan ${missing} competidores para completar 5.\n\n` +
+          'Devolvé solo JSON con la forma {"competitors":["..."]}.',
+      },
+    ],
+    undefined,
+    500,
+    process.env.DIAGNOSTIC_COMPETITORS_OPENAI_MODEL?.trim() || 'gpt-4o'
+  );
+
+  try {
+    const parsed = JSON.parse(content) as { competitors?: string[] };
+    const selected = Array.isArray(parsed.competitors) ? parsed.competitors : [];
+    const existingSet = new Set(existing.map((name) => normalizeCompetitorName(name)));
+    const filtered = mergeUniqueCompetitorNames(
+      selected.filter((name) => {
+        const normalized = normalizeCompetitorName(name);
+        return normalized && !existingSet.has(normalized);
+      })
+    );
+    return filtered.slice(0, missing);
+  } catch {
+    return [];
   }
 }
 
@@ -807,6 +893,21 @@ export async function resolveBrandAnalysisContext(input: {
   }
 
   competitorNames = mergeUniqueCompetitorNames(competitorNames, validatedCompetitorNames);
+  if (competitorNames.length > 0 && competitorNames.length < 5) {
+    const extraCompetitors = await expandCompetitorCandidates({
+      brandName: input.brandName,
+      websiteUrl: input.websiteUrl,
+      country,
+      industry,
+      verticalSummary,
+      customerSegment,
+      searchEvidence: searchEvidence || undefined,
+      classification: input.classification,
+      existing: competitorNames,
+      targetCount: 5,
+    });
+    competitorNames = mergeUniqueCompetitorNames(competitorNames, extraCompetitors);
+  }
   if (competitorNames.length > 1) {
     competitorNames = await selectBestCompetitors({
       brandName: input.brandName,
