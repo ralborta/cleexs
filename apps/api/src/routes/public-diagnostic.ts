@@ -678,17 +678,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           verticalSummary: analysisContext.verticalSummary,
           customerSegment: analysisContext.customerSegment,
         };
-        const firecrawlSiteMarkdown = analysisContext.firecrawlSiteMarkdown;
-        if (analysisContext.sourceUrls.length > 0 && firecrawlSiteMarkdown) {
-          fastify.log.info(
-            {
-              diagnosticId: diagnostic.id,
-              sourceUrls: analysisContext.sourceUrls,
-              chars: firecrawlSiteMarkdown.length,
-            },
-            'Firecrawl: contexto del sitio para vertical/competidores'
-          );
-        }
         const marketCountry = countryFromTld ?? (marketProfile.confidence >= marketConfidenceMin ? marketProfile.country || defaultCountry : defaultCountry);
         const industry = marketProfile.industry || 'General';
         fastify.log.info(
@@ -698,7 +687,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             marketCountry,
             industry,
             countryFromTld: countryFromTld ?? undefined,
-            usedFirecrawlContext: !!firecrawlSiteMarkdown,
             verticalSummary: marketProfile.verticalSummary,
             customerSegment: marketProfile.customerSegment,
             marketConfidence: marketProfile.confidence,

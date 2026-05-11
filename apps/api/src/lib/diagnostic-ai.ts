@@ -1,7 +1,6 @@
 /**
  * IA para el diagnóstico público: determinar industria y competidores
  */
-import { fetchSiteContextForDiagnostics } from './firecrawl-site-context';
 
 export interface IndustryResult {
   industry: string;
@@ -230,10 +229,6 @@ export async function getTop5Competitors(input: {
   ]
     .filter(Boolean)
     .join('\n');
-  const firecrawlBlock =
-    input.siteMarkdown?.trim().length ?
-      `Contenido principal del sitio (prioridad máxima para entender qué hace la empresa):\n${input.siteMarkdown.trim().slice(0, 14_000)}`
-    : 'Sin contenido Firecrawl disponible.';
   const useUrlFirstPrompt = Boolean(input.websiteUrl?.trim());
 
   const content = await callOpenAI([
@@ -241,8 +236,10 @@ export async function getTop5Competitors(input: {
       role: 'system',
       content: useUrlFirstPrompt
         ? 'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
-          'Analizá la URL y el contenido del sitio para identificar competidores DIRECTOS y REALES de esta empresa. ' +
-          'No inventes. No mezcles partners, medios, proveedores, integradores, marketplaces generales ni empresas del ecosistema que no compiten directamente. ' +
+          'Analizá la URL y la evidencia principal del sitio para identificar competidores DIRECTOS y REALES de esta empresa. ' +
+          'Primero inferí cuál es la oferta principal de la empresa y a qué tipo de cliente vende. Luego elegí solo marcas que compitan por esa misma oferta principal. ' +
+          'Ignorá por completo clientes, partners, integraciones, marcas mencionadas como casos de éxito, certificaciones, proveedores, medios, distribuidores, revendedores y marketplaces generales. ' +
+          'No inventes ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
           'Devolvé solo nombres de marcas/empresas.'
         : 'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
           'Tu tarea es identificar competidores DIRECTOS y REALES de la empresa indicada. ' +
@@ -262,13 +259,11 @@ export async function getTop5Competitors(input: {
         ? `Principales competidores directos de ${input.websiteUrl}\n\n` +
           `Marca / empresa: ${input.brandName}\n\n` +
           `Evidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
-          `${firecrawlBlock}\n\n` +
-          'Devolvé un JSON con la forma {"competitors":["..."]}.'
+          'Devolvé un JSON con la forma {"competitors":["..."]} con hasta 5 competidores directos del mismo rubro y misma oferta principal.'
         : `Marca: ${input.brandName}\n` +
           `${marketContext}\n` +
           (input.websiteUrl ? `Sitio web: ${input.websiteUrl}\n` : '') +
           `\nEvidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
-          `${firecrawlBlock}\n\n` +
           (hintBlock ? `Pistas secundarias:\n${hintBlock}\n\n` : '') +
           'Devolvé un JSON con la forma {"competitors":["..."]} incluyendo solo competidores directos reales de esta empresa.',
     },
@@ -347,31 +342,20 @@ export async function determineMarketProfileForBrand(
   const hasSearchEvidence = searchEvidence?.trim().length ? true : false;
   const countryFixed = knownCountry?.trim();
 
-  const fcBlock =
-    firecrawlSiteMarkdown?.trim().length ?
-      `\n\nContenido principal del sitio (Firecrawl; prioridad máxima para rubro y vertical):\n${firecrawlSiteMarkdown.trim().slice(0, 16_000)}`
-    : '';
-
   const evidenceBlock =
     [
       countryFixed ? `País/mercado ya determinado: ${countryFixed}. Solo inferí industria y confidence.` : '',
       `Evidencia website (HTML liviano):\n${websiteEvidenceText}`,
-      fcBlock,
       hasSearchEvidence ? `\n${searchEvidence!.trim()}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
-
-  const hasFirecrawl = Boolean(firecrawlSiteMarkdown?.trim().length);
 
   const systemPrompt =
     'Respondé SOLO con JSON válido. Ejemplo: {"country":"Colombia","industry":"Logística 3PL B2B","confidence":88,"verticalSummary":"Operador de transporte y almacenaje para empresas.","customerSegment":"B2B"}. ' +
     (countryFixed
       ? `El país es ${countryFixed}; devolvé ese mismo valor en country. Inferí industria, confidence (0-100), verticalSummary y customerSegment. `
       : 'Inferí país/mercado principal e industria de la marca priorizando la evidencia (website y/o resultados de búsqueda). ') +
-    (hasFirecrawl ?
-      'Si hay bloque Firecrawl, la industria y verticalSummary DEBEN alinearse con ese texto; no inventes otro rubro (ej. no "banca" si el sitio habla de logística o transporte). '
-    : '') +
     'Industria: SECTOR donde compiten pares directos (2-7 palabras en español), lo más específico posible sin ser un producto aislado. ' +
     'Ejemplos: "Logística y transporte de carga B2B", "Telecomunicaciones móviles", "Banca retail", "Supermercados". ' +
     'verticalSummary: 1-3 frases en español describiendo qué vende y a quién. ' +
@@ -525,31 +509,13 @@ export async function resolveBrandAnalysisContext(input: {
   const knownCountry = input.knownCountry?.trim() || undefined;
   const hasWebsite = Boolean(input.websiteUrl?.trim());
 
-  let firecrawlSiteMarkdown: string | undefined;
   let sourceUrls: string[] = [];
-  if (hasWebsite) {
-    const websiteUrl = input.websiteUrl!.trim();
-    const fcKey = process.env.FIRECRAWL_API_KEY;
-    const fcMax = Number(process.env.PUBLIC_DIAGNOSTIC_FIRECRAWL_MAX_PAGES || 3);
-    try {
-      const siteCtx = await fetchSiteContextForDiagnostics(websiteUrl, fcKey, {
-        maxPages: Number.isFinite(fcMax) ? Math.min(5, Math.max(1, fcMax)) : 3,
-      });
-      if (siteCtx) {
-        firecrawlSiteMarkdown = siteCtx.markdown;
-        sourceUrls = siteCtx.sourceUrls;
-      }
-    } catch {
-      // Si Firecrawl falla, seguimos con website/search evidence.
-    }
-  }
 
   let competitorNames: string[] = [];
   if (hasWebsite) {
     const firstPass = await getTop5Competitors({
       brandName: input.brandName,
       websiteUrl: input.websiteUrl,
-      siteMarkdown: firecrawlSiteMarkdown,
     });
     competitorNames = firstPass.competitors;
   }
@@ -561,8 +527,7 @@ export async function resolveBrandAnalysisContext(input: {
     hasWebsite ? 'General' : fallbackIndustry,
     input.websiteUrl,
     hasWebsite ? undefined : searchEvidence || undefined,
-    hasWebsite ? undefined : knownCountry,
-    firecrawlSiteMarkdown
+    hasWebsite ? undefined : knownCountry
   );
   const country = hasWebsite
     ? marketProfile.country || fallbackCountry
@@ -573,7 +538,6 @@ export async function resolveBrandAnalysisContext(input: {
       brandName: input.brandName,
       country,
       websiteUrl: input.websiteUrl,
-      siteMarkdown: firecrawlSiteMarkdown,
       industryHint: industry,
       niche: {
         verticalSummary: marketProfile.verticalSummary,
@@ -595,7 +559,6 @@ export async function resolveBrandAnalysisContext(input: {
     confidence: marketProfile.confidence,
     ...(marketProfile.verticalSummary ? { verticalSummary: marketProfile.verticalSummary } : {}),
     ...(marketProfile.customerSegment ? { customerSegment: marketProfile.customerSegment } : {}),
-    ...(firecrawlSiteMarkdown ? { firecrawlSiteMarkdown } : {}),
     sourceUrls,
     competitors,
   };
