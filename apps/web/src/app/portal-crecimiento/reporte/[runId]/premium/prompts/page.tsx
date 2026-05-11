@@ -219,6 +219,62 @@ function firstEmptyWeeklySlot(slots: WeeklySlotApi[]): number | null {
   return null;
 }
 
+function Donut({
+  segments,
+  total,
+}: {
+  segments: Array<{ label: string; count: number; color: string }>;
+  total: number;
+}) {
+  const r = 40;
+  const cx = 60;
+  const cy = 60;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  if (total <= 0) {
+    return (
+      <svg viewBox="0 0 120 120" className="mx-auto h-36 w-36">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth="18" />
+        <text x={cx} y={cy - 4} textAnchor="middle" fontSize="16" fontWeight="700" fill="#1e293b">
+          0
+        </text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="8" fill="#64748b">
+          prompts
+        </text>
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 120 120" className="mx-auto h-36 w-36 shrink-0">
+      {segments.map((seg, i) => {
+        const dash = (seg.count / total) * circ;
+        const el = (
+          <circle
+            key={i}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="18"
+            strokeDasharray={`${dash} ${circ - dash}`}
+            strokeDashoffset={-offset}
+            transform={`rotate(-90 ${cx} ${cy})`}
+          />
+        );
+        offset += dash;
+        return el;
+      })}
+      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="16" fontWeight="700" fill="#1e293b">
+        {total}
+      </text>
+      <text x={cx} y={cy + 10} textAnchor="middle" fontSize="8" fill="#64748b">
+        prompts
+      </text>
+    </svg>
+  );
+}
+
 export default function PromptsCorridaPage() {
   const params = useParams();
   const runId = params.runId as string;
@@ -404,6 +460,23 @@ export default function PromptsCorridaPage() {
     () => Boolean(weeklyData?.slots.some((s) => s.id && s.promptText.trim())),
     [weeklyData],
   );
+
+  const donutSegments = useMemo(() => {
+    const counts: Record<string, number> = {};
+    results.forEach((pr) => {
+      const txt = pr.prompt?.promptText ?? '';
+      const key = normalizeIntentionKey(pr.prompt?.category?.name ?? null, txt);
+      counts[key] = (counts[key] ?? 0) + 1;
+    });
+    const order = ['urgencia', 'calidad', 'precio', 'consideracion', 'otros'] as const;
+    return order
+      .filter((k) => (counts[k] ?? 0) > 0)
+      .map((k) => ({
+        label: INTENTION_STYLE[k]?.label ?? k,
+        count: counts[k] ?? 0,
+        color: INTENTION_STYLE[k]?.donutColor ?? '#94a3b8',
+      }));
+  }, [results]);
 
   function csvEscape(s: string) {
     const t = String(s ?? '').replace(/"/g, '""');
@@ -925,134 +998,176 @@ export default function PromptsCorridaPage() {
                   </section>
                 </div>
 
-                <div className="w-full shrink-0 space-y-4 xl:w-[300px] xl:sticky xl:top-4 xl:self-start">
-                  {!run.brand?.id ? (
-                    <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                      Este informe no tiene marca vinculada.
-                    </p>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCustomPromptOpen(true);
-                          setInlineOk(null);
-                          setQuickTryError(null);
-                        }}
-                        className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 p-[1px] shadow-lg shadow-violet-500/25 transition hover:shadow-violet-500/40"
-                      >
-                        <span className="flex w-full flex-col items-center gap-1 rounded-[15px] bg-gradient-to-b from-white/15 to-transparent px-4 py-4 text-center">
-                          <span className="inline-flex items-center gap-2 text-sm font-bold tracking-tight text-white drop-shadow-sm">
-                            <Sparkles className="h-5 w-5 shrink-0 text-amber-200" strokeWidth={2.2} />
-                            Generá tu propio prompt
-                          </span>
-                          <span className="text-[11px] font-medium text-violet-100/95">
-                            Abrí el asistente: ejecutar, analizar y guardar en tu cuenta
-                          </span>
-                        </span>
-                      </button>
+                <div className="w-full shrink-0 space-y-3 xl:w-[300px] xl:sticky xl:top-4 xl:self-start">
+                  <div className="space-y-3">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="mb-2 text-xs font-bold text-slate-900">Intenciones · esta corrida</p>
+                      <Donut segments={donutSegments} total={executed} />
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="mb-2 text-[10px] font-bold text-slate-900">¿Qué es cada intención?</p>
+                      <ul className="space-y-2 text-[10px] text-slate-600">
+                        {Object.entries(INTENTION_STYLE).map(([k, v]) =>
+                          k === 'otros' ? null : (
+                            <li key={k} className="flex gap-2">
+                              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${v.dot}`} />
+                              <span>
+                                <strong className="text-slate-800">{v.label}</strong> — desde categoría/texto del prompt.
+                              </span>
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="mb-2 text-[10px] font-bold text-slate-900">Escala Cleexs</p>
+                      <ul className="space-y-1 text-[10px] text-slate-600">
+                        <li>
+                          <span className="font-semibold text-violet-700">80–100</span> excelente
+                        </li>
+                        <li>
+                          <span className="font-semibold text-blue-700">60–79</span> bien
+                        </li>
+                        <li>
+                          <span className="font-semibold text-amber-700">40–59</span> regular
+                        </li>
+                        <li>
+                          <span className="font-semibold text-red-700">0–39</span> muy bajo
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
 
-                      {!weeklyData ? (
-                        <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-4 text-xs text-slate-500">
-                          <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
-                          Cargando prompts guardados…
-                        </div>
-                      ) : hasSavedWeeklyPrompts ? (
-                        <div className="rounded-2xl border border-violet-200/90 bg-gradient-to-br from-violet-50/90 via-white to-fuchsia-50/30 p-3 shadow-md ring-1 ring-violet-100/80">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-violet-800">Guardados en cuenta</p>
-                          <p className="mt-0.5 text-[10px] text-slate-600">
-                            Marcá uno para <code className="rounded bg-white/90 px-0.5 font-mono text-[9px]">weekly_portal</code>
-                          </p>
-                          <ul className="mt-3 space-y-2">
-                            {weeklyData.slots
-                              .filter((s) => s.id && s.promptText.trim())
-                              .map((s) => {
-                                const selected = weeklyData.selectedWeeklyPortalPromptId === s.id;
-                                return (
-                                  <li
-                                    key={s.slot}
-                                    className={`rounded-xl border p-2.5 shadow-sm transition ${
-                                      selected
-                                        ? 'border-violet-400 bg-white ring-2 ring-violet-200/60'
-                                        : 'border-white/80 bg-white/70 backdrop-blur-sm'
-                                    }`}
-                                  >
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="min-w-0 flex-1">
-                                        <span className="text-[9px] font-black text-slate-400">#{s.slot + 1}</span>
-                                        <p className="truncate text-xs font-bold text-slate-900">
-                                          {s.title?.trim() || 'Sin título'}
-                                        </p>
-                                        <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-600">
-                                          {s.promptText}
-                                        </p>
-                                      </div>
-                                      <div className="flex shrink-0 flex-col items-end gap-1">
-                                        <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] font-bold text-violet-800">
-                                          <input
-                                            type="radio"
-                                            name="weekly-prompt-pick-rail"
-                                            checked={selected}
-                                            disabled={weeklySaving || !s.id}
-                                            onChange={() => void setWeeklySelection(s.id)}
-                                            className="text-violet-600"
-                                          />
-                                          Semanal
-                                        </label>
-                                        <div className="flex gap-1">
-                                          <button
-                                            type="button"
-                                            disabled={weeklySaving}
-                                            onClick={() => openEditorForSlot(s.slot)}
-                                            className="rounded-lg border border-slate-200/80 bg-white px-2 py-0.5 text-[9px] font-bold text-slate-700 shadow-sm hover:bg-violet-50 disabled:opacity-50"
-                                          >
-                                            <Pencil className="mr-0.5 inline h-3 w-3 align-text-bottom" />
-                                            Editar
-                                          </button>
-                                          <button
-                                            type="button"
-                                            disabled={weeklySaving}
-                                            onClick={() => void deleteSlot(s.slot)}
-                                            className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-0.5 disabled:opacity-50"
-                                            aria-label="Borrar"
-                                          >
-                                            <Trash2 className="h-3 w-3 text-rose-700" />
-                                          </button>
+                  <div className="space-y-4 border-t border-slate-200 pt-4">
+                    {!run.brand?.id ? (
+                      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                        Este informe no tiene marca vinculada.
+                      </p>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomPromptOpen(true);
+                            setInlineOk(null);
+                            setQuickTryError(null);
+                          }}
+                          className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 p-[1px] shadow-lg shadow-violet-500/25 transition hover:shadow-violet-500/40"
+                        >
+                          <span className="flex w-full flex-col items-center gap-1 rounded-[15px] bg-gradient-to-b from-white/15 to-transparent px-4 py-4 text-center">
+                            <span className="inline-flex items-center gap-2 text-sm font-bold tracking-tight text-white drop-shadow-sm">
+                              <Sparkles className="h-5 w-5 shrink-0 text-amber-200" strokeWidth={2.2} />
+                              Generá tu propio prompt
+                            </span>
+                            <span className="text-[11px] font-medium text-violet-100/95">
+                              Abrí el asistente: ejecutar, analizar y guardar en tu cuenta
+                            </span>
+                          </span>
+                        </button>
+
+                        {!weeklyData ? (
+                          <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-4 text-xs text-slate-500">
+                            <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+                            Cargando prompts guardados…
+                          </div>
+                        ) : hasSavedWeeklyPrompts ? (
+                          <div className="rounded-2xl border border-violet-200/90 bg-gradient-to-br from-violet-50/90 via-white to-fuchsia-50/30 p-3 shadow-md ring-1 ring-violet-100/80">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-violet-800">Guardados en cuenta</p>
+                            <p className="mt-0.5 text-[10px] text-slate-600">
+                              Marcá uno para{' '}
+                              <code className="rounded bg-white/90 px-0.5 font-mono text-[9px]">weekly_portal</code>
+                            </p>
+                            <ul className="mt-3 space-y-2">
+                              {weeklyData.slots
+                                .filter((s) => s.id && s.promptText.trim())
+                                .map((s) => {
+                                  const selected = weeklyData.selectedWeeklyPortalPromptId === s.id;
+                                  return (
+                                    <li
+                                      key={s.slot}
+                                      className={`rounded-xl border p-2.5 shadow-sm transition ${
+                                        selected
+                                          ? 'border-violet-400 bg-white ring-2 ring-violet-200/60'
+                                          : 'border-white/80 bg-white/70 backdrop-blur-sm'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                          <span className="text-[9px] font-black text-slate-400">#{s.slot + 1}</span>
+                                          <p className="truncate text-xs font-bold text-slate-900">
+                                            {s.title?.trim() || 'Sin título'}
+                                          </p>
+                                          <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-600">
+                                            {s.promptText}
+                                          </p>
+                                        </div>
+                                        <div className="flex shrink-0 flex-col items-end gap-1">
+                                          <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] font-bold text-violet-800">
+                                            <input
+                                              type="radio"
+                                              name="weekly-prompt-pick-rail"
+                                              checked={selected}
+                                              disabled={weeklySaving || !s.id}
+                                              onChange={() => s.id && void setWeeklySelection(s.id)}
+                                              className="text-violet-600"
+                                            />
+                                            Semanal
+                                          </label>
+                                          <div className="flex gap-1">
+                                            <button
+                                              type="button"
+                                              disabled={weeklySaving}
+                                              onClick={() => openEditorForSlot(s.slot)}
+                                              className="rounded-lg border border-slate-200/80 bg-white px-2 py-0.5 text-[9px] font-bold text-slate-700 shadow-sm hover:bg-violet-50 disabled:opacity-50"
+                                            >
+                                              <Pencil className="mr-0.5 inline h-3 w-3 align-text-bottom" />
+                                              Editar
+                                            </button>
+                                            <button
+                                              type="button"
+                                              disabled={weeklySaving}
+                                              onClick={() => void deleteSlot(s.slot)}
+                                              className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-0.5 disabled:opacity-50"
+                                              aria-label="Borrar"
+                                            >
+                                              <Trash2 className="h-3 w-3 text-rose-700" />
+                                            </button>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  </li>
-                                );
-                              })}
-                          </ul>
-                          {weeklyData.runSchedule === 'semanal' ? (
-                            <p className="mt-3 rounded-lg bg-violet-100/90 px-2.5 py-1.5 text-[9px] font-semibold text-violet-950">
-                              Plan semanal activo · n8n tipo <code className="font-mono">weekly_portal</code>
-                            </p>
-                          ) : null}
-                          {weeklyData.selectedWeeklyPortalPromptId ? (
-                            <button
-                              type="button"
-                              disabled={weeklySaving}
-                              onClick={() => void setWeeklySelection(null)}
-                              className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/80 py-2 text-[10px] font-semibold text-slate-600 hover:bg-white"
-                            >
-                              Quitar selección semanal
-                            </button>
-                          ) : (
-                            <p className="mt-2 text-[9px] text-slate-500">
-                              Sin radio marcado, <code className="rounded bg-white px-0.5">weekly_portal</code> puede fallar.
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-3 py-3 text-center text-[11px] leading-snug text-slate-600">
-                          Cuando guardes un prompt desde el popup, aparecerá una lista compacta acá para editarlo o marcarlo
-                          semanal.
-                        </p>
-                      )}
-                    </>
-                  )}
+                                    </li>
+                                  );
+                                })}
+                            </ul>
+                            {weeklyData.runSchedule === 'semanal' ? (
+                              <p className="mt-3 rounded-lg bg-violet-100/90 px-2.5 py-1.5 text-[9px] font-semibold text-violet-950">
+                                Plan semanal activo · n8n tipo <code className="font-mono">weekly_portal</code>
+                              </p>
+                            ) : null}
+                            {weeklyData.selectedWeeklyPortalPromptId ? (
+                              <button
+                                type="button"
+                                disabled={weeklySaving}
+                                onClick={() => void setWeeklySelection(null)}
+                                className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/80 py-2 text-[10px] font-semibold text-slate-600 hover:bg-white"
+                              >
+                                Quitar selección semanal
+                              </button>
+                            ) : (
+                              <p className="mt-2 text-[9px] text-slate-500">
+                                Sin radio marcado, <code className="rounded bg-white px-0.5">weekly_portal</code> puede fallar.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-3 py-3 text-center text-[11px] leading-snug text-slate-600">
+                            Cuando guardes un prompt desde el popup, aparecerá una lista compacta acá para editarlo o marcarlo
+                            semanal.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
