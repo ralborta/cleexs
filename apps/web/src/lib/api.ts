@@ -530,6 +530,7 @@ export const publicDiagnosticApi = {
     brandName?: string,
     url?: string,
     tier?: 'gold' | 'freemium',
+    useSerp?: boolean,
     tracking?: {
       refCode?: string;
       utmSource?: string;
@@ -543,6 +544,7 @@ export const publicDiagnosticApi = {
         ...(brandName != null && brandName !== '' && { brandName }),
         ...(url != null && url !== '' && { url }),
         ...(tier === 'gold' && { tier: 'gold' as const }),
+        ...(typeof useSerp === 'boolean' ? { useSerp } : {}),
         ...(tracking?.refCode ? { refCode: tracking.refCode } : {}),
         ...(tracking?.utmSource ? { utmSource: tracking.utmSource } : {}),
         ...(tracking?.utmMedium ? { utmMedium: tracking.utmMedium } : {}),

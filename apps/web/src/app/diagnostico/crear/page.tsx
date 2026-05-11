@@ -36,6 +36,13 @@ export default function CrearDiagnosticoPage() {
   const utmSourceParam = searchParams.get('utm_source') ?? '';
   const utmMediumParam = searchParams.get('utm_medium') ?? '';
   const utmCampaignParam = searchParams.get('utm_campaign') ?? '';
+  const serpParam = (searchParams.get('serp') ?? searchParams.get('useSerp') ?? '').trim().toLowerCase();
+  const useSerp =
+    serpParam === '0' || serpParam === 'false' || serpParam === 'off'
+      ? false
+      : serpParam === '1' || serpParam === 'true' || serpParam === 'on'
+        ? true
+        : undefined;
   const tier = tierParam === 'gold' ? 'gold' as const : undefined;
   const hasAutostartInput = Boolean(
     (urlParam || '').trim() || (brandParam || '').trim() || (qParam || '').trim()
@@ -184,7 +191,13 @@ export default function CrearDiagnosticoPage() {
     try {
       const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
       const attribution = getAttributionForCreate();
-      const createPromise = publicDiagnosticApi.create(trimmedBrand || undefined, urlToSend, tier, attribution);
+      const createPromise = publicDiagnosticApi.create(
+        trimmedBrand || undefined,
+        urlToSend,
+        tier,
+        useSerp,
+        attribution
+      );
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );

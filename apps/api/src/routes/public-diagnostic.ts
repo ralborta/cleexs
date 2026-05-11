@@ -548,6 +548,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       brandName?: string;
       url?: string;
       tier?: 'freemium' | 'gold';
+      useSerp?: boolean;
       refCode?: string;
       utmSource?: string;
       utmMedium?: string;
@@ -565,6 +566,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         brandName: z.string().max(200).optional(),
         url: z.union([z.string().max(500), z.undefined()]).optional(),
         tier: z.enum(['freemium', 'gold']).optional(),
+        useSerp: z.boolean().optional(),
         refCode: trackingField,
         utmSource: trackingField,
         utmMedium: trackingField,
@@ -576,7 +578,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
         });
       }
-      const { brandName, url, tier: requestedTier, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
+      const { brandName, url, tier: requestedTier, useSerp, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
       const trimmedBrand = (brandName ?? '').trim();
       const trimmedUrl = (url ?? '').trim();
       const visitorIdHeader = request.headers['x-visitor-id'];
@@ -669,6 +671,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             fallbackCountry: defaultCountry,
             fallbackIndustry: 'General',
             knownCountry: countryFromTld || undefined,
+            useSearchEvidence: useSerp !== false,
           }
         );
         const marketCountry =
@@ -682,6 +685,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             brandName: brandForRun,
             marketCountry,
             countryFromTld: countryFromTld ?? undefined,
+            useSerp: useSerp !== false,
             verticalSummary: analysisContext.verticalSummary,
             customerSegment: analysisContext.customerSegment,
             marketConfidence: analysisContext.confidence,

@@ -277,6 +277,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         brandName,
         websiteUrl: normalizedDomain,
         fallbackIndustry: classification.category || 'General',
+        classification,
       });
       const competitorCandidates = analysisContext.competitors.map((c) => ({
         domain: c.domain ?? '',
@@ -405,6 +406,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         brandName,
         websiteUrl: domain,
         fallbackIndustry: classification.category || 'General',
+        classification,
       });
       const candidates = analysisContext.competitors.map((c) => ({
         domain: c.domain ?? '',
