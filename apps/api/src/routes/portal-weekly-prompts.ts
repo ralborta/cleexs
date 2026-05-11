@@ -15,6 +15,25 @@ import {
 
 const MAX_SLOT = 4;
 
+function buildSavedPromptTitle(promptText: string, fallbackSlot?: number): string {
+  const normalized = promptText
+    .trim()
+    .replace(/\s+/g, ' ');
+  const words = normalized
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 3);
+  const totalWords = normalized ? normalized.split(' ').filter(Boolean).length : 0;
+
+  if (words.length === 0) {
+    return fallbackSlot != null ? `Opción ${fallbackSlot + 1}` : 'Prompt';
+  }
+
+  const title = words.join(' ');
+  const capped = `${title.charAt(0).toUpperCase()}${title.slice(1)}`;
+  return totalWords > 3 ? `${capped}...` : capped;
+}
+
 const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { brandId: string } }>('/brands/:brandId/weekly-prompts', async (request, reply) => {
     const portalUser = await resolvePortalUserFromRequest(request);
@@ -27,7 +46,23 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         runSchedule: true,
         selectedWeeklyPortalPromptId: true,
-        portalSavedPrompts: { orderBy: { slot: 'asc' } },
+        portalSavedPrompts: {
+          orderBy: { slot: 'asc' },
+          include: {
+            shadowPrompt: {
+              select: {
+                promptResults: {
+                  orderBy: { createdAt: 'desc' },
+                  take: 1,
+                  select: {
+                    createdAt: true,
+                    responseText: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
@@ -38,9 +73,11 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         ? {
             slot,
             id: row.id,
-            title: row.title,
+            title: buildSavedPromptTitle(row.promptText, slot),
             promptText: row.promptText,
             updatedAt: row.updatedAt.toISOString(),
+            lastExecutedAt: row.shadowPrompt?.promptResults[0]?.createdAt?.toISOString() ?? null,
+            lastResponseText: row.shadowPrompt?.promptResults[0]?.responseText ?? null,
           }
         : {
             slot,
@@ -48,6 +85,8 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
             title: '',
             promptText: '',
             updatedAt: null as string | null,
+            lastExecutedAt: null as string | null,
+            lastResponseText: null as string | null,
           };
     });
 
@@ -201,18 +240,19 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       const parsed = putBody.safeParse(request.body ?? {});
       if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido.', details: parsed.error.flatten() });
 
-      const { title, promptText } = parsed.data;
+      const { promptText } = parsed.data;
+      const generatedTitle = buildSavedPromptTitle(promptText, slot);
 
       const saved = await prisma.brandPortalSavedPrompt.upsert({
         where: { brandId_slot: { brandId: brand.id, slot } },
         create: {
           brandId: brand.id,
           slot,
-          title: title.trim(),
+          title: generatedTitle,
           promptText: promptText.trim(),
         },
         update: {
-          title: title.trim(),
+          title: generatedTitle,
           promptText: promptText.trim(),
         },
       });
@@ -229,7 +269,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         ok: true,
         slot: saved.slot,
         id: saved.id,
-        title: saved.title,
+        title: buildSavedPromptTitle(saved.promptText, saved.slot),
         promptText: saved.promptText,
       });
     }

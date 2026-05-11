@@ -43,6 +43,8 @@ type WeeklySlotApi = {
   title: string;
   promptText: string;
   updatedAt: string | null;
+  lastExecutedAt: string | null;
+  lastResponseText: string | null;
 };
 
 type WeeklyPromptsPayload = {
@@ -219,6 +221,28 @@ function firstEmptyWeeklySlot(slots: WeeklySlotApi[]): number | null {
   return null;
 }
 
+function buildPromptHeadline(promptText: string, fallback = 'Prompt guardado') {
+  const normalized = promptText.trim().replace(/\s+/g, ' ');
+  const words = normalized.split(' ').filter(Boolean);
+  if (!words.length) return fallback;
+  const base = words.slice(0, 3).join(' ');
+  const capped = `${base.charAt(0).toUpperCase()}${base.slice(1)}`;
+  return words.length > 3 ? `${capped}...` : capped;
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function Donut({
   segments,
   total,
@@ -291,7 +315,6 @@ export default function PromptsCorridaPage() {
   const [weeklyLoadError, setWeeklyLoadError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorSlot, setEditorSlot] = useState(0);
-  const [editorTitle, setEditorTitle] = useState('');
   const [editorText, setEditorText] = useState('');
   const [weeklySaving, setWeeklySaving] = useState(false);
 
@@ -516,7 +539,6 @@ export default function PromptsCorridaPage() {
     setOpenedFromQuickTry(false);
     const row = weeklyData?.slots.find((s) => s.slot === slot);
     setEditorSlot(slot);
-    setEditorTitle(row?.title ?? '');
     setEditorText(row?.promptText ?? '');
     setEditorOpen(true);
   }
@@ -536,7 +558,6 @@ export default function PromptsCorridaPage() {
     setCustomPromptOpen(false);
     setOpenedFromQuickTry(true);
     setEditorSlot(slot);
-    setEditorTitle('');
     setEditorText(text);
     setEditorOpen(true);
   }
@@ -600,7 +621,7 @@ export default function PromptsCorridaPage() {
   }
 
   /** PUT slot; refresca lista. Devuelve id del guardado o null si falla. */
-  async function putWeeklySlot(slot: number, title: string, promptText: string): Promise<string | null> {
+  async function putWeeklySlot(slot: number, promptText: string): Promise<string | null> {
     const brandId = run?.brand?.id;
     if (!brandId) return null;
     const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
@@ -610,7 +631,7 @@ export default function PromptsCorridaPage() {
       {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), promptText: promptText.trim() }),
+        body: JSON.stringify({ promptText: promptText.trim() }),
       },
     );
     const b = await res.json().catch(() => ({}));
@@ -644,7 +665,7 @@ export default function PromptsCorridaPage() {
     }
     setWeeklySaving(true);
     try {
-      const id = await putWeeklySlot(slot, '', text);
+      const id = await putWeeklySlot(slot, text);
       if (id) setInlineOk(`Guardado en la opción ${slot + 1}.`);
     } finally {
       setWeeklySaving(false);
@@ -668,7 +689,7 @@ export default function PromptsCorridaPage() {
     }
     setWeeklySaving(true);
     try {
-      const id = await putWeeklySlot(slot, '', text);
+      const id = await putWeeklySlot(slot, text);
       if (!id) return;
       const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
       if (!token) return;
@@ -706,7 +727,7 @@ export default function PromptsCorridaPage() {
         {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: editorTitle.trim(), promptText: text }),
+          body: JSON.stringify({ promptText: text }),
         },
       );
       if (res.ok) {
@@ -1082,6 +1103,9 @@ export default function PromptsCorridaPage() {
                                 .filter((s) => s.id && s.promptText.trim())
                                 .map((s) => {
                                   const selected = weeklyData.selectedWeeklyPortalPromptId === s.id;
+                                  const executionLabel = formatDateTime(s.lastExecutedAt);
+                                  const updatedLabel = formatDateTime(s.updatedAt);
+                                  const autoTitle = buildPromptHeadline(s.promptText, s.title?.trim() || 'Prompt guardado');
                                   return (
                                     <li
                                       key={s.slot}
@@ -1095,11 +1119,28 @@ export default function PromptsCorridaPage() {
                                         <div className="min-w-0 flex-1">
                                           <span className="text-[9px] font-black text-slate-400">#{s.slot + 1}</span>
                                           <p className="truncate text-xs font-bold text-slate-900">
-                                            {s.title?.trim() || 'Sin título'}
+                                            {autoTitle}
                                           </p>
-                                          <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-600">
+                                          <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-500">
                                             {s.promptText}
                                           </p>
+                                          <p className="mt-1 text-[9px] font-medium text-slate-500">
+                                            {executionLabel
+                                              ? `Ejecutado: ${executionLabel}`
+                                              : updatedLabel
+                                                ? `Guardado: ${updatedLabel}`
+                                                : 'Aún sin ejecución'}
+                                          </p>
+                                          <div className="mt-1.5 rounded-lg border border-white/80 bg-white/80 px-2 py-1.5">
+                                            <p className="text-[9px] font-bold uppercase tracking-wide text-violet-700">
+                                              Resultado en pantalla
+                                            </p>
+                                            <p className="mt-0.5 line-clamp-3 text-[10px] leading-snug text-slate-600">
+                                              {s.lastResponseText?.trim()
+                                                ? s.lastResponseText
+                                                : 'Todavía no hay resultado ejecutado para este prompt guardado.'}
+                                            </p>
+                                          </div>
                                         </div>
                                         <div className="flex shrink-0 flex-col items-end gap-1">
                                           <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] font-bold text-violet-800">
@@ -1371,13 +1412,12 @@ export default function PromptsCorridaPage() {
                 ))}
               </div>
             ) : null}
-            <input
-              type="text"
-              value={editorTitle}
-              onChange={(e) => setEditorTitle(e.target.value)}
-              placeholder="Título corto (opcional)"
-              className="mt-4 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
+            <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/60 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Nombre automático</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {buildPromptHeadline(editorText)}
+              </p>
+            </div>
             <textarea
               value={editorText}
               onChange={(e) => setEditorText(e.target.value)}
