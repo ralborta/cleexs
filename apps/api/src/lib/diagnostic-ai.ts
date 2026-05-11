@@ -242,13 +242,14 @@ export async function getTop5Competitors(input: {
         'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
         'Tu tarea es identificar competidores DIRECTOS y REALES de la empresa indicada. ' +
         'Reglas estrictas: ' +
-        '1) Entendé qué hace la empresa principalmente usando la evidencia del sitio como fuente prioritaria. ' +
-        '2) El país/mercado indicado es el único filtro duro si viene informado. ' +
-        '3) Un competidor directo debe resolver la misma necesidad principal, con una oferta comparable y para un tipo de cliente similar. ' +
-        '4) NO incluyas marketplaces generales, partners, proveedores, medios, revendedores, categorías vecinas ni productos de la misma empresa. ' +
-        '5) NO inventes marcas ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
-        '6) Devolvé solo nombres de marcas/empresas, nunca URLs, dominios ni texto extra. ' +
-        '7) Si las pistas secundarias contradicen al sitio, priorizá el sitio.',
+        '1) Si hay evidencia del sitio, usala como fuente principal y suficiente para entender el negocio. ' +
+        '2) No dependas de clasificaciones previas ni de categorías inventadas si el sitio ya deja claro qué hace la empresa. ' +
+        '3) El país/mercado indicado es el único filtro duro si viene informado; si no viene, inferilo desde la URL y el sitio. ' +
+        '4) Un competidor directo debe resolver la misma necesidad principal, con una oferta comparable y para un tipo de cliente similar. ' +
+        '5) NO incluyas marketplaces generales, partners, proveedores, medios, revendedores, categorías vecinas ni productos de la misma empresa. ' +
+        '6) NO inventes marcas ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
+        '7) Devolvé solo nombres de marcas/empresas, nunca URLs, dominios ni texto extra. ' +
+        '8) Si las pistas secundarias contradicen al sitio, ignorá las pistas secundarias y priorizá el sitio.',
     },
     {
       role: 'user',
@@ -512,14 +513,16 @@ export async function resolveBrandAnalysisContext(input: {
   const fallbackCountry = input.fallbackCountry?.trim() || 'Argentina';
   const fallbackIndustry = input.fallbackIndustry?.trim() || 'General';
   const knownCountry = input.knownCountry?.trim() || undefined;
+  const hasWebsite = Boolean(input.websiteUrl?.trim());
 
   let firecrawlSiteMarkdown: string | undefined;
   let sourceUrls: string[] = [];
-  if (input.websiteUrl?.trim()) {
+  if (hasWebsite) {
+    const websiteUrl = input.websiteUrl!.trim();
     const fcKey = process.env.FIRECRAWL_API_KEY;
     const fcMax = Number(process.env.PUBLIC_DIAGNOSTIC_FIRECRAWL_MAX_PAGES || 3);
     try {
-      const siteCtx = await fetchSiteContextForDiagnostics(input.websiteUrl.trim(), fcKey, {
+      const siteCtx = await fetchSiteContextForDiagnostics(websiteUrl, fcKey, {
         maxPages: Number.isFinite(fcMax) ? Math.min(5, Math.max(1, fcMax)) : 3,
       });
       if (siteCtx) {
@@ -531,34 +534,49 @@ export async function resolveBrandAnalysisContext(input: {
     }
   }
 
-  const searchEvidence = knownCountry ? '' : await fetchSearchEvidence(input.brandName);
+  let competitorNames: string[] = [];
+  if (hasWebsite) {
+    const firstPass = await getTop5Competitors({
+      brandName: input.brandName,
+      websiteUrl: input.websiteUrl,
+      siteMarkdown: firecrawlSiteMarkdown,
+    });
+    competitorNames = firstPass.competitors;
+  }
+
+  const searchEvidence = hasWebsite || knownCountry ? '' : await fetchSearchEvidence(input.brandName);
   const marketProfile = await determineMarketProfileForBrand(
     input.brandName,
     fallbackCountry,
-    fallbackIndustry,
+    hasWebsite ? 'General' : fallbackIndustry,
     input.websiteUrl,
-    searchEvidence || undefined,
-    knownCountry,
+    hasWebsite ? undefined : searchEvidence || undefined,
+    hasWebsite ? undefined : knownCountry,
     firecrawlSiteMarkdown
   );
-  const country = knownCountry || marketProfile.country || fallbackCountry;
+  const country = hasWebsite
+    ? marketProfile.country || fallbackCountry
+    : knownCountry || marketProfile.country || fallbackCountry;
   const industry = marketProfile.industry || fallbackIndustry;
-  const { competitors: competitorNames } = await getTop5Competitors({
-    brandName: input.brandName,
-    country,
-    websiteUrl: input.websiteUrl,
-    siteMarkdown: firecrawlSiteMarkdown,
-    industryHint: industry,
-    niche: {
-      verticalSummary: marketProfile.verticalSummary,
-      customerSegment: marketProfile.customerSegment,
-    },
-  });
+  if (!hasWebsite) {
+    const followup = await getTop5Competitors({
+      brandName: input.brandName,
+      country,
+      websiteUrl: input.websiteUrl,
+      siteMarkdown: firecrawlSiteMarkdown,
+      industryHint: industry,
+      niche: {
+        verticalSummary: marketProfile.verticalSummary,
+        customerSegment: marketProfile.customerSegment,
+      },
+    });
+    competitorNames = followup.competitors;
+  }
   const competitors = await resolveCompetitorDomains(
     competitorNames,
-    country,
-    industry,
-    marketProfile.verticalSummary
+    hasWebsite ? undefined : country,
+    hasWebsite ? undefined : industry,
+    hasWebsite ? undefined : marketProfile.verticalSummary
   );
 
   return {
