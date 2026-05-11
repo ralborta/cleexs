@@ -1,6 +1,7 @@
 /**
  * IA para el diagnóstico público: determinar industria y competidores
  */
+import { fetchSiteContextForDiagnostics } from './firecrawl-site-context';
 
 export interface IndustryResult {
   industry: string;
@@ -27,6 +28,17 @@ export interface MarketProfileResult {
   verticalSummary?: string;
   /** Segmento de cliente inferido. */
   customerSegment?: 'B2B' | 'B2C' | 'B2B2C' | 'mixto' | 'desconocido';
+}
+
+export interface ResolvedBrandAnalysisContext {
+  country: string;
+  industry: string;
+  confidence: number;
+  verticalSummary?: string;
+  customerSegment?: 'B2B' | 'B2C' | 'B2B2C' | 'mixto' | 'desconocido';
+  competitors: CompetitorDomainResolution[];
+  firecrawlSiteMarkdown?: string;
+  sourceUrls: string[];
 }
 
 interface WebsiteEvidence {
@@ -488,4 +500,75 @@ export async function resolveCompetitorDomains(
   } catch {
     return unique.map((name) => ({ name, domain: null }));
   }
+}
+
+export async function resolveBrandAnalysisContext(input: {
+  brandName: string;
+  websiteUrl?: string;
+  fallbackCountry?: string;
+  fallbackIndustry?: string;
+  knownCountry?: string;
+}): Promise<ResolvedBrandAnalysisContext> {
+  const fallbackCountry = input.fallbackCountry?.trim() || 'Argentina';
+  const fallbackIndustry = input.fallbackIndustry?.trim() || 'General';
+  const knownCountry = input.knownCountry?.trim() || undefined;
+
+  let firecrawlSiteMarkdown: string | undefined;
+  let sourceUrls: string[] = [];
+  if (input.websiteUrl?.trim()) {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const fcMax = Number(process.env.PUBLIC_DIAGNOSTIC_FIRECRAWL_MAX_PAGES || 3);
+    try {
+      const siteCtx = await fetchSiteContextForDiagnostics(input.websiteUrl.trim(), fcKey, {
+        maxPages: Number.isFinite(fcMax) ? Math.min(5, Math.max(1, fcMax)) : 3,
+      });
+      if (siteCtx) {
+        firecrawlSiteMarkdown = siteCtx.markdown;
+        sourceUrls = siteCtx.sourceUrls;
+      }
+    } catch {
+      // Si Firecrawl falla, seguimos con website/search evidence.
+    }
+  }
+
+  const searchEvidence = knownCountry ? '' : await fetchSearchEvidence(input.brandName);
+  const marketProfile = await determineMarketProfileForBrand(
+    input.brandName,
+    fallbackCountry,
+    fallbackIndustry,
+    input.websiteUrl,
+    searchEvidence || undefined,
+    knownCountry,
+    firecrawlSiteMarkdown
+  );
+  const country = knownCountry || marketProfile.country || fallbackCountry;
+  const industry = marketProfile.industry || fallbackIndustry;
+  const { competitors: competitorNames } = await getTop5Competitors({
+    brandName: input.brandName,
+    country,
+    websiteUrl: input.websiteUrl,
+    siteMarkdown: firecrawlSiteMarkdown,
+    industryHint: industry,
+    niche: {
+      verticalSummary: marketProfile.verticalSummary,
+      customerSegment: marketProfile.customerSegment,
+    },
+  });
+  const competitors = await resolveCompetitorDomains(
+    competitorNames,
+    country,
+    industry,
+    marketProfile.verticalSummary
+  );
+
+  return {
+    country,
+    industry,
+    confidence: marketProfile.confidence,
+    ...(marketProfile.verticalSummary ? { verticalSummary: marketProfile.verticalSummary } : {}),
+    ...(marketProfile.customerSegment ? { customerSegment: marketProfile.customerSegment } : {}),
+    ...(firecrawlSiteMarkdown ? { firecrawlSiteMarkdown } : {}),
+    sourceUrls,
+    competitors,
+  };
 }

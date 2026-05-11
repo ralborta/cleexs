@@ -8,12 +8,8 @@ import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { EntitlementAction } from '@prisma/client';
 import { runOutreachForRun } from '../lib/outreach';
 import {
-  determineMarketProfileForBrand,
-  fetchSearchEvidence,
-  getTop5Competitors,
-  resolveCompetitorDomains,
+  resolveBrandAnalysisContext,
 } from '../lib/diagnostic-ai';
-import { fetchSiteContextForDiagnostics } from '../lib/firecrawl-site-context';
 import { getIntentionForIndustry, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satellite-client';
@@ -665,49 +661,34 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         // Evitar competencia de cuota/latencia con OpenAI durante el core del diagnóstico.
         // El satélite se ejecuta al final para que no degrade la corrida principal.
-        // 1. País: por TLD del dominio si aplica (nike.com.co → Colombia), sino por búsqueda web + IA
         const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
-        let searchEvidence = '';
-        if (!countryFromTld) {
-          searchEvidence = await fetchSearchEvidence(brandForRun);
-        }
-
-        let firecrawlSiteMarkdown: string | undefined;
-        if (trimmedUrl) {
-          const fcKey = process.env.FIRECRAWL_API_KEY;
-          const fcMax = Number(process.env.PUBLIC_DIAGNOSTIC_FIRECRAWL_MAX_PAGES || 3);
-          try {
-            const siteCtx = await fetchSiteContextForDiagnostics(trimmedUrl, fcKey, {
-              maxPages: Number.isFinite(fcMax) ? Math.min(5, Math.max(1, fcMax)) : 3,
-            });
-            if (siteCtx) {
-              firecrawlSiteMarkdown = siteCtx.markdown;
-              fastify.log.info(
-                {
-                  diagnosticId: diagnostic.id,
-                  sourceUrls: siteCtx.sourceUrls,
-                  chars: siteCtx.markdown.length,
-                },
-                'Firecrawl: contexto del sitio para vertical/competidores'
-              );
-            }
-          } catch (err) {
-            fastify.log.warn(
-              { err, diagnosticId: diagnostic.id },
-              'Firecrawl contexto sitio falló; se continúa sin crawl'
-            );
+        const analysisContext = await resolveBrandAnalysisContext(
+          {
+            brandName: brandForRun,
+            websiteUrl: trimmedUrl || undefined,
+            fallbackCountry: defaultCountry,
+            fallbackIndustry: 'General',
+            knownCountry: countryFromTld || undefined,
           }
-        }
-
-        const marketProfile = await determineMarketProfileForBrand(
-          brandForRun,
-          defaultCountry,
-          'General',
-          trimmedUrl || undefined,
-          searchEvidence || undefined,
-          countryFromTld || undefined,
-          firecrawlSiteMarkdown
         );
+        const marketProfile = {
+          country: analysisContext.country,
+          industry: analysisContext.industry,
+          confidence: analysisContext.confidence,
+          verticalSummary: analysisContext.verticalSummary,
+          customerSegment: analysisContext.customerSegment,
+        };
+        const firecrawlSiteMarkdown = analysisContext.firecrawlSiteMarkdown;
+        if (analysisContext.sourceUrls.length > 0 && firecrawlSiteMarkdown) {
+          fastify.log.info(
+            {
+              diagnosticId: diagnostic.id,
+              sourceUrls: analysisContext.sourceUrls,
+              chars: firecrawlSiteMarkdown.length,
+            },
+            'Firecrawl: contexto del sitio para vertical/competidores'
+          );
+        }
         const marketCountry = countryFromTld ?? (marketProfile.confidence >= marketConfidenceMin ? marketProfile.country || defaultCountry : defaultCountry);
         const industry = marketProfile.industry || 'General';
         fastify.log.info(
@@ -717,32 +698,21 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             marketCountry,
             industry,
             countryFromTld: countryFromTld ?? undefined,
-            usedSearch: !!searchEvidence,
             usedFirecrawlContext: !!firecrawlSiteMarkdown,
             verticalSummary: marketProfile.verticalSummary,
             customerSegment: marketProfile.customerSegment,
             marketConfidence: marketProfile.confidence,
             marketConfidenceMin,
           },
-          'Perfil de mercado (país por TLD o búsqueda+IA, industria por IA + Firecrawl si aplica)'
+          'Perfil de mercado unificado desde sitio + país'
         );
         await prisma.publicDiagnostic.update({
           where: { id: diagnostic.id },
           data: { industry },
         });
 
-        // 2. IA elige 5 competidores
-        const { competitors } = await getTop5Competitors({
-          brandName: brandForRun,
-          country: marketCountry,
-          websiteUrl: trimmedUrl || undefined,
-          siteMarkdown: firecrawlSiteMarkdown,
-          industryHint: industry,
-          niche: {
-            verticalSummary: marketProfile.verticalSummary,
-            customerSegment: marketProfile.customerSegment,
-          },
-        });
+        // 2. IA elige competidores desde el mismo contexto común del sistema
+        const competitors = analysisContext.competitors.map((c) => c.name).filter(Boolean);
 
         // 3. Crear Brand con industria y competidores
         const brand = await prisma.brand.create({
@@ -752,45 +722,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
             industry,
             country: marketCountry,
+            description: analysisContext.verticalSummary || null,
           },
         });
 
-        // 3a. Resolver dominio oficial de cada competidor para habilitar outreach automatico
-        // (Firecrawl/Hunter requieren dominio). Si OpenAI no lo sabe, domain queda null.
-        let competitorDomainMap = new Map<string, string | null>();
-        try {
-          const resolved = await resolveCompetitorDomains(
-            competitors,
-            marketCountry,
-            industry,
-            marketProfile.verticalSummary
-          );
-          for (const entry of resolved) {
-            competitorDomainMap.set(entry.name.toLowerCase(), entry.domain);
-          }
-          fastify.log.info(
-            {
-              diagnosticId: diagnostic.id,
-              resolved: resolved.map((r) => ({ name: r.name, domain: r.domain })),
-            },
-            'Dominios de competidores resueltos'
-          );
-        } catch (err) {
-          fastify.log.warn(
-            { err, diagnosticId: diagnostic.id },
-            'No se pudieron resolver dominios de competidores (se guardan sin domain)'
-          );
-        }
-
-        for (const name of competitors) {
-          const cleanName = name.trim() || 'Competidor';
-          const domain = competitorDomainMap.get(cleanName.toLowerCase()) ?? null;
+        for (const entry of analysisContext.competitors) {
           await prisma.competitor.create({
             data: {
               brandId: brand.id,
-              name: cleanName,
-              domain,
+              name: entry.name.trim() || 'Competidor',
+              domain: entry.domain ?? null,
               autoDetected: true,
+              validated: true,
+              discoveryReason: 'Detectado desde contexto real del sitio',
             },
           });
         }

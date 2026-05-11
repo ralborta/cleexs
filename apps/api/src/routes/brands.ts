@@ -5,11 +5,10 @@ import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import {
   classifyDomain,
-  discoverCompetitors,
-  validateCompetitors,
-  generatePrompts,
   normalizeDomain,
 } from '../lib/classifier';
+import { resolveBrandAnalysisContext } from '../lib/diagnostic-ai';
+import { buildDiagnosticPrompts, getIntentionForIndustry } from '../lib/diagnostic-prompts';
 
 const normalizeSuggestion = (value: string) =>
   value
@@ -18,6 +17,15 @@ const normalizeSuggestion = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\w\s]/g, '')
     .trim();
+
+function deriveBrandNameFromDomain(domain: string): string {
+  const root = normalizeDomain(domain).split('.')[0] || domain;
+  return root
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
 
 type SuggestionItem = { name: string; reason?: string };
 
@@ -253,7 +261,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
       const data = autoCreateSchema.parse(request.body);
       const normalizedDomain = normalizeDomain(data.domain);
 
-      // 1. Clasificar el dominio (marca, tipo, categoria, vertical, mercado)
+      // 1. Clasificación liviana para nombre/tipo; el contexto real se resuelve desde el sitio.
       let classification;
       try {
         classification = await classifyDomain(normalizedDomain);
@@ -261,55 +269,72 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(500).send({ error: err?.message || 'Error clasificando dominio' });
       }
 
-      if (classification.confidence < 0.25) {
-        return reply.code(422).send({
-          error: 'No pudimos identificar el negocio con suficiente certeza. Probá con otro dominio o creá la marca manualmente.',
-          classification,
-        });
-      }
-
-      // 2. Descubrir competidores del mismo tipo/categoria/mercado
-      const candidates = await discoverCompetitors(classification);
-
-      // 3. Validar cada competidor re-clasificandolo
-      const validated = await validateCompetitors(classification, candidates);
-      const validCompetitors = validated.filter((c) => c.valid);
-
-      // 4. Generar prompts contextualizados
-      const generatedPrompts = await generatePrompts(classification, data.promptCount);
+      const brandName =
+        `${classification.brandName || ''}`.trim() ||
+        deriveBrandNameFromDomain(normalizedDomain) ||
+        normalizedDomain;
+      const analysisContext = await resolveBrandAnalysisContext({
+        brandName,
+        websiteUrl: normalizedDomain,
+        fallbackIndustry: classification.category || 'General',
+      });
+      const competitorCandidates = analysisContext.competitors.map((c) => ({
+        domain: c.domain ?? '',
+        name: c.name,
+        reason: 'Detectado desde contexto real del sitio',
+      }));
+      const intention = getIntentionForIndustry(analysisContext.industry);
+      const generatedPrompts = buildDiagnosticPrompts(
+        brandName,
+        analysisContext.industry,
+        analysisContext.competitors.map((c) => c.name),
+        intention,
+        analysisContext.country
+      ).slice(0, Math.max(1, Math.min(data.promptCount, 9)));
 
       // 5. Persistir todo en una transaccion
       const brand = await prisma.$transaction(async (tx) => {
         const createdBrand = await tx.brand.create({
           data: {
             tenantId: data.tenantId,
-            name: classification.brandName,
+            name: brandName,
             domain: classification.domain,
-            industry: classification.category,
+            industry: analysisContext.industry,
             productType: classification.subcategory || null,
-            country: classification.geoMarket,
+            country: analysisContext.country,
+            description: analysisContext.verticalSummary || classification.description || null,
             businessType: classification.businessType as any,
             category: classification.category,
             subcategory: classification.subcategory || null,
             geoMarket: classification.geoMarket,
             sizeSegment: classification.sizeSegment as any,
             autoDetected: true,
-            classifierMeta: classification as unknown as Prisma.InputJsonValue,
+            classifierMeta: {
+              classification,
+              marketProfile: {
+                country: analysisContext.country,
+                industry: analysisContext.industry,
+                confidence: analysisContext.confidence,
+                verticalSummary: analysisContext.verticalSummary,
+                customerSegment: analysisContext.customerSegment,
+                sourceUrls: analysisContext.sourceUrls,
+              },
+            } as unknown as Prisma.InputJsonValue,
             aliases: {
               create: (classification.aliases || []).map((alias) => ({ alias })),
             },
             competitors: {
-              create: validCompetitors.map((c) => ({
+              create: analysisContext.competitors.map((c) => ({
                 name: c.name,
                 domain: c.domain,
                 aliases: [],
-                businessType: c.classification?.businessType as any,
-                category: c.classification?.category,
-                subcategory: c.classification?.subcategory || null,
-                geoMarket: c.classification?.geoMarket || classification.geoMarket,
+                businessType: classification.businessType as any,
+                category: analysisContext.industry,
+                subcategory: classification.subcategory || null,
+                geoMarket: classification.geoMarket,
                 autoDetected: true,
                 validated: true,
-                discoveryReason: c.reason,
+                discoveryReason: 'Detectado desde contexto real del sitio',
               })),
             },
           },
@@ -345,7 +370,7 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
               prompts: {
                 create: generatedPrompts.map((p) => ({
                   name: p.name,
-                  promptText: p.text,
+                  promptText: p.promptText,
                   active: true,
                 })),
               },
@@ -359,13 +384,9 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(201).send({
         brand,
         classification,
-        competitorCandidates: candidates,
-        competitorsCreated: validCompetitors.length,
-        competitorsRejected: validated.filter((c) => !c.valid).map((c) => ({
-          domain: c.domain,
-          name: c.name,
-          reason: c.rejectionReason,
-        })),
+        competitorCandidates,
+        competitorsCreated: analysisContext.competitors.length,
+        competitorsRejected: [],
         promptsCreated: generatedPrompts.length,
       });
     }
@@ -377,8 +398,21 @@ const brandRoutes: FastifyPluginAsync = async (fastify) => {
     if (!domain) return reply.code(400).send({ error: 'domain requerido' });
     try {
       const classification = await classifyDomain(domain);
-      const candidates = await discoverCompetitors(classification);
-      return { classification, candidates };
+      const brandName =
+        `${classification.brandName || ''}`.trim() ||
+        deriveBrandNameFromDomain(domain) ||
+        domain;
+      const analysisContext = await resolveBrandAnalysisContext({
+        brandName,
+        websiteUrl: domain,
+        fallbackIndustry: classification.category || 'General',
+      });
+      const candidates = analysisContext.competitors.map((c) => ({
+        domain: c.domain ?? '',
+        name: c.name,
+        reason: 'Detectado desde contexto real del sitio',
+      }));
+      return { classification, analysisContext, candidates };
     } catch (err: any) {
       return reply.code(500).send({ error: err?.message || 'Error' });
     }

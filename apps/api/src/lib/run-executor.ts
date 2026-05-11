@@ -5,6 +5,8 @@ import { parseTop3 } from './parsing';
 import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from './pria';
 import { persistSavedPromptExecutionSnapshot } from './portal-saved-prompt-history';
+import { resolveBrandAnalysisContext } from './diagnostic-ai';
+import { buildDiagnosticPrompts, getIntentionForIndustry } from './diagnostic-prompts';
 
 /** Versión de prompts activa del tenant, o la del tenant root (000) si el cliente no tiene la suya. */
 export async function resolveActivePromptVersion(
@@ -442,6 +444,148 @@ async function persistRunHistoryForSavedPrompt(input: {
   });
 }
 
+async function prepareDynamicMonthlyRunContext(input: {
+  runId: string;
+  tenantId: string;
+  brand: {
+    id: string;
+    name: string;
+    domain: string | null;
+    industry: string | null;
+    country: string | null;
+    productType: string | null;
+    objective: string | null;
+    description: string | null;
+    businessType: string | null;
+    category: string | null;
+    subcategory: string | null;
+    geoMarket: string | null;
+    sizeSegment?: string | null;
+    aliases: Array<{ alias: string }>;
+    competitors: Array<{
+      name: string;
+      domain: string | null;
+      aliases?: unknown;
+      autoDetected?: boolean;
+      validated?: boolean;
+      businessType?: string | null;
+      category?: string | null;
+      subcategory?: string | null;
+      geoMarket?: string | null;
+      discoveryReason?: string | null;
+    }>;
+    selectedWeeklyPortalPromptId: string | null;
+  };
+}) {
+  if (!input.brand.domain?.trim()) return null;
+
+  const resolved = await resolveBrandAnalysisContext({
+    brandName: input.brand.name,
+    websiteUrl: input.brand.domain,
+    fallbackCountry: input.brand.country || undefined,
+    fallbackIndustry: input.brand.industry || input.brand.category || 'General',
+    knownCountry: input.brand.country || undefined,
+  });
+
+  const manualCompetitors = input.brand.competitors.filter((c) => !c.autoDetected);
+  const refreshedAutoCompetitors = resolved.competitors.map((c) => ({
+    name: c.name,
+    domain: c.domain,
+    aliases: [],
+    businessType: input.brand.businessType,
+    category: resolved.industry,
+    subcategory: input.brand.subcategory,
+    geoMarket: input.brand.geoMarket,
+    autoDetected: true,
+    validated: true,
+    discoveryReason: 'Detectado desde contexto real del sitio',
+  }));
+  const allCompetitors = [...manualCompetitors, ...refreshedAutoCompetitors];
+  const competitorNames = allCompetitors.map((c) => c.name).filter(Boolean);
+  const promptsToCreate = buildDiagnosticPrompts(
+    input.brand.name,
+    resolved.industry,
+    competitorNames,
+    getIntentionForIndustry(resolved.industry),
+    resolved.country
+  );
+
+  const dynamic = await prisma.$transaction(async (tx) => {
+    await tx.brand.update({
+      where: { id: input.brand.id },
+      data: {
+        industry: resolved.industry,
+        country: resolved.country,
+        ...(resolved.verticalSummary ? { description: resolved.verticalSummary } : {}),
+        classifierMeta: {
+          refreshedAt: new Date().toISOString(),
+          source: 'run_monthly_dynamic_context',
+          marketProfile: {
+            country: resolved.country,
+            industry: resolved.industry,
+            confidence: resolved.confidence,
+            verticalSummary: resolved.verticalSummary,
+            customerSegment: resolved.customerSegment,
+            sourceUrls: resolved.sourceUrls,
+          },
+        } as unknown as Prisma.InputJsonValue,
+      },
+    });
+    await tx.competitor.deleteMany({
+      where: { brandId: input.brand.id, autoDetected: true },
+    });
+    for (const competitor of refreshedAutoCompetitors) {
+      await tx.competitor.create({
+        data: {
+          brandId: input.brand.id,
+          name: competitor.name,
+          domain: competitor.domain,
+          aliases: competitor.aliases as unknown as Prisma.InputJsonValue,
+          businessType: competitor.businessType as any,
+          category: competitor.category,
+          subcategory: competitor.subcategory,
+          geoMarket: competitor.geoMarket,
+          autoDetected: true,
+          validated: true,
+          discoveryReason: competitor.discoveryReason,
+        },
+      });
+    }
+    const promptVersion = await tx.promptVersion.create({
+      data: {
+        tenantId: input.tenantId,
+        name: `RUNCTX_${input.runId}_${Date.now().toString(36)}`,
+        active: false,
+        prompts: {
+          create: promptsToCreate.map((p) => ({
+            name: p.name,
+            promptText: p.promptText,
+            active: true,
+          })),
+        },
+      },
+      include: {
+        prompts: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    return promptVersion;
+  });
+
+  return {
+    promptVersion: dynamic,
+    prompts: dynamic.prompts,
+    brand: {
+      ...input.brand,
+      industry: resolved.industry,
+      country: resolved.country,
+      description: resolved.verticalSummary || input.brand.description,
+      competitors: allCompetitors,
+    },
+  };
+}
+
 /**
  * Ejecuta un Run: llama a OpenAI por cada prompt, guarda resultados y actualiza PRIA.
  * Usado por el endpoint de runs y por el flujo de diagnóstico público.
@@ -481,11 +625,29 @@ export async function executeRun(
 
   if (!run) throw new Error('Run no encontrado');
 
-  const promptVersion = await resolveActivePromptVersion(run.tenantId, options.promptVersionId ?? null);
+  let currentBrand: any = run.brand;
+  let promptVersion = await resolveActivePromptVersion(run.tenantId, options.promptVersionId ?? null);
 
   if (!promptVersion) throw new Error('No hay versión de prompts activa');
 
-  const prompts = await loadPromptsForRunExecution(run, promptVersion.id);
+  let prompts = await loadPromptsForRunExecution(run, promptVersion.id);
+
+  if (run.runType === 'monthly' && !options.promptVersionId) {
+    try {
+      const dynamic = await prepareDynamicMonthlyRunContext({
+        runId,
+        tenantId: run.tenantId,
+        brand: currentBrand,
+      });
+      if (dynamic) {
+        promptVersion = dynamic.promptVersion;
+        prompts = dynamic.prompts;
+        currentBrand = dynamic.brand;
+      }
+    } catch {
+      // Si la regeneración dinámica falla, se usa la configuración previa del run.
+    }
+  }
 
   if (prompts.length === 0) throw new Error('No hay prompts activos');
 
@@ -499,31 +661,35 @@ export async function executeRun(
         maxTokens,
         promptVersionId: promptVersion.id,
         promptVersionSource:
-          promptVersion.tenantId === run.tenantId ? 'tenant' : 'root_fallback',
+          run.runType === 'monthly' && !options.promptVersionId
+            ? 'dynamic_run_context'
+            : promptVersion.tenantId === run.tenantId
+              ? 'tenant'
+              : 'root_fallback',
       } as unknown as Prisma.InputJsonValue,
     },
   });
 
-  const competitors = run.brand.competitors.map((c) => ({
+  const competitors = currentBrand.competitors.map((c: any) => ({
     name: c.name,
     aliases: (c.aliases as string[]) || [],
   }));
-  const competitorList = competitors.map((c) => c.name).join(', ');
-  const brandAliases = run.brand.aliases.map((a) => a.alias);
+  const competitorList = competitors.map((c: any) => c.name).join(', ');
+  const brandAliases = currentBrand.aliases.map((a: any) => a.alias);
   const useFreeformPromptMode = run.runType === 'weekly_portal';
   const freeformBrandContextBlock = useFreeformPromptMode
     ? buildPortalBrandFreeformContextBlock({
-        name: run.brand.name,
-        domain: run.brand.domain,
-        industry: run.brand.industry,
-        country: run.brand.country,
-        productType: run.brand.productType,
-        objective: run.brand.objective,
-        description: run.brand.description,
-        businessType: run.brand.businessType,
-        category: run.brand.category,
-        subcategory: run.brand.subcategory,
-        geoMarket: run.brand.geoMarket,
+        name: currentBrand.name,
+        domain: currentBrand.domain,
+        industry: currentBrand.industry,
+        country: currentBrand.country,
+        productType: currentBrand.productType,
+        objective: currentBrand.objective,
+        description: currentBrand.description,
+        businessType: currentBrand.businessType,
+        category: currentBrand.category,
+        subcategory: currentBrand.subcategory,
+        geoMarket: currentBrand.geoMarket,
       })
     : null;
   let totalTokens = 0;
@@ -557,9 +723,9 @@ export async function executeRun(
             role: 'user',
             content:
               useFreeformPromptMode
-                ? `${freeformBrandContextBlock}\n\n--- Consulta del usuario ---\n${prompt.promptText}\n\nMarca del cliente: ${run.brand.name}.`
+                ? `${freeformBrandContextBlock}\n\n--- Consulta del usuario ---\n${prompt.promptText}\n\nMarca del cliente: ${currentBrand.name}.`
                 : `${prompt.promptText}\n\n` +
-                  `Marca a medir: ${run.brand.name}.\n` +
+                  `Marca a medir: ${currentBrand.name}.\n` +
                   `Competidores: ${competitorList || 'no informados'}.`,
           },
         ],
@@ -579,12 +745,12 @@ export async function executeRun(
     totalTokens += responseJson?.usage?.total_tokens || 0;
     const responseText = responseJson?.choices?.[0]?.message?.content?.trim() || '';
 
-    const { top3, flags } = parseTop3(responseText, run.brand.name, competitors);
+    const { top3, flags } = parseTop3(responseText, currentBrand.name, competitors);
     const brandPosition =
       top3.find(
         (e) =>
-          e.name.toLowerCase() === run.brand.name.toLowerCase() ||
-          brandAliases.some((a) => a.toLowerCase() === e.name.toLowerCase())
+          e.name.toLowerCase() === currentBrand.name.toLowerCase() ||
+          brandAliases.some((a: string) => a.toLowerCase() === e.name.toLowerCase())
       )?.position || null;
 
     const score = calculateScore(brandPosition);
@@ -611,7 +777,7 @@ export async function executeRun(
           runType: run.runType,
           promptTextSnapshot: prompt.promptText,
           responseText: finalResponseText,
-          brand: run.brand,
+          brand: currentBrand,
         });
       } catch {
         // El historial portal no debe romper la corrida principal.
