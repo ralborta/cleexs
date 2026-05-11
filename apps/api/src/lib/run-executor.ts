@@ -87,20 +87,19 @@ const OPENAI_FREEFORM_SYSTEM =
   'No conviertas la respuesta en ranking salvo que el usuario lo pida explícitamente. ' +
   'No inventes datos ni competidores. Si falta contexto suficiente, decilo claramente.';
 
-/** Portal: fuerza coherencia de rubro y evita comparaciones absurdas entre sectores. */
+/** Portal: contexto mínimo para evitar ruido sin meter rubro/categorías. */
 const PORTAL_CONTEXTUAL_RANKING_SYSTEM =
   'Sos un analista de visibilidad de marca ante respuestas de IA. ' +
   'Reglas estrictas:\n' +
-  '- Leé el bloque CONTEXTO DEL NEGOCIO: ahí está el rubro, mercado y descripción real del cliente.\n' +
-  '- La marca del cliente y los competidores listados pertenecen a ESE mismo universo. No la compares con empresas de sectores totalmente ajenos (ej. software vs cemento) salvo que la consulta del usuario lo pida explícitamente.\n' +
+  '- Leé el bloque CONTEXTO DEL NEGOCIO solo para entender qué hace la marca.\n' +
   '- Usá exclusivamente la marca del cliente y la lista de competidores entregada. No agregues marcas externas.\n' +
-  '- Si la consulta es ambigua, interpretala favoreciendo el sector y el tipo de negocio del contexto.\n' +
+  '- Si la consulta es ambigua, respondé comparando solo dentro de la lista entregada.\n' +
   'Respondé en español con un Top 3 numerado (1. 2. 3.) con nombre de marca y un motivo breve por ítem.';
 
 const PORTAL_CONTEXTUAL_FREEFORM_SYSTEM =
   'Sos un analista de negocio. ' +
   'Reglas estrictas:\n' +
-  '- Leé el bloque CONTEXTO DE LA EMPRESA solo para entender qué hace la marca y en qué mercado opera.\n' +
+  '- Leé el bloque CONTEXTO DE LA EMPRESA solo para entender qué hace la marca.\n' +
   '- No uses listas previas de competidores como verdad fija.\n' +
   '- Respondé exactamente la consulta del usuario; no fuerces Top 3, score ni ranking si no lo pidió.\n' +
   '- Si la consulta pide competidores, devolvé competidores directos reales del mismo contexto y evitá inventar.';
@@ -125,18 +124,13 @@ export function buildPortalBrandContextBlock(brand: {
     '=== CONTEXTO DEL NEGOCIO (usá solo esto para situar marca y competidores) ===',
     `Marca del cliente: ${brand.name}`,
     brand.domain ? `Dominio / web: ${brand.domain}` : null,
-    brand.industry ? `Industria / sector: ${brand.industry}` : null,
-    brand.businessType ? `Tipo de negocio: ${String(brand.businessType)}` : null,
-    brand.category ? `Categoría: ${brand.category}` : null,
-    brand.subcategory ? `Subcategoría: ${brand.subcategory}` : null,
     brand.productType ? `Producto / servicio: ${brand.productType}` : null,
     brand.country ? `País: ${brand.country}` : null,
-    brand.geoMarket ? `Mercado geo: ${brand.geoMarket}` : null,
     brand.objective ? `Objetivo: ${brand.objective}` : null,
     desc ? `Descripción del negocio: ${desc.slice(0, 1500)}${desc.length > 1500 ? '…' : ''}` : null,
     comp.length > 0
       ? `Competidores del diagnóstico (mismo contexto): ${comp.join(', ')}`
-      : 'Competidores del diagnóstico: (ninguno cargado; inferí competidores plausibles del mismo rubro si hace falta).',
+      : 'Competidores del diagnóstico: (ninguno cargado).',
     '=== Fin contexto ===',
   ];
   return lines.filter((x): x is string => Boolean(x)).join('\n');
@@ -161,12 +155,7 @@ export function buildPortalBrandFreeformContextBlock(brand: {
     `Marca: ${brand.name}`,
     brand.domain ? `Web / dominio: ${brand.domain}` : null,
     brand.country ? `País: ${brand.country}` : null,
-    brand.geoMarket ? `Mercado geo: ${brand.geoMarket}` : null,
-    brand.industry ? `Industria / sector (referencia): ${brand.industry}` : null,
-    brand.category ? `Categoría (referencia): ${brand.category}` : null,
-    brand.subcategory ? `Subcategoría (referencia): ${brand.subcategory}` : null,
     brand.productType ? `Producto / servicio: ${brand.productType}` : null,
-    brand.businessType ? `Tipo de negocio: ${String(brand.businessType)}` : null,
     brand.objective ? `Objetivo: ${brand.objective}` : null,
     desc ? `Descripción de la empresa: ${desc.slice(0, 1500)}${desc.length > 1500 ? '…' : ''}` : null,
     'Usá este bloque solo para entender qué hace la empresa; no asumas competidores previos ni fuerces rankings.',

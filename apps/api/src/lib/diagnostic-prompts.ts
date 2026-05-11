@@ -1,33 +1,7 @@
 /**
  * Generación de prompts para diagnóstico público.
- * Selecciona Urgencia vs Consideración según industria y genera los 9 prompts.
+ * Mantiene intenciones simples y evita meter rubro/sector en el texto del prompt.
  */
-
-/** Industrias donde usar Consideración en lugar de Urgencia (decisión con tiempo) */
-const INDUSTRIES_USE_CONSIDERACION = [
-  'educación',
-  'educacion',
-  'universidad',
-  'universidades',
-  'cursos',
-  'formación',
-  'formacion',
-  'banco',
-  'bancos',
-  'banca',
-  'finanzas',
-  'seguros',
-  'aseguradora',
-  'consultoría',
-  'consultoria',
-  'consultor',
-  'servicios profesionales',
-  'abogacía',
-  'abogacia',
-  'medicina',
-  'salud',
-  'hospital',
-];
 
 /** Pesos por defecto (suman 100) */
 const DEFAULT_WEIGHTS = {
@@ -40,44 +14,36 @@ const DEFAULT_WEIGHTS = {
 export type IntentionType = 'urgencia' | 'consideracion';
 
 /**
- * Determina si la industria debe usar Consideración en lugar de Urgencia.
+ * Mantiene una intención inicial estable y genérica para no sesgar el diagnóstico por rubro.
  */
-export function getIntentionForIndustry(industry: string): IntentionType {
-  const normalized = industry
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-  const matches = INDUSTRIES_USE_CONSIDERACION.some((term) => normalized.includes(term));
-  return matches ? 'consideracion' : 'urgencia';
+export function getIntentionForIndustry(_industry: string): IntentionType {
+  return 'consideracion';
 }
 
 /**
  * Contextos para cada intención (texto que va en el prompt)
  */
-function getIntentionContexts(intention: IntentionType, industry: string) {
-  const product = 'productos y servicios';
-  const industryCtx = industry || 'tu sector';
+function getIntentionContexts(intention: IntentionType) {
   return {
     urgencia: {
       label: 'Urgencia',
       weight: DEFAULT_WEIGHTS.urgencia,
-      context: `Necesito encontrar ${product} pronto, con entrega o respuesta inmediata.`,
+      context: 'Necesito resolver esta necesidad rápido y con una respuesta inmediata.',
     },
     consideracion: {
       label: 'Consideración',
       weight: DEFAULT_WEIGHTS.consideracion,
-      context: `Estoy evaluando ${product} para ${industryCtx}. Busco una decisión informada a mediano plazo, sin urgencia inmediata.`,
+      context: 'Estoy evaluando opciones y quiero comparar bien antes de decidir.',
     },
     calidad: {
       label: 'Calidad',
       weight: DEFAULT_WEIGHTS.calidad,
-      context: `Busco la mejor calidad en ${product} para ${industryCtx}.`,
+      context: 'Busco la opción más confiable y de mejor calidad.',
     },
     precio: {
       label: 'Precio',
       weight: DEFAULT_WEIGHTS.precio,
-      context: `Busco ${product} con buen precio y valor.`,
+      context: 'Busco una opción con buen precio y valor.',
     },
   };
 }
@@ -87,16 +53,16 @@ function getIntentionContexts(intention: IntentionType, industry: string) {
  */
 export function buildDiagnosticPrompts(
   brandName: string,
-  industry: string,
+  _industry: string,
   competitors: string[],
   intention: IntentionType,
   country?: string
 ): Array<{ name: string; promptText: string }> {
   const competitorText = competitors.length ? competitors.join(', ') : 'competidores relevantes';
   const types = ['Comparativo', 'Recomendación', 'Defensibilidad'] as const;
-  const marketLine = country ? `Mercado objetivo: ${country}.` : 'Mercado objetivo: mercado local.';
+  const countryLine = country ? `País / mercado: ${country}.` : '';
 
-  const contexts = getIntentionContexts(intention, industry);
+  const contexts = getIntentionContexts(intention);
   const firstIntention = intention === 'consideracion' ? contexts.consideracion : contexts.urgencia;
 
   const intentions = [
@@ -111,9 +77,9 @@ export function buildDiagnosticPrompts(
     const prefix = `Intención: ${intentionItem.label} (${intentionItem.weight}%). Tipo:`;
     const allowedBrandsLine = `Usá solo esta lista de marcas: ${brandName}${competitors.length ? `, ${competitorText}` : ''}. No agregues otras marcas.`;
     const texts: string[] = [
-      `${prefix} Comparativo.\n${intentionItem.context}\n${marketLine}\nCompará y rankeá Top 3 en esta categoría. Marca medida: ${brandName}. Competidores: ${competitorText}. ${allowedBrandsLine} Respondé 1., 2., 3. con motivo breve.`,
-      `${prefix} Recomendación.\n${intentionItem.context}\n${marketLine}\nSi tuvieras que recomendar para alguien con esta necesidad, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. ${allowedBrandsLine} Respondé 1., 2., 3. con motivo breve por cada uno.`,
-      `${prefix} Defensibilidad.\n${intentionItem.context}\n${marketLine}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores? Respondé con Top 3 e incluí ${competitorText}. ${allowedBrandsLine} Indicá 1., 2., 3. con motivo breve.`,
+      `${prefix} Comparativo.\n${intentionItem.context}\n${countryLine}\nArmá un Top 3 usando solo estas marcas. Marca medida: ${brandName}. Competidores: ${competitorText}. ${allowedBrandsLine} Respondé 1., 2., 3. con motivo breve.`,
+      `${prefix} Recomendación.\n${intentionItem.context}\n${countryLine}\nSi tuvieras que recomendar una opción, ¿cuál es el Top 3? Incluí ${brandName} y ${competitorText}. ${allowedBrandsLine} Respondé 1., 2., 3. con motivo breve por cada uno.`,
+      `${prefix} Defensibilidad.\n${intentionItem.context}\n${countryLine}\nEstoy considerando ${brandName}. ¿Hay alternativas mejores dentro de esta lista? ${allowedBrandsLine} Indicá 1., 2., 3. con motivo breve.`,
     ];
     types.forEach((tipo, i) => {
       prompts.push({
