@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
@@ -14,6 +14,7 @@ import {
   Loader2,
   MessageSquare,
   Pencil,
+  Play,
   Save,
   Sparkles,
   Target,
@@ -314,6 +315,7 @@ function Donut({
 
 export default function PromptsCorridaPage() {
   const params = useParams();
+  const router = useRouter();
   const runId = params.runId as string;
   const basePath = `/portal-crecimiento/reporte/${runId}/premium`;
 
@@ -330,6 +332,7 @@ export default function PromptsCorridaPage() {
   const [editorSlot, setEditorSlot] = useState(0);
   const [editorText, setEditorText] = useState('');
   const [weeklySaving, setWeeklySaving] = useState(false);
+  const [executingSavedPromptId, setExecutingSavedPromptId] = useState<string | null>(null);
 
   /** Consulta rápida: escribe → ejecutá → ver mini análisis (no es la corrida diagnóstico guardada). */
   const [draftPrompt, setDraftPrompt] = useState('');
@@ -806,6 +809,35 @@ export default function PromptsCorridaPage() {
     }
   }
 
+  async function executeSavedPrompt(savedPromptId: string) {
+    const brandId = run?.brand?.id;
+    if (!brandId) return;
+    const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
+    if (!token) return;
+
+    setQuickTryError(null);
+    setInlineOk(null);
+    setExecutingSavedPromptId(savedPromptId);
+    try {
+      const res = await fetch(
+        `${API_URL}/api/portal/brands/${encodeURIComponent(brandId)}/weekly-prompts/${encodeURIComponent(savedPromptId)}/execute`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setWeeklyLoadError((body as { error?: string }).error || `Error ${res.status}`);
+        return;
+      }
+      await persistWeeklyPayload();
+      router.push(`${basePath}/prompts/resultados`);
+    } finally {
+      setExecutingSavedPromptId(null);
+    }
+  }
+
   if (loadError) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
@@ -1106,6 +1138,14 @@ export default function PromptsCorridaPage() {
                           </span>
                         </button>
 
+                        <Link
+                          href={`${basePath}/prompts/resultados`}
+                          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-white px-4 py-3 text-sm font-bold text-violet-800 shadow-sm transition hover:bg-violet-50"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          Resultados
+                        </Link>
+
                         {!weeklyData ? (
                           <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-4 text-xs text-slate-500">
                             <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
@@ -1151,11 +1191,6 @@ export default function PromptsCorridaPage() {
                                                 ? `Guardado: ${updatedLabel}`
                                                 : 'Aún sin ejecución'}
                                           </p>
-                                          <p className="mt-0.5 text-[9px] text-slate-500">
-                                            {s.resultsCount > 0
-                                              ? `${s.resultsCount} resultado${s.resultsCount === 1 ? '' : 's'} históricos`
-                                              : 'Sin resultados guardados todavía'}
-                                          </p>
                                         </div>
                                         <div className="flex shrink-0 flex-col items-end gap-1">
                                           <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] font-bold text-violet-800">
@@ -1170,16 +1205,19 @@ export default function PromptsCorridaPage() {
                                             Semanal
                                           </label>
                                           <div className="flex gap-1">
-                                            <Link
-                                              href={`${basePath}/prompts/guardados/${s.id}`}
-                                              className={`rounded-lg border px-2 py-0.5 text-[9px] font-bold shadow-sm ${
-                                                s.resultsCount > 0
-                                                  ? 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100'
-                                                  : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                                              }`}
+                                            <button
+                                              type="button"
+                                              disabled={weeklySaving || executingSavedPromptId === s.id || !s.id}
+                                              onClick={() => s.id && void executeSavedPrompt(s.id)}
+                                              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-800 shadow-sm hover:bg-emerald-100 disabled:opacity-50"
                                             >
-                                              Resultados
-                                            </Link>
+                                              {executingSavedPromptId === s.id ? (
+                                                <Loader2 className="mr-0.5 inline h-3 w-3 animate-spin align-text-bottom" />
+                                              ) : (
+                                                <Play className="mr-0.5 inline h-3 w-3 align-text-bottom" />
+                                              )}
+                                              Ejecutar
+                                            </button>
                                             <button
                                               type="button"
                                               disabled={weeklySaving}

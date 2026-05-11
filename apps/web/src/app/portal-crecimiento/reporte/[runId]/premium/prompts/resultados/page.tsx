@@ -39,14 +39,6 @@ type PortalAnalysisApi = {
 };
 
 type SavedPromptResultsPayload = {
-  savedPrompt: {
-    id: string;
-    slot: number;
-    title: string;
-    promptText: string;
-    updatedAt: string;
-    totalExecutions: number;
-  };
   results: Array<{
     id: string;
     createdAt: string;
@@ -55,6 +47,12 @@ type SavedPromptResultsPayload = {
     responseText: string;
     analysis: PortalAnalysisApi | null;
     runId: string | null;
+    savedPrompt: {
+      id: string;
+      slot: number;
+      title: string;
+      promptText: string;
+    };
   }>;
 };
 
@@ -100,10 +98,9 @@ function AnalysisBarChart({
   );
 }
 
-export default function SavedPromptResultsPage() {
+export default function PromptResultsPage() {
   const params = useParams();
   const runId = params.runId as string;
-  const savedPromptId = params.savedPromptId as string;
   const basePath = `/portal-crecimiento/reporte/${runId}/premium`;
 
   const [usage, setUsage] = useState<UsageResponse | null>(null);
@@ -144,12 +141,10 @@ export default function SavedPromptResultsPage() {
         const runBody = (await runRes.json()) as RunDetail;
         const usageBody = usageRes.ok ? ((await usageRes.json()) as UsageResponse) : {};
 
-        if (!runBody.brand?.id) {
-          throw new Error('La corrida no tiene marca asociada.');
-        }
+        if (!runBody.brand?.id) throw new Error('La corrida no tiene marca asociada.');
 
         const resultsRes = await fetch(
-          `${API_URL}/api/portal/brands/${encodeURIComponent(runBody.brand.id)}/weekly-prompts/${encodeURIComponent(savedPromptId)}/results`,
+          `${API_URL}/api/portal/brands/${encodeURIComponent(runBody.brand.id)}/weekly-prompts/results`,
           { cache: 'no-store', headers },
         );
         const resultsBody = await resultsRes.json().catch(() => ({}));
@@ -174,7 +169,7 @@ export default function SavedPromptResultsPage() {
     return () => {
       cancelled = true;
     };
-  }, [runId, savedPromptId]);
+  }, [runId]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
@@ -185,7 +180,7 @@ export default function SavedPromptResultsPage() {
           {loading ? (
             <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">
               <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
-              <p className="text-sm text-slate-600">Cargando resultados históricos…</p>
+              <p className="text-sm text-slate-600">Cargando resultados…</p>
             </div>
           ) : error ? (
             <div className="rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
@@ -205,26 +200,28 @@ export default function SavedPromptResultsPage() {
                     <ArrowLeft className="h-3.5 w-3.5" />
                     Volver a prompts
                   </Link>
-                  <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">{payload.savedPrompt.title}</h1>
-                  <p className="mt-1 max-w-3xl text-sm text-slate-600">{payload.savedPrompt.promptText}</p>
+                  <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">Resultados</h1>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Historial de ejecuciones de prompts guardados, mezclado por fecha y mostrando de qué prompt viene cada resultado.
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-violet-100 bg-violet-50/80 px-4 py-3 text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Histórico</p>
-                  <p className="mt-1 text-lg font-bold text-slate-900">{payload.savedPrompt.totalExecutions}</p>
-                  <p className="text-[11px] text-slate-600">últimas 3 ejecuciones</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Resultados cargados</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{payload.results.length}</p>
+                  <p className="text-[11px] text-slate-600">últimos snapshots guardados</p>
                 </div>
               </div>
 
               {payload.results.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-violet-200 bg-white p-8 text-center shadow-sm">
-                  <p className="text-sm font-semibold text-slate-800">Todavía no hay resultados históricos para este prompt.</p>
+                  <p className="text-sm font-semibold text-slate-800">Todavía no hay resultados históricos visibles.</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Cuando este prompt se ejecute y se guarde su snapshot, aparecerá acá con su fecha.
+                    Ejecutá un prompt guardado y se va a sumar automáticamente a esta pantalla.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {payload.results.map((result, index) => (
+                  {payload.results.map((result) => (
                     <section key={result.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                         <div>
@@ -232,10 +229,8 @@ export default function SavedPromptResultsPage() {
                             <CalendarDays className="h-3.5 w-3.5" />
                             {formatDateTime(result.createdAt)}
                           </div>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">
-                            {index === 0 ? 'Resultado más reciente' : `Resultado histórico #${index + 1}`}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">Prompt ejecutado en esa fecha: {result.promptTextSnapshot}</p>
+                          <p className="mt-2 text-sm font-bold text-slate-900">{result.savedPrompt.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">{result.savedPrompt.promptText}</p>
                         </div>
                         {result.runId ? (
                           <Link
@@ -259,7 +254,7 @@ export default function SavedPromptResultsPage() {
                       <div className="mt-5">
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-violet-600" />
-                          <p className="text-sm font-bold text-slate-900">Análisis histórico mostrado en ese momento</p>
+                          <p className="text-sm font-bold text-slate-900">Análisis histórico</p>
                         </div>
 
                         {result.analysis ? (

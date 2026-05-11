@@ -35,6 +35,62 @@ function buildSavedPromptTitle(promptText: string, fallbackSlot?: number): strin
   return totalWords > 3 ? `${capped}...` : capped;
 }
 
+async function executePromptAgainstCurrentBrandContext(input: {
+  brand: {
+    name: string;
+    domain: string | null;
+    industry: string | null;
+    country: string | null;
+    productType: string | null;
+    objective: string | null;
+    description: string | null;
+    businessType: string | null;
+    category: string | null;
+    subcategory: string | null;
+    geoMarket: string | null;
+    aliases: Array<{ alias: string }>;
+    competitors: Array<{ name: string; aliases?: unknown }>;
+  };
+  promptText: string;
+}) {
+  const competitors = input.brand.competitors.map((c) => ({
+    name: c.name,
+    aliases: (c.aliases as string[]) || [],
+  }));
+
+  const brandContextBlock = buildPortalBrandContextBlock({
+    name: input.brand.name,
+    domain: input.brand.domain,
+    industry: input.brand.industry,
+    country: input.brand.country,
+    productType: input.brand.productType,
+    objective: input.brand.objective,
+    description: input.brand.description,
+    businessType: input.brand.businessType,
+    category: input.brand.category,
+    subcategory: input.brand.subcategory,
+    geoMarket: input.brand.geoMarket,
+    competitors: input.brand.competitors.map((c) => ({ name: c.name })),
+  });
+
+  const out = await executeOpenAIRankingPrompt({
+    promptText: input.promptText.trim(),
+    brandName: input.brand.name,
+    competitors,
+    brandAliases: input.brand.aliases.map((a) => a.alias),
+    brandContextBlock,
+  });
+
+  const analysis = await analyzePortalCustomPromptResponse({
+    userPrompt: input.promptText.trim(),
+    responseText: out.responseText,
+    brandName: input.brand.name,
+    brandContextBlock,
+  });
+
+  return { out, analysis };
+}
+
 const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { brandId: string } }>('/brands/:brandId/weekly-prompts', async (request, reply) => {
     const portalUser = await resolvePortalUserFromRequest(request);
@@ -164,39 +220,9 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       try {
-        const competitors = brand.competitors.map((c) => ({
-          name: c.name,
-          aliases: (c.aliases as string[]) || [],
-        }));
-
-        const brandContextBlock = buildPortalBrandContextBlock({
-          name: brand.name,
-          domain: brand.domain,
-          industry: brand.industry,
-          country: brand.country,
-          productType: brand.productType,
-          objective: brand.objective,
-          description: brand.description,
-          businessType: brand.businessType,
-          category: brand.category,
-          subcategory: brand.subcategory,
-          geoMarket: brand.geoMarket,
-          competitors: brand.competitors,
-        });
-
-        const out = await executeOpenAIRankingPrompt({
+        const { out, analysis } = await executePromptAgainstCurrentBrandContext({
+          brand,
           promptText: parsedBody.data.promptText.trim(),
-          brandName: brand.name,
-          competitors,
-          brandAliases: brand.aliases.map((a) => a.alias),
-          brandContextBlock,
-        });
-
-        const analysis = await analyzePortalCustomPromptResponse({
-          userPrompt: parsedBody.data.promptText.trim(),
-          responseText: out.responseText,
-          brandName: brand.name,
-          brandContextBlock,
         });
 
         return {
@@ -207,6 +233,111 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error al ejecutar la consulta';
         fastify.log.error({ err: e, brandId }, 'executeOpenAIRankingPrompt portal');
+        return reply.code(502).send({ error: msg });
+      }
+    }
+  );
+
+  fastify.post<{ Params: { brandId: string; savedPromptId: string } }>(
+    '/brands/:brandId/weekly-prompts/:savedPromptId/execute',
+    async (request, reply) => {
+      const portalUser = await resolvePortalUserFromRequest(request);
+      if (!portalUser) return reply.code(401).send({ error: 'Autenticación requerida.' });
+
+      const { tenantId, userId } = portalUser;
+      const brandId = request.params.brandId;
+      const savedPromptId = request.params.savedPromptId;
+
+      const brand = await prisma.brand.findFirst({
+        where: { id: brandId, tenantId },
+        include: {
+          aliases: true,
+          competitors: true,
+          portalSavedPrompts: {
+            where: { id: savedPromptId },
+            take: 1,
+          },
+        },
+      });
+      if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
+
+      const savedPrompt = brand.portalSavedPrompts[0];
+      if (!savedPrompt || !savedPrompt.promptText.trim()) {
+        return reply.code(404).send({ error: 'Prompt guardado no encontrado.' });
+      }
+
+      const canCreate = await canCreateRun(tenantId);
+      if (!canCreate.allowed) {
+        return reply.code(403).send({ error: canCreate.reason || 'No podés ejecutar una consulta ahora.' });
+      }
+
+      const genCheck = await checkEntitlement(prisma, {
+        actor: { tenantId, userId },
+        action: EntitlementAction.score_generate,
+      });
+      if (!genCheck.allowed) {
+        return reply.code(403).send({
+          error: genCheck.reason || 'Límite de análisis alcanzado.',
+          code: genCheck.code,
+          usage: genCheck.usage,
+          limit: genCheck.limit,
+        });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(503).send({ error: 'OPENAI_API_KEY no configurada en el servidor.' });
+      }
+
+      try {
+        await consumeEntitlement(prisma, {
+          actor: { tenantId, userId },
+          action: EntitlementAction.score_generate,
+          brandId,
+          dedupeKey: `portal-saved-prompt-execute:${savedPromptId}:${userId}:${randomUUID()}`,
+          metaJson: { brandId, savedPromptId, kind: 'portal_saved_prompt_execute' },
+        });
+      } catch (err) {
+        fastify.log.error({ err }, 'consumeEntitlement portal saved prompt execute');
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
+          return reply.code(503).send({
+            error: 'usage_ledger_requerido',
+            message: 'Falta la tabla usage_ledger. Ejecutá migraciones en la API.',
+          });
+        }
+        throw err;
+      }
+
+      try {
+        const { out, analysis } = await executePromptAgainstCurrentBrandContext({
+          brand,
+          promptText: savedPrompt.promptText,
+        });
+
+        const execution = await persistSavedPromptExecutionSnapshot({
+          savedPromptId: savedPrompt.id,
+          source: 'portal_saved_prompt_execute',
+          promptTextSnapshot: savedPrompt.promptText,
+          responseText: out.responseText,
+          analysisJson: analysis ? (analysis as unknown as Prisma.InputJsonValue) : null,
+        });
+
+        return {
+          ok: true,
+          executionId: execution.id,
+          createdAt: execution.createdAt.toISOString(),
+          savedPrompt: {
+            id: savedPrompt.id,
+            slot: savedPrompt.slot,
+            title: buildSavedPromptTitle(savedPrompt.promptText, savedPrompt.slot),
+            promptText: savedPrompt.promptText,
+          },
+          responseText: out.responseText,
+          analysis,
+          totalTokens: out.totalTokens,
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Error al ejecutar el prompt guardado';
+        fastify.log.error({ err: e, brandId, savedPromptId }, 'execute saved portal prompt');
         return reply.code(502).send({ error: msg });
       }
     }
@@ -350,6 +481,65 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
           responseText: execution.responseText,
           analysis: execution.analysisJson,
           runId: execution.runId,
+        })),
+      };
+    }
+  );
+
+  fastify.get<{ Params: { brandId: string } }>(
+    '/brands/:brandId/weekly-prompts/results',
+    async (request, reply) => {
+      const portalUser = await resolvePortalUserFromRequest(request);
+      if (!portalUser) return reply.code(401).send({ error: 'Autenticación requerida.' });
+
+      const brand = await prisma.brand.findFirst({
+        where: { id: request.params.brandId, tenantId: portalUser.tenantId },
+        select: { id: true },
+      });
+      if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
+
+      const executions = await prisma.brandPortalSavedPromptExecution.findMany({
+        where: {
+          savedPrompt: {
+            brandId: brand.id,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 60,
+        select: {
+          id: true,
+          createdAt: true,
+          source: true,
+          promptTextSnapshot: true,
+          responseText: true,
+          analysisJson: true,
+          runId: true,
+          savedPrompt: {
+            select: {
+              id: true,
+              slot: true,
+              title: true,
+              promptText: true,
+            },
+          },
+        },
+      });
+
+      return {
+        results: executions.map((execution) => ({
+          id: execution.id,
+          createdAt: execution.createdAt.toISOString(),
+          source: execution.source,
+          promptTextSnapshot: execution.promptTextSnapshot,
+          responseText: execution.responseText,
+          analysis: execution.analysisJson,
+          runId: execution.runId,
+          savedPrompt: {
+            id: execution.savedPrompt.id,
+            slot: execution.savedPrompt.slot,
+            title: buildSavedPromptTitle(execution.savedPrompt.promptText, execution.savedPrompt.slot),
+            promptText: execution.savedPrompt.promptText,
+          },
         })),
       };
     }
