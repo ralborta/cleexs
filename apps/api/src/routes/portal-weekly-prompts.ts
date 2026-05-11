@@ -10,7 +10,7 @@ import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { canCreateRun } from '../lib/tenant';
 import {
   analyzePortalCustomPromptResponse,
-  buildPortalBrandContextBlock,
+  buildPortalBrandFreeformContextBlock,
   executeOpenAIRankingPrompt,
 } from '../lib/run-executor';
 
@@ -58,7 +58,7 @@ async function executePromptAgainstCurrentBrandContext(input: {
     aliases: (c.aliases as string[]) || [],
   }));
 
-  const brandContextBlock = buildPortalBrandContextBlock({
+  const brandContextBlock = buildPortalBrandFreeformContextBlock({
     name: input.brand.name,
     domain: input.brand.domain,
     industry: input.brand.industry,
@@ -70,7 +70,6 @@ async function executePromptAgainstCurrentBrandContext(input: {
     category: input.brand.category,
     subcategory: input.brand.subcategory,
     geoMarket: input.brand.geoMarket,
-    competitors: input.brand.competitors.map((c) => ({ name: c.name })),
   });
 
   const out = await executeOpenAIRankingPrompt({
@@ -79,6 +78,7 @@ async function executePromptAgainstCurrentBrandContext(input: {
     competitors,
     brandAliases: input.brand.aliases.map((a) => a.alias),
     brandContextBlock,
+    mode: 'freeform',
   });
 
   const analysis = await analyzePortalCustomPromptResponse({

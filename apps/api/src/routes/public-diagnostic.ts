@@ -732,9 +732,16 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
         // 2. IA elige 5 competidores
-        const { competitors } = await getTop5Competitors(brandForRun, industry, marketCountry, {
-          verticalSummary: marketProfile.verticalSummary,
-          customerSegment: marketProfile.customerSegment,
+        const { competitors } = await getTop5Competitors({
+          brandName: brandForRun,
+          country: marketCountry,
+          websiteUrl: trimmedUrl || undefined,
+          siteMarkdown: firecrawlSiteMarkdown,
+          industryHint: industry,
+          niche: {
+            verticalSummary: marketProfile.verticalSummary,
+            customerSegment: marketProfile.customerSegment,
+          },
         });
 
         // 3. Crear Brand con industria y competidores

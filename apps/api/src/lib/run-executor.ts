@@ -79,6 +79,11 @@ const OPENAI_RANKING_SYSTEM =
   'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
   'Incluí marcas y luego un breve motivo por cada una.';
 
+const OPENAI_FREEFORM_SYSTEM =
+  'Respondé en español a la consulta del usuario usando el contexto de la empresa solo para entender qué hace la marca. ' +
+  'No conviertas la respuesta en ranking salvo que el usuario lo pida explícitamente. ' +
+  'No inventes datos ni competidores. Si falta contexto suficiente, decilo claramente.';
+
 /** Portal: fuerza coherencia de rubro y evita comparaciones absurdas entre sectores. */
 const PORTAL_CONTEXTUAL_RANKING_SYSTEM =
   'Sos un analista de visibilidad de marca ante respuestas de IA. ' +
@@ -87,6 +92,14 @@ const PORTAL_CONTEXTUAL_RANKING_SYSTEM =
   '- La marca del cliente y los competidores listados pertenecen a ESE mismo universo. No la compares con empresas de sectores totalmente ajenos (ej. software vs cemento) salvo que la consulta del usuario lo pida explícitamente.\n' +
   '- Si la consulta es ambigua, interpretala favoreciendo el sector y el tipo de negocio del contexto.\n' +
   'Respondé en español con un Top 3 numerado (1. 2. 3.) con nombre de marca y un motivo breve por ítem.';
+
+const PORTAL_CONTEXTUAL_FREEFORM_SYSTEM =
+  'Sos un analista de negocio. ' +
+  'Reglas estrictas:\n' +
+  '- Leé el bloque CONTEXTO DE LA EMPRESA solo para entender qué hace la marca y en qué mercado opera.\n' +
+  '- No uses listas previas de competidores como verdad fija.\n' +
+  '- Respondé exactamente la consulta del usuario; no fuerces Top 3, score ni ranking si no lo pidió.\n' +
+  '- Si la consulta pide competidores, devolvé competidores directos reales del mismo contexto y evitá inventar.';
 
 export function buildPortalBrandContextBlock(brand: {
   name: string;
@@ -125,6 +138,41 @@ export function buildPortalBrandContextBlock(brand: {
   return lines.filter((x): x is string => Boolean(x)).join('\n');
 }
 
+export function buildPortalBrandFreeformContextBlock(brand: {
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  country: string | null;
+  productType: string | null;
+  objective: string | null;
+  description: string | null;
+  businessType: string | null;
+  category: string | null;
+  subcategory: string | null;
+  geoMarket: string | null;
+}): string {
+  const desc = brand.description?.trim();
+  const lines = [
+    '=== CONTEXTO DE LA EMPRESA ===',
+    `Marca: ${brand.name}`,
+    brand.domain ? `Web / dominio: ${brand.domain}` : null,
+    brand.country ? `País: ${brand.country}` : null,
+    brand.geoMarket ? `Mercado geo: ${brand.geoMarket}` : null,
+    brand.industry ? `Industria / sector (referencia): ${brand.industry}` : null,
+    brand.category ? `Categoría (referencia): ${brand.category}` : null,
+    brand.subcategory ? `Subcategoría (referencia): ${brand.subcategory}` : null,
+    brand.productType ? `Producto / servicio: ${brand.productType}` : null,
+    brand.businessType ? `Tipo de negocio: ${String(brand.businessType)}` : null,
+    brand.objective ? `Objetivo: ${brand.objective}` : null,
+    desc ? `Descripción de la empresa: ${desc.slice(0, 1500)}${desc.length > 1500 ? '…' : ''}` : null,
+    'Usá este bloque solo para entender qué hace la empresa; no asumas competidores previos ni fuerces rankings.',
+    '=== Fin contexto ===',
+  ];
+  return lines.filter((x): x is string => Boolean(x)).join('\n');
+}
+
+type PromptExecutionMode = 'ranking' | 'freeform';
+
 export type OpenAIRankingInput = {
   promptText: string;
   brandName: string;
@@ -132,6 +180,7 @@ export type OpenAIRankingInput = {
   brandAliases: string[];
   /** Si viene informado, se usa prompt contextual de portal (rubro + marca). */
   brandContextBlock?: string;
+  mode?: PromptExecutionMode;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -161,15 +210,23 @@ export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Pro
   const temperature = input.temperature ?? 0.2;
   const maxTokens = input.maxTokens ?? 800;
   const usePortalContext = Boolean(input.brandContextBlock?.trim());
+  const mode = input.mode ?? 'ranking';
+  const isFreeform = mode === 'freeform';
 
-  const systemContent = usePortalContext ? PORTAL_CONTEXTUAL_RANKING_SYSTEM : OPENAI_RANKING_SYSTEM;
+  const systemContent = usePortalContext
+    ? (isFreeform ? PORTAL_CONTEXTUAL_FREEFORM_SYSTEM : PORTAL_CONTEXTUAL_RANKING_SYSTEM)
+    : (isFreeform ? OPENAI_FREEFORM_SYSTEM : OPENAI_RANKING_SYSTEM);
   const userContent = usePortalContext
-    ? `${input.brandContextBlock!.trim()}\n\n--- Consulta simulada (usuario ante una IA) ---\n${input.promptText}\n\n` +
-      `Marca del cliente a tener en cuenta: ${input.brandName}.\n` +
-      `Competidores de referencia (si aplica): ${competitorList || 'ver contexto'}.`
-    : `${input.promptText}\n\n` +
-      `Marca a medir: ${input.brandName}.\n` +
-      `Competidores: ${competitorList || 'no informados'}.`;
+    ? isFreeform
+      ? `${input.brandContextBlock!.trim()}\n\n--- Consulta del usuario ---\n${input.promptText}\n\nMarca del cliente: ${input.brandName}.`
+      : `${input.brandContextBlock!.trim()}\n\n--- Consulta simulada (usuario ante una IA) ---\n${input.promptText}\n\n` +
+        `Marca del cliente a tener en cuenta: ${input.brandName}.\n` +
+        `Competidores de referencia (si aplica): ${competitorList || 'ver contexto'}.`
+    : isFreeform
+      ? `Marca del cliente: ${input.brandName}.\n\nConsulta del usuario:\n${input.promptText}`
+      : `${input.promptText}\n\n` +
+        `Marca a medir: ${input.brandName}.\n` +
+        `Competidores: ${competitorList || 'no informados'}.`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 90_000);
@@ -338,20 +395,35 @@ async function persistRunHistoryForSavedPrompt(input: {
     competitors: Array<{ name: string }>;
   };
 }) {
-  const brandContextBlock = buildPortalBrandContextBlock({
-    name: input.brand.name,
-    domain: input.brand.domain,
-    industry: input.brand.industry,
-    country: input.brand.country,
-    productType: input.brand.productType,
-    objective: input.brand.objective,
-    description: input.brand.description,
-    businessType: input.brand.businessType,
-    category: input.brand.category,
-    subcategory: input.brand.subcategory,
-    geoMarket: input.brand.geoMarket,
-    competitors: input.brand.competitors,
-  });
+  const brandContextBlock =
+    input.runType === 'weekly_portal'
+      ? buildPortalBrandFreeformContextBlock({
+          name: input.brand.name,
+          domain: input.brand.domain,
+          industry: input.brand.industry,
+          country: input.brand.country,
+          productType: input.brand.productType,
+          objective: input.brand.objective,
+          description: input.brand.description,
+          businessType: input.brand.businessType,
+          category: input.brand.category,
+          subcategory: input.brand.subcategory,
+          geoMarket: input.brand.geoMarket,
+        })
+      : buildPortalBrandContextBlock({
+          name: input.brand.name,
+          domain: input.brand.domain,
+          industry: input.brand.industry,
+          country: input.brand.country,
+          productType: input.brand.productType,
+          objective: input.brand.objective,
+          description: input.brand.description,
+          businessType: input.brand.businessType,
+          category: input.brand.category,
+          subcategory: input.brand.subcategory,
+          geoMarket: input.brand.geoMarket,
+          competitors: input.brand.competitors,
+        });
 
   const analysis = await analyzePortalCustomPromptResponse({
     userPrompt: input.promptTextSnapshot.trim(),
@@ -438,6 +510,22 @@ export async function executeRun(
   }));
   const competitorList = competitors.map((c) => c.name).join(', ');
   const brandAliases = run.brand.aliases.map((a) => a.alias);
+  const useFreeformPromptMode = run.runType === 'weekly_portal';
+  const freeformBrandContextBlock = useFreeformPromptMode
+    ? buildPortalBrandFreeformContextBlock({
+        name: run.brand.name,
+        domain: run.brand.domain,
+        industry: run.brand.industry,
+        country: run.brand.country,
+        productType: run.brand.productType,
+        objective: run.brand.objective,
+        description: run.brand.description,
+        businessType: run.brand.businessType,
+        category: run.brand.category,
+        subcategory: run.brand.subcategory,
+        geoMarket: run.brand.geoMarket,
+      })
+    : null;
   let totalTokens = 0;
 
   const OPENAI_TIMEOUT_MS = 90_000; // 90s por prompt para evitar que el run quede colgado
@@ -463,14 +551,16 @@ export async function executeRun(
         messages: [
           {
             role: 'system',
-            content: OPENAI_RANKING_SYSTEM,
+            content: useFreeformPromptMode ? PORTAL_CONTEXTUAL_FREEFORM_SYSTEM : OPENAI_RANKING_SYSTEM,
           },
           {
             role: 'user',
             content:
-              `${prompt.promptText}\n\n` +
-              `Marca a medir: ${run.brand.name}.\n` +
-              `Competidores: ${competitorList || 'no informados'}.`,
+              useFreeformPromptMode
+                ? `${freeformBrandContextBlock}\n\n--- Consulta del usuario ---\n${prompt.promptText}\n\nMarca del cliente: ${run.brand.name}.`
+                : `${prompt.promptText}\n\n` +
+                  `Marca a medir: ${run.brand.name}.\n` +
+                  `Competidores: ${competitorList || 'no informados'}.`,
           },
         ],
       }),

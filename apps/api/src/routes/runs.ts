@@ -11,7 +11,7 @@ import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { persistSavedPromptExecutionSnapshot } from '../lib/portal-saved-prompt-history';
 import {
   analyzePortalCustomPromptResponse,
-  buildPortalBrandContextBlock,
+  buildPortalBrandFreeformContextBlock,
   executeRun,
   loadPromptsForRunExecution,
   resolveActivePromptVersion,
@@ -35,7 +35,7 @@ async function buildSavedPromptExecutionAnalysis(
   promptText: string,
   responseText: string
 ) {
-  const brandContextBlock = buildPortalBrandContextBlock({
+  const brandContextBlock = buildPortalBrandFreeformContextBlock({
     name: brand.name,
     domain: brand.domain,
     industry: brand.industry,
@@ -47,7 +47,6 @@ async function buildSavedPromptExecutionAnalysis(
     category: brand.category,
     subcategory: brand.subcategory,
     geoMarket: brand.geoMarket,
-    competitors: brand.competitors,
   });
 
   return analyzePortalCustomPromptResponse({

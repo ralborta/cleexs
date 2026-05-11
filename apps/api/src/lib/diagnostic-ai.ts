@@ -184,42 +184,70 @@ export async function determineIndustry(
 /**
  * Selecciona los 5 mejores competidores para una marca en una industria
  */
-export async function getTop5Competitors(
-  brandName: string,
-  industry: string,
-  country?: string,
-  niche?: { verticalSummary?: string; customerSegment?: string }
-): Promise<CompetitorsResult> {
-  const marketContext = country ? ` País/mercado: ${country}.` : '';
-  const nicheBlock = [
-    niche?.verticalSummary?.trim()
-      ? `Qué hace el negocio (según sitio / análisis): ${niche.verticalSummary.trim()}`
+export async function getTop5Competitors(input: {
+  brandName: string;
+  country?: string;
+  websiteUrl?: string;
+  siteMarkdown?: string;
+  industryHint?: string;
+  niche?: { verticalSummary?: string; customerSegment?: string };
+}): Promise<CompetitorsResult> {
+  const marketContext = input.country?.trim()
+    ? `País/mercado principal: ${input.country.trim()}. Usalo como filtro fuerte para elegir competidores del mismo mercado.`
+    : 'País/mercado principal: no informado. Si inferís uno con alta confianza desde el sitio, usalo; si no, evitá asumir.';
+  const siteEvidence = await fetchWebsiteEvidence(input.websiteUrl);
+  const siteEvidenceBlock = siteEvidence
+    ? [
+        `URL evaluada: ${siteEvidence.sourceUrl || input.websiteUrl}.`,
+        siteEvidence.title ? `Title: ${siteEvidence.title}` : '',
+        siteEvidence.metaDescription ? `Meta description: ${siteEvidence.metaDescription}` : '',
+        siteEvidence.h1 ? `H1 principal: ${siteEvidence.h1}` : '',
+        siteEvidence.h2 ? `H2 destacado: ${siteEvidence.h2}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : 'Sin evidencia HTML resumida del sitio.';
+  const hintBlock = [
+    input.industryHint?.trim() ? `Pista secundaria de industria (no rígida): ${input.industryHint.trim()}` : '',
+    input.niche?.verticalSummary?.trim()
+      ? `Resumen del negocio (pista secundaria): ${input.niche.verticalSummary.trim()}`
       : '',
-    niche?.customerSegment?.trim()
-      ? `Tipo de cliente principal: ${niche.customerSegment.trim()}.`
+    input.niche?.customerSegment?.trim()
+      ? `Tipo de cliente principal (pista secundaria): ${input.niche.customerSegment.trim()}.`
       : '',
   ]
     .filter(Boolean)
     .join('\n');
+  const firecrawlBlock =
+    input.siteMarkdown?.trim().length ?
+      `Contenido principal del sitio (prioridad máxima para entender qué hace la empresa):\n${input.siteMarkdown.trim().slice(0, 14_000)}`
+    : 'Sin contenido Firecrawl disponible.';
 
   const content = await callOpenAI([
     {
       role: 'system',
       content:
-        'Respondé SOLO con un JSON válido. Ejemplo: {"competitors": ["Marca A", "Marca B", "Marca C", "Marca D", "Marca E"]}. ' +
+        'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
+        'Tu tarea es identificar competidores DIRECTOS y REALES de la empresa indicada. ' +
         'Reglas estrictas: ' +
-        '1) Solo marcas/empresas que sean competidores DIRECTOS: misma sub-vertical / mismo tipo de oferta y mismo tipo de cliente (B2B vs B2C) que la marca medida. ' +
-        '   No mezcles rubros (ej. logística 3PL no compite con banca retail). ' +
-        '2) NO incluyas productos, servicios o submarcas de la misma empresa (ej. si la marca es una operadora, no incluyas su billetera móvil; si es un banco, no incluyas su app de pagos). ' +
-        '3) NO inventes marcas. Solo listá empresas que existan realmente en ese país. Si no estás seguro de que exista, no la incluyas. ' +
-        '4) Solo nombres de marcas/empresas, nunca URLs ni dominios.',
+        '1) Entendé qué hace la empresa principalmente usando la evidencia del sitio como fuente prioritaria. ' +
+        '2) El país/mercado indicado es el único filtro duro si viene informado. ' +
+        '3) Un competidor directo debe resolver la misma necesidad principal, con una oferta comparable y para un tipo de cliente similar. ' +
+        '4) NO incluyas marketplaces generales, partners, proveedores, medios, revendedores, categorías vecinas ni productos de la misma empresa. ' +
+        '5) NO inventes marcas ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
+        '6) Devolvé solo nombres de marcas/empresas, nunca URLs, dominios ni texto extra. ' +
+        '7) Si las pistas secundarias contradicen al sitio, priorizá el sitio.',
     },
     {
       role: 'user',
       content:
-        `Marca: ${brandName}. Industria: ${industry}.${marketContext}\n` +
-        (nicheBlock ? `${nicheBlock}\n` : '') +
-        `\nListá exactamente 5 competidores directos (empresas reales de ese país). Solo marcas que existan. Respuesta (solo JSON):`,
+        `Marca: ${input.brandName}\n` +
+        `${marketContext}\n` +
+        (input.websiteUrl ? `Sitio web: ${input.websiteUrl}\n` : '') +
+        `\nEvidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
+        `${firecrawlBlock}\n\n` +
+        (hintBlock ? `Pistas secundarias:\n${hintBlock}\n\n` : '') +
+        'Devolvé un JSON con la forma {"competitors":["..."]} incluyendo solo competidores directos reales de esta empresa.',
     },
   ]);
 
@@ -230,9 +258,9 @@ export async function getTop5Competitors(
       .slice(0, 5)
       .map((c) => `${c}`.trim())
       .filter(Boolean);
-    return { competitors: competitors.length >= 5 ? competitors : [...competitors, ...Array(5 - competitors.length).fill('Competidor')] };
+    return { competitors };
   } catch {
-    return { competitors: ['Competidor 1', 'Competidor 2', 'Competidor 3', 'Competidor 4', 'Competidor 5'] };
+    return { competitors: [] };
   }
 }
 
