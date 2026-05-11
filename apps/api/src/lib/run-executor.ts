@@ -78,11 +78,59 @@ const OPENAI_RANKING_SYSTEM =
   'Respondé con un ranking claro del Top 3 en formato numerado (1., 2., 3.). ' +
   'Incluí marcas y luego un breve motivo por cada una.';
 
+/** Portal: fuerza coherencia de rubro y evita comparaciones absurdas entre sectores. */
+const PORTAL_CONTEXTUAL_RANKING_SYSTEM =
+  'Sos un analista de visibilidad de marca ante respuestas de IA. ' +
+  'Reglas estrictas:\n' +
+  '- Leé el bloque CONTEXTO DEL NEGOCIO: ahí está el rubro, mercado y descripción real del cliente.\n' +
+  '- La marca del cliente y los competidores listados pertenecen a ESE mismo universo. No la compares con empresas de sectores totalmente ajenos (ej. software vs cemento) salvo que la consulta del usuario lo pida explícitamente.\n' +
+  '- Si la consulta es ambigua, interpretala favoreciendo el sector y el tipo de negocio del contexto.\n' +
+  'Respondé en español con un Top 3 numerado (1. 2. 3.) con nombre de marca y un motivo breve por ítem.';
+
+export function buildPortalBrandContextBlock(brand: {
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  country: string | null;
+  productType: string | null;
+  objective: string | null;
+  description: string | null;
+  businessType: string | null;
+  category: string | null;
+  subcategory: string | null;
+  geoMarket: string | null;
+  competitors: { name: string }[];
+}): string {
+  const desc = brand.description?.trim();
+  const comp = brand.competitors.map((c) => c.name).filter(Boolean);
+  const lines = [
+    '=== CONTEXTO DEL NEGOCIO (usá solo esto para situar marca y competidores) ===',
+    `Marca del cliente: ${brand.name}`,
+    brand.domain ? `Dominio / web: ${brand.domain}` : null,
+    brand.industry ? `Industria / sector: ${brand.industry}` : null,
+    brand.businessType ? `Tipo de negocio: ${String(brand.businessType)}` : null,
+    brand.category ? `Categoría: ${brand.category}` : null,
+    brand.subcategory ? `Subcategoría: ${brand.subcategory}` : null,
+    brand.productType ? `Producto / servicio: ${brand.productType}` : null,
+    brand.country ? `País: ${brand.country}` : null,
+    brand.geoMarket ? `Mercado geo: ${brand.geoMarket}` : null,
+    brand.objective ? `Objetivo: ${brand.objective}` : null,
+    desc ? `Descripción del negocio: ${desc.slice(0, 1500)}${desc.length > 1500 ? '…' : ''}` : null,
+    comp.length > 0
+      ? `Competidores del diagnóstico (mismo contexto): ${comp.join(', ')}`
+      : 'Competidores del diagnóstico: (ninguno cargado; inferí competidores plausibles del mismo rubro si hace falta).',
+    '=== Fin contexto ===',
+  ];
+  return lines.filter((x): x is string => Boolean(x)).join('\n');
+}
+
 export type OpenAIRankingInput = {
   promptText: string;
   brandName: string;
   competitors: Array<{ name: string; aliases?: string[] }>;
   brandAliases: string[];
+  /** Si viene informado, se usa prompt contextual de portal (rubro + marca). */
+  brandContextBlock?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -111,6 +159,16 @@ export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Pro
   const model = input.model ?? 'gpt-4o-mini';
   const temperature = input.temperature ?? 0.2;
   const maxTokens = input.maxTokens ?? 800;
+  const usePortalContext = Boolean(input.brandContextBlock?.trim());
+
+  const systemContent = usePortalContext ? PORTAL_CONTEXTUAL_RANKING_SYSTEM : OPENAI_RANKING_SYSTEM;
+  const userContent = usePortalContext
+    ? `${input.brandContextBlock!.trim()}\n\n--- Consulta simulada (usuario ante una IA) ---\n${input.promptText}\n\n` +
+      `Marca del cliente a tener en cuenta: ${input.brandName}.\n` +
+      `Competidores de referencia (si aplica): ${competitorList || 'ver contexto'}.`
+    : `${input.promptText}\n\n` +
+      `Marca a medir: ${input.brandName}.\n` +
+      `Competidores: ${competitorList || 'no informados'}.`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 90_000);
@@ -127,13 +185,10 @@ export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Pro
       temperature,
       max_tokens: maxTokens,
       messages: [
-        { role: 'system', content: OPENAI_RANKING_SYSTEM },
+        { role: 'system', content: systemContent },
         {
           role: 'user',
-          content:
-            `${input.promptText}\n\n` +
-            `Marca a medir: ${input.brandName}.\n` +
-            `Competidores: ${competitorList || 'no informados'}.`,
+          content: userContent,
         },
       ],
     }),
@@ -166,6 +221,99 @@ export async function executeOpenAIRankingPrompt(input: OpenAIRankingInput): Pro
   const responseText = truncated ? raw.slice(0, maxSize) : raw;
 
   return { responseText, top3, flags, score, brandPosition, totalTokens };
+}
+
+export type PortalPromptAnalysis = {
+  resumen: string;
+  puntos_clave: string[];
+  graficos: Array<{ titulo: string; items: Array<{ etiqueta: string; valor: number }> }>;
+};
+
+/**
+ * Segunda pasada: lectura de la respuesta (sin “score Cleexs”) + datos para 2 gráficos simples.
+ */
+export async function analyzePortalCustomPromptResponse(input: {
+  userPrompt: string;
+  responseText: string;
+  brandName: string;
+  brandContextBlock: string;
+}): Promise<PortalPromptAnalysis | null> {
+  if (!process.env.OPENAI_API_KEY) return null;
+
+  const model = 'gpt-4o-mini';
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+  const instruction =
+    'Sos analista. Con el contexto del negocio y la respuesta del modelo, generá un análisis en español.\n' +
+    'Devolvé SOLO un JSON válido (sin markdown) con esta forma exacta:\n' +
+    '{"resumen":"2-4 oraciones","puntos_clave":["máx 5 strings"],"graficos":[' +
+    '{"titulo":"string","items":[{"etiqueta":"string","valor":0-100}]},' +
+    '{"titulo":"string","items":[{"etiqueta":"string","valor":0-100}]}]}\n' +
+    'Los "valor" son relevancia o peso relativo (0-100), no un score de producto Cleexs.\n' +
+    'Los gráficos deben ayudar a interpretar la respuesta (ej. marcas mencionadas, temas, tono).\n' +
+    'Si hay pocas marcas, completá el segundo gráfico con aspectos del texto (claridad, recomendación, riesgos).';
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    signal: controller.signal,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.3,
+      max_tokens: 900,
+      messages: [
+        { role: 'system', content: instruction },
+        {
+          role: 'user',
+          content:
+            `${input.brandContextBlock}\n\n` +
+            `Marca cliente: ${input.brandName}\n` +
+            `Consulta del usuario:\n${input.userPrompt}\n\n` +
+            `Respuesta del modelo a analizar:\n${input.responseText.slice(0, 12000)}`,
+        },
+      ],
+    }),
+  }).finally(() => clearTimeout(timeoutId));
+
+  const responseJson = (await response.json()) as {
+    error?: { message?: string };
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  if (!response.ok) return null;
+
+  const raw = responseJson?.choices?.[0]?.message?.content?.trim() || '';
+  const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  try {
+    const parsed = JSON.parse(jsonStr) as PortalPromptAnalysis;
+    if (typeof parsed.resumen !== 'string' || !Array.isArray(parsed.puntos_clave) || !Array.isArray(parsed.graficos)) {
+      return null;
+    }
+    const graficos = parsed.graficos
+      .slice(0, 2)
+      .map((g) => ({
+        titulo: String(g.titulo ?? '').slice(0, 120),
+        items: (Array.isArray(g.items) ? g.items : [])
+          .slice(0, 6)
+          .map((it) => ({
+            etiqueta: String((it as { etiqueta?: string }).etiqueta ?? '').slice(0, 80),
+            valor: Math.min(100, Math.max(0, Number((it as { valor?: number }).valor) || 0)),
+          }))
+          .filter((it) => it.etiqueta),
+      }))
+      .filter((g) => g.titulo && g.items.length > 0);
+    if (graficos.length === 0) return null;
+    return {
+      resumen: parsed.resumen.slice(0, 2000),
+      puntos_clave: parsed.puntos_clave.map((s) => String(s).slice(0, 300)).filter(Boolean).slice(0, 5),
+      graficos,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**

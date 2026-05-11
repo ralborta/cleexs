@@ -7,7 +7,11 @@ import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { syncShadowPromptForSaved } from '../lib/portal-weekly-prompt-sync';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { canCreateRun } from '../lib/tenant';
-import { executeOpenAIRankingPrompt } from '../lib/run-executor';
+import {
+  analyzePortalCustomPromptResponse,
+  buildPortalBrandContextBlock,
+  executeOpenAIRankingPrompt,
+} from '../lib/run-executor';
 
 const MAX_SLOT = 4;
 
@@ -129,19 +133,39 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
           aliases: (c.aliases as string[]) || [],
         }));
 
+        const brandContextBlock = buildPortalBrandContextBlock({
+          name: brand.name,
+          domain: brand.domain,
+          industry: brand.industry,
+          country: brand.country,
+          productType: brand.productType,
+          objective: brand.objective,
+          description: brand.description,
+          businessType: brand.businessType,
+          category: brand.category,
+          subcategory: brand.subcategory,
+          geoMarket: brand.geoMarket,
+          competitors: brand.competitors,
+        });
+
         const out = await executeOpenAIRankingPrompt({
           promptText: parsedBody.data.promptText.trim(),
           brandName: brand.name,
           competitors,
           brandAliases: brand.aliases.map((a) => a.alias),
+          brandContextBlock,
+        });
+
+        const analysis = await analyzePortalCustomPromptResponse({
+          userPrompt: parsedBody.data.promptText.trim(),
+          responseText: out.responseText,
+          brandName: brand.name,
+          brandContextBlock,
         });
 
         return {
-          score: out.score,
-          brandPosition: out.brandPosition,
-          top3: out.top3,
-          flags: out.flags,
           responseText: out.responseText,
+          analysis,
           totalTokens: out.totalTokens,
         };
       } catch (e) {
