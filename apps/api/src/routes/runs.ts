@@ -8,7 +8,55 @@ import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from '../lib/pria';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
-import { executeRun, loadPromptsForRunExecution, resolveActivePromptVersion } from '../lib/run-executor';
+import { persistSavedPromptExecutionSnapshot } from '../lib/portal-saved-prompt-history';
+import {
+  analyzePortalCustomPromptResponse,
+  buildPortalBrandContextBlock,
+  executeRun,
+  loadPromptsForRunExecution,
+  resolveActivePromptVersion,
+} from '../lib/run-executor';
+
+async function buildSavedPromptExecutionAnalysis(
+  brand: {
+    name: string;
+    domain: string | null;
+    industry: string | null;
+    country: string | null;
+    productType: string | null;
+    objective: string | null;
+    description: string | null;
+    businessType: string | null;
+    category: string | null;
+    subcategory: string | null;
+    geoMarket: string | null;
+    competitors: Array<{ name: string }>;
+  },
+  promptText: string,
+  responseText: string
+) {
+  const brandContextBlock = buildPortalBrandContextBlock({
+    name: brand.name,
+    domain: brand.domain,
+    industry: brand.industry,
+    country: brand.country,
+    productType: brand.productType,
+    objective: brand.objective,
+    description: brand.description,
+    businessType: brand.businessType,
+    category: brand.category,
+    subcategory: brand.subcategory,
+    geoMarket: brand.geoMarket,
+    competitors: brand.competitors,
+  });
+
+  return analyzePortalCustomPromptResponse({
+    userPrompt: promptText.trim(),
+    responseText,
+    brandName: brand.name,
+    brandContextBlock,
+  });
+}
 
 const runRoutes: FastifyPluginAsync = async (fastify) => {
   /** Portal cliente: crea run mensual y ejecuta análisis (mismos prompts que el dashboard). */
@@ -353,7 +401,20 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.params.id },
         include: {
           brand: {
-            include: {
+            select: {
+              id: true,
+              name: true,
+              domain: true,
+              industry: true,
+              country: true,
+              productType: true,
+              objective: true,
+              description: true,
+              businessType: true,
+              category: true,
+              subcategory: true,
+              geoMarket: true,
+              selectedWeeklyPortalPromptId: true,
               aliases: true,
               competitors: true,
             },
@@ -425,6 +486,22 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         );
       }
 
+      if (prompt.brandPortalSavedPromptId) {
+        try {
+          const analysis = await buildSavedPromptExecutionAnalysis(run.brand, prompt.promptText, finalResponseText);
+          await persistSavedPromptExecutionSnapshot({
+            savedPromptId: prompt.brandPortalSavedPromptId,
+            runId: run.id,
+            source: `run:${run.runType}`,
+            promptTextSnapshot: prompt.promptText,
+            responseText: finalResponseText,
+            analysisJson: analysis ? (analysis as unknown as Prisma.InputJsonValue) : null,
+          });
+        } catch (err) {
+          fastify.log.warn({ err, runId: run.id, promptId }, 'No se pudo guardar historial portal en addResult');
+        }
+      }
+
       // Actualizar PRIA report
       await updatePRIAReport(run.id, run.brandId);
 
@@ -468,7 +545,20 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.params.id },
         include: {
           brand: {
-            include: {
+            select: {
+              id: true,
+              name: true,
+              domain: true,
+              industry: true,
+              country: true,
+              productType: true,
+              objective: true,
+              description: true,
+              businessType: true,
+              category: true,
+              subcategory: true,
+              geoMarket: true,
+              selectedWeeklyPortalPromptId: true,
               aliases: true,
               competitors: true,
             },
@@ -615,6 +705,24 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
               { runId: run.id, index: i, expectedPromptId: promptIdToStore, storedPromptId: created.promptId },
               'PromptResult creado con promptId distinto al esperado'
             );
+          }
+          if (prompt.brandPortalSavedPromptId) {
+            try {
+              const analysis = await buildSavedPromptExecutionAnalysis(run.brand, promptTextToSend, finalResponseText);
+              await persistSavedPromptExecutionSnapshot({
+                savedPromptId: prompt.brandPortalSavedPromptId,
+                runId: run.id,
+                source: `run:${run.runType}`,
+                promptTextSnapshot: promptTextToSend,
+                responseText: finalResponseText,
+                analysisJson: analysis ? (analysis as unknown as Prisma.InputJsonValue) : null,
+              });
+            } catch (err) {
+              fastify.log.warn(
+                { err, runId: run.id, promptId: promptIdToStore },
+                'No se pudo guardar historial portal durante execute'
+              );
+            }
           }
         }
 

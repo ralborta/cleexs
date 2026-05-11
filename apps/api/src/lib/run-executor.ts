@@ -4,6 +4,7 @@ import { prisma } from './prisma';
 import { parseTop3 } from './parsing';
 import { calculateScore } from '@cleexs/shared';
 import { updatePRIAReport } from './pria';
+import { persistSavedPromptExecutionSnapshot } from './portal-saved-prompt-history';
 
 /** Versión de prompts activa del tenant, o la del tenant root (000) si el cliente no tiene la suya. */
 export async function resolveActivePromptVersion(
@@ -316,6 +317,59 @@ export async function analyzePortalCustomPromptResponse(input: {
   }
 }
 
+async function persistRunHistoryForSavedPrompt(input: {
+  savedPromptId: string;
+  runId: string;
+  runType: string;
+  promptTextSnapshot: string;
+  responseText: string;
+  brand: {
+    name: string;
+    domain: string | null;
+    industry: string | null;
+    country: string | null;
+    productType: string | null;
+    objective: string | null;
+    description: string | null;
+    businessType: string | null;
+    category: string | null;
+    subcategory: string | null;
+    geoMarket: string | null;
+    competitors: Array<{ name: string }>;
+  };
+}) {
+  const brandContextBlock = buildPortalBrandContextBlock({
+    name: input.brand.name,
+    domain: input.brand.domain,
+    industry: input.brand.industry,
+    country: input.brand.country,
+    productType: input.brand.productType,
+    objective: input.brand.objective,
+    description: input.brand.description,
+    businessType: input.brand.businessType,
+    category: input.brand.category,
+    subcategory: input.brand.subcategory,
+    geoMarket: input.brand.geoMarket,
+    competitors: input.brand.competitors,
+  });
+
+  const analysis = await analyzePortalCustomPromptResponse({
+    userPrompt: input.promptTextSnapshot.trim(),
+    responseText: input.responseText,
+    brandName: input.brand.name,
+    brandContextBlock,
+  });
+
+  await persistSavedPromptExecutionSnapshot({
+    savedPromptId: input.savedPromptId,
+    runId: input.runId,
+    source: `run:${input.runType}`,
+    promptTextSnapshot: input.promptTextSnapshot,
+    responseText: input.responseText,
+    analysisJson: analysis ? (analysis as unknown as Prisma.InputJsonValue) : null,
+  });
+}
+
 /**
  * Ejecuta un Run: llama a OpenAI por cada prompt, guarda resultados y actualiza PRIA.
  * Usado por el endpoint de runs y por el flujo de diagnóstico público.
@@ -332,9 +386,22 @@ export async function executeRun(
     where: { id: runId },
     include: {
       brand: {
-        include: {
+        select: {
+          id: true,
+          name: true,
+          domain: true,
+          industry: true,
+          country: true,
+          productType: true,
+          objective: true,
+          description: true,
+          businessType: true,
+          category: true,
+          subcategory: true,
+          geoMarket: true,
           aliases: true,
           competitors: true,
+          selectedWeeklyPortalPromptId: true,
         },
       },
     },
@@ -446,6 +513,20 @@ export async function executeRun(
         truncated,
       },
     });
+    if (prompt.brandPortalSavedPromptId) {
+      try {
+        await persistRunHistoryForSavedPrompt({
+          savedPromptId: prompt.brandPortalSavedPromptId,
+          runId,
+          runType: run.runType,
+          promptTextSnapshot: prompt.promptText,
+          responseText: finalResponseText,
+          brand: run.brand,
+        });
+      } catch {
+        // El historial portal no debe romper la corrida principal.
+      }
+    }
   }
 
   await updatePRIAReport(runId, run.brandId);
@@ -521,9 +602,22 @@ export async function executeRunGemini(
     where: { id: runId },
     include: {
       brand: {
-        include: {
+        select: {
+          id: true,
+          name: true,
+          domain: true,
+          industry: true,
+          country: true,
+          productType: true,
+          objective: true,
+          description: true,
+          businessType: true,
+          category: true,
+          subcategory: true,
+          geoMarket: true,
           aliases: true,
           competitors: true,
+          selectedWeeklyPortalPromptId: true,
         },
       },
     },
@@ -599,6 +693,20 @@ export async function executeRunGemini(
         truncated,
       },
     });
+    if (prompt.brandPortalSavedPromptId) {
+      try {
+        await persistRunHistoryForSavedPrompt({
+          savedPromptId: prompt.brandPortalSavedPromptId,
+          runId,
+          runType: run.runType,
+          promptTextSnapshot: prompt.promptText,
+          responseText: finalResponseText,
+          brand: run.brand,
+        });
+      } catch {
+        // El historial portal no debe romper la corrida principal.
+      }
+    }
   }
 
   await updatePRIAReport(runId, run.brandId);

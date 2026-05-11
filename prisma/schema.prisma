@@ -228,10 +228,30 @@ model BrandPortalSavedPrompt {
   shadowPrompt         Prompt?
   brandsSelectingThis  Brand[]  @relation("BrandSelectedWeeklyPrompt")
   runsSnapshot         Run[]    @relation("RunWeeklyPortalPrompt")
+  executions           BrandPortalSavedPromptExecution[]
 
   @@unique([brandId, slot])
   @@index([brandId])
   @@map("brand_portal_saved_prompts")
+}
+
+/// Snapshots históricos de ejecuciones de prompts guardados del portal.
+model BrandPortalSavedPromptExecution {
+  id                 String   @id @default(uuid())
+  savedPromptId      String   @map("saved_prompt_id")
+  runId              String?  @map("run_id")
+  source             String   @default("portal_manual")
+  promptTextSnapshot String   @db.Text @map("prompt_text_snapshot")
+  responseText       String   @db.Text @map("response_text")
+  analysisJson       Json?    @map("analysis_json")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  savedPrompt BrandPortalSavedPrompt @relation(fields: [savedPromptId], references: [id], onDelete: Cascade)
+  run        Run?                    @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([savedPromptId, createdAt])
+  @@index([runId])
+  @@map("brand_portal_saved_prompt_executions")
 }
 
 model BrandAlias {
@@ -367,6 +387,7 @@ model Run {
   tenant      Tenant      @relation(fields: [tenantId], references: [id])
   brand       Brand       @relation(fields: [brandId], references: [id])
   weeklyPortalSavedPrompt BrandPortalSavedPrompt? @relation("RunWeeklyPortalPrompt", fields: [weeklyPortalSavedPromptId], references: [id], onDelete: SetNull)
+  portalSavedPromptExecutions BrandPortalSavedPromptExecution[]
   promptResults PromptResult[]
   priaReports PRIAReport[]
   leadSources LeadSource[]

@@ -44,7 +44,7 @@ type WeeklySlotApi = {
   promptText: string;
   updatedAt: string | null;
   lastExecutedAt: string | null;
-  lastResponseText: string | null;
+  resultsCount: number;
 };
 
 type WeeklyPromptsPayload = {
@@ -241,6 +241,19 @@ function formatDateTime(value: string | null | undefined) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function buildLatestExecutionPayload(
+  promptText: string,
+  quickResult: QuickTryPayload | null,
+  draftPrompt: string
+) {
+  if (!quickResult?.responseText?.trim()) return undefined;
+  if (promptText.trim() !== draftPrompt.trim()) return undefined;
+  return {
+    responseText: quickResult.responseText,
+    analysis: quickResult.analysis ?? null,
+  };
 }
 
 function Donut({
@@ -621,7 +634,11 @@ export default function PromptsCorridaPage() {
   }
 
   /** PUT slot; refresca lista. Devuelve id del guardado o null si falla. */
-  async function putWeeklySlot(slot: number, promptText: string): Promise<string | null> {
+  async function putWeeklySlot(
+    slot: number,
+    promptText: string,
+    latestExecution?: { responseText: string; analysis: PortalAnalysisApi | null }
+  ): Promise<string | null> {
     const brandId = run?.brand?.id;
     if (!brandId) return null;
     const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
@@ -631,7 +648,7 @@ export default function PromptsCorridaPage() {
       {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptText: promptText.trim() }),
+        body: JSON.stringify({ promptText: promptText.trim(), latestExecution }),
       },
     );
     const b = await res.json().catch(() => ({}));
@@ -665,7 +682,7 @@ export default function PromptsCorridaPage() {
     }
     setWeeklySaving(true);
     try {
-      const id = await putWeeklySlot(slot, text);
+      const id = await putWeeklySlot(slot, text, buildLatestExecutionPayload(text, quickResult, draftPrompt));
       if (id) setInlineOk(`Guardado en la opción ${slot + 1}.`);
     } finally {
       setWeeklySaving(false);
@@ -689,7 +706,7 @@ export default function PromptsCorridaPage() {
     }
     setWeeklySaving(true);
     try {
-      const id = await putWeeklySlot(slot, text);
+      const id = await putWeeklySlot(slot, text, buildLatestExecutionPayload(text, quickResult, draftPrompt));
       if (!id) return;
       const token = sessionStorage.getItem(PORTAL_SESSION_TOKEN_KEY);
       if (!token) return;
@@ -727,7 +744,10 @@ export default function PromptsCorridaPage() {
         {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ promptText: text }),
+          body: JSON.stringify({
+            promptText: text,
+            latestExecution: openedFromQuickTry ? buildLatestExecutionPayload(text, quickResult, draftPrompt) : undefined,
+          }),
         },
       );
       if (res.ok) {
@@ -1131,16 +1151,11 @@ export default function PromptsCorridaPage() {
                                                 ? `Guardado: ${updatedLabel}`
                                                 : 'Aún sin ejecución'}
                                           </p>
-                                          <div className="mt-1.5 rounded-lg border border-white/80 bg-white/80 px-2 py-1.5">
-                                            <p className="text-[9px] font-bold uppercase tracking-wide text-violet-700">
-                                              Resultado en pantalla
-                                            </p>
-                                            <p className="mt-0.5 line-clamp-3 text-[10px] leading-snug text-slate-600">
-                                              {s.lastResponseText?.trim()
-                                                ? s.lastResponseText
-                                                : 'Todavía no hay resultado ejecutado para este prompt guardado.'}
-                                            </p>
-                                          </div>
+                                          <p className="mt-0.5 text-[9px] text-slate-500">
+                                            {s.resultsCount > 0
+                                              ? `${s.resultsCount} resultado${s.resultsCount === 1 ? '' : 's'} históricos`
+                                              : 'Sin resultados guardados todavía'}
+                                          </p>
                                         </div>
                                         <div className="flex shrink-0 flex-col items-end gap-1">
                                           <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] font-bold text-violet-800">
@@ -1155,6 +1170,16 @@ export default function PromptsCorridaPage() {
                                             Semanal
                                           </label>
                                           <div className="flex gap-1">
+                                            <Link
+                                              href={`${basePath}/prompts/guardados/${s.id}`}
+                                              className={`rounded-lg border px-2 py-0.5 text-[9px] font-bold shadow-sm ${
+                                                s.resultsCount > 0
+                                                  ? 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100'
+                                                  : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                              }`}
+                                            >
+                                              Resultados
+                                            </Link>
                                             <button
                                               type="button"
                                               disabled={weeklySaving}

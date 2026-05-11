@@ -5,6 +5,7 @@ import { EntitlementAction, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { syncShadowPromptForSaved } from '../lib/portal-weekly-prompt-sync';
+import { persistSavedPromptExecutionSnapshot } from '../lib/portal-saved-prompt-history';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { canCreateRun } from '../lib/tenant';
 import {
@@ -49,17 +50,13 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         portalSavedPrompts: {
           orderBy: { slot: 'asc' },
           include: {
-            shadowPrompt: {
-              select: {
-                promptResults: {
-                  orderBy: { createdAt: 'desc' },
-                  take: 1,
-                  select: {
-                    createdAt: true,
-                    responseText: true,
-                  },
-                },
-              },
+            executions: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { createdAt: true },
+            },
+            _count: {
+              select: { executions: true },
             },
           },
         },
@@ -76,8 +73,8 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
             title: buildSavedPromptTitle(row.promptText, slot),
             promptText: row.promptText,
             updatedAt: row.updatedAt.toISOString(),
-            lastExecutedAt: row.shadowPrompt?.promptResults[0]?.createdAt?.toISOString() ?? null,
-            lastResponseText: row.shadowPrompt?.promptResults[0]?.responseText ?? null,
+            lastExecutedAt: row.executions[0]?.createdAt?.toISOString() ?? null,
+            resultsCount: row._count.executions,
           }
         : {
             slot,
@@ -86,7 +83,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
             promptText: '',
             updatedAt: null as string | null,
             lastExecutedAt: null as string | null,
-            lastResponseText: null as string | null,
+            resultsCount: 0,
           };
     });
 
@@ -216,8 +213,13 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   const putBody = z.object({
-    title: z.string().max(160).optional().default(''),
     promptText: z.string().min(1).max(20000),
+    latestExecution: z
+      .object({
+        responseText: z.string().min(1).max(100_000),
+        analysis: z.unknown().nullable().optional(),
+      })
+      .optional(),
   });
 
   fastify.put<{ Params: { brandId: string; slot: string }; Body: unknown }>(
@@ -240,7 +242,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       const parsed = putBody.safeParse(request.body ?? {});
       if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido.', details: parsed.error.flatten() });
 
-      const { promptText } = parsed.data;
+      const { promptText, latestExecution } = parsed.data;
       const generatedTitle = buildSavedPromptTitle(promptText, slot);
 
       const saved = await prisma.brandPortalSavedPrompt.upsert({
@@ -265,6 +267,24 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(503).send({ error: msg });
       }
 
+      if (latestExecution?.responseText?.trim()) {
+        try {
+          await persistSavedPromptExecutionSnapshot({
+            savedPromptId: saved.id,
+            source: 'portal_manual',
+            promptTextSnapshot: promptText.trim(),
+            responseText: latestExecution.responseText.trim(),
+            analysisJson:
+              latestExecution.analysis && typeof latestExecution.analysis === 'object'
+                ? (latestExecution.analysis as Prisma.InputJsonValue)
+                : null,
+          });
+        } catch (e) {
+          fastify.log.error({ err: e, savedId: saved.id }, 'persistSavedPromptExecutionSnapshot manual');
+          return reply.code(503).send({ error: 'No se pudo guardar el historial del resultado.' });
+        }
+      }
+
       return reply.code(200).send({
         ok: true,
         slot: saved.slot,
@@ -272,6 +292,66 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         title: buildSavedPromptTitle(saved.promptText, saved.slot),
         promptText: saved.promptText,
       });
+    }
+  );
+
+  fastify.get<{ Params: { brandId: string; savedPromptId: string } }>(
+    '/brands/:brandId/weekly-prompts/:savedPromptId/results',
+    async (request, reply) => {
+      const portalUser = await resolvePortalUserFromRequest(request);
+      if (!portalUser) return reply.code(401).send({ error: 'Autenticación requerida.' });
+
+      const row = await prisma.brandPortalSavedPrompt.findFirst({
+        where: {
+          id: request.params.savedPromptId,
+          brandId: request.params.brandId,
+          brand: { is: { tenantId: portalUser.tenantId } },
+        },
+        select: {
+          id: true,
+          slot: true,
+          title: true,
+          promptText: true,
+          updatedAt: true,
+          executions: {
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+            select: {
+              id: true,
+              createdAt: true,
+              source: true,
+              promptTextSnapshot: true,
+              responseText: true,
+              analysisJson: true,
+              runId: true,
+            },
+          },
+          _count: {
+            select: { executions: true },
+          },
+        },
+      });
+      if (!row) return reply.code(404).send({ error: 'Prompt guardado no encontrado.' });
+
+      return {
+        savedPrompt: {
+          id: row.id,
+          slot: row.slot,
+          title: buildSavedPromptTitle(row.promptText, row.slot),
+          promptText: row.promptText,
+          updatedAt: row.updatedAt.toISOString(),
+          totalExecutions: row._count.executions,
+        },
+        results: row.executions.map((execution) => ({
+          id: execution.id,
+          createdAt: execution.createdAt.toISOString(),
+          source: execution.source,
+          promptTextSnapshot: execution.promptTextSnapshot,
+          responseText: execution.responseText,
+          analysis: execution.analysisJson,
+          runId: execution.runId,
+        })),
+      };
     }
   );
 
