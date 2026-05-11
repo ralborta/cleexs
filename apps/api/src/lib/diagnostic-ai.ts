@@ -234,33 +234,43 @@ export async function getTop5Competitors(input: {
     input.siteMarkdown?.trim().length ?
       `Contenido principal del sitio (prioridad máxima para entender qué hace la empresa):\n${input.siteMarkdown.trim().slice(0, 14_000)}`
     : 'Sin contenido Firecrawl disponible.';
+  const useUrlFirstPrompt = Boolean(input.websiteUrl?.trim());
 
   const content = await callOpenAI([
     {
       role: 'system',
-      content:
-        'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
-        'Tu tarea es identificar competidores DIRECTOS y REALES de la empresa indicada. ' +
-        'Reglas estrictas: ' +
-        '1) Si hay evidencia del sitio, usala como fuente principal y suficiente para entender el negocio. ' +
-        '2) No dependas de clasificaciones previas ni de categorías inventadas si el sitio ya deja claro qué hace la empresa. ' +
-        '3) El país/mercado indicado es el único filtro duro si viene informado; si no viene, inferilo desde la URL y el sitio. ' +
-        '4) Un competidor directo debe resolver la misma necesidad principal, con una oferta comparable y para un tipo de cliente similar. ' +
-        '5) NO incluyas marketplaces generales, partners, proveedores, medios, revendedores, categorías vecinas ni productos de la misma empresa. ' +
-        '6) NO inventes marcas ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
-        '7) Devolvé solo nombres de marcas/empresas, nunca URLs, dominios ni texto extra. ' +
-        '8) Si las pistas secundarias contradicen al sitio, ignorá las pistas secundarias y priorizá el sitio.',
+      content: useUrlFirstPrompt
+        ? 'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
+          'Analizá la URL y el contenido del sitio para identificar competidores DIRECTOS y REALES de esta empresa. ' +
+          'No inventes. No mezcles partners, medios, proveedores, integradores, marketplaces generales ni empresas del ecosistema que no compiten directamente. ' +
+          'Devolvé solo nombres de marcas/empresas.'
+        : 'Respondé SOLO con un JSON válido. Ejemplo: {"competitors":["Marca A","Marca B","Marca C"]}. ' +
+          'Tu tarea es identificar competidores DIRECTOS y REALES de la empresa indicada. ' +
+          'Reglas estrictas: ' +
+          '1) Si hay evidencia del sitio, usala como fuente principal y suficiente para entender el negocio. ' +
+          '2) No dependas de clasificaciones previas ni de categorías inventadas si el sitio ya deja claro qué hace la empresa. ' +
+          '3) El país/mercado indicado es el único filtro duro si viene informado; si no viene, inferilo desde la URL y el sitio. ' +
+          '4) Un competidor directo debe resolver la misma necesidad principal, con una oferta comparable y para un tipo de cliente similar. ' +
+          '5) NO incluyas marketplaces generales, partners, proveedores, medios, revendedores, categorías vecinas ni productos de la misma empresa. ' +
+          '6) NO inventes marcas ni fuerces cantidad. Si solo estás seguro de 2 o 3, devolvé 2 o 3. ' +
+          '7) Devolvé solo nombres de marcas/empresas, nunca URLs, dominios ni texto extra. ' +
+          '8) Si las pistas secundarias contradicen al sitio, ignorá las pistas secundarias y priorizá el sitio.',
     },
     {
       role: 'user',
-      content:
-        `Marca: ${input.brandName}\n` +
-        `${marketContext}\n` +
-        (input.websiteUrl ? `Sitio web: ${input.websiteUrl}\n` : '') +
-        `\nEvidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
-        `${firecrawlBlock}\n\n` +
-        (hintBlock ? `Pistas secundarias:\n${hintBlock}\n\n` : '') +
-        'Devolvé un JSON con la forma {"competitors":["..."]} incluyendo solo competidores directos reales de esta empresa.',
+      content: useUrlFirstPrompt
+        ? `Principales competidores directos de ${input.websiteUrl}\n\n` +
+          `Marca / empresa: ${input.brandName}\n\n` +
+          `Evidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
+          `${firecrawlBlock}\n\n` +
+          'Devolvé un JSON con la forma {"competitors":["..."]}.'
+        : `Marca: ${input.brandName}\n` +
+          `${marketContext}\n` +
+          (input.websiteUrl ? `Sitio web: ${input.websiteUrl}\n` : '') +
+          `\nEvidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
+          `${firecrawlBlock}\n\n` +
+          (hintBlock ? `Pistas secundarias:\n${hintBlock}\n\n` : '') +
+          'Devolvé un JSON con la forma {"competitors":["..."]} incluyendo solo competidores directos reales de esta empresa.',
     },
   ]);
 
