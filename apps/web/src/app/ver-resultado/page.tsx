@@ -165,6 +165,23 @@ const buildComparisonSummary = (results: PublicDiagnosticPromptResult[]): Compar
     .sort((a, b) => b.appearances - a.appearances);
 };
 
+const filterComparisonSummaryToTrackedParticipants = (
+  rows: ComparisonRow[],
+  brandName: string,
+  aliases: string[],
+  competitors: string[],
+) => {
+  if (rows.length === 0) return rows;
+  const trackedNames = new Set(
+    [brandName, ...aliases, ...competitors]
+      .map((value) => normalizeName(value || ''))
+      .filter(Boolean),
+  );
+  return rows.filter(
+    (row) => isBrandEntry(row.name, brandName, aliases) || trackedNames.has(normalizeName(row.name)),
+  );
+};
+
 /** Vista limitada Freemium: solo Cleexs Score + CTA */
 function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }) {
   return (
@@ -292,11 +309,17 @@ function ReporteCompleto({
       : 0;
   const cleexsScore = intentionScores.length > 0 ? cleexsScoreByIntention : fallbackScore;
 
-  const comparisonSummary = buildComparisonSummary(results);
+  const rawComparisonSummary = buildComparisonSummary(results);
   const competitorsUsed =
     runResult.competitors?.length > 0
       ? runResult.competitors
-      : Array.from(new Set(comparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
+      : Array.from(new Set(rawComparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
+  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
+    rawComparisonSummary,
+    brandName,
+    brandAliases,
+    competitorsUsed,
+  );
 
   return (
     <div className="space-y-6">

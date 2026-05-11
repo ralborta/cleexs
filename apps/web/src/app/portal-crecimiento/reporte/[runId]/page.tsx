@@ -140,6 +140,23 @@ function buildComparisonSummary(promptResults: Array<{ top3Json: unknown }>) {
     .sort((a, b) => b.appearances - a.appearances);
 }
 
+function filterComparisonSummaryToTrackedParticipants(
+  rows: Array<{ name: string; type: string; appearances: number; averagePosition: number; share: number; sampleReason?: string }>,
+  brandName: string,
+  aliases: string[],
+  competitors: string[],
+) {
+  if (rows.length === 0) return rows;
+  const trackedNames = new Set(
+    [brandName, ...aliases, ...competitors]
+      .map((value) => normalizeName(value || ''))
+      .filter(Boolean)
+  );
+  return rows.filter(
+    (row) => isBrandEntry(row.name, brandName, aliases) || trackedNames.has(normalizeName(row.name))
+  );
+}
+
 function competitorsDetectedInRun(promptResults: Array<{ top3Json: unknown }>) {
   const counts = new Map<string, number>();
   for (const result of promptResults) {
@@ -341,7 +358,14 @@ export default function PortalReporteRunPage() {
     const cleexsFromRuns = intentionScores.length > 0 ? cleexsScoreByIntention : promptAvg;
     const displayScore = pria != null ? Math.round(pria) : Math.round(cleexsFromRuns || 0);
 
-    const comparison = buildComparisonSummary(results);
+    const configuredCompetitors = run.brand.competitors?.map((c) => c.name) ?? [];
+    const rawComparison = buildComparisonSummary(results);
+    const comparison = filterComparisonSummaryToTrackedParticipants(
+      rawComparison,
+      brandName,
+      brandAliases,
+      configuredCompetitors
+    );
     const brandRow = comparison.find(
       (r) => r.type === 'brand' || isBrandEntry(r.name, brandName, brandAliases)
     );

@@ -152,6 +152,23 @@ const buildComparisonSummary = (results: PromptResult[]): ComparisonRow[] => {
     .sort((a, b) => b.appearances - a.appearances);
 };
 
+const filterComparisonSummaryToTrackedParticipants = (
+  rows: ComparisonRow[],
+  brandName: string,
+  aliases: string[],
+  competitors: string[],
+) => {
+  if (rows.length === 0) return rows;
+  const trackedNames = new Set(
+    [brandName, ...aliases, ...competitors]
+      .map((value) => normalizeName(value || ''))
+      .filter(Boolean),
+  );
+  return rows.filter(
+    (row) => isBrandEntry(row.name, brandName, aliases) || trackedNames.has(normalizeName(row.name)),
+  );
+};
+
 export default function RunDetailPage() {
   const params = useParams();
   const runId = params.runId as string;
@@ -289,7 +306,7 @@ export default function RunDetailPage() {
       : 0;
   const cleexsScore = intentionScores.length > 0 ? cleexsScoreByIntention : fallbackScore;
 
-  const comparisonSummary = buildComparisonSummary(promptResults);
+  const rawComparisonSummary = buildComparisonSummary(promptResults);
   const competitorsFromResults = Array.from(
     new Set(
       promptResults
@@ -300,7 +317,13 @@ export default function RunDetailPage() {
   );
   const competitorsFromBrand =
     run.brand.competitors?.length ? run.brand.competitors.map((c) => c.name) : [];
-  const competitorsUsed = competitorsFromResults.length > 0 ? competitorsFromResults : competitorsFromBrand;
+  const competitorsUsed = competitorsFromBrand.length > 0 ? competitorsFromBrand : competitorsFromResults;
+  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
+    rawComparisonSummary,
+    run.brand.name,
+    brandAliases,
+    competitorsUsed,
+  );
   const hasIndustryContext = Boolean(run.brand.industry?.trim() || run.brand.productType?.trim());
   const suggestedCompetitors = Array.from(
     ranking

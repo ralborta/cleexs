@@ -252,6 +252,23 @@ function buildComparisonSummary(results: PublicDiagnosticPromptResult[]): Compar
     .sort((a, b) => b.appearances - a.appearances);
 }
 
+function filterComparisonSummaryToTrackedParticipants(
+  rows: ComparisonRow[],
+  brandName: string,
+  aliases: string[],
+  competitors: string[],
+) {
+  if (rows.length === 0) return rows;
+  const trackedNames = new Set(
+    [brandName, ...aliases, ...competitors]
+      .map((value) => normalizeName(value || ''))
+      .filter(Boolean),
+  );
+  return rows.filter(
+    (row) => isBrandEntry(row.name, brandName, aliases) || trackedNames.has(normalizeName(row.name)),
+  );
+}
+
 function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
   return (
     <div className={cn('h-2 w-full overflow-hidden rounded-full bg-slate-200', className)}>
@@ -405,14 +422,20 @@ export function ReporteModerno({
   const cleexsScore = intentionScores.length > 0 ? cleexsScoreByIntention : fallbackScore;
   const displayScore = (cleexsScore || runResult.cleexsScore) ?? 0;
 
-  const comparisonSummary = buildComparisonSummary(results);
-  const leaderRow = comparisonSummary[0];
-  const secondRow = comparisonSummary[1];
-  const brandRow = comparisonSummary.find((r) => r.type === 'brand' || isBrandEntry(r.name, brandName, brandAliases));
+  const rawComparisonSummary = buildComparisonSummary(results);
   const competitorsUsed =
     runResult.competitors?.length > 0
       ? runResult.competitors
-      : Array.from(new Set(comparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
+      : Array.from(new Set(rawComparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
+  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
+    rawComparisonSummary,
+    brandName,
+    brandAliases,
+    competitorsUsed,
+  );
+  const leaderRow = comparisonSummary[0];
+  const secondRow = comparisonSummary[1];
+  const brandRow = comparisonSummary.find((r) => r.type === 'brand' || isBrandEntry(r.name, brandName, brandAliases));
   const competitorLeader = comparisonSummary.find((r) => r.type === 'competitor');
   const strongestIntention = [...intentionScores].sort((a, b) => b.score - a.score)[0];
   const weakestIntention = [...intentionScores].sort((a, b) => a.score - b.score)[0];

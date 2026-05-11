@@ -127,6 +127,23 @@ const buildComparisonSummary = (results: PublicDiagnosticPromptResult[]): Compar
     .sort((a, b) => b.share - a.share);
 };
 
+const filterComparisonSummaryToTrackedParticipants = (
+  rows: ComparisonRow[],
+  brandName: string,
+  aliases: string[],
+  competitors: string[],
+) => {
+  if (rows.length === 0) return rows;
+  const trackedNames = new Set(
+    [brandName, ...aliases, ...competitors]
+      .map((value) => normalizeName(value || ''))
+      .filter(Boolean),
+  );
+  return rows.filter(
+    (row) => isBrandEntry(row.name, brandName, aliases) || trackedNames.has(normalizeName(row.name)),
+  );
+};
+
 function scoreLabelEs(score: number) {
   if (score >= 70) return 'alto';
   if (score >= 45) return 'medio';
@@ -338,7 +355,17 @@ export function ReporteCorridas({
   const cleexsScore = intentionScores.length > 0 ? weightedScore : fallbackScore;
   const displayScore = Math.round(cleexsScore || runResult.cleexsScore || 0);
 
-  const comparisonSummary = buildComparisonSummary(results);
+  const rawComparisonSummary = buildComparisonSummary(results);
+  const competitorsUsed =
+    runResult.competitors?.length > 0
+      ? runResult.competitors
+      : Array.from(new Set(rawComparisonSummary.filter((row) => row.type === 'competitor').map((row) => row.name)));
+  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
+    rawComparisonSummary,
+    brandName,
+    brandAliases,
+    competitorsUsed,
+  );
   const brandRow =
     comparisonSummary.find(
       (row) => row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases)
