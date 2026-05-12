@@ -1438,6 +1438,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       brandName: '' as string,
       cleexsScore: 0 as number,
       competitors: [] as string[],
+      competitorDetails: [] as Array<{ name: string; domain?: string | null }>,
       brandAliases: [] as string[],
       promptResults: [] as Array<{
         category: string;
