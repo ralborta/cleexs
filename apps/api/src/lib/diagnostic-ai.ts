@@ -71,6 +71,11 @@ function mergeUniqueCompetitorNames(...lists: Array<string[] | undefined>): stri
   return out;
 }
 
+function filterSelfCompetitors(brandName: string, names: string[]): string[] {
+  const brandKey = normalizeCompetitorName(brandName);
+  return mergeUniqueCompetitorNames(names).filter((name) => normalizeCompetitorName(name) !== brandKey);
+}
+
 async function selectBestCompetitors(input: {
   brandName: string;
   websiteUrl?: string;
@@ -245,6 +250,14 @@ interface WebsiteEvidence {
   sourceUrl?: string;
 }
 
+function sanitizeSearchHint(value: string | undefined | null, maxLength = 90): string {
+  return `${value || ''}`
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
 async function callOpenAI(
   messages: Array<{ role: string; content: string }>,
   JsonSchema?: object,
@@ -350,16 +363,16 @@ export async function fetchSearchEvidence(
     ? websiteUrl.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '')
     : '';
   const countryPart = countryHint?.trim() ? ` "${countryHint.trim()}"` : '';
-  const compactBusinessHint = `${businessHint || ''}`
-    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80);
+  const compactBusinessHint = sanitizeSearchHint(businessHint, 80);
   const queries = [
     `"${brandName}"${countryPart} país origen sede marca ${siteHint}`.trim(),
-    `"${brandName}"${countryPart} competidores alternativas mercado local ${siteHint}`.trim(),
-    ...(compactBusinessHint ? [`${compactBusinessHint} ${countryHint || ''} competidores marcas locales`.trim()] : []),
+    `"${brandName}"${countryPart} dónde opera empresa mercado principal ${siteHint}`.trim(),
+    ...(compactBusinessHint ? [`"${brandName}" ${compactBusinessHint} ${countryHint || ''}`.trim()] : []),
   ];
+  return runSerperQueries(apiKey, queries);
+}
+
+async function runSerperQueries(apiKey: string, queries: string[]): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -393,6 +406,30 @@ export async function fetchSearchEvidence(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchCompetitorSearchEvidence(input: {
+  brandName: string;
+  websiteUrl?: string;
+  country?: string;
+  businessHint?: string;
+}): Promise<string> {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey?.trim()) return '';
+
+  const siteHint = input.websiteUrl?.trim()
+    ? input.websiteUrl.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '')
+    : '';
+  const country = sanitizeSearchHint(input.country, 60);
+  const businessHint = sanitizeSearchHint(input.businessHint, 90);
+  const queries = [
+    businessHint && country ? `${businessHint} ${country} competidores directos marcas`.trim() : '',
+    businessHint && country ? `${businessHint} ${country} alternativas empresas`.trim() : '',
+    `"${input.brandName}" ${country} competidores directos ${siteHint}`.trim(),
+    businessHint ? `${businessHint} ${country} ${siteHint} mercado local`.trim() : '',
+  ].filter(Boolean);
+
+  return runSerperQueries(apiKey, queries);
 }
 
 /**
@@ -434,6 +471,7 @@ export async function getTop5Competitors(input: {
   brandName: string;
   country?: string;
   websiteUrl?: string;
+  websiteEvidence?: WebsiteEvidence | null;
   industryHint?: string;
   niche?: { verticalSummary?: string; customerSegment?: string };
   searchEvidence?: string;
@@ -443,7 +481,7 @@ export async function getTop5Competitors(input: {
   const marketContext = input.country?.trim()
     ? `País/mercado principal: ${input.country.trim()}. Usalo como filtro fuerte para elegir competidores del mismo mercado.`
     : 'País/mercado principal: no informado. Si inferís uno con alta confianza desde el sitio, usalo; si no, evitá asumir.';
-  const siteEvidence = await fetchWebsiteEvidence(input.websiteUrl);
+  const siteEvidence = input.websiteEvidence === undefined ? await fetchWebsiteEvidence(input.websiteUrl) : input.websiteEvidence;
   const siteEvidenceBlock = siteEvidence
     ? [
         `URL evaluada: ${siteEvidence.sourceUrl || input.websiteUrl}.`,
@@ -475,13 +513,14 @@ export async function getTop5Competitors(input: {
       role: 'system',
       content: useUrlFirstPrompt
         ? 'Respondé SOLO con un JSON válido. Ejemplo: {"country":"Bolivia","verticalSummary":"Urbanizadora que vende lotes y proyectos inmobiliarios a familias e inversionistas.","customerSegment":"B2C","competitors":["Marca A","Marca B","Marca C"]}. ' +
-          'Analizá únicamente la URL y el contenido visible del sitio para entender qué vende esta empresa y a quién le vende. ' +
-          'Primero identificá la oferta principal y el tipo de cliente. Después elegí solo competidores DIRECTOS y REALES que compitan por esa misma necesidad principal. ' +
+          'Leé primero la URL y el contenido visible del sitio para entender qué vende esta empresa y a quién le vende. ' +
+          'Usá el sitio como fuente principal. Si hay búsqueda web, tomala solo como pista secundaria para encontrar marcas locales; nunca dejes que contradiga lo que el sitio vende. ' +
+          'Primero identificá la oferta principal en una frase simple. Después elegí solo competidores DIRECTOS y REALES que una persona de ese mismo mercado compararía antes de comprar. ' +
           'country: si viene informado, usá exactamente ese valor; si no viene, inferilo solo si es claro por el sitio o la URL; si no, devolvé null. ' +
           'verticalSummary: 1-2 frases en español sobre qué vende la empresa y a quién. ' +
           'customerSegment: exactamente uno de B2B, B2C, B2B2C, mixto, desconocido. ' +
-          'Aplicá filtro local estricto: priorizá misma ciudad o zona si aparece en el sitio; si no, mismo país. No elijas marcas extranjeras ni cadenas globales si no operan claramente en el país detectado. ' +
-          'Aplicá filtro de producto exacto: no alcanza con la misma categoría amplia. Tienen que competir por la misma oferta principal. Ejemplo: un restaurante de pollos en Bolivia debe compararse con restaurantes de pollos en Bolivia, no con cadenas internacionales ni comidas generales. ' +
+          'Aplicá filtro local estricto: priorizá misma ciudad o zona si aparece en el sitio; si no, mismo país. No elijas marcas extranjeras ni cadenas globales si no operan claramente en el mercado detectado. ' +
+          'Aplicá filtro de producto exacto: no alcanza con la misma categoría amplia. Tienen que competir por la misma oferta principal. Ejemplo: un restaurante de pollos en Bolivia compite con restaurantes de pollos en Bolivia, no con cadenas internacionales ni con comida general. ' +
           'Ignorá por completo clientes, partners, integraciones, marcas mencionadas como casos de éxito, certificaciones, proveedores, medios, distribuidores, revendedores y marketplaces generales. ' +
           'Tampoco devuelvas directorios, holdings, medios de comunicación, comparadores, cámaras, franquicias paraguas ni marcas de la misma empresa. ' +
           'No mezcles industrias ni categorías vecinas. ' +
@@ -510,7 +549,7 @@ export async function getTop5Competitors(input: {
           `Marca / empresa: ${input.brandName}\n\n` +
           (input.country?.trim() ? `País/mercado confirmado: ${input.country.trim()}\n\n` : '') +
           `Evidencia resumida del sitio:\n${siteEvidenceBlock}\n\n` +
-          (hintBlock ? `Evidencia adicional:\n${hintBlock}\n\n` : '') +
+          (hintBlock ? `Pistas adicionales para encontrar marcas locales directas:\n${hintBlock}\n\n` : '') +
           'Devolvé un JSON con la forma {"country":"..."|null,"verticalSummary":"...","customerSegment":"B2B|B2C|B2B2C|mixto|desconocido","competitors":["..."]} con hasta 5 competidores directos de la misma oferta principal y para el mismo tipo de cliente.'
         : `Marca: ${input.brandName}\n` +
           `${marketContext}\n` +
@@ -544,7 +583,7 @@ export async function getTop5Competitors(input: {
       desconocido: 'desconocido',
     };
     return {
-      competitors,
+      competitors: filterSelfCompetitors(input.brandName, competitors),
       ...(country ? { country } : {}),
       ...(verticalSummary ? { verticalSummary } : {}),
       ...(segMap[seg] ? { customerSegment: segMap[seg] } : {}),
@@ -782,6 +821,7 @@ export async function resolveBrandAnalysisContext(input: {
   const knownCountry = input.knownCountry?.trim() || undefined;
   const hasWebsite = Boolean(input.websiteUrl?.trim());
   const useSearchEvidence = input.useSearchEvidence !== false;
+  const websiteEvidence = hasWebsite ? await fetchWebsiteEvidence(input.websiteUrl) : null;
 
   let sourceUrls: string[] = [];
 
@@ -791,7 +831,8 @@ export async function resolveBrandAnalysisContext(input: {
   let confidence = knownCountry ? 90 : 0;
   let verticalSummary: string | undefined;
   let customerSegment: ResolvedBrandAnalysisContext['customerSegment'];
-  const searchEvidence = useSearchEvidence
+  let competitorSearchEvidence = '';
+  const searchEvidence = !hasWebsite && useSearchEvidence
     ? await fetchSearchEvidence(input.brandName, input.websiteUrl, knownCountry)
     : '';
 
@@ -799,57 +840,49 @@ export async function resolveBrandAnalysisContext(input: {
     const firstPass = await getTop5Competitors({
       brandName: input.brandName,
       websiteUrl: input.websiteUrl,
+      websiteEvidence,
       country: knownCountry,
-      searchEvidence: searchEvidence || undefined,
     });
-    competitorNames = firstPass.competitors;
+    competitorNames = filterSelfCompetitors(input.brandName, firstPass.competitors);
     country = knownCountry || firstPass.country || fallbackCountry;
-    industry = input.classification?.category || fallbackIndustry;
+    industry = fallbackIndustry;
     verticalSummary = firstPass.verticalSummary;
     customerSegment = firstPass.customerSegment;
     confidence = knownCountry ? 95 : firstPass.country ? 85 : competitorNames.length > 0 ? 70 : 40;
-    if (country || verticalSummary || customerSegment) {
-      const refinedPass = await getTop5Competitors({
-        brandName: input.brandName,
-        websiteUrl: input.websiteUrl,
-        country,
-        niche: {
-          verticalSummary,
-          customerSegment,
-        },
-        searchEvidence: searchEvidence || undefined,
-      });
-      if (refinedPass.competitors.length > 0) competitorNames = refinedPass.competitors;
-      if (refinedPass.country) country = refinedPass.country;
-      if (refinedPass.verticalSummary) verticalSummary = refinedPass.verticalSummary;
-      if (refinedPass.customerSegment) customerSegment = refinedPass.customerSegment;
-      confidence = Math.max(confidence, refinedPass.country ? 90 : confidence);
-    }
-    if (competitorNames.length === 0) {
-      const rescueSearchEvidence = useSearchEvidence
-        ? await fetchSearchEvidence(
-            input.brandName,
-            input.websiteUrl,
+
+    if (competitorNames.length < 5) {
+      competitorSearchEvidence = useSearchEvidence
+        ? await fetchCompetitorSearchEvidence({
+            brandName: input.brandName,
+            websiteUrl: input.websiteUrl,
             country,
-            verticalSummary
-          )
+            businessHint:
+              verticalSummary ||
+              websiteEvidence?.h1 ||
+              websiteEvidence?.title ||
+              websiteEvidence?.metaDescription,
+          })
         : '';
       const rescuePass = await getTop5Competitors({
         brandName: input.brandName,
         websiteUrl: input.websiteUrl,
+        websiteEvidence,
         country,
         niche: {
           verticalSummary,
           customerSegment,
         },
-        searchEvidence: rescueSearchEvidence || searchEvidence || undefined,
+        searchEvidence: competitorSearchEvidence || undefined,
         allowProbableLocalFallback: true,
       });
-      if (rescuePass.competitors.length > 0) competitorNames = rescuePass.competitors;
+      competitorNames = filterSelfCompetitors(
+        input.brandName,
+        mergeUniqueCompetitorNames(competitorNames, rescuePass.competitors)
+      );
       if (rescuePass.country) country = rescuePass.country;
       if (rescuePass.verticalSummary) verticalSummary = rescuePass.verticalSummary;
       if (rescuePass.customerSegment) customerSegment = rescuePass.customerSegment;
-      confidence = Math.max(confidence, rescuePass.competitors.length > 0 ? 80 : confidence);
+      confidence = Math.max(confidence, competitorNames.length >= 5 ? 90 : rescuePass.competitors.length > 0 ? 80 : confidence);
     }
   } else {
     const marketProfile = await determineMarketProfileForBrand(
@@ -880,7 +913,7 @@ export async function resolveBrandAnalysisContext(input: {
   }
 
   let validatedCompetitorNames: string[] = [];
-  if (input.classification) {
+  if (input.classification && !hasWebsite) {
     try {
       const discovered = await discoverCompetitors(input.classification);
       const validated = await validateCompetitors(input.classification, discovered);
@@ -892,34 +925,41 @@ export async function resolveBrandAnalysisContext(input: {
     }
   }
 
-  competitorNames = mergeUniqueCompetitorNames(competitorNames, validatedCompetitorNames);
+  competitorNames = filterSelfCompetitors(
+    input.brandName,
+    mergeUniqueCompetitorNames(competitorNames, validatedCompetitorNames)
+  );
   if (competitorNames.length > 0 && competitorNames.length < 5) {
     const extraCompetitors = await expandCompetitorCandidates({
       brandName: input.brandName,
       websiteUrl: input.websiteUrl,
       country,
-      industry,
+      industry: hasWebsite ? undefined : industry,
       verticalSummary,
       customerSegment,
-      searchEvidence: searchEvidence || undefined,
+      searchEvidence: (hasWebsite ? competitorSearchEvidence : searchEvidence) || undefined,
       classification: input.classification,
       existing: competitorNames,
       targetCount: 5,
     });
-    competitorNames = mergeUniqueCompetitorNames(competitorNames, extraCompetitors);
+    competitorNames = filterSelfCompetitors(
+      input.brandName,
+      mergeUniqueCompetitorNames(competitorNames, extraCompetitors)
+    );
   }
   if (competitorNames.length > 1) {
     competitorNames = await selectBestCompetitors({
       brandName: input.brandName,
       websiteUrl: input.websiteUrl,
       country,
-      industry,
+      industry: hasWebsite ? undefined : industry,
       verticalSummary,
       customerSegment,
-      searchEvidence: searchEvidence || undefined,
+      searchEvidence: (hasWebsite ? competitorSearchEvidence : searchEvidence) || undefined,
       classification: input.classification,
       candidates: competitorNames,
     });
+    competitorNames = filterSelfCompetitors(input.brandName, competitorNames);
   }
   const competitors = await resolveCompetitorDomains(
     competitorNames,

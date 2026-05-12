@@ -696,6 +696,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
         // 2. IA elige competidores desde el mismo contexto común del sistema
         const competitors = analysisContext.competitors.map((c) => c.name).filter(Boolean);
+        if (competitors.length < 5) {
+          throw new Error(
+            `Diagnóstico abortado: solo se detectaron ${competitors.length} competidores directos válidos para ${brandForRun}`
+          );
+        }
 
         // 3. Crear Brand con industria y competidores
         const brand = await prisma.brand.create({
