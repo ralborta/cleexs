@@ -461,10 +461,12 @@ model PublicDiagnostic {
   utmCampaign String?  @map("utm_campaign")
   tier        String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
   email       String?  // capturado al final del flujo (para enviar resultado)
-  status      String   @default("pending") // pending | running | completed | failed
+  status      String   @default("pending") // pending | detecting_competitors | awaiting_user | running | completed | failed
   runId       String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
   runGeminiId String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
   analysisJson Json?   @map("analysis_json") // análisis detallado con IA (Fase 2)
+  // Borrador previo al run: URLs sugeridas de competidores, país (fase captcha + confirmación).
+  setupDraftJson Json? @map("setup_draft_json")
   shareSlug   String?  @unique @map("share_slug") // URL pública /score/{slug}
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

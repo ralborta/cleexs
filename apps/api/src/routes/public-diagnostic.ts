@@ -1,3 +1,4 @@
+import type { FastifyBaseLogger } from 'fastify';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
@@ -539,10 +540,330 @@ async function ensureShareSlug(diagnosticId: string): Promise<string | null> {
   return fallback;
 }
 
+type PublicDiagLog = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>;
+
+async function isFirstRunForDomain(diagnosticId: string, domain: string): Promise<boolean> {
+  const firstCompleted = await prisma.publicDiagnostic.findFirst({
+    where: { domain, status: 'completed' },
+    orderBy: { createdAt: 'asc' },
+  });
+  return !!firstCompleted && firstCompleted.id === diagnosticId;
+}
+
+/**
+ * Pipeline completo del diagnóstico público (Brand, Run OpenAI/Gemini, análisis, satélite, emails).
+ * Se invoca solo tras `POST .../start` (usuario confirmó email + 5 competidores).
+ */
+async function executePublicDiagnosticPipeline(params: {
+  log: PublicDiagLog;
+  diagnosticId: string;
+  diagnosticDomain: string;
+  brandForRun: string;
+  trimmedUrl: string;
+  useSerp: boolean;
+  defaultCountry: string;
+  marketConfidenceMin: number;
+  competitorRows: Array<{ name: string; domain: string }>;
+}): Promise<void> {
+  const {
+    log,
+    diagnosticId,
+    diagnosticDomain,
+    brandForRun,
+    trimmedUrl,
+    useSerp,
+    defaultCountry,
+    marketConfidenceMin,
+    competitorRows,
+  } = params;
+
+  const competitorNames = competitorRows.map((c) => c.name).filter(Boolean);
+  if (competitorNames.length < 5) {
+    throw new Error(
+      `Diagnóstico abortado: se requieren 5 competidores; hay ${competitorNames.length} válidos para ${brandForRun}`
+    );
+  }
+
+  const rootTenant = await prisma.tenant.findFirst({
+    where: { tenantCode: '000' },
+  });
+  if (!rootTenant) {
+    log.error('Tenant root (000) no encontrado. Ejecutá prisma db seed.');
+    throw new Error('Tenant root no encontrado');
+  }
+
+  const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
+  const analysisContext = await resolveBrandAnalysisContext({
+    brandName: brandForRun,
+    websiteUrl: trimmedUrl || undefined,
+    fallbackCountry: defaultCountry,
+    fallbackIndustry: 'General',
+    knownCountry: countryFromTld || undefined,
+    useSearchEvidence: useSerp !== false,
+  });
+  const marketCountry =
+    countryFromTld ??
+    (analysisContext.confidence >= marketConfidenceMin
+      ? analysisContext.country || defaultCountry
+      : defaultCountry);
+  log.info(
+    {
+      diagnosticId,
+      brandName: brandForRun,
+      marketCountry,
+      countryFromTld: countryFromTld ?? undefined,
+      useSerp: useSerp !== false,
+      verticalSummary: analysisContext.verticalSummary,
+      customerSegment: analysisContext.customerSegment,
+      marketConfidence: analysisContext.confidence,
+      marketConfidenceMin,
+    },
+    'Contexto competitivo resuelto desde sitio + país (pipeline tras confirmación usuario)'
+  );
+
+  const brand = await prisma.brand.create({
+    data: {
+      tenantId: rootTenant.id,
+      name: brandForRun,
+      domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
+      industry: null,
+      country: marketCountry,
+      description: analysisContext.verticalSummary || null,
+    },
+  });
+
+  for (const entry of competitorRows) {
+    await prisma.competitor.create({
+      data: {
+        brandId: brand.id,
+        name: entry.name.trim() || 'Competidor',
+        domain: entry.domain,
+        autoDetected: true,
+        validated: true,
+        discoveryReason: 'Confirmado por el usuario (diagnóstico público)',
+      },
+    });
+  }
+
+  const intention = getDefaultDiagnosticIntention();
+  const diagnosticPrompts = buildDiagnosticPrompts(
+    brandForRun,
+    competitorNames,
+    intention,
+    marketCountry
+  );
+
+  const promptVersion = await prisma.promptVersion.create({
+    data: {
+      tenantId: rootTenant.id,
+      name: `DIAG_${diagnosticId}`,
+      active: false,
+    },
+  });
+  for (const p of diagnosticPrompts) {
+    await prisma.prompt.create({
+      data: {
+        promptVersionId: promptVersion.id,
+        name: p.name,
+        promptText: p.promptText,
+        active: true,
+      },
+    });
+  }
+
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  const run = await prisma.run.create({
+    data: {
+      tenantId: rootTenant.id,
+      brandId: brand.id,
+      periodStart,
+      periodEnd,
+      runType: 'diagnostic',
+      status: 'pending',
+    },
+  });
+
+  await prisma.publicDiagnostic.update({
+    where: { id: diagnosticId },
+    data: { runId: run.id },
+  });
+
+  await executeRun(run.id, { promptVersionId: promptVersion.id });
+
+  await prisma.publicDiagnostic.update({
+    where: { id: diagnosticId },
+    data: { status: 'completed' },
+  });
+
+  setImmediate(() => {
+    runOutreachForRun(rootTenant.id, run.id, { enrich: true, logger: log as FastifyBaseLogger })
+      .then((outreach) => {
+        log.info({ diagnosticId, runId: run.id, outreach }, 'Outreach automatico completado');
+      })
+      .catch((err) => {
+        log.warn({ err, diagnosticId, runId: run.id }, 'Outreach automatico fallo');
+      });
+  });
+
+  try {
+    const runGemini = await prisma.run.create({
+      data: {
+        tenantId: rootTenant.id,
+        brandId: brand.id,
+        periodStart,
+        periodEnd,
+        runType: 'diagnostic_gemini',
+        status: 'pending',
+      },
+    });
+    await prisma.publicDiagnostic.update({
+      where: { id: diagnosticId },
+      data: { runGeminiId: runGemini.id },
+    });
+    await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
+  } catch (geminiErr) {
+    log.warn(
+      { err: geminiErr, diagnosticId },
+      'Run Gemini no ejecutado (sin key o error). Solo se muestra score OpenAI.'
+    );
+  }
+
+  let analysisJson: object | null = null;
+  let satelliteModule: SatelliteModuleResult | null = null;
+  try {
+    const fullRun = await prisma.run.findUnique({
+      where: { id: run.id },
+      include: {
+        promptResults: {
+          include: { prompt: { select: { promptText: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        brand: { include: { competitors: true } },
+      },
+    });
+    const priaReport = await prisma.pRIAReport.findFirst({
+      where: { runId: run.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (fullRun) {
+      const ctx = buildRunContext({
+        run: fullRun,
+        priaReport,
+        businessContext: analysisContext.verticalSummary,
+      });
+      const isFirstRun = await isFirstRunForDomain(diagnosticId, diagnosticDomain);
+      const analysis = await generateDiagnosticAnalysis(ctx, isFirstRun ? 'gold' : 'freemium');
+      if (analysis) {
+        analysisJson = analysis as object;
+        if ((analysis as { tier?: string }).tier !== 'gold') {
+          log.warn(
+            { diagnosticId },
+            'Gemini no disponible: solo se guardó análisis OpenAI. Configurá GEMINI_API_KEY en la API.'
+          );
+        }
+      }
+    }
+  } catch (analysisErr) {
+    log.warn({ err: analysisErr, diagnosticId }, 'Análisis IA no generado');
+  }
+
+  if (trimmedUrl) {
+    try {
+      satelliteModule = await runSatelliteAnalysis(trimmedUrl);
+    } catch (satErr) {
+      log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
+    }
+  }
+
+  const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
+  if (persistedAnalysis != null) {
+    const safeForDb = shrinkAnalysisJsonForPersistence(persistedAnalysis);
+    await prisma.publicDiagnostic.update({
+      where: { id: diagnosticId },
+      data: { analysisJson: safeForDb },
+    });
+    analysisJson = safeForDb;
+  }
+
+  void ensureShareSlug(diagnosticId).catch((err) =>
+    log.warn({ err, diagnosticId }, 'No se pudo asignar share_slug')
+  );
+
+  const current = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+  });
+  if (current?.email) {
+    const baseUrl = getAppBaseUrlForPublicLinks();
+    try {
+      if (!isEmailDisabled() && isEmailConfigured()) {
+        await sendDiagnosticLink(
+          current.email,
+          diagnosticId,
+          baseUrl,
+          analysisJson ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail) : null
+        );
+        try {
+          await sendShareCleexsFollowUpEmail(current.email, diagnosticId, baseUrl, current.brandName);
+        } catch (shareErr) {
+          log.error({ err: shareErr, diagnosticId }, 'Error al enviar email de compartir');
+        }
+        log.info({ diagnosticId, email: current.email }, 'Email enviado');
+      }
+    } catch (mailErr) {
+      log.error({ err: mailErr, diagnosticId }, 'Error al enviar email');
+    }
+  }
+}
+
+function parsePublicSetupDraft(json: unknown): {
+  suggestedCompetitorUrls: string[];
+  marketCountry?: string;
+  useSerp?: boolean;
+} | null {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+  const o = json as Record<string, unknown>;
+  const urls = o.suggestedCompetitorUrls;
+  if (!Array.isArray(urls)) return null;
+  const suggestedCompetitorUrls = urls.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
+  const marketCountry = typeof o.marketCountry === 'string' ? o.marketCountry : undefined;
+  const useSerp = typeof o.useSerp === 'boolean' ? o.useSerp : undefined;
+  return { suggestedCompetitorUrls, marketCountry, useSerp };
+}
+
+/** Normaliza exactamente 5 URLs de competidor a dominio host; null si inválido o duplicado. */
+function parseFiveCompetitorDomains(urls: unknown): string[] | null {
+  if (!Array.isArray(urls) || urls.length !== 5) return null;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const u of urls) {
+    if (typeof u !== 'string' || !u.trim()) return null;
+    let host: string;
+    try {
+      host = normalizeDomain(u.trim());
+    } catch {
+      return null;
+    }
+    if (!host || seen.has(host)) return null;
+    seen.add(host);
+    out.push(host);
+  }
+  return out;
+}
+
+function competitorRowsFromDomains(domains: string[]): Array<{ name: string; domain: string }> {
+  return domains.map((domain) => ({
+    name: deriveBrandFromDomain(domain) || domain.split('.')[0] || 'Competidor',
+    domain,
+  }));
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
-  // POST /api/public/diagnostic — marca y/o url (al menos uno obligatorio) + tier (freemium|gold)
+  // POST /api/public/diagnostic — solo URL: detecta competidores y pasa a awaiting_user (sin consumir cupo).
   fastify.post<{
     Body: {
       brandName?: string;
@@ -581,26 +902,16 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const { brandName, url, tier: requestedTier, useSerp, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
       const trimmedBrand = (brandName ?? '').trim();
       const trimmedUrl = (url ?? '').trim();
-      const visitorIdHeader = request.headers['x-visitor-id'];
-      const visitorId = typeof visitorIdHeader === 'string' ? visitorIdHeader.trim() : '';
 
-      if (!trimmedBrand && !trimmedUrl) {
+      if (!trimmedUrl) {
         return reply.code(400).send({
-          error: 'Ingresá la marca o la URL de tu sitio (al menos uno).',
+          error: 'Ingresá la URL de tu sitio.',
         });
       }
 
-      let domain: string;
-      let brandForRun: string;
-      if (trimmedUrl) {
-        domain = normalizeDomain(trimmedUrl);
-        const derivedFromBrand = trimmedBrand ? deriveBrandIfLooksLikeDomain(trimmedBrand) : null;
-        brandForRun = derivedFromBrand ?? (trimmedBrand || deriveBrandFromDomain(domain));
-      } else {
-        domain = `brand-${slugify(trimmedBrand)}-${Date.now().toString(36)}`;
-        const derived = deriveBrandIfLooksLikeDomain(trimmedBrand);
-        brandForRun = derived ?? trimmedBrand;
-      }
+      const domain = normalizeDomain(trimmedUrl);
+      const derivedFromBrand = trimmedBrand ? deriveBrandIfLooksLikeDomain(trimmedBrand) : null;
+      const brandForRun = derivedFromBrand ?? (trimmedBrand || deriveBrandFromDomain(domain));
 
       if (!process.env.OPENAI_API_KEY) {
         return reply.code(503).send({
@@ -610,18 +921,156 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
       const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
 
-      const rootTenant = await prisma.tenant.findFirst({
-        where: { tenantCode: '000' },
+      const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
+
+      const diagnostic = await prisma.publicDiagnostic.create({
+        data: {
+          brandName: brandForRun,
+          domain,
+          status: 'detecting_competitors',
+          tier,
+          ...(refCode ? { refCode: refCode.toLowerCase() } : {}),
+          ...(utmSource ? { utmSource: utmSource.toLowerCase() } : {}),
+          ...(utmMedium ? { utmMedium: utmMedium.toLowerCase() } : {}),
+          ...(utmCampaign ? { utmCampaign: utmCampaign.toLowerCase() } : {}),
+        },
       });
-      if (!rootTenant) {
-        fastify.log.error('Tenant root (000) no encontrado. Ejecutá prisma db seed.');
-        return reply.code(500).send({
-          error: 'Configuración del sistema incompleta. Verificá que se haya ejecutado el seed de la base de datos.',
+
+      const diagId = diagnostic.id;
+      const serp = useSerp !== false;
+
+      setImmediate(async () => {
+        try {
+          const countryFromTld = getCountryFromDomain(trimmedUrl);
+          const analysisContext = await resolveBrandAnalysisContext({
+            brandName: brandForRun,
+            websiteUrl: trimmedUrl,
+            fallbackCountry: defaultCountry,
+            fallbackIndustry: 'General',
+            knownCountry: countryFromTld || undefined,
+            useSearchEvidence: serp,
+          });
+          const marketCountry =
+            countryFromTld ??
+            (analysisContext.confidence >= marketConfidenceMin
+              ? analysisContext.country || defaultCountry
+              : defaultCountry);
+
+          const seenHosts = new Set<string>();
+          const suggestedCompetitorUrls: string[] = [];
+          const ownHost = domain.toLowerCase();
+          for (const c of analysisContext.competitors) {
+            const d = c.domain?.trim();
+            if (!d) continue;
+            let host: string;
+            try {
+              host = normalizeDomain(d);
+            } catch {
+              continue;
+            }
+            if (!host || host === ownHost || seenHosts.has(host)) continue;
+            seenHosts.add(host);
+            suggestedCompetitorUrls.push(`https://${host}`);
+            if (suggestedCompetitorUrls.length >= 5) break;
+          }
+
+          if (suggestedCompetitorUrls.length < 5) {
+            fastify.log.warn(
+              { diagnosticId: diagId, found: suggestedCompetitorUrls.length },
+              'Detección de competidores: menos de 5 URLs válidas'
+            );
+            await prisma.publicDiagnostic.update({
+              where: { id: diagId },
+              data: { status: 'failed' },
+            });
+            return;
+          }
+
+          await prisma.publicDiagnostic.update({
+            where: { id: diagId },
+            data: {
+              status: 'awaiting_user',
+              setupDraftJson: {
+                suggestedCompetitorUrls,
+                marketCountry,
+                useSerp: serp,
+              },
+            },
+          });
+        } catch (err) {
+          fastify.log.error({ err, diagnosticId: diagId }, 'Error en detección de competidores');
+          await prisma.publicDiagnostic
+            .update({ where: { id: diagId }, data: { status: 'failed' } })
+            .catch(() => {});
+        }
+      });
+
+      return reply.code(201).send({ diagnosticId: diagnostic.id });
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic');
+      const message = err instanceof Error ? err.message : 'Error interno';
+      const isPrisma = message.includes('column') || message.includes('does not exist') || message.includes('Unknown');
+      return reply.code(500).send({
+        error: isPrisma
+          ? 'Error de base de datos. Ejecutá en Railway: railway run npx prisma migrate deploy'
+          : 'Error interno al crear el diagnóstico. Intentá de nuevo.',
+      });
+    }
+  });
+
+  // POST /api/public/diagnostic/:id/start — email + 5 URLs competidor; consume cupo y ejecuta pipeline.
+  fastify.post<{
+    Params: { id: string };
+    Body: { email: string; competitorUrls: string[]; useSerp?: boolean };
+  }>('/diagnostic/:id/start', async (request, reply) => {
+    try {
+      const schema = z.object({
+        email: z.string().email(),
+        competitorUrls: z.array(z.string().max(500)).length(5),
+        useSerp: z.boolean().optional(),
+      });
+      const parsed = schema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
+        });
+      }
+      const { id } = request.params;
+      const { email, competitorUrls, useSerp: useSerpBody } = parsed.data;
+
+      const diagnostic = await prisma.publicDiagnostic.findUnique({ where: { id } });
+      if (!diagnostic) {
+        return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
+      }
+      if (diagnostic.status !== 'awaiting_user') {
+        return reply.code(409).send({
+          error:
+            diagnostic.status === 'running'
+              ? 'El análisis ya está en curso.'
+              : 'Este diagnóstico no está listo para iniciar. Volvé a crear uno o esperá la detección de competidores.',
         });
       }
 
-      const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
+      const domains = parseFiveCompetitorDomains(competitorUrls);
+      if (!domains) {
+        return reply.code(400).send({
+          error: 'Necesitamos exactamente 5 URLs de competidores válidas y con dominios distintos.',
+        });
+      }
 
+      const ownHost = diagnostic.domain.toLowerCase();
+      if (domains.some((h) => h === ownHost)) {
+        return reply.code(400).send({ error: 'Los competidores no pueden incluir el mismo dominio que tu sitio.' });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(503).send({
+          error: 'El servicio de análisis no está disponible. Intentá más tarde.',
+        });
+      }
+
+      const visitorIdHeader = request.headers['x-visitor-id'];
+      const visitorId = typeof visitorIdHeader === 'string' ? visitorIdHeader.trim() : '';
       if (visitorId) {
         const canGenerate = await checkEntitlement(prisma, {
           actor: { anonymousId: visitorId },
@@ -637,16 +1086,29 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      const diagnostic = await prisma.publicDiagnostic.create({
+      const draft = parsePublicSetupDraft(diagnostic.setupDraftJson);
+      const useSerp = useSerpBody ?? draft?.useSerp ?? true;
+      const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+      const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
+
+      const trimmedUrl =
+        diagnostic.domain && !diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '';
+      if (!trimmedUrl) {
+        return reply.code(400).send({ error: 'URL de sitio inválida para este diagnóstico.' });
+      }
+
+      const competitorRows = competitorRowsFromDomains(domains);
+
+      await prisma.publicDiagnostic.update({
+        where: { id },
         data: {
-          brandName: brandForRun,
-          domain,
+          email,
           status: 'running',
-          tier,
-          ...(refCode ? { refCode: refCode.toLowerCase() } : {}),
-          ...(utmSource ? { utmSource: utmSource.toLowerCase() } : {}),
-          ...(utmMedium ? { utmMedium: utmMedium.toLowerCase() } : {}),
-          ...(utmCampaign ? { utmCampaign: utmCampaign.toLowerCase() } : {}),
+          setupDraftJson: {
+            ...(draft ?? {}),
+            confirmedCompetitorUrls: competitorUrls,
+            confirmedAt: new Date().toISOString(),
+          },
         },
       });
 
@@ -654,284 +1116,37 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         await consumeEntitlement(prisma, {
           actor: { anonymousId: visitorId },
           action: EntitlementAction.score_generate,
-          dedupeKey: `anon-score-generate:${visitorId}:${diagnostic.id}`,
-          metaJson: { diagnosticId: diagnostic.id, domain },
+          dedupeKey: `anon-score-generate:${visitorId}:${id}`,
+          metaJson: { diagnosticId: id, domain: diagnostic.domain },
         });
       }
 
       setImmediate(async () => {
-      try {
-        // Evitar competencia de cuota/latencia con OpenAI durante el core del diagnóstico.
-        // El satélite se ejecuta al final para que no degrade la corrida principal.
-        const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
-        const analysisContext = await resolveBrandAnalysisContext(
-          {
-            brandName: brandForRun,
-            websiteUrl: trimmedUrl || undefined,
-            fallbackCountry: defaultCountry,
-            fallbackIndustry: 'General',
-            knownCountry: countryFromTld || undefined,
-            useSearchEvidence: useSerp !== false,
-          }
-        );
-        const marketCountry =
-          countryFromTld ??
-          (analysisContext.confidence >= marketConfidenceMin
-            ? analysisContext.country || defaultCountry
-            : defaultCountry);
-        fastify.log.info(
-          {
-            diagnosticId: diagnostic.id,
-            brandName: brandForRun,
-            marketCountry,
-            countryFromTld: countryFromTld ?? undefined,
-            useSerp: useSerp !== false,
-            verticalSummary: analysisContext.verticalSummary,
-            customerSegment: analysisContext.customerSegment,
-            marketConfidence: analysisContext.confidence,
+        try {
+          await executePublicDiagnosticPipeline({
+            log: fastify.log,
+            diagnosticId: id,
+            diagnosticDomain: diagnostic.domain,
+            brandForRun: diagnostic.brandName,
+            trimmedUrl,
+            useSerp,
+            defaultCountry,
             marketConfidenceMin,
-          },
-          'Contexto competitivo resuelto desde sitio + país'
-        );
-
-        // 2. IA elige competidores desde el mismo contexto común del sistema
-        const competitors = analysisContext.competitors.map((c) => c.name).filter(Boolean);
-        if (competitors.length < 5) {
-          throw new Error(
-            `Diagnóstico abortado: solo se detectaron ${competitors.length} competidores directos válidos para ${brandForRun}`
-          );
-        }
-
-        // 3. Crear Brand con industria y competidores
-        const brand = await prisma.brand.create({
-          data: {
-            tenantId: rootTenant.id,
-            name: brandForRun,
-            domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
-            industry: null,
-            country: marketCountry,
-            description: analysisContext.verticalSummary || null,
-          },
-        });
-
-        for (const entry of analysisContext.competitors) {
-          await prisma.competitor.create({
-            data: {
-              brandId: brand.id,
-              name: entry.name.trim() || 'Competidor',
-              domain: entry.domain ?? null,
-              autoDetected: true,
-              validated: true,
-              discoveryReason: 'Detectado desde contexto real del sitio',
-            },
+            competitorRows,
           });
+        } catch (err) {
+          fastify.log.error({ err, diagnosticId: id }, 'Error en diagnóstico');
+          await prisma.publicDiagnostic
+            .update({ where: { id }, data: { status: 'failed' } })
+            .catch(() => {});
         }
-
-        // 3b. Intención inicial fija y simple
-        const intention = getDefaultDiagnosticIntention();
-        const diagnosticPrompts = buildDiagnosticPrompts(
-          brandForRun,
-          competitors,
-          intention,
-          marketCountry
-        );
-
-        // 3c. Crear versión de prompts dinámica para este diagnóstico
-        const promptVersion = await prisma.promptVersion.create({
-          data: {
-            tenantId: rootTenant.id,
-            name: `DIAG_${diagnostic.id}`,
-            active: false, // Solo para este diagnóstico, no interfiere con runs del admin
-          },
-        });
-        for (const p of diagnosticPrompts) {
-          await prisma.prompt.create({
-            data: {
-              promptVersionId: promptVersion.id,
-              name: p.name,
-              promptText: p.promptText,
-              active: true,
-            },
-          });
-        }
-
-        // 4. Crear Run y ejecutar
-        const now = new Date();
-        const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-        const run = await prisma.run.create({
-          data: {
-            tenantId: rootTenant.id,
-            brandId: brand.id,
-            periodStart,
-            periodEnd,
-            runType: 'diagnostic',
-            status: 'pending',
-          },
-        });
-
-        await prisma.publicDiagnostic.update({
-          where: { id: diagnostic.id },
-          data: { runId: run.id },
-        });
-
-        await executeRun(run.id, { promptVersionId: promptVersion.id });
-
-        // Marcar completado apenas termina OpenAI para no bloquear UX.
-        // Gemini (si existe) se calcula luego en segundo plano.
-        await prisma.publicDiagnostic.update({
-          where: { id: diagnostic.id },
-          data: { status: 'completed' },
-        });
-
-        // Outreach automatico: detecta competidores que ganan + busca contactos con Firecrawl y Hunter.
-        // Fire-and-forget para no bloquear la UX. No envia correos, solo persiste LeadSource + LeadContact.
-        setImmediate(() => {
-          runOutreachForRun(rootTenant.id, run.id, { enrich: true, logger: fastify.log })
-            .then((outreach) => {
-              fastify.log.info(
-                { diagnosticId: diagnostic.id, runId: run.id, outreach },
-                'Outreach automatico completado'
-              );
-            })
-            .catch((err) => {
-              fastify.log.warn(
-                { err, diagnosticId: diagnostic.id, runId: run.id },
-                'Outreach automatico fallo'
-              );
-            });
-        });
-
-        // Run Gemini con los mismos prompts (score y métricas para Gemini), no bloqueante para la UI.
-        try {
-          const runGemini = await prisma.run.create({
-            data: {
-              tenantId: rootTenant.id,
-              brandId: brand.id,
-              periodStart,
-              periodEnd,
-              runType: 'diagnostic_gemini',
-              status: 'pending',
-            },
-          });
-          await prisma.publicDiagnostic.update({
-            where: { id: diagnostic.id },
-            data: { runGeminiId: runGemini.id },
-          });
-          await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
-        } catch (geminiErr) {
-          fastify.log.warn(
-            { err: geminiErr, diagnosticId: diagnostic.id },
-            'Run Gemini no ejecutado (sin key o error). Solo se muestra score OpenAI.'
-          );
-        }
-
-        let analysisJson: object | null = null;
-        let satelliteModule: SatelliteModuleResult | null = null;
-        try {
-          const fullRun = await prisma.run.findUnique({
-            where: { id: run.id },
-            include: {
-              promptResults: {
-                include: { prompt: { select: { promptText: true } } },
-                orderBy: { createdAt: 'asc' },
-              },
-              brand: { include: { competitors: true } },
-            },
-          });
-          const priaReport = await prisma.pRIAReport.findFirst({
-            where: { runId: run.id },
-            orderBy: { createdAt: 'desc' },
-          });
-          // PRIA puede faltar en carreras muy raras; buildRunContext tolera priaReport null (score 0).
-          if (fullRun) {
-            const ctx = buildRunContext({
-              run: fullRun,
-              priaReport,
-              businessContext: analysisContext.verticalSummary,
-            });
-            // Primera corrida del dominio = análisis completo: OpenAI + Gemini + perspectiva ambos (uno por uno y después juntos). Sin depender de Gold.
-            const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
-            const analysis = await generateDiagnosticAnalysis(ctx, isFirstRun ? 'gold' : 'freemium');
-            if (analysis) {
-              analysisJson = analysis as object;
-              if ((analysis as { tier?: string }).tier !== 'gold') {
-                fastify.log.warn(
-                  { diagnosticId: diagnostic.id },
-                  'Gemini no disponible: solo se guardó análisis OpenAI. Configurá GEMINI_API_KEY en la API.'
-                );
-              }
-            }
-          }
-        } catch (analysisErr) {
-          fastify.log.warn({ err: analysisErr, diagnosticId: diagnostic.id }, 'Análisis IA no generado');
-        }
-
-        if (trimmedUrl) {
-          try {
-            satelliteModule = await runSatelliteAnalysis(trimmedUrl);
-          } catch (satErr) {
-            fastify.log.warn({ err: satErr, diagnosticId: diagnostic.id }, 'Módulo satélite no disponible');
-          }
-        }
-
-        const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
-        if (persistedAnalysis != null) {
-          const safeForDb = shrinkAnalysisJsonForPersistence(persistedAnalysis);
-          await prisma.publicDiagnostic.update({
-            where: { id: diagnostic.id },
-            data: { analysisJson: safeForDb },
-          });
-          analysisJson = safeForDb;
-        }
-
-        void ensureShareSlug(diagnostic.id).catch((err) =>
-          fastify.log.warn({ err, diagnosticId: diagnostic.id }, 'No se pudo asignar share_slug')
-        );
-
-        const current = await prisma.publicDiagnostic.findUnique({
-          where: { id: diagnostic.id },
-        });
-        if (current?.email) {
-          const baseUrl = getAppBaseUrlForPublicLinks();
-          try {
-            if (!isEmailDisabled() && isEmailConfigured()) {
-              await sendDiagnosticLink(
-                current.email,
-                diagnostic.id,
-                baseUrl,
-                analysisJson ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail) : null
-              );
-              try {
-                await sendShareCleexsFollowUpEmail(current.email, diagnostic.id, baseUrl, current.brandName);
-              } catch (shareErr) {
-                fastify.log.error({ err: shareErr, diagnosticId: diagnostic.id }, 'Error al enviar email de compartir');
-              }
-              fastify.log.info({ diagnosticId: diagnostic.id, email: current.email }, 'Email enviado');
-            }
-          } catch (mailErr) {
-            fastify.log.error({ err: mailErr, diagnosticId: diagnostic.id }, 'Error al enviar email');
-          }
-        }
-      } catch (err) {
-        fastify.log.error({ err, diagnosticId: diagnostic.id }, 'Error en diagnóstico');
-        await prisma.publicDiagnostic
-          .update({ where: { id: diagnostic.id }, data: { status: 'failed' } })
-          .catch(() => {});
-      }
-    });
-
-      return reply.code(201).send({ diagnosticId: diagnostic.id });
-    } catch (err) {
-      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic');
-      const message = err instanceof Error ? err.message : 'Error interno';
-      const isPrisma = message.includes('column') || message.includes('does not exist') || message.includes('Unknown');
-      return reply.code(500).send({
-        error: isPrisma
-          ? 'Error de base de datos. Ejecutá en Railway: railway run npx prisma migrate deploy'
-          : 'Error interno al crear el diagnóstico. Intentá de nuevo.',
       });
+
+      return reply.code(200).send({ ok: true, diagnosticId: id });
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/:id/start');
+      const message = err instanceof Error ? err.message : 'Error interno';
+      return reply.code(500).send({ error: message || 'Error interno.' });
     }
   });
 
@@ -997,15 +1212,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.code(200).send({ ok: true, emailSent, ...(emailError && { emailError }) });
   });
-
-  // Fase 3: determina si es primera corrida para este dominio (ve todo) o Freemium (limitado)
-  async function isFirstRunForDomain(diagnosticId: string, domain: string): Promise<boolean> {
-    const firstCompleted = await prisma.publicDiagnostic.findFirst({
-      where: { domain, status: 'completed' },
-      orderBy: { createdAt: 'asc' },
-    });
-    return !!firstCompleted && firstCompleted.id === diagnosticId;
-  }
 
   type ShareRunResult = {
     brandId: string;
@@ -1411,11 +1617,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         createdAt: true,
         updatedAt: true,
         shareSlug: true,
+        setupDraftJson: true,
       },
     });
     if (!row) {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
+
+    const setupDraft = parsePublicSetupDraft(row.setupDraftJson);
 
     let analysisJson: unknown = null;
     if (row.status === 'completed') {
@@ -1476,6 +1685,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runResult?: RunResultType;
       runResultGemini?: RunResultType;
       trendData?: Array<{ label: string; score: number; date: string }>;
+      setupDraft?: {
+        suggestedCompetitorUrls: string[];
+        marketCountry?: string;
+        useSerp?: boolean;
+      } | null;
+      email?: string | null;
     } = {
       id: diagnostic.id,
       domain: diagnostic.domain,
@@ -1487,6 +1702,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runId: diagnostic.runId,
       runGeminiId: diagnostic.runGeminiId ?? null,
       shareSlug: shareSlugOut,
+      setupDraft: setupDraft ?? null,
+      email: row.email ?? null,
     };
 
     if (diagnostic.analysisJson) {

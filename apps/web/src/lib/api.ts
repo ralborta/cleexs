@@ -470,11 +470,23 @@ export interface PublicDiagnosticSatelliteModule {
   error?: string;
 }
 
+export interface PublicDiagnosticSetupDraft {
+  suggestedCompetitorUrls: string[];
+  marketCountry?: string;
+  useSerp?: boolean;
+}
+
 export interface PublicDiagnostic {
   id: string;
   domain: string;
   brandName: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status:
+    | 'pending'
+    | 'detecting_competitors'
+    | 'awaiting_user'
+    | 'running'
+    | 'completed'
+    | 'failed';
   tier?: 'gold' | 'freemium';
   isFirstRun?: boolean;
   showFullReport?: boolean;
@@ -483,6 +495,9 @@ export interface PublicDiagnostic {
   /** Estado del segundo run (Gemini), si existe `runGeminiId`. */
   geminiRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
   shareSlug?: string | null;
+  email?: string | null;
+  /** URLs sugeridas y contexto antes de confirmar correo + competidores. */
+  setupDraft?: PublicDiagnosticSetupDraft | null;
   steps?: PublicDiagnosticStep[];
   progressPercent?: number;
   runResult?: PublicDiagnosticRunResult;
@@ -527,30 +542,42 @@ export interface PublicDiagnosticShareResponse {
 }
 
 export const publicDiagnosticApi = {
-  create: (
-    brandName?: string,
-    url?: string,
-    tier?: 'gold' | 'freemium',
-    useSerp?: boolean,
+  create: (input: {
+    url: string;
+    brandName?: string;
+    tier?: 'gold' | 'freemium';
+    useSerp?: boolean;
     tracking?: {
       refCode?: string;
       utmSource?: string;
       utmMedium?: string;
       utmCampaign?: string;
-    }
-  ) =>
+    };
+  }) =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
       body: JSON.stringify({
-        ...(brandName != null && brandName !== '' && { brandName }),
-        ...(url != null && url !== '' && { url }),
-        ...(tier === 'gold' && { tier: 'gold' as const }),
-        ...(typeof useSerp === 'boolean' ? { useSerp } : {}),
-        ...(tracking?.refCode ? { refCode: tracking.refCode } : {}),
-        ...(tracking?.utmSource ? { utmSource: tracking.utmSource } : {}),
-        ...(tracking?.utmMedium ? { utmMedium: tracking.utmMedium } : {}),
-        ...(tracking?.utmCampaign ? { utmCampaign: tracking.utmCampaign } : {}),
+        url: input.url,
+        ...(input.brandName != null && input.brandName !== '' && { brandName: input.brandName }),
+        ...(input.tier === 'gold' && { tier: 'gold' as const }),
+        ...(typeof input.useSerp === 'boolean' ? { useSerp: input.useSerp } : {}),
+        ...(input.tracking?.refCode ? { refCode: input.tracking.refCode } : {}),
+        ...(input.tracking?.utmSource ? { utmSource: input.tracking.utmSource } : {}),
+        ...(input.tracking?.utmMedium ? { utmMedium: input.tracking.utmMedium } : {}),
+        ...(input.tracking?.utmCampaign ? { utmCampaign: input.tracking.utmCampaign } : {}),
       }),
+    }),
+  start: (
+    id: string,
+    body: { email: string; competitorUrls: string[]; useSerp?: boolean },
+    opts?: { visitorId?: string }
+  ) =>
+    api<{ ok: boolean; diagnosticId: string }>(`/api/public/diagnostic/${id}/start`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: {
+        ...(opts?.visitorId ? { 'x-visitor-id': opts.visitorId } : {}),
+      },
     }),
   setEmail: (id: string, email: string) =>
     api<{ ok: boolean; emailSent?: boolean | null; emailError?: 'provider_rejected' | 'send_failed' }>(
@@ -562,7 +589,7 @@ export const publicDiagnosticApi = {
     ),
   get: (id: string, tier?: 'gold' | 'freemium') =>
     api<PublicDiagnostic>(
-      `/api/public/diagnostic/${id}${tier ? `?tier=${tier}` : ''}${tier ? '&' : '?'}_=${Date.now()}`,
+      `/api/public/diagnostic/${id}?${tier ? `tier=${tier}&` : ''}_=${Date.now()}`,
       { cache: 'no-store' }
     ),
 };

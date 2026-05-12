@@ -43,7 +43,10 @@ export default function CrearDiagnosticoPage() {
       : serpParam === '1' || serpParam === 'true' || serpParam === 'on'
         ? true
         : undefined;
-  const tier = tierParam === 'gold' ? 'gold' as const : undefined;
+  const tier = tierParam === 'gold' ? ('gold' as const) : undefined;
+  const hasAutostartUrl = Boolean(
+    (urlParam || '').trim() || ((qParam || '').trim() && looksLikeDomain(qParam || ''))
+  );
   const hasAutostartInput = Boolean(
     (urlParam || '').trim() || (brandParam || '').trim() || (qParam || '').trim()
   );
@@ -74,6 +77,7 @@ export default function CrearDiagnosticoPage() {
   // Crea diagnóstico automáticamente y pasa directo a la pantalla de checks.
   useEffect(() => {
     if (!autostart || autoStartTriggered.current) return;
+    if (!hasAutostartUrl) return;
 
     const u = (urlParam || '').trim();
     const b = (brandParam || '').trim();
@@ -89,15 +93,15 @@ export default function CrearDiagnosticoPage() {
       else nextBrand = q;
     }
 
-    if (!nextUrl && !nextBrand) {
-      setError('No pudimos leer la marca/URL desde el enlace. Probá nuevamente.');
+    if (!nextUrl) {
+      setError('Necesitamos la URL de tu sitio (ej. tudominio.com) en el enlace.');
       return;
     }
 
     autoStartTriggered.current = true;
     setAutoStartRunning(true);
     void startDiagnostic(nextBrand, nextUrl, true);
-  }, [autostart, urlParam, brandParam, qParam, tier]);
+  }, [autostart, hasAutostartUrl, urlParam, brandParam, qParam, tier]);
 
   function normalizeUrl(input: string): string {
     const trimmed = input.trim();
@@ -183,21 +187,21 @@ export default function CrearDiagnosticoPage() {
     setError(null);
     const trimmedBrand = nextBrandName.trim();
     const trimmedUrl = nextUrl.trim();
-    if (!trimmedBrand && !trimmedUrl) {
-      setError('Ingresá la marca o la URL de tu sitio (al menos uno).');
+    if (!trimmedUrl) {
+      setError('Ingresá la URL de tu sitio (obligatorio). La marca es opcional.');
       return;
     }
     setLoading(true);
     try {
-      const urlToSend = trimmedUrl ? normalizeUrl(trimmedUrl) : undefined;
+      const urlToSend = normalizeUrl(trimmedUrl);
       const attribution = getAttributionForCreate();
-      const createPromise = publicDiagnosticApi.create(
-        trimmedBrand || undefined,
-        urlToSend,
+      const createPromise = publicDiagnosticApi.create({
+        url: urlToSend,
+        brandName: trimmedBrand || undefined,
         tier,
         useSerp,
-        attribution
-      );
+        tracking: attribution,
+      });
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );
@@ -223,14 +227,14 @@ export default function CrearDiagnosticoPage() {
   }
 
   useEffect(() => {
-    if (!(autostart && hasAutostartInput && (autoStartRunning || loading))) return;
+    if (!(autostart && hasAutostartUrl && (autoStartRunning || loading))) return;
     const watchdog = setTimeout(() => {
       setLoading(false);
       setAutoStartRunning(false);
       setError('El inicio automático tardó demasiado. Podés continuar manualmente.');
     }, 30000);
     return () => clearTimeout(watchdog);
-  }, [autostart, hasAutostartInput, autoStartRunning, loading]);
+  }, [autostart, hasAutostartUrl, autoStartRunning, loading]);
 
   function cancelAutostart() {
     setLoading(false);
@@ -238,7 +242,7 @@ export default function CrearDiagnosticoPage() {
     setError('Inicio automático cancelado. Podés continuar manualmente.');
   }
 
-  if (autostart && hasAutostartInput && !error && (autoStartRunning || loading)) {
+  if (autostart && hasAutostartUrl && !error && (autoStartRunning || loading)) {
     return (
       <main className="min-h-[calc(100vh-72px)] bg-slate-100 px-6 py-16">
         <div className="mx-auto max-w-lg">
@@ -275,7 +279,8 @@ export default function CrearDiagnosticoPage() {
           <CardHeader className="pb-2 text-center">
             <CardTitle className="text-2xl font-bold text-slate-900">Diagnóstico de recomendación</CardTitle>
             <CardDescription className="text-base leading-relaxed text-slate-600">
-              Ingresá tu marca o la URL de tu sitio (o ambos). Determinamos tu industria, competidores y generamos tu Cleexs Score.
+              Ingresá la URL de tu sitio (obligatorio). Podés sumar la marca si querés que aparezca con otro nombre.
+              Luego confirmás correo y competidores antes de arrancar el análisis completo.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -283,7 +288,7 @@ export default function CrearDiagnosticoPage() {
               <div>
                 <label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
                   <Tag className="h-4 w-4 text-primary-600 shrink-0" aria-hidden />
-                  Marca
+                  Marca <span className="text-muted-foreground font-normal">(opcional)</span>
                 </label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
@@ -301,7 +306,7 @@ export default function CrearDiagnosticoPage() {
               <div>
                 <label htmlFor="url" className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
                   <Globe className="h-4 w-4 text-primary-600 shrink-0" aria-hidden />
-                  URL de tu sitio <span className="text-muted-foreground font-normal">(opcional)</span>
+                  URL de tu sitio
                 </label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
@@ -325,7 +330,7 @@ export default function CrearDiagnosticoPage() {
               <Button
                 type="submit"
                 className="w-full bg-primary-600 text-white shadow-sm hover:bg-primary-700"
-                disabled={loading || (!brandName.trim() && !url.trim())}
+                disabled={loading || !url.trim()}
               >
                 {loading ? (
                   'Iniciando…'

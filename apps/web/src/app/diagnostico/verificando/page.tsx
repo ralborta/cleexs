@@ -2,7 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { publicDiagnosticApi } from '@/lib/api';
+import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
+import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
 import { Boxes, Loader2, Lock, Mail, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -52,6 +53,13 @@ function isBlockingOverlay(m: OverlayMoment): m is Extract<OverlayMoment, { type
   return m.type !== 'idle';
 }
 
+function fiveUrlsFromDraft(draft: PublicDiagnostic['setupDraft']): string[] {
+  const raw = draft?.suggestedCompetitorUrls ?? [];
+  const out = raw.map((u) => String(u).trim());
+  while (out.length < 5) out.push('');
+  return out.slice(0, 5);
+}
+
 function isReportReadyForRedirect(
   diagnostic: Awaited<ReturnType<typeof publicDiagnosticApi.get>>
 ): boolean {
@@ -86,6 +94,14 @@ function VerificandoContent() {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [captchaPopupOpen, setCaptchaPopupOpen] = useState(true);
 
+  const [wizardStep, setWizardStep] = useState(0);
+  const [setupHumanOk, setSetupHumanOk] = useState(false);
+  const [setupEmail, setSetupEmail] = useState('');
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>(['', '', '', '', '']);
+  const [startAnalysisLoading, setStartAnalysisLoading] = useState(false);
+  const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null);
+  const setupWizardInitRef = useRef<string | null>(null);
+
   const [heroIdx, setHeroIdx] = useState(0);
   useEffect(() => {
     const id = setInterval(() => {
@@ -98,7 +114,6 @@ function VerificandoContent() {
   const [pipeline, setPipeline] = useState(0);
   const [overlay, setOverlay] = useState<OverlayMoment>({ type: 'idle' });
   const [visualBoost, setVisualBoost] = useState(0);
-  const [emailSectionVisible, setEmailSectionVisible] = useState(false);
   const [visibleStepCards, setVisibleStepCards] = useState(3);
   const overlayRef = useRef(overlay);
   useEffect(() => {
@@ -137,6 +152,18 @@ function VerificandoContent() {
     [brandLabel, domain]
   );
   const domainShort = (domain || '').replace(/^https?:\/\//, '');
+  const analysisRunningPhase =
+    diagnostic?.status === 'running' ||
+    diagnostic?.status === 'completed' ||
+    diagnostic?.status === 'failed';
+
+  const showLegacyEmail =
+    analysisRunningPhase &&
+    captchaVerified &&
+    !!diagnostic &&
+    !diagnostic.email &&
+    progress >= 50;
+
   const activeStepForCards = useMemo(() => {
     const firstPending = stepsList.findIndex((s) => !s.completed);
     if (firstPending >= 0) return firstPending;
@@ -201,6 +228,32 @@ function VerificandoContent() {
       setOverlay({ type: 'idle' });
     }
   }, [advancePipeline]);
+
+  useEffect(() => {
+    if (
+      diagnostic?.status === 'running' ||
+      diagnostic?.status === 'completed' ||
+      diagnostic?.status === 'failed'
+    ) {
+      setCaptchaVerified(true);
+      setCaptchaPopupOpen(false);
+    }
+  }, [diagnostic?.status]);
+
+  useEffect(() => {
+    setupWizardInitRef.current = null;
+  }, [diagnosticId]);
+
+  useEffect(() => {
+    if (diagnostic?.status !== 'awaiting_user' || !diagnostic.id) return;
+    if (setupWizardInitRef.current === diagnostic.id) return;
+    setupWizardInitRef.current = diagnostic.id;
+    setWizardStep(0);
+    setSetupHumanOk(false);
+    setSetupEmail('');
+    setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
+    setStartAnalysisError(null);
+  }, [diagnostic?.status, diagnostic?.id, diagnostic?.setupDraft]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -297,14 +350,7 @@ function VerificandoContent() {
   }, [diagnosticId, diagnostic?.steps, handoff]);
 
   useEffect(() => {
-    if (!captchaVerified) return;
-    if (progress >= 60 && !emailSectionVisible && !emailSent) {
-      setEmailSectionVisible(true);
-      if (diagnosticId) trackOnboarding('onboarding_unlock_viewed', { diagnosticId });
-    }
-  }, [captchaVerified, progress, emailSectionVisible, emailSent, diagnosticId]);
-
-  useEffect(() => {
+    if (!analysisRunningPhase) return;
     if (!captchaVerified) return;
     if (diagnostic?.status === 'completed' || handoff !== 'no') return;
     if (isBlockingOverlay(overlay)) return;
@@ -329,7 +375,17 @@ function VerificandoContent() {
     } else if (pipeline === 7) {
       setOverlay({ type: 'social2' });
     }
-  }, [captchaVerified, activeIndex, pipeline, overlay, diagnostic?.status, ctx, handoff, diagnosticId]);
+  }, [
+    analysisRunningPhase,
+    captchaVerified,
+    activeIndex,
+    pipeline,
+    overlay,
+    diagnostic?.status,
+    ctx,
+    handoff,
+    diagnosticId,
+  ]);
 
   useEffect(() => {
     const targetVisible = Math.min(ANALYSIS_STEP_CARD_LABELS.length, Math.max(3, activeStepForCards + 2));
@@ -337,6 +393,44 @@ function VerificandoContent() {
     const t = setTimeout(() => setVisibleStepCards((n) => Math.min(targetVisible, n + 1)), 120);
     return () => clearTimeout(t);
   }, [activeStepForCards, visibleStepCards]);
+
+  const handleSetupStartAnalysis = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!diagnosticId || !diagnostic) return;
+    setStartAnalysisError(null);
+    const trimmed = competitorUrls.map((u) => u.trim());
+    if (trimmed.some((u) => !u)) {
+      setStartAnalysisError('Completá las 5 URLs de competidores.');
+      return;
+    }
+    const em = setupEmail.trim();
+    if (!em.includes('@')) {
+      setStartAnalysisError('Ingresá un correo válido.');
+      return;
+    }
+    setStartAnalysisLoading(true);
+    try {
+      const vid = getOrCreateCleexsVisitorId();
+      await publicDiagnosticApi.start(
+        diagnosticId,
+        {
+          email: em,
+          competitorUrls: trimmed,
+          ...(typeof diagnostic.setupDraft?.useSerp === 'boolean'
+            ? { useSerp: diagnostic.setupDraft.useSerp }
+            : {}),
+        },
+        { visitorId: vid }
+      );
+      trackOnboarding('onboarding_setup_completed', { diagnosticId });
+      const data = await publicDiagnosticApi.get(diagnosticId, tierQParam === 'gold' ? 'gold' : undefined);
+      setDiagnostic(data);
+    } catch (err) {
+      setStartAnalysisError(err instanceof Error ? err.message : 'No se pudo iniciar el análisis.');
+    } finally {
+      setStartAnalysisLoading(false);
+    }
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,6 +504,185 @@ function VerificandoContent() {
           <Link href="/diagnostico/crear">
             <Button variant="outline" size="sm">Volver al diagnóstico</Button>
           </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (!diagnostic) {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center gap-3 bg-slate-50 px-6">
+        <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
+        <p className="text-sm text-slate-600">Cargando diagnóstico…</p>
+      </main>
+    );
+  }
+
+  if (diagnostic.status === 'detecting_competitors') {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center gap-4 bg-slate-50 px-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary-600" aria-hidden />
+        <div className="max-w-md text-center">
+          <p className="text-lg font-semibold text-slate-900">Detectando competidores</p>
+          <p className="mt-2 text-sm text-slate-600">
+            Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (diagnostic.status === 'awaiting_user') {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center bg-slate-100 px-4 py-10">
+        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+          <div className="mb-6 text-center">
+            <Lock className="mx-auto mb-2 h-8 w-8 text-slate-400" aria-hidden />
+            <h1 className="text-xl font-bold text-slate-900">Antes de arrancar el análisis</h1>
+            <p className="mt-1 text-sm text-slate-600">
+              Verificación, correo y competidores (podés editar las URLs sugeridas).
+            </p>
+          </div>
+
+          <ol className="mb-6 flex gap-2 text-xs font-medium text-slate-500">
+            <li
+              className={cn(
+                'flex-1 rounded-lg border px-2 py-2 text-center',
+                wizardStep === 0 ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-slate-200'
+              )}
+            >
+              1 · Verificación
+            </li>
+            <li
+              className={cn(
+                'flex-1 rounded-lg border px-2 py-2 text-center',
+                wizardStep === 1 ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-slate-200'
+              )}
+            >
+              2 · Correo
+            </li>
+            <li
+              className={cn(
+                'flex-1 rounded-lg border px-2 py-2 text-center',
+                wizardStep === 2 ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-slate-200'
+              )}
+            >
+              3 · Competidores
+            </li>
+          </ol>
+
+          {wizardStep === 0 && (
+            <div className="space-y-4">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <input
+                  type="checkbox"
+                  checked={setupHumanOk}
+                  onChange={(e) => setSetupHumanOk(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm font-medium text-slate-800">No soy un robot</span>
+              </label>
+              <Button
+                type="button"
+                className="w-full"
+                disabled={!setupHumanOk}
+                onClick={() => {
+                  setWizardStep(1);
+                  if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
+                }}
+              >
+                Continuar
+              </Button>
+            </div>
+          )}
+
+          {wizardStep === 1 && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2 rounded-lg border border-violet-100 bg-violet-50/80 p-3">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                <p className="text-xs text-violet-900">
+                  Te avisamos cuando el informe esté listo. No compartimos tu correo con terceros.
+                </p>
+              </div>
+              <input
+                type="email"
+                value={setupEmail}
+                onChange={(e) => setSetupEmail(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                placeholder="correo@empresa.com"
+                autoComplete="email"
+              />
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setWizardStep(0)}>
+                  Atrás
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-primary-600 text-white hover:bg-primary-700"
+                  disabled={!setupEmail.trim().includes('@')}
+                  onClick={() => setWizardStep(2)}
+                >
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 2 && (
+            <form onSubmit={handleSetupStartAnalysis} className="space-y-4">
+              <p className="text-xs text-slate-600">
+                Confirmá o editá las cinco URLs de competencia. Cada una debe ser un sitio distinto al tuyo.
+              </p>
+              <div className="space-y-2">
+                {competitorUrls.map((val, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="w-6 text-center text-xs font-semibold text-slate-400">{idx + 1}</span>
+                    <input
+                      type="text"
+                      inputMode="url"
+                      value={val}
+                      onChange={(e) => {
+                        const next = [...competitorUrls];
+                        next[idx] = e.target.value;
+                        setCompetitorUrls(next);
+                      }}
+                      className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      placeholder="https://competidor.com"
+                    />
+                  </div>
+                ))}
+              </div>
+              {startAnalysisError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {startAnalysisError}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
+                  Atrás
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-primary-600 text-white hover:bg-primary-700"
+                  disabled={startAnalysisLoading}
+                >
+                  {startAnalysisLoading ? 'Iniciando…' : 'Comenzar análisis'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          <p className="mt-6 text-center text-[11px] text-slate-500">
+            Al continuar aceptás los{' '}
+            <a href="/terminos" className="underline">
+              Términos
+            </a>{' '}
+            y la{' '}
+            <a href="/privacidad" className="underline">
+              Privacidad
+            </a>
+            .
+          </p>
         </div>
       </main>
     );
@@ -568,7 +841,7 @@ function VerificandoContent() {
                 />
               )}
 
-              {captchaVerified && emailSectionVisible && !emailSent && (
+              {captchaVerified && showLegacyEmail && !emailSent && (
                 <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
                   <div className="flex items-start gap-3">
                     <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-1 ring-violet-200/80">
@@ -601,7 +874,7 @@ function VerificandoContent() {
                 </div>
               )}
 
-              {captchaVerified && emailSectionVisible && emailSent && (
+              {captchaVerified && showLegacyEmail && emailSent && (
                 <div className="rounded-xl border border-slate-200 bg-white p-3 text-center text-sm text-slate-600">
                   {emailSendFailed ? (
                     <p className="text-xs text-amber-800">
@@ -621,13 +894,13 @@ function VerificandoContent() {
                 </div>
               )}
 
-              {captchaVerified && !emailSectionVisible && !emailSent && progress >= 45 && (
+              {captchaVerified && !showLegacyEmail && !emailSent && progress >= 45 && analysisRunningPhase && (
                 <p className="text-center text-[10px] text-slate-500">El correo se habilita al 60% del progreso.</p>
               )}
             </div>
           </div>
         </div>
-        {captchaPopupOpen && !captchaVerified && (
+        {captchaPopupOpen && !captchaVerified && analysisRunningPhase && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-3 sm:items-center">
             <div
               className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
