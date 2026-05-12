@@ -6,6 +6,7 @@ import type {
   PublicDiagnosticPromptResult,
   PublicDiagnosticTrendPoint,
 } from '@/lib/api';
+import { CompetitorNameLink } from '@/components/report/competitor-name-link';
 import {
   BarChart3,
   ChevronDown,
@@ -366,6 +367,11 @@ export function ReporteCorridas({
     brandAliases,
     competitorsUsed,
   );
+  const competitorUrlMap = new Map(
+    (runResult.competitorDetails ?? [])
+      .map((item) => [normalizeName(item.name || ''), item.domain ?? null] as const)
+      .filter(([key]) => Boolean(key)),
+  );
   const brandRow =
     comparisonSummary.find(
       (row) => row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases)
@@ -450,6 +456,7 @@ export function ReporteCorridas({
 
   const topCompetitors = comparisonSummary.slice(0, 5).map((row) => ({
     name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
+    sourceName: row.name,
     share: Number(row.share.toFixed(1)),
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),
   }));
@@ -862,15 +869,23 @@ export function ReporteCorridas({
                           >
                             {idx + 1}
                           </span>
-                          <span
-                            className={cn(
-                              'flex-1 truncate font-medium',
-                              c.isBrand ? 'text-violet-700' : 'text-slate-700'
-                            )}
-                            title={c.name}
-                          >
-                            {c.name}
-                          </span>
+                          {c.isBrand ? (
+                            <span
+                              className={cn(
+                                'flex-1 truncate font-medium',
+                                c.isBrand ? 'text-violet-700' : 'text-slate-700'
+                              )}
+                              title={c.name}
+                            >
+                              {c.name}
+                            </span>
+                          ) : (
+                            <CompetitorNameLink
+                              name={c.name}
+                              url={competitorUrlMap.get(normalizeName(c.sourceName)) ?? undefined}
+                              className="flex-1 truncate font-medium text-slate-700"
+                            />
+                          )}
                           <span
                             className={cn(
                               'tabular-nums font-semibold',
@@ -1014,15 +1029,23 @@ export function ReporteCorridas({
                               >
                                 {idx + 1}
                               </span>
-                              <span
-                                className={cn(
-                                  'truncate text-xs font-semibold',
-                                  c.isBrand ? 'text-indigo-700' : 'text-slate-700'
-                                )}
-                                title={c.name}
-                              >
-                                {c.name}
-                              </span>
+                              {c.isBrand ? (
+                                <span
+                                  className={cn(
+                                    'truncate text-xs font-semibold',
+                                    c.isBrand ? 'text-indigo-700' : 'text-slate-700'
+                                  )}
+                                  title={c.name}
+                                >
+                                  {c.name}
+                                </span>
+                              ) : (
+                                <CompetitorNameLink
+                                  name={c.name}
+                                  url={competitorUrlMap.get(normalizeName(c.sourceName)) ?? undefined}
+                                  className="truncate text-xs font-semibold text-slate-700"
+                                />
+                              )}
                               {c.isBrand && (
                                 <span className="rounded-full bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-700 ring-1 ring-indigo-100">
                                   Tu marca

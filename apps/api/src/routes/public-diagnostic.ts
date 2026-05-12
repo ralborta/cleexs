@@ -1012,6 +1012,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     brandName: string;
     cleexsScore: number;
     competitors: string[];
+    competitorDetails?: Array<{ name: string; domain?: string | null }>;
     brandAliases: string[];
     promptResults: Array<{
       category: string;
@@ -1075,6 +1076,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           brandName: fullRun.brand.name,
           cleexsScore: runPeek.priaReports[0].priaTotal,
           competitors: fullRun.brand.competitors.map((c) => c.name),
+          competitorDetails: fullRun.brand.competitors.map((c) => ({ name: c.name, domain: c.domain })),
           brandAliases: fullRun.brand.aliases.map((a) => a.alias),
           promptResults: fullRun.promptResults.map((pr) => ({
             category: pr.prompt?.category?.name ?? 'General',
@@ -1113,6 +1115,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             brandName: fullRunGemini.brand.name,
             cleexsScore: runGemini.priaReports[0].priaTotal,
             competitors: fullRunGemini.brand.competitors.map((c) => c.name),
+            competitorDetails: fullRunGemini.brand.competitors.map((c) => ({ name: c.name, domain: c.domain })),
             brandAliases: fullRunGemini.brand.aliases.map((a) => a.alias),
             promptResults: fullRunGemini.promptResults.map((pr) => ({
               category: pr.prompt?.category?.name ?? 'General',
@@ -1562,6 +1565,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             brandName: fullRun.brand.name,
             cleexsScore,
             competitors: fullRun.brand.competitors.map((c) => c.name),
+            competitorDetails: fullRun.brand.competitors.map((c) => ({ name: c.name, domain: c.domain })),
             brandAliases: fullRun.brand.aliases.map((a) => a.alias),
             promptResults: showFullReport
               ? fullRun.promptResults.map((pr) => ({
@@ -1608,6 +1612,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               brandName: fullRunGemini.brand.name,
               cleexsScore: runGemini.priaReports[0].priaTotal,
               competitors: fullRunGemini.brand.competitors.map((c) => c.name),
+              competitorDetails: fullRunGemini.brand.competitors.map((c) => ({ name: c.name, domain: c.domain })),
               brandAliases: fullRunGemini.brand.aliases.map((a) => a.alias),
               promptResults: fullRunGemini.promptResults.map((pr) => ({
                 category: pr.prompt?.category?.name ?? 'General',

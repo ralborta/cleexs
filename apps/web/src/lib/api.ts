@@ -405,6 +405,7 @@ export interface PublicDiagnosticRunResult {
   brandName: string;
   cleexsScore: number;
   competitors: string[];
+  competitorDetails?: Array<{ name: string; domain?: string | null }>;
   brandAliases: string[];
   promptResults: PublicDiagnosticPromptResult[];
 }

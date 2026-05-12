@@ -250,6 +250,7 @@ function buildRunResultAmbos(
     brandName: a.brandName,
     cleexsScore,
     competitors: a.competitors ?? [],
+    competitorDetails: a.competitorDetails ?? b.competitorDetails ?? [],
     brandAliases: a.brandAliases ?? [],
     promptResults,
   };
