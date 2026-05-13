@@ -22,8 +22,12 @@ export function parseTop3(
   // Normalizar texto
   const normalized = responseText.toLowerCase();
   const allBrands = [
-    { name: brandName, type: 'brand' as const },
-    ...competitors.map((c) => ({ name: c.name, type: 'competitor' as const })),
+    { name: brandName, type: 'brand' as const, aliases: [] as string[] },
+    ...competitors.map((c) => ({
+      name: c.name,
+      type: 'competitor' as const,
+      aliases: c.aliases ?? [],
+    })),
   ];
 
   // 1) Intentar lista numerada (1., 2., 3. o 1) 2) 3))
@@ -107,20 +111,34 @@ export function parseTop3(
   const seen = new Set<string>();
   let fallbackPosition = 1;
   for (const brand of allBrands) {
-    const idx = normalized.indexOf(normalizeText(brand.name));
-    if (idx >= 0 && !seen.has(brand.name)) {
-      const line = responseText.split('\n').find((l) => normalizeText(l).includes(normalizeText(brand.name))) || responseText;
-      const reason = extractReasonFromLine(line, brand.name);
-      top3.push({
-        position: fallbackPosition,
-        name: brand.name,
-        type: brand.type,
-        ...(reason && { reason }),
-      });
-      seen.add(brand.name);
-      fallbackPosition++;
-      if (top3.length >= 3) break;
+    const labels = [brand.name, ...brand.aliases].filter(Boolean);
+    let hit = false;
+    for (const label of labels) {
+      const nt = normalizeText(label);
+      if (nt.length < 2) continue;
+      const idx = normalized.indexOf(nt);
+      if (idx >= 0) {
+        hit = true;
+        break;
+      }
     }
+    if (!hit || seen.has(brand.name)) continue;
+    const primary = brand.name;
+    const line =
+      responseText.split('\n').find((l) => {
+        const lt = normalizeText(l);
+        return labels.some((lab) => lt.includes(normalizeText(lab)));
+      }) || responseText;
+    const reason = extractReasonFromLine(line, primary);
+    top3.push({
+      position: fallbackPosition,
+      name: primary,
+      type: brand.type,
+      ...(reason && { reason }),
+    });
+    seen.add(brand.name);
+    fallbackPosition++;
+    if (top3.length >= 3) break;
   }
 
   if (top3.length >= 2) {
@@ -155,14 +173,18 @@ function extractReasonFromLine(line: string, brandName: string): string | undefi
  */
 function findBrandInText(
   text: string,
-  brands: Array<{ name: string; type: 'brand' | 'competitor' }>
+  brands: Array<{ name: string; type: 'brand' | 'competitor'; aliases?: string[] }>
 ): { name: string; type: 'brand' | 'competitor' } | null {
   const normalizedText = normalizeText(text);
 
   for (const brand of brands) {
-    const normalizedBrand = normalizeText(brand.name);
-    if (normalizedText.includes(normalizedBrand)) {
-      return brand;
+    const labels = [brand.name, ...(brand.aliases || [])].filter(Boolean);
+    for (const label of labels) {
+      const normalizedBrand = normalizeText(label);
+      if (normalizedBrand.length < 2) continue;
+      if (normalizedText.includes(normalizedBrand)) {
+        return { name: brand.name, type: brand.type };
+      }
     }
   }
 

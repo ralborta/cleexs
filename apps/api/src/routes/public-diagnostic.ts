@@ -6,7 +6,7 @@ import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import { executeRun, executeRunGemini } from '../lib/run-executor';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
-import { EntitlementAction } from '@prisma/client';
+import { EntitlementAction, Prisma } from '@prisma/client';
 import { runOutreachForRun } from '../lib/outreach';
 import {
   resolveBrandAnalysisContext,
@@ -576,7 +576,7 @@ async function executePublicDiagnosticPipeline(params: {
   useSerp: boolean;
   defaultCountry: string;
   marketConfidenceMin: number;
-  competitorRows: Array<{ name: string; domain: string }>;
+  competitorRows: Array<{ name: string; domain: string; aliases: string[] }>;
 }): Promise<void> {
   const {
     log,
@@ -651,6 +651,7 @@ async function executePublicDiagnosticPipeline(params: {
         brandId: brand.id,
         name: entry.name.trim() || 'Competidor',
         domain: entry.domain,
+        aliases: entry.aliases as unknown as Prisma.InputJsonValue,
         autoDetected: true,
         validated: true,
         discoveryReason: 'Confirmado por el usuario (diagnóstico público)',
@@ -866,11 +867,53 @@ function parseFiveCompetitorDomains(urls: unknown): string[] | null {
   return out;
 }
 
-function competitorRowsFromDomains(domains: string[]): Array<{ name: string; domain: string }> {
-  return domains.map((domain) => ({
-    name: deriveBrandFromDomain(domain) || domain.split('.')[0] || 'Competidor',
-    domain,
-  }));
+/** Variantes para matchear la respuesta del modelo con lo que cargó el usuario (parseTop3). */
+function buildAliasHintsForCompetitorHost(hostRaw: string, originalUrl?: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (s: string) => {
+    const t = `${s}`.trim();
+    if (t.length < 2) return;
+    const k = t.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(t);
+  };
+
+  const host = hostRaw.trim().toLowerCase().replace(/^www\./, '');
+  add(hostRaw.trim());
+  add(host);
+  add(`www.${host}`);
+  const derived = deriveBrandFromDomain(host);
+  if (derived) add(derived);
+  if (originalUrl?.trim()) {
+    const raw = originalUrl.trim();
+    add(raw);
+    try {
+      const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      const u = new URL(withScheme);
+      add(u.hostname);
+      add(u.host);
+    } catch {
+      /* ignore */
+    }
+  }
+  return out.slice(0, 16);
+}
+
+function competitorRowsFromDomains(
+  domains: string[],
+  originalUrls?: string[]
+): Array<{ name: string; domain: string; aliases: string[] }> {
+  return domains.map((domain, i) => {
+    const original = originalUrls?.[i]?.trim();
+    const aliases = buildAliasHintsForCompetitorHost(domain, original);
+    return {
+      name: deriveBrandFromDomain(domain) || domain.split('.')[0] || 'Competidor',
+      domain,
+      aliases,
+    };
+  });
 }
 
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
@@ -1114,7 +1157,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'URL de sitio inválida para este diagnóstico.' });
       }
 
-      const competitorRows = competitorRowsFromDomains(domains);
+      const competitorRows = competitorRowsFromDomains(
+        domains,
+        competitorUrls.map((u) => `${u}`.trim())
+      );
 
       await prisma.publicDiagnostic.update({
         where: { id },
