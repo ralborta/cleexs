@@ -822,6 +822,17 @@ function VerResultadoContent() {
                             runResult={runResultToShow}
                             brandName={runResultToShow.brandName}
                             trendData={diagnostic.trendData}
+                            satelliteBlock={
+                              !diagnostic.domain.startsWith('brand-') &&
+                              (showSatelliteSkeleton || satelliteModule) ? (
+                                <>
+                                  {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
+                                  {satelliteModule && (
+                                    <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
+                                  )}
+                                </>
+                              ) : null
+                            }
                           />
                         ))}
                     </div>

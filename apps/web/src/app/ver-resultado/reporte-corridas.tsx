@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type {
   PublicDiagnosticRunResult,
   PublicDiagnosticPromptResult,
@@ -300,10 +300,13 @@ export function ReporteCorridas({
   runResult,
   brandName,
   trendData,
+  satelliteBlock,
 }: {
   runResult: PublicDiagnosticRunResult;
   brandName: string;
   trendData?: PublicDiagnosticTrendPoint[];
+  /** Módulo AEO / satélite (mismo contenido que en vista legacy), entre KPIs y comparativa. */
+  satelliteBlock?: ReactNode;
 }) {
   const gaugeGradientId = useId().replace(/:/g, '');
   const [summaryTab, setSummaryTab] = useState<'score' | 'competidores'>('score');
@@ -989,9 +992,21 @@ export function ReporteCorridas({
         </div>
       </section>
 
-      {/* 3 Comparativa principal */}
+      {/* 3 Análisis técnico AEO (satélite) */}
+      {satelliteBlock ? (
+        <section>
+          {sectionHeading(
+            3,
+            'Análisis técnico del sitio (AEO)',
+            'Herramientas del sitio y acciones a ejecutar, alineado con Cleexs Tools.'
+          )}
+          <div className="mt-1">{satelliteBlock}</div>
+        </section>
+      ) : null}
+
+      {/* 4 Comparativa principal */}
       <section>
-        {sectionHeading(3, 'Comparativa principal')}
+        {sectionHeading(4, 'Comparativa principal')}
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
@@ -1213,7 +1228,7 @@ export function ReporteCorridas({
 
       {/* 4 Métricas — siempre visibles */}
       <section>
-        {sectionHeading(4, 'Métricas del análisis')}
+        {sectionHeading(5, 'Métricas del análisis')}
         <p className="mb-3 text-xs text-slate-500">
           Cuatro señales clave calculadas sobre las respuestas de esta corrida.
         </p>
@@ -1280,7 +1295,7 @@ export function ReporteCorridas({
 
       {/* 5 Visualizaciones — siempre visibles */}
       <section>
-        {sectionHeading(5, 'Visualizaciones adicionales')}
+        {sectionHeading(6, 'Visualizaciones adicionales')}
         <p className="mb-3 text-xs text-slate-500">
           Tendencia del Cleexs Score y reparto medio por intención de búsqueda en esta corrida.
         </p>
@@ -1421,7 +1436,7 @@ export function ReporteCorridas({
 
       {/* 6 Top 3 acciones */}
       <section>
-        {sectionHeading(6, 'Top 3 acciones prioritarias', 'Acciones personalizadas según los resultados de esta corrida')}
+        {sectionHeading(7, 'Top 3 acciones prioritarias', 'Acciones personalizadas según los resultados de esta corrida')}
         <div className="grid gap-3 md:grid-cols-3">
           {actions.slice(0, 3).map((action, idx) => {
             const AIcon = action.Icon;
