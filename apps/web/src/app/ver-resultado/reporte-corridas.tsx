@@ -998,7 +998,7 @@ export function ReporteCorridas({
           {sectionHeading(
             3,
             'Análisis técnico del sitio (AEO)',
-            'Herramientas del sitio y acciones a ejecutar, alineado con Cleexs Tools.'
+            'Herramientas del sitio y acciones concretas según el análisis técnico (AEO).'
           )}
           <div className="mt-1">{satelliteBlock}</div>
         </section>

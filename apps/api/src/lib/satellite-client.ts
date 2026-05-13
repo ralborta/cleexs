@@ -29,7 +29,7 @@ type SatelliteAnalyzeAllResponse = {
 } & Partial<Record<SatelliteToolKey, SatelliteToolResult>>;
 
 export type SatelliteModuleResult = {
-  /** `pending`: placeholder en DB mientras corre Cleexs Tools en segundo plano. */
+  /** `pending`: placeholder en DB mientras corre el análisis técnico del sitio en segundo plano. */
   status: 'completed' | 'failed' | 'timeout' | 'skipped' | 'pending';
   targetUrl?: string;
   overallScore: number;
@@ -144,7 +144,7 @@ function toolDetailForStorage(t: SatelliteToolResult): Record<string, unknown> |
       suggestions: plain.suggestions,
       _truncated: true,
       _note:
-        'El detalle sigue siendo muy grande; mostramos score y sugerencias. Para el volcado completo abrí Cleexs Tools con el mismo sitio.',
+        'El detalle sigue siendo muy grande; mostramos score y sugerencias. Para ver todo el volcado técnico, generá un nuevo diagnóstico o consultá con tu equipo.',
     };
   } catch {
     return undefined;

@@ -666,7 +666,7 @@ function VerResultadoContent() {
   const geminiFallo = diagnostic.geminiRunStatus === 'failed';
   const geminiEnCola = Boolean(diagnostic.runGeminiId) && !runResultGemini && !geminiFallo;
   /**
-   * Post-proceso: la API puede guardar primero el análisis IA y luego fusionar Cleexs Tools (AEO).
+   * Post-proceso: la API puede guardar primero el análisis IA y luego fusionar el módulo técnico del sitio (AEO).
    * Mientras el satélite corre, `satelliteModule.status === 'pending'`.
    */
   const satelliteAeoPending = diagnostic.satelliteModule?.status === 'pending';
@@ -1119,10 +1119,10 @@ function formatDetailPrimitive(
     const t = value.trim();
     if (!t.length) return null;
     if (looksLikeRawMarkup(t)) {
-      return 'La respuesta parece HTML/XML (no es texto plano tipo robots.txt). Para el contenido completo, usá Cleexs Tools.';
+      return 'La respuesta parece HTML/XML (no es texto plano tipo robots.txt). Acá mostramos un extracto; el contenido completo puede no mostrarse en esta vista.';
     }
     if (t.length > maxStr) {
-      return `${t.slice(0, maxStr)}… [${t.length - maxStr} caracteres más en Cleexs Tools]`;
+      return `${t.slice(0, maxStr)}… [${t.length - maxStr} caracteres más no mostrados aquí]`;
     }
     return t;
   }
@@ -1187,7 +1187,7 @@ function SatelliteValueBlock({
     if (looksLikeRawMarkup(t)) {
       return (
         <p className="text-sm text-amber-800 bg-amber-50/80 rounded-lg border border-amber-100 px-3 py-2">
-          Contenido tipo HTML/XML omitido aquí. Abrí Cleexs Tools para verlo completo.
+          Contenido tipo HTML/XML omitido en esta vista por seguridad y legibilidad.
         </p>
       );
     }
@@ -1198,7 +1198,7 @@ function SatelliteValueBlock({
         {shown}
         {t.length > max ? (
           <span className="mt-2 block text-xs font-medium text-slate-500">
-            Total {t.length} caracteres — el resto está en Cleexs Tools.
+            Total {t.length} caracteres — el resto no se muestra completo en este panel.
           </span>
         ) : null}
       </p>
@@ -1368,7 +1368,7 @@ function SatelliteModuleSkeleton() {
           />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">
-              Analizando el sitio con Cleexs Tools (AEO)
+              Analizando el sitio (análisis técnico AEO)
             </p>
             <p className="text-xs leading-relaxed text-primary-900/85 sm:text-sm">
               Suele tardar unos segundos o un par de minutos según el sitio. El resto del informe ya podés usarlo
@@ -1395,8 +1395,8 @@ function SatelliteToolDetailPanel({
   if ((!detail || Object.keys(detail).length === 0) && !err) {
     return (
       <p className="text-left text-sm leading-relaxed text-muted-foreground">
-        No hay detalle guardado para <span className="font-medium text-foreground">{label}</span>. Abrí Cleexs Tools con
-        el mismo sitio para ver el panel completo o generá un diagnóstico nuevo.
+        No hay detalle guardado para <span className="font-medium text-foreground">{label}</span> en este informe.
+        Podés generar un diagnóstico nuevo o revisar más adelante si el análisis técnico aún se está completando.
       </p>
     );
   }
@@ -1527,13 +1527,13 @@ function SatelliteAeoDegradedNotice({
 
   const body =
     module.status === 'timeout'
-      ? 'Cleexs Tools tardó más de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no llegó a completarse.'
+      ? 'El análisis técnico del sitio tardó más de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no llegó a completarse.'
       : module.status === 'failed'
         ? module.error?.trim() ||
-          'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o usá Cleexs Tools directamente con la misma URL.'
+          'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o generá un diagnóstico nuevo con la misma URL.'
         : module.status === 'skipped'
           ? 'Este diagnóstico no incluye URL de sitio o el módulo AEO está desactivado.'
-          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Podés generar un diagnóstico nuevo o revisar el sitio en Cleexs Tools.';
+          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Podés generar un diagnóstico nuevo o revisar el sitio con tu equipo técnico.';
 
   const toolsUrl = CLEEXS_TOOLS_PUBLIC_URL;
 
@@ -1562,7 +1562,7 @@ function SatelliteAeoDegradedNotice({
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800"
               >
-                Abrir Cleexs Tools
+                Ver análisis técnico ampliado
                 <ExternalLink className="h-4 w-4 opacity-90" aria-hidden />
               </a>
             ) : null}
@@ -1575,9 +1575,10 @@ function SatelliteAeoDegradedNotice({
           </div>
           {!toolsUrl ? (
             <p className="text-xs text-slate-500">
-              Para mostrar el enlace a Cleexs Tools, configurá{' '}
-              <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_CLEEXS_TOOLS_URL</code> en el
-              front.
+              Si tu organización tiene un enlace propio al análisis técnico ampliado, puede configurarse en el
+              despliegue:{' '}
+              <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_CLEEXS_TOOLS_URL</code>{' '}
+              (solo equipo técnico).
             </p>
           ) : null}
         </div>
@@ -1616,7 +1617,7 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
         <div className="min-w-0 flex-1">
           <span className="block text-base font-bold tracking-tight text-white sm:text-lg">Acciones a ejecutar</span>
           <span className="mt-0.5 block text-xs font-medium leading-snug text-white/90 sm:text-sm">
-            Prioridades del análisis AEO (misma lógica que Cleexs Tools).{' '}
+            Prioridades del análisis técnico del sitio (AEO).{' '}
             <span className="text-white/85">
               {total > 0
                 ? `${total} tareas · tocá para ${expanded ? 'ocultar' : 'ver'} píldoras y lista.`
@@ -1704,7 +1705,7 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
           ) : (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
               No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
-              herramienta o abrí Cleexs Tools para un análisis interactivo completo.
+              herramienta o consultá con tu equipo si hace falta un análisis más profundo.
             </p>
           )}
         </div>
@@ -1831,7 +1832,7 @@ function SatelliteModuleCard({
             <p className="text-xs leading-relaxed text-slate-600">
               {degraded
                 ? 'Cuando la corrida falla o hace timeout, no mostramos scores vacíos como si fueran reales.'
-                : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas al estilo Cleexs Tools.'}
+                : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas según el análisis técnico.'}
             </p>
           </div>
         </div>
@@ -1864,8 +1865,8 @@ function SatelliteModuleCard({
             {degraded ? null : (
               <>
                 {' '}
-                · {totalTools} herramientas con datos · Si algo aparece recortado, abrí Cleexs Tools para el volcado
-                completo.
+                · {totalTools} herramientas con datos · Si algo aparece recortado, parte del volcado técnico puede no
+                mostrarse completo en esta vista.
               </>
             )}
           </p>

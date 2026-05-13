@@ -583,7 +583,7 @@ async function isFirstRunForDomain(diagnosticId: string, domain: string): Promis
 
 /**
  * Pipeline completo del diagnóstico público (Brand, Run OpenAI/Gemini, análisis, satélite, emails).
- * Cleexs Tools corre en paralelo con la corrida OpenAI (misma URL). El análisis escrito IA exige resultados OpenAI.
+ * El análisis técnico del sitio (satélite) corre en paralelo con la corrida OpenAI (misma URL). El análisis escrito IA exige resultados OpenAI.
  * Se invoca solo tras `POST .../start` (usuario confirmó email + 5 competidores).
  */
 async function executePublicDiagnosticPipeline(params: {
@@ -725,7 +725,7 @@ async function executePublicDiagnosticPipeline(params: {
   });
 
   /**
-   * Cleexs Tools solo necesita la URL; la corrida OpenAI necesita prompts + API.
+   * El análisis técnico del sitio solo necesita la URL; la corrida OpenAI necesita prompts + API.
    * Ejecutar ambas en paralelo reduce el tiempo total antes de análisis IA + Gemini.
    */
   let satellitePrefetch: SatelliteModuleResult | null = null;
@@ -746,7 +746,7 @@ async function executePublicDiagnosticPipeline(params: {
 
   log.info(
     { diagnosticId, satelliteStarted: Boolean(trimmedUrl) },
-    'executeRun y Cleexs Tools (si hubo URL) completados en paralelo'
+    'executeRun y análisis técnico del sitio (si hubo URL) completados en paralelo'
   );
 
   await prisma.publicDiagnostic.update({
