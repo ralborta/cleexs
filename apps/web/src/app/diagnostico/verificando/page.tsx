@@ -125,6 +125,13 @@ function VerificandoContent() {
   const waitingCompletedSinceRef = useRef<number | null>(null);
 
   const stepsList = diagnostic?.steps ?? [];
+  const isPreRunBackdrop =
+    diagnostic?.status === 'awaiting_user' || diagnostic?.status === 'detecting_competitors';
+  const analysisRunningPhase =
+    diagnostic?.status === 'running' ||
+    diagnostic?.status === 'completed' ||
+    diagnostic?.status === 'failed';
+
   const activeIndex = useMemo(() => {
     if (stepsList.length === 0) return 0;
     const i = stepsList.findIndex((s) => !s.completed);
@@ -139,11 +146,20 @@ function VerificandoContent() {
   const progress = diagnostic?.progressPercent ?? 0;
   const brandLabel = diagnostic?.brandName ?? null;
   const domain = diagnostic?.domain ?? '';
+  const domainShort = (domain || '').replace(/^https?:\/\//, '');
   const isRunning = diagnostic?.status === 'running';
   const allStepsDone = stepsList.length > 0 && stepsList.every((s) => s.completed);
   const isFinalizing = isRunning && allStepsDone;
   const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6;
   const barPct = isFinalizing ? finalizingWave : Math.min(progress, 100);
+  const displayActiveIndex = isPreRunBackdrop ? Math.min(10, ONBOARDING_STEP_LABELS.length - 1) : activeIndex;
+  const displayCardLabel =
+    isPreRunBackdrop
+      ? ANALYSIS_STEP_CARD_LABELS[Math.min(10, ANALYSIS_STEP_CARD_LABELS.length - 1)] ?? ''
+      : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
+  const displayCompletedCount = isPreRunBackdrop ? 10 : completedCount;
+  const displayBarPct = isPreRunBackdrop ? 91 : barPct;
+  const displayCaptchaVerified = captchaVerified || isPreRunBackdrop;
   const ctx: SitePreviewContext = useMemo(
     () => ({
       brandName: brandLabel,
@@ -151,12 +167,6 @@ function VerificandoContent() {
     }),
     [brandLabel, domain]
   );
-  const domainShort = (domain || '').replace(/^https?:\/\//, '');
-  const analysisRunningPhase =
-    diagnostic?.status === 'running' ||
-    diagnostic?.status === 'completed' ||
-    diagnostic?.status === 'failed';
-
   const showLegacyEmail =
     analysisRunningPhase &&
     captchaVerified &&
@@ -165,11 +175,12 @@ function VerificandoContent() {
     progress >= 50;
 
   const activeStepForCards = useMemo(() => {
+    if (isPreRunBackdrop) return Math.min(10, ANALYSIS_STEP_CARD_LABELS.length - 1);
     const firstPending = stepsList.findIndex((s) => !s.completed);
     if (firstPending >= 0) return firstPending;
     if (diagnostic?.status === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
     return Math.max(activeIndex, 0);
-  }, [stepsList, diagnostic?.status, activeIndex]);
+  }, [stepsList, diagnostic?.status, activeIndex, isPreRunBackdrop]);
 
   const advancePipeline = useCallback((next: number) => {
     setPipeline(next);
@@ -250,7 +261,8 @@ function VerificandoContent() {
     setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
     setCompetitorRowSelected([true, true, true, true, true]);
     setStartAnalysisError(null);
-  }, [diagnostic?.status, diagnostic?.id, diagnostic?.setupDraft]);
+    // Solo al entrar en awaiting_user para este id; no incluir setupDraft para no pisar URLs editadas en cada poll.
+  }, [diagnostic?.status, diagnostic?.id]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -493,6 +505,17 @@ function VerificandoContent() {
     diagnostic.analysisJson == null;
   const waitingFinalReady = waitingSecondModel || waitingConsolidation;
   const analysisSteps: AnalysisStepItem[] = ANALYSIS_STEP_CARD_LABELS.map((label, i) => {
+    if (isPreRunBackdrop) {
+      const isCompleted = i < 10;
+      const isActive = i === 10;
+      const state: AnalysisStepItem['state'] = isCompleted ? 'completed' : isActive ? 'active' : 'pending';
+      return {
+        id: i + 1,
+        label,
+        state,
+        visible: i < ANALYSIS_STEP_CARD_LABELS.length,
+      };
+    }
     const completedFromApi = stepsList[i]?.completed === true;
     const isCompleted =
       completedFromApi || (i < activeStepForCards && diagnostic?.status !== 'failed');
@@ -541,63 +564,257 @@ function VerificandoContent() {
     );
   }
 
-  if (diagnostic.status === 'detecting_competitors') {
+  if (handoff === 'preview' || handoff === 'leaving') {
     return (
-      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center gap-4 bg-slate-50 px-6">
-        <Loader2 className="h-12 w-12 animate-spin text-primary-600" aria-hidden />
-        <div className="max-w-md text-center">
-          <p className="text-lg font-semibold text-slate-900">Detectando competidores</p>
+      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4">
+        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-lg">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
+            {handoff === 'leaving' ? (
+              <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
+            ) : (
+              <Sparkles className="h-6 w-6 text-primary-600" />
+            )}
+          </div>
+          <p className="text-lg font-bold text-slate-900">Tu informe está listo</p>
           <p className="mt-2 text-sm text-slate-600">
-            Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
+            {brandLabel
+              ? `Abrimos el análisis completo de ${brandLabel}: score, intención y posición frente a la competencia.`
+              : 'Abrimos el análisis con tu score y comparativa con la competencia.'}
           </p>
+          {handoff === 'leaving' && <p className="mt-4 text-xs text-slate-500">Redirigiendo…</p>}
         </div>
       </main>
     );
   }
 
-  if (diagnostic.status === 'awaiting_user') {
-    const trimmedUrls = competitorUrls.map((u) => u.trim());
-    const canSubmitSetup =
-      setupHumanOk &&
-      setupEmail.trim().includes('@') &&
-      trimmedUrls.length === 5 &&
-      trimmedUrls.every(Boolean);
+  const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
+  const allCompetitorsSelected = competitorRowSelected.every(Boolean);
+  const canSubmitAwaitingSetup =
+    diagnostic.status === 'awaiting_user' &&
+    setupHumanOk &&
+    setupEmail.trim().includes('@') &&
+    trimmedSetupCompetitorUrls.length === 5 &&
+    trimmedSetupCompetitorUrls.every(Boolean);
 
-    const restoreSuggestedCompetitors = () => {
-      setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
-      setCompetitorRowSelected([true, true, true, true, true]);
-    };
+  return (
+    <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
+      <div
+        className={cn(
+          'mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0',
+          isPreRunBackdrop && 'pointer-events-none select-none'
+        )}
+      >
+        <div className="mb-4 shrink-0 sm:mb-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900">
+                {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
+              </h1>
+            </div>
+            <img
+              src="/CleexsLogo.png"
+              alt="Cleexs"
+              className="h-14 w-auto shrink-0 object-contain sm:h-16"
+            />
+          </div>
+        </div>
 
-    const allCompetitorsSelected = competitorRowSelected.every(Boolean);
-
-    return (
-      <main className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-slate-100">
         <div
-          className="pointer-events-none absolute inset-0 z-0 scale-105 select-none opacity-40 blur-md"
-          aria-hidden
+          className={cn(
+            'grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8',
+            isPreRunBackdrop && 'pointer-events-none'
+          )}
         >
-          <div className="flex h-full min-h-[480px] flex-col gap-4 p-6 opacity-80 sm:p-10">
-            <div className="h-8 w-48 rounded bg-slate-300" />
-            <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="h-4 max-w-[75%] rounded bg-slate-200" />
-                <div className="mt-4 space-y-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-8 rounded bg-slate-100" />
-                  ))}
+          <div className="flex min-h-0 min-w-0 flex-col">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="h-1.5 w-full overflow-hidden bg-slate-100">
+                <div
+                  className="h-full bg-primary-600 transition-all duration-700 ease-out"
+                  style={{ width: `${displayCaptchaVerified ? displayBarPct : 0}%` }}
+                />
+              </div>
+              <div className="p-4 sm:p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Construyendo tu Cleexs Score: {displayCompletedCount}/{ONBOARDING_STEP_LABELS.length} completado
+                </p>
+                {displayCaptchaVerified ? (
+                  <>
+                    <div className="mt-2 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold leading-snug text-slate-900">
+                          Paso {displayActiveIndex + 1} de 11
+                        </p>
+                        <p className="mt-1.5 min-h-[2.75rem] text-sm text-slate-600">{displayCardLabel}</p>
+                      </div>
+                      <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-blue-200 bg-blue-50 text-blue-600 shadow-inner">
+                        <Boxes className="h-6 w-6" />
+                      </span>
+                    </div>
+                    {isRunning && allStepsDone && (
+                      <p className="mt-2 text-xs text-primary-800">
+                        {isFinalizing
+                          ? 'Checks listos. Consolidando tu Cleexs Score y el informe final…'
+                          : ''}
+                      </p>
+                    )}
+                    {waitingFinalReady && (
+                      <p className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-2 text-xs text-primary-800">
+                        {waitingSecondModel
+                          ? 'Score base listo. Terminando el segundo modelo (Gemini) para habilitar consolidado…'
+                          : 'Score base listo. Cerrando consolidado técnico del informe…'}
+                      </p>
+                    )}
+                    <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                      <div className="flex items-center justify-between">
+                        <span>
+                          {isRunning || isPreRunBackdrop
+                            ? isFinalizing
+                              ? 'Preparando informe'
+                              : 'En proceso'
+                            : 'Preparando…'}
+                        </span>
+                        <span className="font-semibold text-slate-700">
+                          {Math.round(displayCaptchaVerified ? displayBarPct : 0)}% · {formatElapsed(elapsedSeconds)}
+                        </span>
+                      </div>
+                    </div>
+                    {isRunning && elapsedSeconds >= 360 && (
+                      <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                        Tarda más de lo usual. Si no avanzá, podés crear un diagnóstico más tarde.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-600">Confirmá que sos humano en la ventana a la derecha. Ahí
+                    arranca el análisis visual y el progreso.</p>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <AnalysisStepsGrid steps={analysisSteps} />
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="inline-flex items-center gap-1.5 text-slate-600">
+                    <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+                    En proceso
+                  </span>
+                  <span className="font-semibold text-slate-700">
+                    {Math.round(displayCaptchaVerified ? displayBarPct : 0)}%
+                  </span>
+                  <span className="text-slate-500">{formatElapsed(elapsedSeconds)}</span>
                 </div>
               </div>
-              <div className="rounded-2xl bg-slate-800 p-4 shadow-inner">
-                <div className="mx-auto h-24 w-24 rounded-full border-4 border-slate-600" />
-              </div>
+            </div>
+          </div>
+
+          <div className="relative flex min-h-0 min-w-0 flex-col">
+            {HERO.map((src, i) => (
+              <div
+                key={src}
+                aria-hidden
+                className={cn(
+                  'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
+                  heroIdx === i ? 'opacity-25' : 'opacity-0'
+                )}
+                style={{ backgroundImage: `url('${src}')`, backgroundSize: '60% auto' }}
+              />
+            ))}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
+            />
+
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3">
+              <OnboardingRightStage
+                stepIndex={displayActiveIndex}
+                brandName={brandLabel}
+                domainShort={domainShort}
+                pulseKey={visualBoost}
+                className="shrink-0"
+              />
+              {captchaVerified && isBlockingOverlay(overlay) && (
+                <OnboardingMomentStack
+                  className="flex-1"
+                  moment={overlay as MomentKind}
+                  onClose={overlay.type === 'insight' ? onInsightClose : onSocialClose}
+                  onQuiz1={onQuiz1}
+                  onQuiz2={onQuiz2}
+                  onPredict={onPredict}
+                />
+              )}
+
+              {captchaVerified && showLegacyEmail && !emailSent && (
+                <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-1 ring-violet-200/80">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-violet-900">Desbloqueá el envío a tu mail</p>
+                      <p className="mt-0.5 text-xs text-violet-800/90">
+                        Recibí un aviso y el resumen de tu análisis cuando cierre. Sin spam.
+                      </p>
+                    </div>
+                  </div>
+                  <form onSubmit={handleEmailSubmit} className="mt-2 flex flex-col gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-sm"
+                      placeholder="correo@empresa.com"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={emailLoading || !email.trim()}
+                      className="h-10 w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-md shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700"
+                    >
+                      {emailLoading ? 'Guardando…' : 'Enviar'}
+                    </Button>
+                  </form>
+                </div>
+              )}
+
+              {captchaVerified && showLegacyEmail && emailSent && (
+                <div className="rounded-xl border border-slate-200 bg-white p-3 text-center text-sm text-slate-600">
+                  {emailSendFailed ? (
+                    <p className="text-xs text-amber-800">
+                      Guardamos tu email. Si no te llega el aviso, revisá spam o escribinos.
+                      {emailErrorCode === 'provider_rejected' && (
+                        <span>
+                          {' '}
+                          <a href="https://resend.com/domains" className="underline" target="_blank" rel="noreferrer">
+                            Verificar dominio
+                          </a>
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p>Email guardado. Te avisamos cuando cierre el análisis.</p>
+                  )}
+                </div>
+              )}
+
+              {captchaVerified && !showLegacyEmail && !emailSent && progress >= 45 && analysisRunningPhase && (
+                <p className="text-center text-[10px] text-slate-500">El correo se habilita al 60% del progreso.</p>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 flex min-h-[calc(100vh-72px)] items-start justify-center overflow-y-auto px-4 py-8 sm:items-center sm:py-10">
+        <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
+          El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te llevamos al
+          informe.
+        </p>
+      </div>
+
+      {diagnostic.status === 'awaiting_user' && (
+        <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-900/35 p-4 backdrop-blur-[2px] sm:items-center">
           <form
             onSubmit={handleSetupStartAnalysis}
-            className="w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+            className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
             role="dialog"
             aria-modal
             aria-labelledby="setup-modal-title"
@@ -738,7 +955,10 @@ function VerificandoContent() {
                 </label>
                 <button
                   type="button"
-                  onClick={restoreSuggestedCompetitors}
+                  onClick={() => {
+                    setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
+                    setCompetitorRowSelected([true, true, true, true, true]);
+                  }}
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
                 >
                   <Plus className="h-4 w-4" />
@@ -756,7 +976,7 @@ function VerificandoContent() {
             <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
               <Button
                 type="submit"
-                disabled={!canSubmitSetup || startAnalysisLoading}
+                disabled={!canSubmitAwaitingSetup || startAnalysisLoading}
                 className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
               >
                 <Save className="h-4 w-4" />
@@ -777,310 +997,102 @@ function VerificandoContent() {
             </p>
           </form>
         </div>
-      </main>
-    );
-  }
+      )}
 
-  if (handoff === 'preview' || handoff === 'leaving') {
-    return (
-      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-lg">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-            {handoff === 'leaving' ? (
-              <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
-            ) : (
-              <Sparkles className="h-6 w-6 text-primary-600" />
-            )}
-          </div>
-          <p className="text-lg font-bold text-slate-900">Tu informe está listo</p>
-          <p className="mt-2 text-sm text-slate-600">
-            {brandLabel
-              ? `Abrimos el análisis completo de ${brandLabel}: score, intención y posición frente a la competencia.`
-              : 'Abrimos el análisis con tu score y comparativa con la competencia.'}
-          </p>
-          {handoff === 'leaving' && <p className="mt-4 text-xs text-slate-500">Redirigiendo…</p>}
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
-        <div className="mb-4 shrink-0 sm:mb-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
-              <h1 className="mt-1 text-xl font-bold text-slate-900">
-                {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
-              </h1>
-            </div>
-            <img
-              src="/CleexsLogo.png"
-              alt="Cleexs"
-              className="h-14 w-auto shrink-0 object-contain sm:h-16"
-            />
+      {diagnostic.status === 'detecting_competitors' && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-[2px]">
+          <div className="flex max-w-sm flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
+            <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
+            <p className="mt-4 text-center text-lg font-semibold text-slate-900">Detectando competidores</p>
+            <p className="mt-2 text-center text-sm text-slate-600">
+              Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
+            </p>
           </div>
         </div>
+      )}
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
-          <div className="flex min-h-0 min-w-0 flex-col">
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="h-1.5 w-full overflow-hidden bg-slate-100">
-                <div
-                  className="h-full bg-primary-600 transition-all duration-700 ease-out"
-                  style={{ width: `${captchaVerified ? barPct : 0}%` }}
-                />
-              </div>
-              <div className="p-4 sm:p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Construyendo tu Cleexs Score: {completedCount}/{ONBOARDING_STEP_LABELS.length} completado
-                </p>
-                {captchaVerified ? (
-                  <>
-                    <div className="mt-2 flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold leading-snug text-slate-900">Paso {activeIndex + 1} de 11</p>
-                        <p className="mt-1.5 min-h-[2.75rem] text-sm text-slate-600">{currentCardLabel}</p>
-                      </div>
-                      <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-blue-200 bg-blue-50 text-blue-600 shadow-inner">
-                        <Boxes className="h-6 w-6" />
-                      </span>
-                    </div>
-                    {isRunning && allStepsDone && (
-                      <p className="mt-2 text-xs text-primary-800">
-                        {isFinalizing
-                          ? 'Checks listos. Consolidando tu Cleexs Score y el informe final…'
-                          : ''}
-                      </p>
-                    )}
-                    {waitingFinalReady && (
-                      <p className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-2 text-xs text-primary-800">
-                        {waitingSecondModel
-                          ? 'Score base listo. Terminando el segundo modelo (Gemini) para habilitar consolidado…'
-                          : 'Score base listo. Cerrando consolidado técnico del informe…'}
-                      </p>
-                    )}
-                    <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                      <div className="flex items-center justify-between">
-                        <span>{isRunning ? (isFinalizing ? 'Preparando informe' : 'En proceso') : 'Preparando…'}</span>
-                        <span className="font-semibold text-slate-700">
-                          {Math.round(captchaVerified ? barPct : 0)}% · {formatElapsed(elapsedSeconds)}
-                        </span>
-                      </div>
-                    </div>
-                    {isRunning && elapsedSeconds >= 360 && (
-                      <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-                        Tarda más de lo usual. Si no avanzá, podés crear un diagnóstico más tarde.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-600">Confirmá que sos humano en la ventana a la derecha. Ahí
-                    arranca el análisis visual y el progreso.</p>
-                )}
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <AnalysisStepsGrid steps={analysisSteps} />
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="inline-flex items-center gap-1.5 text-slate-600">
-                    <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
-                    En proceso
-                  </span>
-                  <span className="font-semibold text-slate-700">
-                    {Math.round(captchaVerified ? barPct : 0)}%
-                  </span>
-                  <span className="text-slate-500">{formatElapsed(elapsedSeconds)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {diagnostic.status === 'running' && !diagnostic.email && !captchaVerified && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
+          <form
+            onSubmit={handleLegacySetupSave}
+            className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+            role="dialog"
+            aria-modal
+            aria-labelledby="legacy-setup-title"
+          >
+            <h1 id="legacy-setup-title" className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Confirmá y completá tus datos
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Estos datos son necesarios para continuar con tu análisis.
+            </p>
 
-          <div className="relative flex min-h-0 min-w-0 flex-col">
-            {HERO.map((src, i) => (
-              <div
-                key={src}
-                aria-hidden
-                className={cn(
-                  'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
-                  heroIdx === i ? 'opacity-25' : 'opacity-0'
-                )}
-                style={{ backgroundImage: `url('${src}')`, backgroundSize: '60% auto' }}
-              />
-            ))}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
-            />
-
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3">
-              <OnboardingRightStage
-                stepIndex={activeIndex}
-                brandName={brandLabel}
-                domainShort={domainShort}
-                pulseKey={visualBoost}
-                className="shrink-0"
-              />
-              {captchaVerified && isBlockingOverlay(overlay) && (
-                <OnboardingMomentStack
-                  className="flex-1"
-                  moment={overlay as MomentKind}
-                  onClose={overlay.type === 'insight' ? onInsightClose : onSocialClose}
-                  onQuiz1={onQuiz1}
-                  onQuiz2={onQuiz2}
-                  onPredict={onPredict}
-                />
-              )}
-
-              {captchaVerified && showLegacyEmail && !emailSent && (
-                <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
-                  <div className="flex items-start gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-1 ring-violet-200/80">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-violet-900">Desbloqueá el envío a tu mail</p>
-                      <p className="mt-0.5 text-xs text-violet-800/90">
-                        Recibí un aviso y el resumen de tu análisis cuando cierre. Sin spam.
-                      </p>
-                    </div>
-                  </div>
-                  <form onSubmit={handleEmailSubmit} className="mt-2 flex flex-col gap-2">
+            <section className="mt-8 border-t border-slate-100 pt-8">
+              <h2 className="text-base font-bold text-slate-900">Verificación humana</h2>
+              <p className="mt-1 text-sm text-slate-600">Confirmá que sos una persona para proteger el análisis.</p>
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
+                  <span className="flex items-center gap-3">
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-sm"
-                      placeholder="correo@empresa.com"
+                      type="checkbox"
+                      checked={legacySetupHumanOk}
+                      onChange={(e) => setLegacySetupHumanOk(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
                     />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={emailLoading || !email.trim()}
-                      className="h-10 w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-md shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700"
-                    >
-                      {emailLoading ? 'Guardando…' : 'Enviar'}
-                    </Button>
-                  </form>
-                </div>
-              )}
-
-              {captchaVerified && showLegacyEmail && emailSent && (
-                <div className="rounded-xl border border-slate-200 bg-white p-3 text-center text-sm text-slate-600">
-                  {emailSendFailed ? (
-                    <p className="text-xs text-amber-800">
-                      Guardamos tu email. Si no te llega el aviso, revisá spam o escribinos.
-                      {emailErrorCode === 'provider_rejected' && (
-                        <span>
-                          {' '}
-                          <a href="https://resend.com/domains" className="underline" target="_blank" rel="noreferrer">
-                            Verificar dominio
-                          </a>
-                        </span>
-                      )}
-                    </p>
-                  ) : (
-                    <p>Email guardado. Te avisamos cuando cierre el análisis.</p>
-                  )}
-                </div>
-              )}
-
-              {captchaVerified && !showLegacyEmail && !emailSent && progress >= 45 && analysisRunningPhase && (
-                <p className="text-center text-[10px] text-slate-500">El correo se habilita al 60% del progreso.</p>
-              )}
-            </div>
-          </div>
-        </div>
-        {diagnostic.status === 'running' && !diagnostic.email && !captchaVerified && (
-          <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
-            <form
-              onSubmit={handleLegacySetupSave}
-              className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
-              role="dialog"
-              aria-modal
-              aria-labelledby="legacy-setup-title"
-            >
-              <h1 id="legacy-setup-title" className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                Confirmá y completá tus datos
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                Estos datos son necesarios para continuar con tu análisis.
-              </p>
-
-              <section className="mt-8 border-t border-slate-100 pt-8">
-                <h2 className="text-base font-bold text-slate-900">Verificación humana</h2>
-                <p className="mt-1 text-sm text-slate-600">Confirmá que sos una persona para proteger el análisis.</p>
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                  <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
-                    <span className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={legacySetupHumanOk}
-                        onChange={(e) => setLegacySetupHumanOk(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
-                      />
-                      <span className="text-sm font-medium text-slate-800">No soy un robot</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
-                      <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
-                      <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
-                      <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
-                    </span>
-                  </label>
-                </div>
-              </section>
-
-              <section className="mt-8 border-t border-slate-100 pt-8">
-                <h2 className="text-base font-bold text-slate-900">Correo</h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Ingresá tu correo para recibir el reporte completo de tu análisis apenas esté listo.
-                </p>
-                <div className="relative mt-4">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-violet-500/20 focus:border-violet-400 focus:ring-2"
-                    placeholder="correo@empresa.com"
-                    autoComplete="email"
-                  />
-                </div>
-              </section>
-
-              <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
-                <Button
-                  type="submit"
-                  disabled={emailLoading || !legacySetupHumanOk || !email.trim().includes('@')}
-                  className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
-                >
-                  <Save className="h-4 w-4" />
-                  {emailLoading ? 'Guardando…' : 'Guardar'}
-                </Button>
+                    <span className="text-sm font-medium text-slate-800">No soy un robot</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
+                    <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
+                    <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
+                    <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
+                  </span>
+                </label>
               </div>
+            </section>
 
-              <p className="mt-6 text-center text-[11px] text-slate-500">
-                Al guardar aceptás los{' '}
-                <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
-                  Términos
-                </a>{' '}
-                y la{' '}
-                <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
-                  Privacidad
-                </a>
-                .
+            <section className="mt-8 border-t border-slate-100 pt-8">
+              <h2 className="text-base font-bold text-slate-900">Correo</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Ingresá tu correo para recibir el reporte completo de tu análisis apenas esté listo.
               </p>
-            </form>
-          </div>
-        )}
+              <div className="relative mt-4">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-violet-500/20 focus:border-violet-400 focus:ring-2"
+                  placeholder="correo@empresa.com"
+                  autoComplete="email"
+                />
+              </div>
+            </section>
 
-        <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
-          El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te llevamos al
-          informe.
-        </p>
-      </div>
+            <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+              <Button
+                type="submit"
+                disabled={emailLoading || !legacySetupHumanOk || !email.trim().includes('@')}
+                className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
+              >
+                <Save className="h-4 w-4" />
+                {emailLoading ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </div>
+
+            <p className="mt-6 text-center text-[11px] text-slate-500">
+              Al guardar aceptás los{' '}
+              <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                Términos
+              </a>{' '}
+              y la{' '}
+              <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                Privacidad
+              </a>
+              .
+            </p>
+          </form>
+        </div>
+      )}
     </main>
   );
 }
