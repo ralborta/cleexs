@@ -682,7 +682,7 @@ export function PortalCompetidoresCleexsScore({ runId }: { runId: string }) {
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">Competidores y Cleexs Score</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
-                  Métricas del <strong className="text-slate-800">panel oficial</strong> sobre esta corrida: Cleexs Score derivado del PRIA de tu marca y del desempeño en Top&nbsp;3 de tus competidores
+                  Métricas del <strong className="text-slate-800">panel oficial</strong> sobre esta corrida: Cleexs Score de tu marca y del desempeño en Top&nbsp;3 de tus competidores
                   configurados. La aparición en Top&nbsp;3 se cuenta por cada prompt ejecutado ({modelo === 'gemini' ? 'motor Gemini en esta corrida' : 'motor ChatGPT/OpenAI en esta corrida'}).
                 </p>
               </div>
@@ -1040,7 +1040,7 @@ export function PortalCompetidoresCleexsScore({ runId }: { runId: string }) {
                   <div className="flex gap-3">
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" aria-hidden />
                     <p className="text-violet-900/95">
-                      <strong>Cómo se calculan las columnas:</strong> el <strong>Cleexs Score</strong> de tu marca corresponde al PRIA
+                      <strong>Cómo se calculan las columnas:</strong> el <strong>Cleexs Score</strong> de tu marca es el score
                       agregado de esta corrida; el de cada competidor se estima desde su presencia ponderada en el Top&nbsp;3 (misma
                       fórmula que el panel público Cleexs). Los porcentajes de aparición en Top&nbsp;3 son prompts donde la marca figura en
                       posiciones 1 a 3 sobre el total de prompts. La posición promedio se calcula solo sobre esas apariciones. Las variantes ChatGPT/Gemini

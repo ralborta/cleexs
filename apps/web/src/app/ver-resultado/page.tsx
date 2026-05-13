@@ -30,7 +30,6 @@ import {
   Lock,
   LayoutDashboard,
   Sparkles,
-  ChevronDown,
   Globe,
   FileSearch,
   Braces,
@@ -46,9 +45,9 @@ import {
   ShieldAlert,
   Gauge,
   CircleDot,
-  BarChart2,
-  Layers,
   CheckCircle2,
+  ListChecks,
+  ChevronRight,
   Users,
   Rocket,
   FileText,
@@ -658,12 +657,14 @@ function VerResultadoContent() {
     diagnostic.showFullReport && (Boolean(diagnostic.runGeminiId) || tieneGemini);
   const geminiFallo = diagnostic.geminiRunStatus === 'failed';
   const geminiEnCola = Boolean(diagnostic.runGeminiId) && !runResultGemini && !geminiFallo;
-  /** Mientras el backend termina de guardar analysisJson (incluye módulo satélite), mostramos placeholder animado. */
+  /**
+   * Post-proceso tras status completed: análisis IA + satélite se generan en paralelo en la API
+   * y se guardan juntos en `analysisJson`. Mientras tanto el cliente no tiene `analysisJson`.
+   */
   const showSatelliteSkeleton =
     isCompleted &&
     diagnostic.showFullReport &&
     !diagnostic.domain.startsWith('brand-') &&
-    !satelliteModule &&
     diagnostic.analysisJson == null;
   const runResultToShow: PublicDiagnosticRunResult | null = runResult
     ? vistaModelo === 'consolidado' && runResultGemini
@@ -1068,7 +1069,9 @@ function shouldOmitDetailFieldKey(key: string): boolean {
   return false;
 }
 
+/** En listados compactos; el panel expandido usa `MAX_DETAIL_STRING_EXPANDED`. */
 const MAX_DETAIL_STRING_LEN = 420;
+const MAX_DETAIL_STRING_EXPANDED = 12_000;
 
 function looksLikeRawMarkup(text: string): boolean {
   const t = text.trimStart().toLowerCase();
@@ -1081,7 +1084,11 @@ function looksLikeRawMarkup(text: string): boolean {
   );
 }
 
-function formatDetailPrimitive(key: string | undefined, value: unknown): string | null {
+function formatDetailPrimitive(
+  key: string | undefined,
+  value: unknown,
+  maxStr: number = MAX_DETAIL_STRING_LEN
+): string | null {
   if (key !== undefined && shouldOmitDetailFieldKey(key)) return null;
   if (value === null || value === undefined) return null;
   if (typeof value === 'boolean') return value ? 'Sí' : 'No';
@@ -1090,10 +1097,10 @@ function formatDetailPrimitive(key: string | undefined, value: unknown): string 
     const t = value.trim();
     if (!t.length) return null;
     if (looksLikeRawMarkup(t)) {
-      return 'La respuesta parece HTML/XML (no es texto plano tipo robots.txt). Para el contenido completo, usá «Ver análisis técnico completo».';
+      return 'La respuesta parece HTML/XML (no es texto plano tipo robots.txt). Para el contenido completo, usá Cleexs Tools.';
     }
-    if (t.length > MAX_DETAIL_STRING_LEN) {
-      return `Texto muy largo (${t.length} caracteres). Ver el contenido completo en Cleexs Tools.`;
+    if (t.length > maxStr) {
+      return `${t.slice(0, maxStr)}… [${t.length - maxStr} caracteres más en Cleexs Tools]`;
     }
     return t;
   }
@@ -1131,48 +1138,169 @@ const SUGGESTION_PRIORITY_META: Record<
   },
 };
 
-function SatelliteDetailExtraRows({ detail }: { detail: Record<string, unknown> }) {
+function SatelliteValueBlock({
+  label,
+  value,
+  depth,
+}: {
+  label?: string;
+  value: unknown;
+  depth: number;
+}): React.ReactNode {
+  if (depth > 8) {
+    return <p className="text-xs italic text-slate-400">Profundidad máxima alcanzada.</p>;
+  }
+  if (value === null || value === undefined) {
+    return <span className="text-sm text-slate-400">—</span>;
+  }
+  if (typeof value === 'boolean') {
+    return <span className="text-sm">{value ? 'Sí' : 'No'}</span>;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return <span className="text-sm tabular-nums font-medium text-slate-800">{String(value)}</span>;
+  }
+  if (typeof value === 'string') {
+    const t = value.trim();
+    if (!t.length) return <span className="text-sm text-slate-400">—</span>;
+    if (looksLikeRawMarkup(t)) {
+      return (
+        <p className="text-sm text-amber-800 bg-amber-50/80 rounded-lg border border-amber-100 px-3 py-2">
+          Contenido tipo HTML/XML omitido aquí. Abrí Cleexs Tools para verlo completo.
+        </p>
+      );
+    }
+    const max = MAX_DETAIL_STRING_EXPANDED;
+    const shown = t.length > max ? `${t.slice(0, max)}…` : t;
+    return (
+      <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words max-h-72 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+        {shown}
+        {t.length > max ? (
+          <span className="mt-2 block text-xs font-medium text-slate-500">
+            Total {t.length} caracteres — el resto está en Cleexs Tools.
+          </span>
+        ) : null}
+      </p>
+    );
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return <span className="text-sm text-slate-400">Sin ítems</span>;
+    }
+    if (value.every((x) => typeof x === 'string')) {
+      return (
+        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">
+          {(value as string[]).map((s, i) => (
+            <li key={i} className="leading-snug break-words">
+              {s}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    return (
+      <ul className="space-y-2">
+        {value.map((item, i) => (
+          <li
+            key={i}
+            className="rounded-lg border border-slate-100 bg-white px-3 py-2.5 text-sm shadow-sm"
+          >
+            {typeof item === 'object' && item !== null && !Array.isArray(item) ? (
+              <div className="space-y-2">
+                {Object.entries(item as Record<string, unknown>).map(([ik, iv]) => {
+                  if (shouldOmitDetailFieldKey(ik)) return null;
+                  return (
+                    <div key={ik}>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        {humanizeDetailKey(ik)}
+                      </p>
+                      <div className="mt-0.5">{SatelliteValueBlock({ value: iv, depth: depth + 1 })}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              SatelliteValueBlock({ value: item, depth: depth + 1 })
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    return (
+      <div className="space-y-2 border-l-2 border-slate-200 pl-3">
+        {Object.entries(o).map(([k, v]) => {
+          if (shouldOmitDetailFieldKey(k)) return null;
+          const prim = formatDetailPrimitive(k, v, MAX_DETAIL_STRING_EXPANDED);
+          if (prim !== null) {
+            return (
+              <div key={k}>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{humanizeDetailKey(k)}</p>
+                <p className="mt-0.5 text-sm text-slate-800">{prim}</p>
+              </div>
+            );
+          }
+          return (
+            <div key={k}>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{humanizeDetailKey(k)}</p>
+              <div className="mt-1">{SatelliteValueBlock({ value: v, depth: depth + 1 })}</div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return <span className="text-sm text-slate-600">{String(value)}</span>;
+}
+
+/** Detalle estructurado (similar densidad al panel del Tools): campos simples + listas + objetos anidados. */
+function SatelliteDetailSections({ detail }: { detail: Record<string, unknown> }) {
   const skip = new Set(['_truncated', '_note', 'error', 'suggestions', 'score']);
   const rows: { label: string; value: string }[] = [];
+  const complex: { key: string; label: string; value: unknown }[] = [];
 
   for (const [k, v] of Object.entries(detail)) {
     if (skip.has(k)) continue;
     if (shouldOmitDetailFieldKey(k)) continue;
-    const prim = formatDetailPrimitive(k, v);
+    const prim = formatDetailPrimitive(k, v, MAX_DETAIL_STRING_LEN);
     if (prim !== null) {
       rows.push({ label: humanizeDetailKey(k), value: prim });
       continue;
     }
-    if (v && typeof v === 'object' && !Array.isArray(v)) {
-      const sub: string[] = [];
-      for (const [sk, sv] of Object.entries(v as Record<string, unknown>)) {
-        if (shouldOmitDetailFieldKey(sk)) continue;
-        const p = formatDetailPrimitive(sk, sv);
-        if (p) sub.push(`${humanizeDetailKey(sk)}: ${p}`);
-      }
-      if (sub.length) rows.push({ label: humanizeDetailKey(k), value: sub.join(' · ') });
+    if (v !== null && v !== undefined) {
+      complex.push({ key: k, label: humanizeDetailKey(k), value: v });
     }
   }
 
-  if (rows.length === 0) return null;
+  if (rows.length === 0 && complex.length === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
-        <ClipboardList className="h-3.5 w-3.5 text-primary-500" aria-hidden />
-        Resumen
-      </p>
-      <dl className="grid gap-2 sm:grid-cols-2">
-        {rows.map((r) => (
-          <div
-            key={r.label}
-            className="rounded-lg border border-slate-100 bg-white px-3 py-2.5"
-          >
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{r.label}</dt>
-            <dd className="mt-0.5 text-sm font-medium leading-snug text-slate-900">{r.value}</dd>
+    <div className="space-y-6">
+      {rows.length > 0 && (
+        <div className="space-y-2">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
+            <ClipboardList className="h-3.5 w-3.5 text-primary-500" aria-hidden />
+            Resumen de campos
+          </p>
+          <dl className="grid gap-2 sm:grid-cols-2">
+            {rows.map((r) => (
+              <div key={r.label} className="rounded-lg border border-slate-100 bg-white px-3 py-2.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{r.label}</dt>
+                <dd className="mt-0.5 text-sm font-medium leading-snug text-slate-900">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+      {complex.map(({ key, label, value }) => (
+        <div key={key} className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-3">
+            {SatelliteValueBlock({ label, value, depth: 0 })}
           </div>
-        ))}
-      </dl>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1232,25 +1360,27 @@ function SatelliteModuleSkeleton() {
 
 function SatelliteToolDetailPanel({
   label,
+  toolError,
   detail,
 }: {
   label: string;
+  toolError?: string;
   detail?: Record<string, unknown>;
 }) {
-  if (!detail || Object.keys(detail).length === 0) {
+  const err = toolError || (typeof detail?.error === 'string' ? detail.error : null);
+
+  if ((!detail || Object.keys(detail).length === 0) && !err) {
     return (
       <p className="text-left text-sm leading-relaxed text-muted-foreground">
-        No hay detalle guardado para <span className="font-medium text-foreground">{label}</span>. Abrí{' '}
-        <span className="font-medium text-foreground">&quot;Ver análisis técnico completo&quot;</span> o generá un
-        diagnóstico nuevo para ver el panel detallado.
+        No hay detalle guardado para <span className="font-medium text-foreground">{label}</span>. Abrí Cleexs Tools con
+        el mismo sitio para ver el panel completo o generá un diagnóstico nuevo.
       </p>
     );
   }
 
-  const truncated = detail._truncated === true;
-  const note = typeof detail._note === 'string' ? detail._note : null;
-  const suggestions = Array.isArray(detail.suggestions) ? detail.suggestions : null;
-  const err = typeof detail.error === 'string' ? detail.error : null;
+  const truncated = detail?._truncated === true;
+  const note = typeof detail?._note === 'string' ? detail._note : null;
+  const suggestions = detail && Array.isArray(detail.suggestions) ? detail.suggestions : null;
 
   return (
     <div className="space-y-5 text-left font-sans">
@@ -1271,10 +1401,10 @@ function SatelliteToolDetailPanel({
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
             <Lightbulb className="h-3.5 w-3.5 text-amber-500" aria-hidden />
-            Sugerencias
+            Sugerencias ({suggestions.length})
           </p>
           <ul className="space-y-2">
-            {suggestions.slice(0, 12).map((s: unknown, i: number) => {
+            {suggestions.map((s: unknown, i: number) => {
               const item = s as { message?: string; priority?: string; detail?: string; action?: string };
               const message = (item.message || '').trim();
               if (!message) return null;
@@ -1283,23 +1413,21 @@ function SatelliteToolDetailPanel({
               const PriIcon = meta.Icon;
               return (
                 <li key={i} className={cn('rounded-lg border px-3 py-3', meta.box)}>
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="mb-1.5 flex items-center gap-2">
                     <PriIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span className={cn(
-                      'text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5',
-                      meta.box
-                    )}>
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                        meta.box
+                      )}
+                    >
                       {meta.short}
                     </span>
                   </div>
                   <p className="text-sm font-semibold leading-snug">{message}</p>
-                  {item.detail && (
-                    <p className="mt-1.5 text-xs leading-relaxed text-current/70">{item.detail}</p>
-                  )}
+                  {item.detail && <p className="mt-1.5 text-xs leading-relaxed text-current/80">{item.detail}</p>}
                   {item.action && (
-                    <p className="mt-1.5 text-xs font-semibold leading-relaxed">
-                      → {item.action}
-                    </p>
+                    <p className="mt-1.5 text-xs font-semibold leading-relaxed">→ {item.action}</p>
                   )}
                 </li>
               );
@@ -1308,59 +1436,142 @@ function SatelliteToolDetailPanel({
         </div>
       )}
 
-      <SatelliteDetailExtraRows detail={detail} />
+      {detail && <SatelliteDetailSections detail={detail} />}
     </div>
   );
 }
 
-/** Mini SVG ring de progreso para tool cards (icono centrado, un poco más grande) */
-function ScoreRing({
-  score,
-  hasError,
-  Icon,
-}: {
-  score: number;
-  hasError?: boolean;
-  Icon: LucideIcon;
-}) {
-  const r = 26;
-  const cx = 32;
-  const circumference = 2 * Math.PI * r;
-  const pct = Math.min(Math.max(score, 0), 100);
-  const offset = circumference * (1 - pct / 100);
+function toolLabelFromSatelliteSource(source: string): string {
+  return SATELLITE_TOOL_ROWS.find((r) => r.key === source)?.label ?? source.replace(/_/g, ' ');
+}
 
-  const colors = satelliteScoreColor(score, hasError);
-  const ringColor =
-    hasError || score < 50
-      ? '#f87171'   // red-400
-      : score < 80
-        ? '#fbbf24' // amber-400
-        : '#34d399'; // emerald-400
+function countByActionPriority(actions: PublicDiagnosticSatelliteModule['actions']) {
+  const c = { critica: 0, alta: 0, media: 0, baja: 0, info: 0 };
+  for (const a of actions) {
+    const p = (a.priority || 'info').trim().toLowerCase();
+    if (p in c) c[p as keyof typeof c] += 1;
+    else c.info += 1;
+  }
+  return c;
+}
+
+const ACTION_PILL_META: Record<
+  string,
+  { label: string; className: string }
+> = {
+  critica: { label: 'CRÍTICO', className: 'border-red-400 bg-red-50 text-red-900' },
+  alta: { label: 'ALTA', className: 'border-amber-400 bg-amber-50 text-amber-950' },
+  media: { label: 'MEDIA', className: 'border-sky-400 bg-sky-50 text-sky-950' },
+  baja: { label: 'BAJA', className: 'border-slate-300 bg-slate-50 text-slate-800' },
+  info: { label: 'INFO', className: 'border-emerald-400 bg-emerald-50 text-emerald-950' },
+};
+
+/** Prioridad visual del borde izquierdo en tarjetas de acción (orden de severidad). */
+function actionCardBorderClass(priority: string): string {
+  const p = priority.trim().toLowerCase();
+  if (p === 'critica') return 'border-l-red-500';
+  if (p === 'alta') return 'border-l-amber-500';
+  if (p === 'media') return 'border-l-sky-500';
+  if (p === 'baja') return 'border-l-slate-400';
+  return 'border-l-emerald-500';
+}
+
+function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSatelliteModule }) {
+  const actions = module.actions ?? [];
+  const counts = countByActionPriority(actions);
 
   return (
-    <div className="relative flex items-center justify-center">
-      <svg width={cx * 2} height={cx * 2} className="-rotate-90" aria-hidden>
-        <circle
-          cx={cx} cy={cx} r={r}
-          fill="none"
-          stroke="#f1f5f9"
-          strokeWidth={4}
-        />
-        <circle
-          cx={cx} cy={cx} r={r}
-          fill="none"
-          stroke={ringColor}
-          strokeWidth={4}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-all duration-700 ease-out"
-        />
-      </svg>
-      <span className={cn('absolute flex h-12 w-12 items-center justify-center rounded-full', colors.icon)}>
-        <Icon className="h-7 w-7" aria-hidden />
-      </span>
-    </div>
+    <section className="space-y-4" aria-labelledby="satellite-actions-heading">
+      <div className="overflow-hidden rounded-2xl border-2 border-indigo-950/80 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 shadow-lg shadow-amber-900/10">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white ring-2 ring-white/30">
+            <ChevronRight className="h-6 w-6" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 id="satellite-actions-heading" className="text-base font-black tracking-tight text-white sm:text-lg">
+              Acciones a ejecutar
+            </h3>
+            <p className="mt-0.5 text-xs font-medium leading-snug text-white/95 sm:text-sm">
+              Lo más importante del análisis AEO: tareas concretas ordenadas por impacto. Misma lógica que en Cleexs
+              Tools; acá las ves junto al informe Cleexs.
+            </p>
+          </div>
+          <ListChecks className="hidden h-8 w-8 shrink-0 text-white/90 sm:block" aria-hidden />
+        </div>
+      </div>
+
+      {actions.length > 0 ? (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {(['critica', 'alta', 'media', 'baja', 'info'] as const).map((pk) => {
+              const n = counts[pk];
+              if (n <= 0) return null;
+              const meta = ACTION_PILL_META[pk];
+              return (
+                <span
+                  key={pk}
+                  className={cn(
+                    'inline-flex items-center rounded-full border-2 px-3 py-1 text-xs font-bold tabular-nums',
+                    meta.className
+                  )}
+                >
+                  {meta.label}: {n}
+                </span>
+              );
+            })}
+          </div>
+
+          <ul className="space-y-3">
+            {actions.map((action, idx) => {
+              const p = (action.priority || 'info').trim().toLowerCase();
+              const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
+              const PriIcon = meta.Icon;
+              const src = toolLabelFromSatelliteSource(action.source);
+              return (
+                <li
+                  key={`${action.source}-${idx}-${action.message.slice(0, 24)}`}
+                  className={cn(
+                    'rounded-xl border border-slate-200 bg-white pl-4 pr-4 py-4 shadow-sm sm:pl-5',
+                    'border-l-[5px]',
+                    actionCardBorderClass(p)
+                  )}
+                >
+                  <div className="flex flex-wrap items-center gap-2 gap-y-1">
+                    <PriIcon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                    <span
+                      className={cn(
+                        'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                        meta.box
+                      )}
+                    >
+                      {meta.short}
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                      {src}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-bold leading-snug text-slate-900">{action.message}</p>
+                  {action.detail ? (
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{action.detail}</p>
+                  ) : null}
+                  {action.action ? (
+                    <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-indigo-800">
+                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                      <span>{action.action}</span>
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : (
+        <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+          No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle de cada herramienta
+          abajo o abrí Cleexs Tools para un análisis interactivo completo.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -1371,164 +1582,125 @@ function SatelliteModuleCard({
   module: PublicDiagnosticSatelliteModule;
   siteUrl: string;
 }) {
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
-
   const statusLabel =
     module.status === 'completed' ? 'Completado'
     : module.status === 'timeout' ? 'Timeout'
     : module.status === 'skipped' ? 'Omitido'
     : 'No disponible';
 
-  const topActions = module.actions.slice(0, 3);
   const totalTools = Object.keys(module.tools || {}).length;
   const overallStyle = satelliteScoreColor(module.overallScore, false);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-      {/* ── Cabecera: fondo blanco, score según resultado ── */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
             <Sparkles className="h-5 w-5 text-slate-800" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900">Herramientas adicionales</p>
-            <p className="text-xs text-slate-500">Resumen AEO del sitio</p>
+            <p className="text-sm font-semibold text-slate-900">Análisis técnico del sitio (AEO)</p>
+            <p className="text-xs leading-relaxed text-slate-600">
+              Misma información que en Cleexs Tools: acciones prioritarias y las 10 herramientas con todo el detalle
+              disponible en esta corrida, visible a la vez.
+            </p>
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Score general</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Score global</p>
           <p className={cn('text-3xl font-black leading-none tabular-nums', overallStyle.text)}>
             {module.overallScore.toFixed(0)}
           </p>
         </div>
       </div>
 
-      <div className="p-5 space-y-6">
-
-        {/* ── Stats row ── */}
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-100 bg-slate-50/90 p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Score satélite</p>
-            <div className="flex items-end gap-2">
-              <p className={cn('text-4xl font-black leading-none tabular-nums', overallStyle.text)}>
-                {module.overallScore.toFixed(0)}
-              </p>
-              <BarChart2 className={cn('h-5 w-5 mb-0.5', overallStyle.text)} aria-hidden />
-            </div>
-          </div>
-          <div className="rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Tools procesadas</p>
-            <div className="flex items-end gap-2">
-              <p className="text-4xl font-black text-slate-700 leading-none">{totalTools}</p>
-              <Layers className="h-5 w-5 text-slate-400 mb-0.5" />
-            </div>
-          </div>
-          <div className={cn(
-            'rounded-xl p-4 shadow-sm',
-            module.status === 'completed' ? 'bg-gradient-to-br from-emerald-50 to-green-50'
-            : module.status === 'timeout' ? 'bg-gradient-to-br from-amber-50 to-orange-50'
-            : 'bg-gradient-to-br from-slate-50 to-slate-100'
-          )}>
-            <p className={cn(
-              'text-[10px] font-semibold uppercase tracking-widest mb-1',
-              module.status === 'completed' ? 'text-emerald-400'
-              : module.status === 'timeout' ? 'text-amber-400'
-              : 'text-slate-400'
-            )}>Estado</p>
-            <div className="flex items-end gap-2">
-              <p className={cn(
-                'text-4xl font-black leading-none',
-                module.status === 'completed' ? 'text-emerald-700'
-                : module.status === 'timeout' ? 'text-amber-700'
-                : 'text-slate-700'
-              )}>{statusLabel}</p>
-            </div>
-          </div>
+      <div className="space-y-8 bg-slate-50/40 p-5 sm:p-6">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+          <p>
+            <span className="font-semibold text-slate-800">Sitio analizado:</span>{' '}
+            {siteUrl ? (
+              <a href={siteUrl} className="text-primary-600 underline-offset-2 hover:underline" target="_blank" rel="noreferrer">
+                {siteUrl}
+              </a>
+            ) : (
+              '—'
+            )}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Estado del módulo: {statusLabel} · {totalTools} herramientas con datos · Los textos largos o recortados
+            por tamaño indican cuándo conviene abrir Cleexs Tools para el 100% del volcado.
+          </p>
         </div>
 
-        {/* ── Tool cards grid ── */}
-        <div>
-          <p className="text-sm font-semibold text-slate-900 mb-0.5">Resumen por herramienta</p>
-          <p className="text-xs text-slate-400 mb-4">Tocá &quot;Ver detalle&quot; en cada tarjeta para expandir sugerencias y métricas.</p>
+        <SatelliteActionsExecuteBlock module={module} />
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
-            {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }) => {
+        <div>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-slate-900">Herramientas (1–10)</p>
+              <p className="text-xs text-slate-500">
+                Cada bloque muestra sugerencias y datos técnicos tal como en el panel original, sin tener que abrir uno
+                por uno.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }, idx) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
               const hasErr = Boolean(t?.error);
-              const open = expandedKey === key;
               const colors = satelliteScoreColor(score, hasErr);
-
-              const cardBg =
-                hasErr || score < 50
-                  ? 'from-red-50/50 to-white'
-                  : score < 80
-                    ? 'from-amber-50/50 to-white'
-                    : 'from-emerald-50/50 to-white';
+              const labelShort = label.length > 18 ? `${label.slice(0, 16)}…` : label;
 
               return (
                 <div
                   key={key}
-                  className={cn(
-                    'flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-b text-left shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200',
-                    cardBg,
-                    open && 'col-span-full ring-2 ring-primary-200 shadow-md'
-                  )}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-200/60"
                 >
-                  <button
-                    type="button"
-                    onClick={() => setExpandedKey((k) => (k === key ? null : key))}
-                    className="flex w-full flex-col items-center gap-2 px-3 pt-4 pb-3 text-center outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                    aria-expanded={open}
-                  >
-                    <ScoreRing score={score} hasError={hasErr} Icon={ToolIcon} />
-                    <p className="text-xs font-semibold text-slate-800 leading-tight tracking-tight">{label}</p>
-                    <p className={cn('text-2xl font-black leading-none tabular-nums', colors.text)}>
-                      {score > 0 ? Math.round(score) : '—'}
-                    </p>
-                    <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                      {open ? 'Ocultar detalle' : 'Ver detalle'}
+                  <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50/90 to-white px-4 py-3 sm:px-5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-200/90 text-xs font-bold text-slate-700">
+                      {idx + 1}
                     </span>
-                    <ChevronDown
-                      className={cn('h-4 w-4 text-slate-300 transition-transform', open && 'rotate-180')}
-                      aria-hidden
-                    />
-                  </button>
-
-                  {open && (
-                    <div className="border-t border-slate-100 bg-white px-4 py-4">
-                      <SatelliteToolDetailPanel label={label} detail={t?.detail} />
+                    <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-inner', colors.icon)}>
+                      <ToolIcon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-900 sm:text-base" title={label}>
+                        {labelShort}
+                      </p>
+                      <p className="text-[11px] text-slate-500 sm:text-xs">
+                        {hasErr ? 'Hubo error o timeout en esta herramienta.' : 'Detalle y sugerencias de la corrida.'}
+                      </p>
                     </div>
-                  )}
+                    <div className="ml-auto flex shrink-0 flex-col items-end gap-0.5 text-right">
+                      <span className={cn('text-2xl font-black tabular-nums leading-none sm:text-3xl', colors.text)}>
+                        {score > 0 ? Math.round(score) : '—'}
+                      </span>
+                      {score >= 80 && !hasErr ? (
+                        <span className="text-[11px] font-semibold text-emerald-600">Excelente</span>
+                      ) : null}
+                      {score >= 50 && score < 80 && !hasErr ? (
+                        <span className="text-[11px] font-semibold text-amber-700">Mejorable</span>
+                      ) : null}
+                      {score > 0 && score < 50 && !hasErr ? (
+                        <span className="text-[11px] font-semibold text-red-600">Prioritario</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="bg-slate-50/50 px-4 py-5 sm:px-6">
+                    <SatelliteToolDetailPanel
+                      label={label}
+                      toolError={t?.error}
+                      detail={t?.detail}
+                    />
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-
-        {/* ── Acciones prioritarias ── */}
-        {topActions.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900">Acciones prioritarias</p>
-            {topActions.map((action, idx) => (
-              <div
-                key={`${action.source}-${idx}`}
-                className={cn(
-                  'flex items-start gap-3 rounded-lg border px-3 py-3',
-                  idx === 0
-                    ? 'border-amber-200 border-l-4 border-l-amber-400 bg-amber-50'
-                    : 'border-slate-100 bg-white'
-                )}
-              >
-                <AlertCircle className={cn('mt-0.5 h-4 w-4 shrink-0', idx === 0 ? 'text-amber-500' : 'text-slate-400')} aria-hidden />
-                <p className="text-sm text-slate-700 leading-snug">{action.message}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
       </div>
     </div>
   );

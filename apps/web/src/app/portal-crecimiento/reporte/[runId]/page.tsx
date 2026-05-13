@@ -925,7 +925,7 @@ export default function PortalReporteRunPage() {
           </div>
           {diag.priaCategories.length > 0 ? (
             <div className="mt-6 border-t border-slate-100 pt-4">
-              <p className="text-xs font-semibold text-slate-700">PRIA por categoría</p>
+              <p className="text-xs font-semibold text-slate-700">Cleexs Score por categoría</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {diag.priaCategories.map((row) => (
                   <span

@@ -722,75 +722,96 @@ async function executePublicDiagnosticPipeline(params: {
       });
   });
 
-  try {
-    const runGemini = await prisma.run.create({
-      data: {
-        tenantId: rootTenant.id,
-        brandId: brand.id,
-        periodStart,
-        periodEnd,
-        runType: 'diagnostic_gemini',
-        status: 'pending',
-      },
-    });
-    await prisma.publicDiagnostic.update({
-      where: { id: diagnosticId },
-      data: { runGeminiId: runGemini.id },
-    });
-    await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
-  } catch (geminiErr) {
-    log.warn(
-      { err: geminiErr, diagnosticId },
-      'Run Gemini no ejecutado (sin key o error). Solo se muestra score OpenAI.'
-    );
-  }
+  const runGeminiBranch = async (): Promise<void> => {
+    try {
+      const runGemini = await prisma.run.create({
+        data: {
+          tenantId: rootTenant.id,
+          brandId: brand.id,
+          periodStart,
+          periodEnd,
+          runType: 'diagnostic_gemini',
+          status: 'pending',
+        },
+      });
+      await prisma.publicDiagnostic.update({
+        where: { id: diagnosticId },
+        data: { runGeminiId: runGemini.id },
+      });
+      await executeRunGemini(runGemini.id, { promptVersionId: promptVersion.id });
+    } catch (geminiErr) {
+      log.warn(
+        { err: geminiErr, diagnosticId },
+        'Run Gemini no ejecutado (sin key o error). Solo se muestra score OpenAI.'
+      );
+    }
+  };
+
+  const runAnalysisSatelliteBranch = async (): Promise<void> => {
+    try {
+      const fullRun = await prisma.run.findUnique({
+        where: { id: run.id },
+        include: {
+          promptResults: {
+            include: { prompt: { select: { promptText: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+          brand: { include: { competitors: true } },
+        },
+      });
+      const priaReport = await prisma.pRIAReport.findFirst({
+        where: { runId: run.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const runDiagnosticAnalysis = async (): Promise<object | null> => {
+        if (!fullRun) return null;
+        const ctx = buildRunContext({
+          run: fullRun,
+          priaReport,
+          businessContext: analysisContext.verticalSummary,
+        });
+        const isFirstRun = await isFirstRunForDomain(diagnosticId, diagnosticDomain);
+        const analysis = await generateDiagnosticAnalysis(ctx, isFirstRun ? 'gold' : 'freemium');
+        if (analysis) {
+          if ((analysis as { tier?: string }).tier !== 'gold') {
+            log.warn(
+              { diagnosticId },
+              'Gemini no disponible: solo se guardó análisis OpenAI. Configurá GEMINI_API_KEY en la API.'
+            );
+          }
+          return analysis as object;
+        }
+        return null;
+      };
+
+      const runSatellite = async (): Promise<SatelliteModuleResult | null> => {
+        if (!trimmedUrl) return null;
+        try {
+          return await runSatelliteAnalysis(trimmedUrl);
+        } catch (satErr) {
+          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
+          return null;
+        }
+      };
+
+      const [analysis, sat] = await Promise.all([
+        runDiagnosticAnalysis().catch((err) => {
+          log.warn({ err, diagnosticId }, 'Análisis IA no generado');
+          return null;
+        }),
+        runSatellite(),
+      ]);
+      analysisJson = analysis;
+      satelliteModule = sat;
+    } catch (analysisErr) {
+      log.warn({ err: analysisErr, diagnosticId }, 'Análisis IA / satélite: error inesperado');
+    }
+  };
 
   let analysisJson: object | null = null;
   let satelliteModule: SatelliteModuleResult | null = null;
-  try {
-    const fullRun = await prisma.run.findUnique({
-      where: { id: run.id },
-      include: {
-        promptResults: {
-          include: { prompt: { select: { promptText: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-        brand: { include: { competitors: true } },
-      },
-    });
-    const priaReport = await prisma.pRIAReport.findFirst({
-      where: { runId: run.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (fullRun) {
-      const ctx = buildRunContext({
-        run: fullRun,
-        priaReport,
-        businessContext: analysisContext.verticalSummary,
-      });
-      const isFirstRun = await isFirstRunForDomain(diagnosticId, diagnosticDomain);
-      const analysis = await generateDiagnosticAnalysis(ctx, isFirstRun ? 'gold' : 'freemium');
-      if (analysis) {
-        analysisJson = analysis as object;
-        if ((analysis as { tier?: string }).tier !== 'gold') {
-          log.warn(
-            { diagnosticId },
-            'Gemini no disponible: solo se guardó análisis OpenAI. Configurá GEMINI_API_KEY en la API.'
-          );
-        }
-      }
-    }
-  } catch (analysisErr) {
-    log.warn({ err: analysisErr, diagnosticId }, 'Análisis IA no generado');
-  }
-
-  if (trimmedUrl) {
-    try {
-      satelliteModule = await runSatelliteAnalysis(trimmedUrl);
-    } catch (satErr) {
-      log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
-    }
-  }
+  await Promise.all([runGeminiBranch(), runAnalysisSatelliteBranch()]);
 
   const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
   if (persistedAnalysis != null) {

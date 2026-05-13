@@ -123,15 +123,26 @@ async def run_analyze_all_impl(url: str) -> dict:
     output["crawlability"] = _process_result("crawlability", cr)
     output["robots_sitemap"] = _process_result("robots_sitemap", rb)
 
-    crawl_tools = [
-        ("freshness", ContentFreshnessChecker(max_pages=FAST_MAX_PAGES["freshness"]).check(url)),
-        ("citations", QueryCitationTracker(max_pages=FAST_MAX_PAGES["citations"]).analyze(url)),
-        ("ai_overview", AIOverviewChecker(max_pages=FAST_MAX_PAGES["ai_overview"]).check(url)),
-        ("duplicates", DuplicateContentFinder(max_pages=FAST_MAX_PAGES["duplicates"]).find(url)),
+    # Phase 3 — crawl-based tools en paralelo (antes en serie sumaba ~2–3 min; ahora ~el máximo de timeouts).
+    crawl_names = ["freshness", "citations", "ai_overview", "duplicates"]
+    crawl_coros = [
+        _run_tool_budgeted("freshness", ContentFreshnessChecker(max_pages=FAST_MAX_PAGES["freshness"]).check(url)),
+        _run_tool_budgeted(
+            "citations", QueryCitationTracker(max_pages=FAST_MAX_PAGES["citations"]).analyze(url)
+        ),
+        _run_tool_budgeted(
+            "ai_overview", AIOverviewChecker(max_pages=FAST_MAX_PAGES["ai_overview"]).check(url)
+        ),
+        _run_tool_budgeted(
+            "duplicates", DuplicateContentFinder(max_pages=FAST_MAX_PAGES["duplicates"]).find(url)
+        ),
     ]
-    for name, coro in crawl_tools:
-        result = await _run_tool_budgeted(name, coro)
-        output[name] = _process_result(name, result)
+    crawl_results = await asyncio.gather(*crawl_coros, return_exceptions=True)
+    for name, result in zip(crawl_names, crawl_results):
+        if isinstance(result, BaseException):
+            output[name] = _process_result(name, {"error": str(result)[:200], "score": 0})
+        else:
+            output[name] = _process_result(name, result)
 
     scores = []
     for name in output:

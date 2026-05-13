@@ -170,7 +170,7 @@ function ScoreRing({ value }: { value: number }) {
           Score general
         </text>
       </svg>
-      <p className="mt-2 text-[11px] font-medium text-violet-800">Cleexs Score (PRIA)</p>
+      <p className="mt-2 text-[11px] font-medium text-violet-800">Cleexs Score</p>
     </div>
   );
 }
@@ -441,7 +441,7 @@ export default function ReportesClientePage() {
     if (!activeRow) return 'Seleccioná un reporte para ver el resumen.';
     const st = activeRow.status;
     if (st !== 'completed') {
-      return `Este reporte está en estado "${st}". Cuando esté completado vas a tener el PRIA cerrado en el centro de métricas. Tipo solicitado: ${label}.`;
+      return `Este reporte está en estado "${st}". Cuando esté completado vas a tener el Cleexs Score cerrado en el centro de métricas. Tipo solicitado: ${label}.`;
     }
     const hint =
       s >= 80 ? 'Tu posición en IA se mantiene sólida; conviene defender el liderazgo en las mismas categorías donde ya aparecés en Top 3.' : s >= 60 ? 'Hay margen positivo pero conviene revisar prompts débiles y la presencia competitiva versus top marcas citadas por el modelo.' : 'Hay oportunidad de mejora prioritaria: reforzá cobertura de intención y contenidos que aumenten probabilidad de cita.';
@@ -543,7 +543,7 @@ export default function ReportesClientePage() {
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900">Reportes del cliente</h1>
                   <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                    Centro unificado para consultar corridas consolidadas, reportes profundos PRIA/Cleexs Score y lanzar nuevas corridas cuando
+                    Centro unificado para consultar corridas consolidadas, reportes profundos de Cleexs Score y lanzar nuevas corridas cuando
                     tengás cupo disponible.
                   </p>
                 </div>
@@ -868,7 +868,7 @@ export default function ReportesClientePage() {
                           <p className="mt-1 text-sm font-bold text-slate-900">{reportTypeLabel(detail?.runType ?? activeRow?.reportType)}</p>
                           <p className="mt-2 text-[11px] leading-snug text-slate-600">
                             {detail?.runType === 'deep_report'
-                              ? 'Análisis ampliado y PRIA cerrado cuando la corrida finaliza.'
+                              ? 'Análisis ampliado y Cleexs Score consolidado cuando la corrida finaliza.'
                               : 'Agregación periódica Cleexs con los prompts configurados para la marca.'}
                           </p>
                         </div>

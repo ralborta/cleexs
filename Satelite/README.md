@@ -1,104 +1,37 @@
-# Proyectos satélite Cleexs
+# Satélite Cleexs — proyecto activo
 
-Dos herramientas complementarias: **Crawlability Checker** (Project1) y **Robots.txt & Sitemap Analyzer** (Project2). Cada una incluye backend en Python (FastAPI) y frontend en Next.js.
+**Único stack a usar:** `CleexsTools37` (backend FastAPI + frontend Next.js, analizador AEO all-in-one con herramientas tool1–tool10).
 
 ## Requisitos
 
 - **Node.js** 18+ y **npm**
-- **Python** 3.10+
-- **pip** (gestor de paquetes de Python)
+- **Python** 3.10+ y **pip**
 
----
+## Desarrollo local
 
-## Project1 – Crawlability Checker
-
-Analiza un sitio web: rastrea páginas, revisa SEO, robots.txt, bots de IA y genera un score de “crawlability”.
-
-### Instalación y ejecución
-
-**Backend (puerto 8000)**
+**Backend** (por defecto puerto 8000; en Railway usa `$PORT`):
 
 ```bash
-cd Satelite/Project1/backend
+cd Satelite/CleexsTools37/backend
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-**Frontend**
+**Frontend:**
 
 ```bash
-cd Satelite/Project1/frontend
+cd Satelite/CleexsTools37/frontend
 npm install
-```
-
-Crear archivo `.env.local` (opcional; si no existe, el frontend usa `http://localhost:8000`):
-
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-Desarrollo:
-
-```bash
+cp .env.example .env.local   # ajusta NEXT_PUBLIC_API_URL si hace falta
 npm run dev
 ```
 
-Compilar para producción:
+Abrir [http://localhost:3000](http://localhost:3000). El frontend debe apuntar al API (ej. `NEXT_PUBLIC_API_URL=http://localhost:8000`).
 
-```bash
-npm run build
-npm run start
-```
+## Despliegue y repo
 
-Abrir [http://localhost:3000](http://localhost:3000). El frontend llama al backend en el puerto 8000.
+Ver **`CleexsTools37/DESPLIEGUE-COMPLETO.md`** y **`CleexsTools37/DEPLOY.md`** (GitHub, Railway, Vercel).
 
----
+## Legado (no usar para trabajo nuevo)
 
-## Project2 – Robots.txt & Sitemap Analyzer
-
-Analiza `robots.txt` y sitemap de un dominio: estado de bots de IA y de búsqueda, sugerencias y generación de sitemap/robots recomendado.
-
-### Instalación y ejecución
-
-**Backend (puerto 8001)**
-
-```bash
-cd Satelite/Project2/backend
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8001
-```
-
-**Frontend**
-
-```bash
-cd Satelite/Project2/frontend
-npm install
-```
-
-Crear `.env.local` (opcional; por defecto usa `http://localhost:8001`):
-
-```
-NEXT_PUBLIC_API_URL=http://localhost:8001
-```
-
-Desarrollo:
-
-```bash
-npm run dev
-```
-
-Compilar para producción:
-
-```bash
-npm run build
-npm run start
-```
-
-Abrir [http://localhost:3000](http://localhost:3000). El frontend usa el backend en el puerto 8001.
-
----
-
-## Notas
-
-- **Ejecutar desde la carpeta de cada proyecto:** los frontends usan Next.js 16 y deben tener sus propias dependencias (`npm install` dentro de `Project1/frontend` y `Project2/frontend`). No usar el `node_modules` de la raíz de Cleexs para compilar estos frontends.
-- **Puertos:** Project1 API = 8000, Project2 API = 8001. Cada frontend en dev suele usar el puerto 3000; si se levantan los dos a la vez, cambiar el puerto de uno (ej. `npm run dev -- -p 3001`).
+En esta carpeta pueden existir entregas antiguas (`Project1`, `Project2`, `backendToni`, `frontendToni`, `.rar`). No están alineadas con el producto actual; **no** las uses como referencia ni para despliegue: todo lo nuevo va contra **`CleexsTools37`**.
