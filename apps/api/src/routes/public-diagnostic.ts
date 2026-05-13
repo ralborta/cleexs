@@ -565,6 +565,7 @@ async function isFirstRunForDomain(diagnosticId: string, domain: string): Promis
 
 /**
  * Pipeline completo del diagnóstico público (Brand, Run OpenAI/Gemini, análisis, satélite, emails).
+ * Cleexs Tools corre en paralelo con la corrida OpenAI (misma URL). El análisis escrito IA exige resultados OpenAI.
  * Se invoca solo tras `POST .../start` (usuario confirmó email + 5 competidores).
  */
 async function executePublicDiagnosticPipeline(params: {
@@ -705,7 +706,30 @@ async function executePublicDiagnosticPipeline(params: {
     data: { runId: run.id },
   });
 
-  await executeRun(run.id, { promptVersionId: promptVersion.id });
+  /**
+   * Cleexs Tools solo necesita la URL; la corrida OpenAI necesita prompts + API.
+   * Ejecutar ambas en paralelo reduce el tiempo total antes de análisis IA + Gemini.
+   */
+  let satellitePrefetch: SatelliteModuleResult | null = null;
+  const satelliteDuringRunPromise = (async () => {
+    if (!trimmedUrl) return;
+    try {
+      satellitePrefetch = await runSatelliteAnalysis(trimmedUrl);
+    } catch (satErr) {
+      log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
+      satellitePrefetch = null;
+    }
+  })();
+
+  await Promise.all([
+    executeRun(run.id, { promptVersionId: promptVersion.id }),
+    satelliteDuringRunPromise,
+  ]);
+
+  log.info(
+    { diagnosticId, satelliteStarted: Boolean(trimmedUrl) },
+    'executeRun y Cleexs Tools (si hubo URL) completados en paralelo'
+  );
 
   await prisma.publicDiagnostic.update({
     where: { id: diagnosticId },
@@ -751,28 +775,16 @@ async function executePublicDiagnosticPipeline(params: {
   };
 
   const runAnalysisSatelliteBranch = async (): Promise<void> => {
-    const SATELLITE_PENDING: SatelliteModuleResult = {
-      status: 'pending',
-      overallScore: 0,
-      tools: {},
-      actions: [],
-    };
-
     let analysisDone: object | null = null;
     let analysisSettled = false;
-    let satelliteDone: SatelliteModuleResult | null = null;
-    let satelliteSettled = false;
+    /** Ya terminó en paralelo con `executeRun` (o null si no hubo URL / error). */
+    const satelliteDone = satellitePrefetch;
 
     let persistChain = Promise.resolve();
     const schedulePersist = () => {
       persistChain = persistChain.then(async () => {
         if (!analysisSettled) return;
-        const satForMerge = satelliteSettled
-          ? satelliteDone
-          : trimmedUrl && analysisDone != null
-            ? SATELLITE_PENDING
-            : null;
-        const merged = buildAnalysisWithSatellite(analysisDone, satForMerge);
+        const merged = buildAnalysisWithSatellite(analysisDone, satelliteDone);
         if (merged == null) return;
         const safe = shrinkAnalysisJsonForPersistence(merged);
         await prisma.publicDiagnostic.update({
@@ -822,35 +834,16 @@ async function executePublicDiagnosticPipeline(params: {
         return null;
       };
 
-      await Promise.all([
-        runDiagnosticAnalysis()
-          .catch((err) => {
-            log.warn({ err, diagnosticId }, 'Análisis IA no generado');
-            return null;
-          })
-          .then(async (a) => {
-            analysisDone = a;
-            analysisSettled = true;
-            await schedulePersist();
-          }),
-        (async () => {
-          if (!trimmedUrl) {
-            satelliteSettled = true;
-            satelliteDone = null;
-            await schedulePersist();
-            return;
-          }
-          try {
-            satelliteDone = await runSatelliteAnalysis(trimmedUrl);
-          } catch (satErr) {
-            log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
-            satelliteDone = null;
-          } finally {
-            satelliteSettled = true;
-            await schedulePersist();
-          }
-        })(),
-      ]);
+      await runDiagnosticAnalysis()
+        .catch((err) => {
+          log.warn({ err, diagnosticId }, 'Análisis IA no generado');
+          return null;
+        })
+        .then(async (a) => {
+          analysisDone = a;
+          analysisSettled = true;
+          await schedulePersist();
+        });
       await persistChain;
     } catch (analysisErr) {
       log.warn({ err: analysisErr, diagnosticId }, 'Análisis IA / satélite: error inesperado');

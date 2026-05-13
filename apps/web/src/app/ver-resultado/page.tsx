@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import React, { Fragment, Suspense, useEffect, useState } from 'react';
+import React, { Fragment, Suspense, useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,7 @@ import {
   CheckCircle2,
   ListChecks,
   ChevronRight,
+  ChevronDown,
   Users,
   Rocket,
   FileText,
@@ -1587,97 +1588,126 @@ function SatelliteAeoDegradedNotice({
 function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSatelliteModule }) {
   const actions = module.actions ?? [];
   const counts = countByActionPriority(actions);
+  const [expanded, setExpanded] = useState(false);
+  const panelId = useId();
+  const headingId = useId();
+  const total = actions.length;
 
   return (
-    <section className="space-y-4" aria-labelledby="satellite-actions-heading">
-      <div className="overflow-hidden rounded-2xl border border-teal-700/25 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 shadow-md shadow-teal-900/10">
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25">
-            <ChevronRight className="h-5 w-5" aria-hidden />
+    <section
+      className="overflow-hidden rounded-2xl border border-teal-800/25 shadow-md shadow-teal-900/10 ring-1 ring-teal-900/10"
+      aria-labelledby={headingId}
+    >
+      <button
+        type="button"
+        id={headingId}
+        className="flex w-full flex-wrap items-center gap-3 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 px-4 py-3.5 text-left transition hover:brightness-[1.03] sm:px-5"
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25">
+          <ChevronDown
+            className={cn('h-5 w-5 transition-transform duration-200', expanded && 'rotate-180')}
+            aria-hidden
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <span className="block text-base font-bold tracking-tight text-white sm:text-lg">Acciones a ejecutar</span>
+          <span className="mt-0.5 block text-xs font-medium leading-snug text-white/90 sm:text-sm">
+            Prioridades del análisis AEO (misma lógica que Cleexs Tools).{' '}
+            <span className="text-white/85">
+              {total > 0
+                ? `${total} tareas · tocá para ${expanded ? 'ocultar' : 'ver'} píldoras y lista.`
+                : expanded
+                  ? 'Tocá de nuevo para ocultar.'
+                  : 'Tocá para ver el mensaje cuando no hay acciones.'}
+            </span>
           </span>
-          <div className="min-w-0 flex-1">
-            <h3 id="satellite-actions-heading" className="text-base font-bold tracking-tight text-white sm:text-lg">
-              Acciones a ejecutar
-            </h3>
-            <p className="mt-0.5 text-xs font-medium leading-snug text-white/90 sm:text-sm">
-              Prioridades del análisis AEO (misma lógica que Cleexs Tools), junto a tu informe Cleexs.
-            </p>
-          </div>
-          <ListChecks className="hidden h-7 w-7 shrink-0 text-white/85 sm:block" aria-hidden />
         </div>
-      </div>
+        <ListChecks className="hidden h-7 w-7 shrink-0 text-white/85 sm:block" aria-hidden />
+      </button>
 
-      {actions.length > 0 ? (
-        <>
-          <div className="flex flex-wrap gap-2">
-            {(['critica', 'alta', 'media', 'baja', 'info'] as const).map((pk) => {
-              const n = counts[pk];
-              if (n <= 0) return null;
-              const meta = ACTION_PILL_META[pk];
-              return (
-                <span
-                  key={pk}
-                  className={cn(
-                    'inline-flex items-center rounded-full border-2 px-3 py-1 text-xs font-bold tabular-nums',
-                    meta.className
-                  )}
-                >
-                  {meta.label}: {n}
-                </span>
-              );
-            })}
-          </div>
-
-          <ul className="space-y-3">
-            {actions.map((action, idx) => {
-              const p = (action.priority || 'info').trim().toLowerCase();
-              const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
-              const PriIcon = meta.Icon;
-              const src = toolLabelFromSatelliteSource(action.source);
-              return (
-                <li
-                  key={`${action.source}-${idx}-${action.message.slice(0, 24)}`}
-                  className={cn(
-                    'rounded-xl border border-slate-200 bg-white pl-4 pr-4 py-4 shadow-sm sm:pl-5',
-                    'border-l-[5px]',
-                    actionCardBorderClass(p)
-                  )}
-                >
-                  <div className="flex flex-wrap items-center gap-2 gap-y-1">
-                    <PriIcon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+      {expanded ? (
+        <div
+          id={panelId}
+          role="region"
+          aria-labelledby={headingId}
+          className="space-y-4 border-t border-teal-900/20 bg-white px-4 py-4 sm:px-5 sm:py-5"
+        >
+          {actions.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {(['critica', 'alta', 'media', 'baja', 'info'] as const).map((pk) => {
+                  const n = counts[pk];
+                  if (n <= 0) return null;
+                  const meta = ACTION_PILL_META[pk];
+                  return (
                     <span
+                      key={pk}
                       className={cn(
-                        'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                        meta.box
+                        'inline-flex items-center rounded-full border-2 px-3 py-1 text-xs font-bold tabular-nums',
+                        meta.className
                       )}
                     >
-                      {meta.short}
+                      {meta.label}: {n}
                     </span>
-                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                      {src}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm font-bold leading-snug text-slate-900">{action.message}</p>
-                  {action.detail ? (
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{action.detail}</p>
-                  ) : null}
-                  {action.action ? (
-                    <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-indigo-800">
-                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                      <span>{action.action}</span>
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      ) : (
-        <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-          No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
-          herramienta o abrí Cleexs Tools para un análisis interactivo completo.
-        </p>
-      )}
+                  );
+                })}
+              </div>
+
+              <ul className="space-y-3">
+                {actions.map((action, idx) => {
+                  const p = (action.priority || 'info').trim().toLowerCase();
+                  const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
+                  const PriIcon = meta.Icon;
+                  const src = toolLabelFromSatelliteSource(action.source);
+                  return (
+                    <li
+                      key={`${action.source}-${idx}-${action.message.slice(0, 24)}`}
+                      className={cn(
+                        'rounded-xl border border-slate-200 bg-white pl-4 pr-4 py-4 shadow-sm sm:pl-5',
+                        'border-l-[5px]',
+                        actionCardBorderClass(p)
+                      )}
+                    >
+                      <div className="flex flex-wrap items-center gap-2 gap-y-1">
+                        <PriIcon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                            meta.box
+                          )}
+                        >
+                          {meta.short}
+                        </span>
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                          {src}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm font-bold leading-snug text-slate-900">{action.message}</p>
+                      {action.detail ? (
+                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{action.detail}</p>
+                      ) : null}
+                      {action.action ? (
+                        <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-indigo-800">
+                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                          <span>{action.action}</span>
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+              No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
+              herramienta o abrí Cleexs Tools para un análisis interactivo completo.
+            </p>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
