@@ -626,11 +626,10 @@ function VerificandoContent() {
         <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50/90 p-6 text-center shadow-sm">
           <p className="text-lg font-bold text-amber-950">No pudimos preparar el diagnóstico</p>
           <p className="mt-3 text-sm leading-relaxed text-amber-900/95">
-            Para abrir las pantallas de verificación necesitamos detectar al menos{' '}
-            <strong>tres competidores</strong> automáticamente. Después vos completás la lista hasta{' '}
-            <strong>cinco URLs</strong> antes de iniciar el análisis. Acá no alcanzamos el mínimo de sugerencias.
+            Ocurrió un error en la etapa automática (detección de competidores o un fallo temporal del servicio). No es
+            por la cantidad de URLs que vos cargás: eso viene después.
           </p>
-          <p className="mt-2 text-sm text-amber-900/85">Probá con otra URL, otra marca o más tarde.</p>
+          <p className="mt-2 text-sm text-amber-900/85">Reintentá o probá con otra URL o más tarde.</p>
           <Button asChild className="mt-6 rounded-xl">
             <Link href="/diagnostico/crear">Volver al diagnóstico</Link>
           </Button>

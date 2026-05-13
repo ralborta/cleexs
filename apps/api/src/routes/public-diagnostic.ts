@@ -18,13 +18,6 @@ import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satelli
 /** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
 const GENERIC_TLDS = new Set(['com', 'net', 'org', 'info', 'biz', 'edu', 'gov', 'int', 'io', 'ai', 'app']);
 
-/** Sugerencias mínimas antes de `awaiting_user`; el usuario completa hasta 5 URLs al confirmar. Default 3. */
-function getPublicDiagMinSuggestedCompetitors(): number {
-  const raw = Number(process.env.PUBLIC_DIAGNOSTIC_MIN_SUGGESTED_COMPETITORS ?? '3');
-  if (!Number.isFinite(raw)) return 3;
-  return Math.max(1, Math.min(5, Math.floor(raw)));
-}
-
 /**
  * Mapa TLD → país (nombre en español).
  * Incluye Américas completas + principales del mundo.
@@ -192,6 +185,19 @@ function getCountryFromDomain(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** Heurística si la IA devolvió nombre sin dominio: proponer `slug.com` para que el usuario edite en el wizard. */
+function slugHostGuessFromCompetitorName(name: string): string | null {
+  const s = `${name || ''}`
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 48);
+  if (s.length < 2) return null;
+  return `${s}.com`;
 }
 
 function normalizeDomain(url: string): string {
@@ -967,31 +973,34 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           const suggestedCompetitorUrls: string[] = [];
           const ownHost = domain.toLowerCase();
           for (const c of analysisContext.competitors) {
-            const d = c.domain?.trim();
-            if (!d) continue;
-            let host: string;
-            try {
-              host = normalizeDomain(d);
-            } catch {
-              continue;
-            }
-            if (!host || host === ownHost || seenHosts.has(host)) continue;
-            seenHosts.add(host);
-            suggestedCompetitorUrls.push(`https://${host}`);
             if (suggestedCompetitorUrls.length >= 5) break;
+            const rawCandidates: string[] = [];
+            const d = c.domain?.trim();
+            if (d) rawCandidates.push(d);
+            if (!d && c.name?.trim()) {
+              const guess = slugHostGuessFromCompetitorName(c.name);
+              if (guess) rawCandidates.push(guess);
+            }
+            for (const raw of rawCandidates) {
+              if (suggestedCompetitorUrls.length >= 5) break;
+              let host: string;
+              try {
+                const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                host = normalizeDomain(withScheme);
+              } catch {
+                continue;
+              }
+              if (!host || host === ownHost || seenHosts.has(host)) continue;
+              seenHosts.add(host);
+              suggestedCompetitorUrls.push(`https://${host}`);
+            }
           }
 
-          const minSuggested = getPublicDiagMinSuggestedCompetitors();
-          if (suggestedCompetitorUrls.length < minSuggested) {
+          if (suggestedCompetitorUrls.length === 0) {
             fastify.log.warn(
-              { diagnosticId: diagId, found: suggestedCompetitorUrls.length, minSuggested },
-              'Detección de competidores: no se alcanzó el mínimo de URLs sugeridas'
+              { diagnosticId: diagId, competitorCount: analysisContext.competitors.length },
+              'Detección de competidores: ninguna URL sugerida (dominios nulos y sin heurística); el usuario completa en el wizard'
             );
-            await prisma.publicDiagnostic.update({
-              where: { id: diagId },
-              data: { status: 'failed' },
-            });
-            return;
           }
 
           await prisma.publicDiagnostic.update({
