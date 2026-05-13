@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, us
 import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
-import { Boxes, Globe, Loader2, Mail, Pencil, Plus, Save, Shield, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Boxes, Globe, Loader2, Mail, Pencil, Plus, Save, Shield, Sparkles, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -101,6 +101,10 @@ function VerificandoContent() {
   const [legacySetupHumanOk, setLegacySetupHumanOk] = useState(false);
   const [startAnalysisLoading, setStartAnalysisLoading] = useState(false);
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null);
+  /** Setup público (awaiting_user): 1 captcha → 2 email → 3 competidores */
+  const [publicSetupStep, setPublicSetupStep] = useState<1 | 2 | 3>(1);
+  /** Modal legacy (running sin email): 1 captcha → 2 email */
+  const [legacyPublicStep, setLegacyPublicStep] = useState<1 | 2>(1);
   const setupWizardInitRef = useRef<string | null>(null);
   const [overlayMountNode, setOverlayMountNode] = useState<HTMLElement | null>(null);
 
@@ -263,6 +267,8 @@ function VerificandoContent() {
   useEffect(() => {
     setupWizardInitRef.current = null;
     setLegacySetupHumanOk(false);
+    setPublicSetupStep(1);
+    setLegacyPublicStep(1);
   }, [diagnosticId]);
 
   useEffect(() => {
@@ -271,6 +277,7 @@ function VerificandoContent() {
     if (!d?.id) return;
     if (setupWizardInitRef.current === d.id) return;
     setupWizardInitRef.current = d.id;
+    setPublicSetupStep(1);
     setSetupHumanOk(false);
     setSetupEmail('');
     setCompetitorUrls(fiveUrlsFromDraft(d.setupDraft));
@@ -418,6 +425,29 @@ function VerificandoContent() {
     return () => clearTimeout(t);
   }, [activeStepForCards, visibleStepCards]);
 
+  const handlePublicSetupStep1Next = useCallback(() => {
+    if (!setupHumanOk) return;
+    if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
+    setStartAnalysisError(null);
+    setPublicSetupStep(2);
+  }, [setupHumanOk, diagnosticId]);
+
+  const handlePublicSetupStep2Next = useCallback(() => {
+    const em = setupEmail.trim();
+    if (!em.includes('@')) {
+      setStartAnalysisError('Ingresá un correo válido.');
+      return;
+    }
+    setStartAnalysisError(null);
+    setPublicSetupStep(3);
+  }, [setupEmail]);
+
+  const handleLegacyStep1Next = useCallback(() => {
+    if (!legacySetupHumanOk) return;
+    if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
+    setLegacyPublicStep(2);
+  }, [legacySetupHumanOk, diagnosticId]);
+
   const handleSetupStartAnalysis = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!diagnosticId || !diagnostic) return;
@@ -425,6 +455,10 @@ function VerificandoContent() {
     const trimmed = competitorUrls.map((u) => u.trim());
     if (trimmed.some((u) => !u)) {
       setStartAnalysisError('Completá las 5 URLs de competidores.');
+      return;
+    }
+    if (!setupHumanOk) {
+      setStartAnalysisError('Confirmá que no sos un robot.');
       return;
     }
     const em = setupEmail.trim();
@@ -604,8 +638,7 @@ function VerificandoContent() {
 
   const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
   const allCompetitorsSelected = competitorRowSelected.every(Boolean);
-  const canSubmitAwaitingSetup =
-    normalizedDiagnosticStatus === 'awaiting_user' &&
+  const canFinalizePublicSetup =
     setupHumanOk &&
     setupEmail.trim().includes('@') &&
     trimmedSetupCompetitorUrls.length === 5 &&
@@ -833,208 +866,276 @@ function VerificandoContent() {
         normalizedDiagnosticStatus === 'awaiting_user' &&
         createPortal(
         <div className="pointer-events-auto fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center">
-            <form
-              onSubmit={handleSetupStartAnalysis}
-              className="relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
-              role="dialog"
-              aria-modal
-              aria-labelledby="setup-modal-title"
+          <div
+            className="relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+            role="dialog"
+            aria-modal
+            aria-labelledby="setup-modal-title"
+          >
+            <button
+              type="button"
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              onClick={() => router.push('/diagnostico/crear')}
+              aria-label="Cerrar y volver al inicio del diagnóstico"
             >
-              <button
-                type="button"
-                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-                onClick={() => router.push('/diagnostico/crear')}
-                aria-label="Cerrar y volver al inicio del diagnóstico"
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-              <div className="flex items-start gap-3 pr-10">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 ring-1 ring-violet-200/60">
-                  <Shield className="h-6 w-6" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h1 id="setup-modal-title" className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                    Confirmá y completá tus datos
-                  </h1>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    Estos datos son necesarios para continuar con tu análisis.
-                  </p>
-                </div>
-              </div>
+              <X className="h-5 w-5" aria-hidden />
+            </button>
 
-            <section className="mt-8 border-t border-slate-100 pt-8">
-              <h2 className="text-base font-bold text-slate-900">Verificación humana</h2>
-              <p className="mt-1 text-sm text-slate-600">Confirmá que sos una persona para proteger el análisis.</p>
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
-                  <span className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={setupHumanOk}
-                      onChange={(e) => {
-                        const v = e.target.checked;
-                        setSetupHumanOk(v);
-                        if (v && diagnosticId) {
-                          trackOnboarding('onboarding_captcha_completed', { diagnosticId });
-                        }
-                      }}
-                      className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
-                    />
-                    <span className="text-sm font-medium text-slate-800">No soy un robot</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
-                    <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
-                    <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
-                    <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
-                  </span>
-                </label>
-              </div>
-            </section>
-
-            <section className="mt-8 border-t border-slate-100 pt-8">
-              <h2 className="text-base font-bold text-slate-900">Correo</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Ingresá tu correo para recibir el reporte completo de tu análisis apenas esté listo.
-              </p>
-              <div className="relative mt-4">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="email"
-                  value={setupEmail}
-                  onChange={(e) => setSetupEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-violet-500/20 focus:border-violet-400 focus:ring-2"
-                  placeholder="correo@empresa.com"
-                  autoComplete="email"
+            <div className="mb-6 flex gap-2 pr-10" aria-hidden>
+              {([1, 2, 3] as const).map((s) => (
+                <div
+                  key={s}
+                  className={cn(
+                    'h-1.5 flex-1 rounded-full transition-colors',
+                    publicSetupStep >= s ? 'bg-violet-600' : 'bg-slate-200'
+                  )}
                 />
-              </div>
-            </section>
-
-            <section className="mt-8 border-t border-slate-100 pt-8">
-              <h2 className="text-base font-bold text-slate-900">Competidores</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Encontramos estos competidores para tu análisis. Si querés, podés editar, quitar o agregar alguno.
-              </p>
-              <div className="mt-4 space-y-2.5">
-                {competitorUrls.map((val, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1.5 sm:gap-3"
-                  >
-                    <span className="w-6 shrink-0 pt-0.5 text-center text-xs font-bold tabular-nums text-slate-400">
-                      {idx + 1}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={competitorRowSelected[idx]}
-                      onChange={() => {
-                        setCompetitorRowSelected((prev) => {
-                          const n = [...prev];
-                          n[idx] = !n[idx];
-                          return n;
-                        });
-                      }}
-                      className="h-4 w-4 shrink-0 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
-                      aria-label={`Incluir competidor ${idx + 1}`}
-                    />
-                    <Globe className="hidden h-4 w-4 shrink-0 text-slate-400 sm:block" aria-hidden />
-                    <input
-                      type="text"
-                      inputMode="url"
-                      id={`comp-url-${idx}`}
-                      value={val}
-                      onChange={(e) => {
-                        const next = [...competitorUrls];
-                        next[idx] = e.target.value;
-                        setCompetitorUrls(next);
-                      }}
-                      className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-0"
-                      placeholder="https://competidor.com"
-                    />
-                    <button
-                      type="button"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-50"
-                      aria-label={`Editar URL ${idx + 1}`}
-                      onClick={() => {
-                        document.getElementById(`comp-url-${idx}`)?.focus();
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = [...competitorUrls];
-                        next[idx] = '';
-                        setCompetitorUrls(next);
-                        setCompetitorRowSelected((prev) => {
-                          const p = [...prev];
-                          p[idx] = false;
-                          return p;
-                        });
-                      }}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50"
-                      aria-label={`Quitar competidor ${idx + 1}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={allCompetitorsSelected}
-                    onChange={() => {
-                      setCompetitorRowSelected(competitorRowSelected.map(() => !allCompetitorsSelected));
-                    }}
-                    className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
-                  />
-                  Seleccionar todos
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
-                    setCompetitorRowSelected([true, true, true, true, true]);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  + Agregar competidor
-                </button>
-              </div>
-            </section>
-
-            {startAnalysisError && (
-              <p className="mt-4 text-sm text-red-600" role="alert">
-                {startAnalysisError}
-              </p>
-            )}
-
-            <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
-              <Button
-                type="submit"
-                disabled={!canSubmitAwaitingSetup || startAnalysisLoading}
-                className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
-              >
-                <Save className="h-4 w-4" />
-                {startAnalysisLoading ? 'Guardando…' : 'Guardar'}
-              </Button>
+              ))}
             </div>
 
-            <p className="mt-6 text-center text-[11px] text-slate-500">
-              Al guardar aceptás los{' '}
-              <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
-                Términos
-              </a>{' '}
-              y la{' '}
-              <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
-                Privacidad
-              </a>
-              .
-            </p>
-          </form>
+            <div className="flex items-start gap-3 pr-10">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 ring-1 ring-violet-200/60">
+                <Shield className="h-6 w-6" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+                  Paso {publicSetupStep} de 3
+                </p>
+                <h1 id="setup-modal-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                  {publicSetupStep === 1 && 'Verificación humana'}
+                  {publicSetupStep === 2 && 'Tu correo'}
+                  {publicSetupStep === 3 && 'Competidores'}
+                </h1>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {publicSetupStep === 1 && 'Confirmá que sos una persona. Después te pedimos el mail y los competidores.'}
+                  {publicSetupStep === 2 && 'Lo usamos solo para enviarte el informe cuando esté listo.'}
+                  {publicSetupStep === 3 &&
+                    'Revisá o editá las cinco URLs. Necesitamos exactamente cinco dominios válidos para el análisis.'}
+                </p>
+              </div>
+            </div>
+
+            {publicSetupStep === 1 && (
+              <section className="mt-8 border-t border-slate-100 pt-8">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                  <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
+                    <span className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={setupHumanOk}
+                        onChange={(e) => setSetupHumanOk(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
+                      />
+                      <span className="text-sm font-medium text-slate-800">No soy un robot</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
+                      <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
+                      <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
+                      <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
+                    </span>
+                  </label>
+                </div>
+                <div className="mt-8 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => router.push('/diagnostico/crear')}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6"
+                    disabled={!setupHumanOk}
+                    onClick={handlePublicSetupStep1Next}
+                  >
+                    Continuar
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {publicSetupStep === 2 && (
+              <section className="mt-8 border-t border-slate-100 pt-8">
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="email"
+                    value={setupEmail}
+                    onChange={(e) => setSetupEmail(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-violet-500/20 focus:border-violet-400 focus:ring-2"
+                    placeholder="correo@empresa.com"
+                    autoComplete="email"
+                  />
+                </div>
+                {startAnalysisError && publicSetupStep === 2 && (
+                  <p className="mt-3 text-sm text-red-600" role="alert">
+                    {startAnalysisError}
+                  </p>
+                )}
+                <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="gap-1 rounded-xl text-slate-700"
+                    onClick={() => {
+                      setStartAnalysisError(null);
+                      setPublicSetupStep(1);
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Atrás
+                  </Button>
+                  <Button
+                    type="button"
+                    className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6"
+                    onClick={handlePublicSetupStep2Next}
+                  >
+                    Continuar
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {publicSetupStep === 3 && (
+              <form onSubmit={handleSetupStartAnalysis}>
+                <section className="mt-8 border-t border-slate-100 pt-8">
+                  <div className="mt-4 space-y-2.5">
+                    {competitorUrls.map((val, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1.5 sm:gap-3"
+                      >
+                        <span className="w-6 shrink-0 pt-0.5 text-center text-xs font-bold tabular-nums text-slate-400">
+                          {idx + 1}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={competitorRowSelected[idx]}
+                          onChange={() => {
+                            setCompetitorRowSelected((prev) => {
+                              const n = [...prev];
+                              n[idx] = !n[idx];
+                              return n;
+                            });
+                          }}
+                          className="h-4 w-4 shrink-0 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
+                          aria-label={`Incluir competidor ${idx + 1}`}
+                        />
+                        <Globe className="hidden h-4 w-4 shrink-0 text-slate-400 sm:block" aria-hidden />
+                        <input
+                          type="text"
+                          inputMode="url"
+                          id={`comp-url-${idx}`}
+                          value={val}
+                          onChange={(e) => {
+                            const next = [...competitorUrls];
+                            next[idx] = e.target.value;
+                            setCompetitorUrls(next);
+                          }}
+                          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-0"
+                          placeholder="https://competidor.com"
+                        />
+                        <button
+                          type="button"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-50"
+                          aria-label={`Editar URL ${idx + 1}`}
+                          onClick={() => {
+                            document.getElementById(`comp-url-${idx}`)?.focus();
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = [...competitorUrls];
+                            next[idx] = '';
+                            setCompetitorUrls(next);
+                            setCompetitorRowSelected((prev) => {
+                              const p = [...prev];
+                              p[idx] = false;
+                              return p;
+                            });
+                          }}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50"
+                          aria-label={`Quitar competidor ${idx + 1}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={allCompetitorsSelected}
+                        onChange={() => {
+                          setCompetitorRowSelected(competitorRowSelected.map(() => !allCompetitorsSelected));
+                        }}
+                        className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
+                      />
+                      Seleccionar todos
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
+                        setCompetitorRowSelected([true, true, true, true, true]);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Restaurar sugeridos
+                    </button>
+                  </div>
+                </section>
+
+                {startAnalysisError && (
+                  <p className="mt-4 text-sm text-red-600" role="alert">
+                    {startAnalysisError}
+                  </p>
+                )}
+
+                <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="gap-1 rounded-xl text-slate-700"
+                    onClick={() => {
+                      setStartAnalysisError(null);
+                      setPublicSetupStep(2);
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Atrás
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={!canFinalizePublicSetup || startAnalysisLoading}
+                    className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
+                  >
+                    <Save className="h-4 w-4" />
+                    {startAnalysisLoading ? 'Iniciando…' : 'Iniciar análisis'}
+                  </Button>
+                </div>
+
+                <p className="mt-6 text-center text-[11px] text-slate-500">
+                  Al iniciar aceptás los{' '}
+                  <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                    Términos
+                  </a>{' '}
+                  y la{' '}
+                  <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                    Privacidad
+                  </a>
+                  .
+                </p>
+              </form>
+            )}
+          </div>
         </div>,
         overlayMountNode
         )}
@@ -1058,24 +1159,21 @@ function VerificandoContent() {
         needsLegacyEmailCaptchaModal &&
         createPortal(
         <div className="pointer-events-auto fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
-          <form
-            onSubmit={handleLegacySetupSave}
-            className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
-            role="dialog"
-            aria-modal
-            aria-labelledby="legacy-setup-title"
-          >
-            <h1 id="legacy-setup-title" className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Confirmá y completá tus datos
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Estos datos son necesarios para continuar con tu análisis.
-            </p>
-
-            <section className="mt-8 border-t border-slate-100 pt-8">
-              <h2 className="text-base font-bold text-slate-900">Verificación humana</h2>
-              <p className="mt-1 text-sm text-slate-600">Confirmá que sos una persona para proteger el análisis.</p>
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+          {legacyPublicStep === 1 ? (
+            <div
+              className="my-auto w-full max-w-lg rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+              role="dialog"
+              aria-modal
+              aria-labelledby="legacy-setup-title"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Paso 1 de 2</p>
+              <h1 id="legacy-setup-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                Verificación humana
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Confirmá que sos una persona para poder guardar tu correo y continuar el análisis.
+              </p>
+              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                 <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
                   <span className="flex items-center gap-3">
                     <input
@@ -1093,14 +1191,33 @@ function VerificandoContent() {
                   </span>
                 </label>
               </div>
-            </section>
-
-            <section className="mt-8 border-t border-slate-100 pt-8">
-              <h2 className="text-base font-bold text-slate-900">Correo</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Ingresá tu correo para recibir el reporte completo de tu análisis apenas esté listo.
+              <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+                <Button
+                  type="button"
+                  className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8"
+                  disabled={!legacySetupHumanOk}
+                  onClick={handleLegacyStep1Next}
+                >
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleLegacySetupSave}
+              className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+              role="dialog"
+              aria-modal
+              aria-labelledby="legacy-email-title"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Paso 2 de 2</p>
+              <h1 id="legacy-email-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                Tu correo
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Ingresá tu correo para recibir el reporte cuando el análisis cierre.
               </p>
-              <div className="relative mt-4">
+              <div className="relative mt-6">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="email"
@@ -1111,31 +1228,38 @@ function VerificandoContent() {
                   autoComplete="email"
                 />
               </div>
-            </section>
-
-            <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
-              <Button
-                type="submit"
-                disabled={emailLoading || !legacySetupHumanOk || !email.trim().includes('@')}
-                className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
-              >
-                <Save className="h-4 w-4" />
-                {emailLoading ? 'Guardando…' : 'Guardar'}
-              </Button>
-            </div>
-
-            <p className="mt-6 text-center text-[11px] text-slate-500">
-              Al guardar aceptás los{' '}
-              <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
-                Términos
-              </a>{' '}
-              y la{' '}
-              <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
-                Privacidad
-              </a>
-              .
-            </p>
-          </form>
+              <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="gap-1 rounded-xl"
+                  onClick={() => setLegacyPublicStep(1)}
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  Atrás
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={emailLoading || !legacySetupHumanOk || !email.trim().includes('@')}
+                  className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
+                >
+                  <Save className="h-4 w-4" />
+                  {emailLoading ? 'Guardando…' : 'Guardar'}
+                </Button>
+              </div>
+              <p className="mt-6 text-center text-[11px] text-slate-500">
+                Al guardar aceptás los{' '}
+                <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                  Términos
+                </a>{' '}
+                y la{' '}
+                <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                  Privacidad
+                </a>
+                .
+              </p>
+            </form>
+          )}
         </div>,
         overlayMountNode
       )}
