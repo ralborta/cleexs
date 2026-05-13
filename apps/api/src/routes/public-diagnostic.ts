@@ -907,11 +907,15 @@ function competitorRowsFromDomains(
 ): Array<{ name: string; domain: string; aliases: string[] }> {
   return domains.map((domain, i) => {
     const original = originalUrls?.[i]?.trim();
+    const derived = deriveBrandFromDomain(domain) || domain.split('.')[0] || 'Competidor';
     const aliases = buildAliasHintsForCompetitorHost(domain, original);
+    /** Incluye dominio en el nombre para no colapsar dos competidores con el mismo derive (p. ej. dos marcas "Fravega"). */
+    const name = `${derived} (${domain})`;
+    const aliasExtras = [derived, domain].filter((x) => x && !aliases.some((a) => a.toLowerCase() === x.toLowerCase()));
     return {
-      name: deriveBrandFromDomain(domain) || domain.split('.')[0] || 'Competidor',
+      name,
       domain,
-      aliases,
+      aliases: [...aliases, ...aliasExtras],
     };
   });
 }
