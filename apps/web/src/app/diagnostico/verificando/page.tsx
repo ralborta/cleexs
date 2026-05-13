@@ -105,12 +105,19 @@ function VerificandoContent() {
   /** Modal legacy (running sin email): 1 captcha → 2 email */
   const [legacyPublicStep, setLegacyPublicStep] = useState<1 | 2>(1);
   const setupWizardInitRef = useRef<string | null>(null);
-  /** Evita portales antes del primer paint en cliente (las cajas deben verse siempre). */
-  const [overlayReady, setOverlayReady] = useState(false);
+  /** Nodo al final de `document.body` para que los modales queden por encima del resto del DOM. */
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   const [heroIdx, setHeroIdx] = useState(0);
   useLayoutEffect(() => {
-    setOverlayReady(true);
+    const el = document.createElement('div');
+    el.setAttribute('data-cleexs-diagnostico-portal', 'true');
+    document.body.appendChild(el);
+    setPortalRoot(el);
+    return () => {
+      el.remove();
+      setPortalRoot(null);
+    };
   }, []);
   useEffect(() => {
     const id = setInterval(() => {
@@ -612,6 +619,26 @@ function VerificandoContent() {
     );
   }
 
+  const statusLowerEarly = String(diagnostic.status ?? '').trim().toLowerCase();
+  if (statusLowerEarly === 'failed' && !diagnostic.runId) {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center bg-slate-50 px-6 py-10">
+        <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50/90 p-6 text-center shadow-sm">
+          <p className="text-lg font-bold text-amber-950">No pudimos preparar el diagnóstico</p>
+          <p className="mt-3 text-sm leading-relaxed text-amber-900/95">
+            Para mostrar las pantallas de verificación necesitamos detectar al menos{' '}
+            <strong>cinco competidores</strong> automáticamente. En este caso no alcanzamos ese mínimo, así que el
+            flujo no pasa a la etapa de captcha y correo.
+          </p>
+          <p className="mt-2 text-sm text-amber-900/85">Probá con otra URL, otra marca o más tarde.</p>
+          <Button asChild className="mt-6 rounded-xl">
+            <Link href="/diagnostico/crear">Volver al diagnóstico</Link>
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
   if (handoff === 'preview' || handoff === 'leaving') {
     return (
       <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4">
@@ -860,8 +887,7 @@ function VerificandoContent() {
         </p>
       </div>
 
-      {overlayReady &&
-        typeof document !== 'undefined' &&
+      {portalRoot &&
         normalizedDiagnosticStatus === 'awaiting_user' &&
         createPortal(
         <div
@@ -1134,11 +1160,10 @@ function VerificandoContent() {
             )}
           </div>
         </div>,
-        document.body
+        portalRoot
         )}
 
-      {overlayReady &&
-        typeof document !== 'undefined' &&
+      {portalRoot &&
         normalizedDiagnosticStatus === 'detecting_competitors' &&
         createPortal(
         <div
@@ -1153,11 +1178,10 @@ function VerificandoContent() {
             </p>
           </div>
         </div>,
-        document.body
+        portalRoot
         )}
 
-      {overlayReady &&
-        typeof document !== 'undefined' &&
+      {portalRoot &&
         needsLegacyEmailCaptchaModal &&
         createPortal(
         <div
@@ -1286,7 +1310,7 @@ function VerificandoContent() {
             </form>
           )}
         </div>,
-        document.body
+        portalRoot
       )}
     </main>
   );
