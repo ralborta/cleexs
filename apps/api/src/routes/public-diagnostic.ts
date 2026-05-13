@@ -722,6 +722,9 @@ async function executePublicDiagnosticPipeline(params: {
       });
   });
 
+  let analysisJson: object | null = null;
+  let satelliteModule: SatelliteModuleResult | null = null;
+
   const runGeminiBranch = async (): Promise<void> => {
     try {
       const runGemini = await prisma.run.create({
@@ -748,6 +751,40 @@ async function executePublicDiagnosticPipeline(params: {
   };
 
   const runAnalysisSatelliteBranch = async (): Promise<void> => {
+    const SATELLITE_PENDING: SatelliteModuleResult = {
+      status: 'pending',
+      overallScore: 0,
+      tools: {},
+      actions: [],
+    };
+
+    let analysisDone: object | null = null;
+    let analysisSettled = false;
+    let satelliteDone: SatelliteModuleResult | null = null;
+    let satelliteSettled = false;
+
+    let persistChain = Promise.resolve();
+    const schedulePersist = () => {
+      persistChain = persistChain.then(async () => {
+        if (!analysisSettled) return;
+        const satForMerge = satelliteSettled
+          ? satelliteDone
+          : trimmedUrl && analysisDone != null
+            ? SATELLITE_PENDING
+            : null;
+        const merged = buildAnalysisWithSatellite(analysisDone, satForMerge);
+        if (merged == null) return;
+        const safe = shrinkAnalysisJsonForPersistence(merged);
+        await prisma.publicDiagnostic.update({
+          where: { id: diagnosticId },
+          data: { analysisJson: safe },
+        });
+        analysisJson = safe;
+        satelliteModule = extractSatelliteModuleFromAnalysis(safe);
+      });
+      return persistChain;
+    };
+
     try {
       const fullRun = await prisma.run.findUnique({
         where: { id: run.id },
@@ -785,43 +822,42 @@ async function executePublicDiagnosticPipeline(params: {
         return null;
       };
 
-      const runSatellite = async (): Promise<SatelliteModuleResult | null> => {
-        if (!trimmedUrl) return null;
-        try {
-          return await runSatelliteAnalysis(trimmedUrl);
-        } catch (satErr) {
-          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
-          return null;
-        }
-      };
-
-      const [analysis, sat] = await Promise.all([
-        runDiagnosticAnalysis().catch((err) => {
-          log.warn({ err, diagnosticId }, 'Análisis IA no generado');
-          return null;
-        }),
-        runSatellite(),
+      await Promise.all([
+        runDiagnosticAnalysis()
+          .catch((err) => {
+            log.warn({ err, diagnosticId }, 'Análisis IA no generado');
+            return null;
+          })
+          .then(async (a) => {
+            analysisDone = a;
+            analysisSettled = true;
+            await schedulePersist();
+          }),
+        (async () => {
+          if (!trimmedUrl) {
+            satelliteSettled = true;
+            satelliteDone = null;
+            await schedulePersist();
+            return;
+          }
+          try {
+            satelliteDone = await runSatelliteAnalysis(trimmedUrl);
+          } catch (satErr) {
+            log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
+            satelliteDone = null;
+          } finally {
+            satelliteSettled = true;
+            await schedulePersist();
+          }
+        })(),
       ]);
-      analysisJson = analysis;
-      satelliteModule = sat;
+      await persistChain;
     } catch (analysisErr) {
       log.warn({ err: analysisErr, diagnosticId }, 'Análisis IA / satélite: error inesperado');
     }
   };
 
-  let analysisJson: object | null = null;
-  let satelliteModule: SatelliteModuleResult | null = null;
   await Promise.all([runGeminiBranch(), runAnalysisSatelliteBranch()]);
-
-  const persistedAnalysis = buildAnalysisWithSatellite(analysisJson, satelliteModule);
-  if (persistedAnalysis != null) {
-    const safeForDb = shrinkAnalysisJsonForPersistence(persistedAnalysis);
-    await prisma.publicDiagnostic.update({
-      where: { id: diagnosticId },
-      data: { analysisJson: safeForDb },
-    });
-    analysisJson = safeForDb;
-  }
 
   void ensureShareSlug(diagnosticId).catch((err) =>
     log.warn({ err, diagnosticId }, 'No se pudo asignar share_slug')

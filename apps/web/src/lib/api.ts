@@ -456,7 +456,7 @@ export interface PublicDiagnosticTrendPoint {
 }
 
 export interface PublicDiagnosticSatelliteModule {
-  status: 'completed' | 'failed' | 'timeout' | 'skipped';
+  status: 'completed' | 'failed' | 'timeout' | 'skipped' | 'pending';
   targetUrl?: string;
   overallScore: number;
   tools: Record<string, { score: number; error?: string; detail?: Record<string, unknown> }>;

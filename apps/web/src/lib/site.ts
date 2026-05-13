@@ -14,3 +14,8 @@ export const CLEEXS_MARKETING_WWW_URL = 'https://www.cleexs.net' as const;
 export const CLEEXS_APP_URL = (
   process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '') || 'https://app.cleexs.net'
 ) as string;
+
+/** Cleexs Tools (AEO). Si está vacío, el UI no muestra enlace directo. */
+export const CLEEXS_TOOLS_PUBLIC_URL = (
+  process.env.NEXT_PUBLIC_CLEEXS_TOOLS_URL?.trim().replace(/\/$/, '') || ''
+) as string;

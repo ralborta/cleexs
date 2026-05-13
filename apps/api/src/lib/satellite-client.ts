@@ -29,7 +29,8 @@ type SatelliteAnalyzeAllResponse = {
 } & Partial<Record<SatelliteToolKey, SatelliteToolResult>>;
 
 export type SatelliteModuleResult = {
-  status: 'completed' | 'failed' | 'timeout' | 'skipped';
+  /** `pending`: placeholder en DB mientras corre Cleexs Tools en segundo plano. */
+  status: 'completed' | 'failed' | 'timeout' | 'skipped' | 'pending';
   targetUrl?: string;
   overallScore: number;
   tools: Partial<
@@ -217,7 +218,7 @@ export async function runSatelliteAnalysis(
             error: typeof job.error === 'string' ? job.error : 'Error en análisis satélite',
           };
         }
-        await sleep(2000);
+        await sleep(1500);
       }
     } else if (startResp.status === 404) {
       // Satélite antiguo sin /start: un solo POST (puede cortar el proxy si tarda mucho).

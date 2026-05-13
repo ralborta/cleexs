@@ -21,7 +21,7 @@ import {
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
-import { CLEEXS_MARKETING_URL } from '@/lib/site';
+import { CLEEXS_MARKETING_URL, CLEEXS_TOOLS_PUBLIC_URL } from '@/lib/site';
 import type { LucideIcon } from 'lucide-react';
 import {
   Loader2,
@@ -53,6 +53,7 @@ import {
   Rocket,
   FileText,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
@@ -505,16 +506,16 @@ function VerResultadoContent() {
     return () => { cancelled = true; };
   }, [diagnosticId, tierFromQuery]);
 
-  // Si está completado y debería tener análisis pero aún no llegó (se genera en background), hacer polling
+  // Si está completado y falta análisis o el módulo AEO sigue en `pending`, refrescar hasta que termine.
   useEffect(() => {
     const id = diagnosticId;
-    if (
-      !id ||
-      !diagnostic ||
-      diagnostic.status !== 'completed' ||
-      !diagnostic.showFullReport ||
-      diagnostic.analysisJson != null
-    ) {
+    if (!id || !diagnostic || diagnostic.status !== 'completed' || !diagnostic.showFullReport) {
+      return;
+    }
+    const awaitingAnalysis = diagnostic.analysisJson == null;
+    const awaitingSatellite =
+      !diagnostic.domain.startsWith('brand-') && diagnostic.satelliteModule?.status === 'pending';
+    if (!awaitingAnalysis && !awaitingSatellite) {
       return;
     }
     const pollIntervalMs = 4000;
@@ -530,7 +531,11 @@ function VerResultadoContent() {
         const data = await publicDiagnosticApi.get(id, tierFromQuery);
         if (cancelled) return;
         setDiagnostic(data);
-        if (data.status === 'failed' || data.analysisJson != null) {
+        if (data.status === 'failed') return;
+        const stillAwaitingAnalysis = data.analysisJson == null;
+        const stillAwaitingSat =
+          !data.domain.startsWith('brand-') && data.satelliteModule?.status === 'pending';
+        if (!stillAwaitingAnalysis && !stillAwaitingSat) {
           return;
         }
       } catch {
@@ -660,14 +665,15 @@ function VerResultadoContent() {
   const geminiFallo = diagnostic.geminiRunStatus === 'failed';
   const geminiEnCola = Boolean(diagnostic.runGeminiId) && !runResultGemini && !geminiFallo;
   /**
-   * Post-proceso tras status completed: análisis IA + satélite se generan en paralelo en la API
-   * y se guardan juntos en `analysisJson`. Mientras tanto el cliente no tiene `analysisJson`.
+   * Post-proceso: la API puede guardar primero el análisis IA y luego fusionar Cleexs Tools (AEO).
+   * Mientras el satélite corre, `satelliteModule.status === 'pending'`.
    */
+  const satelliteAeoPending = diagnostic.satelliteModule?.status === 'pending';
   const showSatelliteSkeleton =
     isCompleted &&
     diagnostic.showFullReport &&
     !diagnostic.domain.startsWith('brand-') &&
-    diagnostic.analysisJson == null;
+    (diagnostic.analysisJson == null || satelliteAeoPending);
   const runResultToShow: PublicDiagnosticRunResult | null = runResult
     ? vistaModelo === 'consolidado' && runResultGemini
       ? buildRunResultAmbos(runResult, runResultGemini)
@@ -813,7 +819,7 @@ function VerResultadoContent() {
                             satelliteBlock={
                               <>
                                 {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
-                                {satelliteModule && (
+                                {satelliteModule && satelliteModule.status !== 'pending' && (
                                   <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                                 )}
                               </>
@@ -826,10 +832,11 @@ function VerResultadoContent() {
                             trendData={diagnostic.trendData}
                             satelliteBlock={
                               !diagnostic.domain.startsWith('brand-') &&
-                              (showSatelliteSkeleton || satelliteModule) ? (
+                              (showSatelliteSkeleton ||
+                                (satelliteModule && satelliteModule.status !== 'pending')) ? (
                                 <>
                                   {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
-                                  {satelliteModule && (
+                                  {satelliteModule && satelliteModule.status !== 'pending' && (
                                     <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                                   )}
                                 </>
@@ -1044,9 +1051,10 @@ const SATELLITE_TOOL_ROWS: Array<{ key: string; label: string; Icon: LucideIcon 
 
 function satelliteScoreColor(score: number, hasError?: boolean) {
   if (hasError) return { border: 'border-l-red-400', icon: 'bg-red-50 text-red-500', bar: 'bg-red-400', text: 'text-red-600' };
+  if (score <= 0) return { border: 'border-l-slate-200', icon: 'bg-slate-100 text-slate-400', bar: 'bg-slate-200', text: 'text-slate-400' };
   if (score >= 80) return { border: 'border-l-emerald-400', icon: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-400', text: 'text-emerald-700' };
   if (score >= 50) return { border: 'border-l-amber-400', icon: 'bg-amber-50 text-amber-600', bar: 'bg-amber-400', text: 'text-amber-700' };
-  return { border: 'border-l-red-400', icon: 'bg-red-50 text-red-500', bar: 'bg-red-400', text: 'text-red-600' };
+  return { border: 'border-l-amber-400', icon: 'bg-amber-50 text-amber-600', bar: 'bg-amber-400', text: 'text-amber-700' };
 }
 
 // kept for backward compat (used nowhere else but just in case)
@@ -1359,10 +1367,11 @@ function SatelliteModuleSkeleton() {
           />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">
-              Generando resumen de herramientas del sitio (AEO)
+              Analizando el sitio con Cleexs Tools (AEO)
             </p>
             <p className="text-xs leading-relaxed text-primary-900/85 sm:text-sm">
-              Esto puede tardar hasta un minuto. Podés esperar en esta pantalla.
+              Suele tardar unos segundos o un par de minutos según el sitio. El resto del informe ya podés usarlo
+              arriba; esta sección se actualiza sola.
             </p>
           </div>
         </div>
@@ -1489,27 +1498,112 @@ function actionCardBorderClass(priority: string): string {
   return 'border-l-emerald-500';
 }
 
+function isSatelliteModuleDegraded(module: PublicDiagnosticSatelliteModule): boolean {
+  const nTools = Object.keys(module.tools || {}).length;
+  const nActions = module.actions?.length ?? 0;
+  const noPayload = nTools === 0 && nActions === 0;
+  if (module.status === 'timeout' || module.status === 'failed' || module.status === 'skipped') return true;
+  if (module.status === 'completed' && noPayload) return true;
+  return false;
+}
+
+function SatelliteAeoDegradedNotice({
+  module,
+  siteUrl,
+}: {
+  module: PublicDiagnosticSatelliteModule;
+  siteUrl: string;
+}) {
+  const title =
+    module.status === 'timeout'
+      ? 'Tiempo de espera agotado'
+      : module.status === 'failed'
+        ? 'No pudimos analizar el sitio desde aquí'
+        : module.status === 'skipped'
+          ? 'Análisis técnico no ejecutado'
+          : 'Sin datos de herramientas en esta corrida';
+
+  const body =
+    module.status === 'timeout'
+      ? 'Cleexs Tools tardó más de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no llegó a completarse.'
+      : module.status === 'failed'
+        ? module.error?.trim() ||
+          'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o usá Cleexs Tools directamente con la misma URL.'
+        : module.status === 'skipped'
+          ? 'Este diagnóstico no incluye URL de sitio o el módulo AEO está desactivado.'
+          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Podés generar un diagnóstico nuevo o revisar el sitio en Cleexs Tools.';
+
+  const toolsUrl = CLEEXS_TOOLS_PUBLIC_URL;
+
+  return (
+    <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/95 via-white to-orange-50/40 p-5 shadow-sm ring-1 ring-amber-100/80 sm:p-6">
+      <div className="flex gap-4">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 shadow-inner">
+          <AlertCircle className="h-6 w-6" aria-hidden />
+        </span>
+        <div className="min-w-0 space-y-2">
+          <p className="text-base font-bold tracking-tight text-slate-900">{title}</p>
+          <p className="text-sm leading-relaxed text-slate-700">{body}</p>
+          {siteUrl ? (
+            <p className="text-xs text-slate-600">
+              <span className="font-semibold text-slate-800">URL prevista:</span>{' '}
+              <a href={siteUrl} className="text-primary-600 underline-offset-2 hover:underline" target="_blank" rel="noreferrer">
+                {siteUrl}
+              </a>
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {toolsUrl ? (
+              <a
+                href={toolsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800"
+              >
+                Abrir Cleexs Tools
+                <ExternalLink className="h-4 w-4 opacity-90" aria-hidden />
+              </a>
+            ) : null}
+            <Link
+              href="/diagnostico/crear"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+            >
+              Nuevo diagnóstico
+            </Link>
+          </div>
+          {!toolsUrl ? (
+            <p className="text-xs text-slate-500">
+              Para mostrar el enlace a Cleexs Tools, configurá{' '}
+              <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_CLEEXS_TOOLS_URL</code> en el
+              front.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSatelliteModule }) {
   const actions = module.actions ?? [];
   const counts = countByActionPriority(actions);
 
   return (
     <section className="space-y-4" aria-labelledby="satellite-actions-heading">
-      <div className="overflow-hidden rounded-2xl border-2 border-indigo-950/80 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 shadow-lg shadow-amber-900/10">
+      <div className="overflow-hidden rounded-2xl border border-teal-700/25 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 shadow-md shadow-teal-900/10">
         <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white ring-2 ring-white/30">
-            <ChevronRight className="h-6 w-6" aria-hidden />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25">
+            <ChevronRight className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 id="satellite-actions-heading" className="text-base font-black tracking-tight text-white sm:text-lg">
+            <h3 id="satellite-actions-heading" className="text-base font-bold tracking-tight text-white sm:text-lg">
               Acciones a ejecutar
             </h3>
-            <p className="mt-0.5 text-xs font-medium leading-snug text-white/95 sm:text-sm">
-              Lo más importante del análisis AEO: tareas concretas ordenadas por impacto. Misma lógica que en Cleexs
-              Tools; acá las ves junto al informe Cleexs.
+            <p className="mt-0.5 text-xs font-medium leading-snug text-white/90 sm:text-sm">
+              Prioridades del análisis AEO (misma lógica que Cleexs Tools), junto a tu informe Cleexs.
             </p>
           </div>
-          <ListChecks className="hidden h-8 w-8 shrink-0 text-white/90 sm:block" aria-hidden />
+          <ListChecks className="hidden h-7 w-7 shrink-0 text-white/85 sm:block" aria-hidden />
         </div>
       </div>
 
@@ -1619,16 +1713,25 @@ function SatelliteModuleCard({
 
   const statusLabel =
     module.status === 'completed' ? 'Completado'
-    : module.status === 'timeout' ? 'Timeout'
+    : module.status === 'timeout' ? 'Tiempo agotado'
+    : module.status === 'failed' ? 'Error'
     : module.status === 'skipped' ? 'Omitido'
+    : module.status === 'pending' ? 'En proceso'
     : 'No disponible';
 
   const totalTools = Object.keys(module.tools || {}).length;
+  const degraded = isSatelliteModuleDegraded(module);
   const overallStyle = satelliteScoreColor(module.overallScore, false);
 
   const openRow = openToolKey ? SATELLITE_TOOL_ROWS.find((r) => r.key === openToolKey) : null;
   const openTool = openRow && openToolKey ? module.tools[openToolKey] : undefined;
   const openScore = openTool?.score ?? 0;
+  const openHasStoredDetail =
+    Boolean(openTool?.error) ||
+    (openTool?.detail &&
+      typeof openTool.detail === 'object' &&
+      !Array.isArray(openTool.detail) &&
+      Object.keys(openTool.detail).length > 0);
 
   const toolModal =
     openRow && openToolKey
@@ -1651,7 +1754,14 @@ function SatelliteModuleCard({
                   <p id="satellite-tool-dialog-title" className="truncate text-base font-bold text-slate-900">
                     {openRow.label}
                   </p>
-                  <p className="text-sm font-semibold tabular-nums text-slate-600">Score {Math.round(openScore)}</p>
+                  <p className="text-sm font-semibold tabular-nums text-slate-600">
+                    {degraded ? 'Sin datos en esta corrida' : `Score ${Math.round(openScore)}`}
+                  </p>
+                  {!openHasStoredDetail ? (
+                    <p className="mt-1 text-xs font-medium text-amber-800/90">
+                      No hay detalle guardado para esta herramienta en el diagnóstico público.
+                    </p>
+                  ) : null}
                 </div>
                 <button
                   type="button"
@@ -1676,33 +1786,38 @@ function SatelliteModuleCard({
       : null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-md ring-1 ring-slate-100/80">
 
       {toolModal}
 
-      <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4 sm:px-6">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-violet-50/60 via-white to-sky-50/50 px-5 py-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
-            <Sparkles className="h-5 w-5 text-slate-800" aria-hidden />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-200/60 bg-white text-violet-700 shadow-sm">
+            <Sparkles className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900">Análisis técnico del sitio (AEO)</p>
+            <p className="text-sm font-bold text-slate-900">Análisis técnico del sitio (AEO)</p>
             <p className="text-xs leading-relaxed text-slate-600">
-              Tarjetas por herramienta: tocá una para ver todo el detalle en un panel. Abajo, acciones a ejecutar con
-              el mismo estilo destacado que en Cleexs Tools.
+              {degraded
+                ? 'Cuando la corrida falla o hace timeout, no mostramos scores vacíos como si fueran reales.'
+                : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas al estilo Cleexs Tools.'}
             </p>
           </div>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Score global</p>
-          <p className={cn('text-3xl font-black leading-none tabular-nums', overallStyle.text)}>
-            {module.overallScore.toFixed(0)}
-          </p>
+          {degraded ? (
+            <p className="text-2xl font-black tabular-nums leading-none text-slate-400">N/D</p>
+          ) : (
+            <p className={cn('text-3xl font-black leading-none tabular-nums', overallStyle.text)}>
+              {module.overallScore.toFixed(0)}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="space-y-8 bg-slate-50/40 p-5 sm:p-6">
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+      <div className="space-y-6 bg-slate-50/50 p-5 sm:p-6">
+        <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
           <p>
             <span className="font-semibold text-slate-800">Sitio analizado:</span>{' '}
             {siteUrl ? (
@@ -1714,68 +1829,79 @@ function SatelliteModuleCard({
             )}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Estado del módulo: {statusLabel} · {totalTools} herramientas con datos · Si ves avisos de recorte, abrí
-            Cleexs Tools para el volcado completo.
+            Estado: <span className="font-medium text-slate-700">{statusLabel}</span>
+            {degraded ? null : (
+              <>
+                {' '}
+                · {totalTools} herramientas con datos · Si algo aparece recortado, abrí Cleexs Tools para el volcado
+                completo.
+              </>
+            )}
           </p>
         </div>
 
-        <div>
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <p className="text-sm font-bold text-slate-900">Herramientas (1–10)</p>
-              <p className="text-xs text-slate-500">
-                Clic en una tarjeta para abrir el detalle (sugerencias y datos técnicos) en un popup.
-              </p>
+        {degraded ? (
+          <SatelliteAeoDegradedNotice module={module} siteUrl={siteUrl} />
+        ) : (
+          <div>
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-slate-900">Herramientas (1–10)</p>
+                <p className="text-xs text-slate-500">Clic para abrir el detalle en un panel.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }, idx) => {
+                const t = module.tools[key];
+                const score = t?.score ?? 0;
+                const hasErr = Boolean(t?.error);
+                const colors = satelliteScoreColor(score, hasErr);
+                const labelShort = label.length > 16 ? `${label.slice(0, 14)}…` : label;
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setOpenToolKey(key)}
+                    className={cn(
+                      'group flex flex-col rounded-2xl border border-slate-200/90 bg-white p-3 text-left shadow-sm transition hover:border-violet-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/80',
+                      openToolKey === key && 'border-violet-400 ring-2 ring-violet-300/80 shadow-md'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600 group-hover:bg-violet-100 group-hover:text-violet-800">
+                        {idx + 1}
+                      </span>
+                      <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', colors.icon)}>
+                        <ToolIcon className="h-4 w-4" aria-hidden />
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs font-bold leading-tight text-slate-900" title={label}>
+                      {labelShort}
+                    </p>
+                    <div className="mt-2 flex items-end justify-between gap-2 border-t border-slate-100 pt-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Detalle</span>
+                      <span className={cn('text-lg font-black tabular-nums leading-none', colors.text)}>
+                        {score > 0 ? Math.round(score) : '—'}
+                      </span>
+                    </div>
+                    {hasErr ? (
+                      <span className="mt-1 text-[10px] font-medium text-red-600">Error</span>
+                    ) : score >= 80 ? (
+                      <span className="mt-1 text-[10px] font-medium text-emerald-600">Muy bien</span>
+                    ) : score > 0 ? (
+                      <span className="mt-1 text-[10px] font-medium text-slate-500">Revisar</span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-            {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }, idx) => {
-              const t = module.tools[key];
-              const score = t?.score ?? 0;
-              const hasErr = Boolean(t?.error);
-              const colors = satelliteScoreColor(score, hasErr);
-              const labelShort = label.length > 16 ? `${label.slice(0, 14)}…` : label;
-
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setOpenToolKey(key)}
-                  className={cn(
-                    'group flex flex-col rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm ring-1 ring-slate-100/80 transition hover:border-violet-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500',
-                    openToolKey === key && 'ring-2 ring-violet-400 border-violet-300'
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-slate-600 group-hover:bg-violet-100 group-hover:text-violet-800">
-                      {idx + 1}
-                    </span>
-                    <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', colors.icon)}>
-                      <ToolIcon className="h-4 w-4" aria-hidden />
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs font-bold leading-tight text-slate-900" title={label}>
-                    {labelShort}
-                  </p>
-                  <div className="mt-2 flex items-end justify-between gap-2 border-t border-slate-100 pt-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ver detalle</span>
-                    <span className={cn('text-lg font-black tabular-nums leading-none', colors.text)}>
-                      {score > 0 ? Math.round(score) : '—'}
-                    </span>
-                  </div>
-                  {hasErr ? (
-                    <span className="mt-1 text-[10px] font-medium text-red-600">Error</span>
-                  ) : score >= 80 ? (
-                    <span className="mt-1 text-[10px] font-medium text-emerald-600">Excelente</span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <SatelliteActionsExecuteBlock module={module} />
+        {!degraded && <SatelliteActionsExecuteBlock module={module} />}
+        {degraded && (module.actions?.length ?? 0) > 0 ? <SatelliteActionsExecuteBlock module={module} /> : null}
       </div>
     </div>
   );
