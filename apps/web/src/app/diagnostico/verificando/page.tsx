@@ -105,6 +105,10 @@ function VerificandoContent() {
   /** Modal legacy (running sin email): 1 captcha → 2 email */
   const [legacyPublicStep, setLegacyPublicStep] = useState<1 | 2>(1);
   const setupWizardInitRef = useRef<string | null>(null);
+  /** True si el usuario editó alguna URL de competidor (no pisar con polls del borrador). */
+  const competitorUrlsTouchedRef = useRef(false);
+  /** Evita setState en cada poll si el borrador sugerido no cambió. */
+  const lastHydratedDraftKeyRef = useRef('');
   /** Nodo al final de `document.body` para que los modales queden por encima del resto del DOM. */
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
@@ -273,6 +277,8 @@ function VerificandoContent() {
 
   useEffect(() => {
     setupWizardInitRef.current = null;
+    competitorUrlsTouchedRef.current = false;
+    lastHydratedDraftKeyRef.current = '';
     setLegacySetupHumanOk(false);
     setPublicSetupStep(1);
     setLegacyPublicStep(1);
@@ -287,10 +293,21 @@ function VerificandoContent() {
     setPublicSetupStep(1);
     setSetupHumanOk(false);
     setSetupEmail('');
-    setCompetitorUrls(fiveUrlsFromDraft(d.setupDraft));
     setStartAnalysisError(null);
-    // Solo al entrar en awaiting_user para este id; no incluir setupDraft en deps para no pisar URLs en cada poll.
+    // Las URLs de competidores las hidrata el efecto que sigue el setupDraft (evita quedar en blanco si el primer poll llega sin borrador).
   }, [normalizedDiagnosticStatus, diagnostic?.id]);
+
+  useEffect(() => {
+    if (normalizedDiagnosticStatus !== 'awaiting_user') return;
+    if (!diagnostic?.id) return;
+    const draftUrls = fiveUrlsFromDraft(diagnostic.setupDraft);
+    if (!draftUrls.some((u) => u.trim())) return;
+    if (competitorUrlsTouchedRef.current) return;
+    const key = draftUrls.map((u) => u.trim()).join('\n');
+    if (key === lastHydratedDraftKeyRef.current) return;
+    lastHydratedDraftKeyRef.current = key;
+    setCompetitorUrls(draftUrls);
+  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -1069,6 +1086,7 @@ function VerificandoContent() {
                           id={`comp-url-${idx}`}
                           value={val}
                           onChange={(e) => {
+                            competitorUrlsTouchedRef.current = true;
                             const next = [...competitorUrls];
                             next[idx] = e.target.value;
                             setCompetitorUrls(next);
@@ -1089,6 +1107,7 @@ function VerificandoContent() {
                         <button
                           type="button"
                           onClick={() => {
+                            competitorUrlsTouchedRef.current = true;
                             const next = [...competitorUrls];
                             next[idx] = '';
                             setCompetitorUrls(next);
@@ -1105,7 +1124,10 @@ function VerificandoContent() {
                     <button
                       type="button"
                       onClick={() => {
-                        setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
+                        competitorUrlsTouchedRef.current = false;
+                        const next = fiveUrlsFromDraft(diagnostic.setupDraft);
+                        lastHydratedDraftKeyRef.current = next.map((u) => u.trim()).join('\n');
+                        setCompetitorUrls(next);
                       }}
                       className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
                     >
