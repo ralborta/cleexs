@@ -1,7 +1,8 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
 import { Boxes, Globe, Loader2, Mail, Pencil, Plus, Save, Shield, Sparkles, Trash2, X } from 'lucide-react';
@@ -101,8 +102,12 @@ function VerificandoContent() {
   const [startAnalysisLoading, setStartAnalysisLoading] = useState(false);
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null);
   const setupWizardInitRef = useRef<string | null>(null);
+  const [overlayMountNode, setOverlayMountNode] = useState<HTMLElement | null>(null);
 
   const [heroIdx, setHeroIdx] = useState(0);
+  useLayoutEffect(() => {
+    setOverlayMountNode(document.body);
+  }, []);
   useEffect(() => {
     const id = setInterval(() => {
       setHeroIdx((i) => (i + 1) % HERO.length);
@@ -161,7 +166,12 @@ function VerificandoContent() {
       : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
   const displayCompletedCount = isPreRunBackdrop ? ONBOARDING_STEP_LABELS.length : completedCount;
   const displayBarPct = isPreRunBackdrop ? 91 : barPct;
-  const displayCaptchaVerified = captchaVerified || isPreRunBackdrop;
+  const diagnosticEmailTrimmed = diagnostic?.email?.trim() ?? '';
+  const hasServerEmailAfterStart = isRunning && Boolean(diagnosticEmailTrimmed);
+  const needsLegacyEmailCaptchaModal =
+    isRunning && !diagnosticEmailTrimmed && !captchaVerified;
+  const displayCaptchaVerified =
+    captchaVerified || isPreRunBackdrop || hasServerEmailAfterStart;
   const ctx: SitePreviewContext = useMemo(
     () => ({
       brandName: brandLabel,
@@ -173,7 +183,7 @@ function VerificandoContent() {
     analysisRunningPhase &&
     captchaVerified &&
     !!diagnostic &&
-    !diagnostic.email &&
+    !diagnosticEmailTrimmed &&
     progress >= 50;
 
   const activeStepForCards = useMemo(() => {
@@ -245,7 +255,8 @@ function VerificandoContent() {
   // Solo saltar el captcha del onboarding clásico cuando el análisis ya arrancó CON email
   // (flujo nuevo POST /start). Si está `running` sin email, el usuario debe ver el modal.
   useEffect(() => {
-    if (diagnostic?.status !== 'running' || !diagnostic.email) return;
+    const em = diagnostic?.email?.trim();
+    if (diagnostic?.status !== 'running' || !em) return;
     setCaptchaVerified(true);
   }, [diagnostic?.status, diagnostic?.email]);
 
@@ -689,6 +700,10 @@ function VerificandoContent() {
                       </p>
                     )}
                   </>
+                ) : needsLegacyEmailCaptchaModal ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Completá verificación y correo en el formulario que aparece sobre esta pantalla (centro).
+                  </p>
                 ) : (
                   <p className="mt-2 text-sm text-slate-600">Confirmá que sos humano en la ventana a la derecha. Ahí
                     arranca el análisis visual y el progreso.</p>
@@ -814,8 +829,10 @@ function VerificandoContent() {
         </p>
       </div>
 
-      {normalizedDiagnosticStatus === 'awaiting_user' && (
-        <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center">
+      {overlayMountNode &&
+        normalizedDiagnosticStatus === 'awaiting_user' &&
+        createPortal(
+        <div className="pointer-events-auto fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center">
             <form
               onSubmit={handleSetupStartAnalysis}
               className="relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
@@ -1018,11 +1035,14 @@ function VerificandoContent() {
               .
             </p>
           </form>
-        </div>
-      )}
+        </div>,
+        overlayMountNode
+        )}
 
-      {normalizedDiagnosticStatus === 'detecting_competitors' && (
-        <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-md">
+      {overlayMountNode &&
+        normalizedDiagnosticStatus === 'detecting_competitors' &&
+        createPortal(
+        <div className="pointer-events-auto fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-md">
           <div className="flex max-w-sm flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
             <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
             <p className="mt-4 text-center text-lg font-semibold text-slate-900">Detectando competidores</p>
@@ -1030,13 +1050,14 @@ function VerificandoContent() {
               Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
             </p>
           </div>
-        </div>
-      )}
+        </div>,
+        overlayMountNode
+        )}
 
-      {normalizedDiagnosticStatus === 'running' &&
-        !diagnostic.email &&
-        !captchaVerified && (
-        <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
+      {overlayMountNode &&
+        needsLegacyEmailCaptchaModal &&
+        createPortal(
+        <div className="pointer-events-auto fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
           <form
             onSubmit={handleLegacySetupSave}
             className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
@@ -1115,7 +1136,8 @@ function VerificandoContent() {
               .
             </p>
           </form>
-        </div>
+        </div>,
+        overlayMountNode
       )}
     </main>
   );
