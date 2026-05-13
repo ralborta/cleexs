@@ -626,9 +626,9 @@ function VerificandoContent() {
         <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50/90 p-6 text-center shadow-sm">
           <p className="text-lg font-bold text-amber-950">No pudimos preparar el diagnóstico</p>
           <p className="mt-3 text-sm leading-relaxed text-amber-900/95">
-            Para mostrar las pantallas de verificación necesitamos detectar al menos{' '}
-            <strong>cinco competidores</strong> automáticamente. En este caso no alcanzamos ese mínimo, así que el
-            flujo no pasa a la etapa de captcha y correo.
+            Para abrir las pantallas de verificación necesitamos detectar al menos{' '}
+            <strong>tres competidores</strong> automáticamente. Después vos completás la lista hasta{' '}
+            <strong>cinco URLs</strong> antes de iniciar el análisis. Acá no alcanzamos el mínimo de sugerencias.
           </p>
           <p className="mt-2 text-sm text-amber-900/85">Probá con otra URL, otra marca o más tarde.</p>
           <Button asChild className="mt-6 rounded-xl">
@@ -953,7 +953,7 @@ function VerificandoContent() {
                   {publicSetupStep === 2 &&
                     'Escribí el correo donde querés recibir el aviso cuando el análisis cierre.'}
                   {publicSetupStep === 3 &&
-                    'Encontramos estos competidores para tu análisis. Si querés, podés editar, quitar o agregar alguno. Guardamos las cinco URLs tal como las dejás acá.'}
+                    'Te sugerimos competidores de tu sector (a veces 3 o 4). Completá o editá hasta cinco URLs válidas; las que falten las cargás vos antes de guardar.'}
                 </p>
               </div>
             </div>
@@ -1174,7 +1174,8 @@ function VerificandoContent() {
             <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
             <p className="mt-4 text-center text-lg font-semibold text-slate-900">Detectando competidores</p>
             <p className="mt-2 text-center text-sm text-slate-600">
-              Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
+              Buscamos competidores de tu sector (mínimo unas pocas sugerencias). Después podés completar la lista
+              hasta cinco en el siguiente paso. Suele tardar unos segundos.
             </p>
           </div>
         </div>,

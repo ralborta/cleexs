@@ -18,6 +18,13 @@ import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satelli
 /** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
 const GENERIC_TLDS = new Set(['com', 'net', 'org', 'info', 'biz', 'edu', 'gov', 'int', 'io', 'ai', 'app']);
 
+/** Sugerencias mínimas antes de `awaiting_user`; el usuario completa hasta 5 URLs al confirmar. Default 3. */
+function getPublicDiagMinSuggestedCompetitors(): number {
+  const raw = Number(process.env.PUBLIC_DIAGNOSTIC_MIN_SUGGESTED_COMPETITORS ?? '3');
+  if (!Number.isFinite(raw)) return 3;
+  return Math.max(1, Math.min(5, Math.floor(raw)));
+}
+
 /**
  * Mapa TLD → país (nombre en español).
  * Incluye Américas completas + principales del mundo.
@@ -974,10 +981,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             if (suggestedCompetitorUrls.length >= 5) break;
           }
 
-          if (suggestedCompetitorUrls.length < 5) {
+          const minSuggested = getPublicDiagMinSuggestedCompetitors();
+          if (suggestedCompetitorUrls.length < minSuggested) {
             fastify.log.warn(
-              { diagnosticId: diagId, found: suggestedCompetitorUrls.length },
-              'Detección de competidores: menos de 5 URLs válidas'
+              { diagnosticId: diagId, found: suggestedCompetitorUrls.length, minSuggested },
+              'Detección de competidores: no se alcanzó el mínimo de URLs sugeridas'
             );
             await prisma.publicDiagnostic.update({
               where: { id: diagId },
