@@ -38,13 +38,25 @@ export type EntitlementCheckResult = {
 
 type PlanLimits = {
   scoreViewMonthly: number | null;
+  /** Cupo mensual para generar análisis (público/portal). Si no se define, se usa `scoreViewMonthly`. */
+  scoreGenerateMonthly?: number | null;
   deepReportsMonthly: number | null;
   maxBrands: number | null;
 };
 
+function monthlyUsageLimit(limits: PlanLimits, action: EntitlementAction): number | null {
+  if (action === EntitlementAction.report_deep_generate) return limits.deepReportsMonthly;
+  if (action === EntitlementAction.score_generate) {
+    const g = limits.scoreGenerateMonthly;
+    if (g !== undefined && g !== null) return g;
+  }
+  return limits.scoreViewMonthly;
+}
+
 const PLAN_LIMITS: Record<Exclude<PlanKey, 'admin'>, PlanLimits> = {
   anonymous: {
     scoreViewMonthly: 1,
+    scoreGenerateMonthly: 3,
     deepReportsMonthly: 0,
     maxBrands: 0,
   },
@@ -359,17 +371,18 @@ export async function checkEntitlement(
       ? await countDistinctScoreViews(prisma, input.actor, start, end)
       : await countUsageForAction(prisma, input.actor, input.action, start, end);
 
-  const limit =
-    input.action === EntitlementAction.report_deep_generate
-      ? limits.deepReportsMonthly
-      : limits.scoreViewMonthly;
+  const limit = monthlyUsageLimit(limits, input.action);
 
   if (limit == null) return wrapResult({ allowed: true, code: 'ok', planKey, usage, limit });
   if (usage >= limit) {
+    const reason =
+      planKey === 'anonymous'
+        ? 'Ya alcanzaste el límite de diagnósticos públicos gratuitos con este navegador este mes (sin cuenta). Podés volver a intentar el mes que viene o crear una cuenta en Cleexs para más cupo.'
+        : 'Alcanzaste el limite mensual de tu plan';
     return wrapResult({
       allowed: false,
       code: 'limit_reached',
-      reason: 'Alcanzaste el limite mensual de tu plan',
+      reason,
       planKey,
       usage,
       limit,
