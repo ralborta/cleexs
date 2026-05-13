@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import React, { Fragment, Suspense, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +52,7 @@ import {
   Users,
   Rocket,
   FileText,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
@@ -1578,8 +1580,8 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
         </>
       ) : (
         <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-          No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle de cada herramienta
-          abajo o abrí Cleexs Tools para un análisis interactivo completo.
+          No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
+          herramienta o abrí Cleexs Tools para un análisis interactivo completo.
         </p>
       )}
     </section>
@@ -1593,6 +1595,28 @@ function SatelliteModuleCard({
   module: PublicDiagnosticSatelliteModule;
   siteUrl: string;
 }) {
+  const [openToolKey, setOpenToolKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openToolKey) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenToolKey(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openToolKey]);
+
+  useEffect(() => {
+    if (openToolKey) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+    return undefined;
+  }, [openToolKey]);
+
   const statusLabel =
     module.status === 'completed' ? 'Completado'
     : module.status === 'timeout' ? 'Timeout'
@@ -1602,8 +1626,59 @@ function SatelliteModuleCard({
   const totalTools = Object.keys(module.tools || {}).length;
   const overallStyle = satelliteScoreColor(module.overallScore, false);
 
+  const openRow = openToolKey ? SATELLITE_TOOL_ROWS.find((r) => r.key === openToolKey) : null;
+  const openTool = openRow && openToolKey ? module.tools[openToolKey] : undefined;
+  const openScore = openTool?.score ?? 0;
+
+  const toolModal =
+    openRow && openToolKey
+      ? createPortal(
+          <div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4">
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-950/55 backdrop-blur-[1px]"
+              aria-label="Cerrar panel"
+              onClick={() => setOpenToolKey(null)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="satellite-tool-dialog-title"
+              className="relative z-10 flex max-h-[min(92vh,880px)] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl"
+            >
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-3 sm:px-5">
+                <div className="min-w-0">
+                  <p id="satellite-tool-dialog-title" className="truncate text-base font-bold text-slate-900">
+                    {openRow.label}
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums text-slate-600">Score {Math.round(openScore)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenToolKey(null)}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
+                <SatelliteToolDetailPanel
+                  label={openRow.label}
+                  toolError={openTool?.error}
+                  detail={openTool?.detail}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+      {toolModal}
 
       <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -1613,8 +1688,8 @@ function SatelliteModuleCard({
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900">Análisis técnico del sitio (AEO)</p>
             <p className="text-xs leading-relaxed text-slate-600">
-              Misma información que en Cleexs Tools: acciones prioritarias y las 10 herramientas con todo el detalle
-              disponible en esta corrida, visible a la vez.
+              Tarjetas por herramienta: tocá una para ver todo el detalle en un panel. Abajo, acciones a ejecutar con
+              el mismo estilo destacado que en Cleexs Tools.
             </p>
           </div>
         </div>
@@ -1639,79 +1714,68 @@ function SatelliteModuleCard({
             )}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Estado del módulo: {statusLabel} · {totalTools} herramientas con datos · Los textos largos o recortados
-            por tamaño indican cuándo conviene abrir Cleexs Tools para el 100% del volcado.
+            Estado del módulo: {statusLabel} · {totalTools} herramientas con datos · Si ves avisos de recorte, abrí
+            Cleexs Tools para el volcado completo.
           </p>
         </div>
 
-        <SatelliteActionsExecuteBlock module={module} />
-
         <div>
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <p className="text-sm font-bold text-slate-900">Herramientas (1–10)</p>
               <p className="text-xs text-slate-500">
-                Cada bloque muestra sugerencias y datos técnicos tal como en el panel original, sin tener que abrir uno
-                por uno.
+                Clic en una tarjeta para abrir el detalle (sugerencias y datos técnicos) en un popup.
               </p>
             </div>
           </div>
 
-          <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
             {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }, idx) => {
               const t = module.tools[key];
               const score = t?.score ?? 0;
               const hasErr = Boolean(t?.error);
               const colors = satelliteScoreColor(score, hasErr);
-              const labelShort = label.length > 18 ? `${label.slice(0, 16)}…` : label;
+              const labelShort = label.length > 16 ? `${label.slice(0, 14)}…` : label;
 
               return (
-                <div
+                <button
                   key={key}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-200/60"
+                  type="button"
+                  onClick={() => setOpenToolKey(key)}
+                  className={cn(
+                    'group flex flex-col rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm ring-1 ring-slate-100/80 transition hover:border-violet-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500',
+                    openToolKey === key && 'ring-2 ring-violet-400 border-violet-300'
+                  )}
                 >
-                  <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50/90 to-white px-4 py-3 sm:px-5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-200/90 text-xs font-bold text-slate-700">
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-slate-600 group-hover:bg-violet-100 group-hover:text-violet-800">
                       {idx + 1}
                     </span>
-                    <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-inner', colors.icon)}>
-                      <ToolIcon className="h-5 w-5" aria-hidden />
+                    <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', colors.icon)}>
+                      <ToolIcon className="h-4 w-4" aria-hidden />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-900 sm:text-base" title={label}>
-                        {labelShort}
-                      </p>
-                      <p className="text-[11px] text-slate-500 sm:text-xs">
-                        {hasErr ? 'Hubo error o timeout en esta herramienta.' : 'Detalle y sugerencias de la corrida.'}
-                      </p>
-                    </div>
-                    <div className="ml-auto flex shrink-0 flex-col items-end gap-0.5 text-right">
-                      <span className={cn('text-2xl font-black tabular-nums leading-none sm:text-3xl', colors.text)}>
-                        {score > 0 ? Math.round(score) : '—'}
-                      </span>
-                      {score >= 80 && !hasErr ? (
-                        <span className="text-[11px] font-semibold text-emerald-600">Excelente</span>
-                      ) : null}
-                      {score >= 50 && score < 80 && !hasErr ? (
-                        <span className="text-[11px] font-semibold text-amber-700">Mejorable</span>
-                      ) : null}
-                      {score > 0 && score < 50 && !hasErr ? (
-                        <span className="text-[11px] font-semibold text-red-600">Prioritario</span>
-                      ) : null}
-                    </div>
                   </div>
-                  <div className="bg-slate-50/50 px-4 py-5 sm:px-6">
-                    <SatelliteToolDetailPanel
-                      label={label}
-                      toolError={t?.error}
-                      detail={t?.detail}
-                    />
+                  <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs font-bold leading-tight text-slate-900" title={label}>
+                    {labelShort}
+                  </p>
+                  <div className="mt-2 flex items-end justify-between gap-2 border-t border-slate-100 pt-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ver detalle</span>
+                    <span className={cn('text-lg font-black tabular-nums leading-none', colors.text)}>
+                      {score > 0 ? Math.round(score) : '—'}
+                    </span>
                   </div>
-                </div>
+                  {hasErr ? (
+                    <span className="mt-1 text-[10px] font-medium text-red-600">Error</span>
+                  ) : score >= 80 ? (
+                    <span className="mt-1 text-[10px] font-medium text-emerald-600">Excelente</span>
+                  ) : null}
+                </button>
               );
             })}
           </div>
         </div>
+
+        <SatelliteActionsExecuteBlock module={module} />
       </div>
     </div>
   );
