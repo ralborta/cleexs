@@ -481,7 +481,7 @@ function VerificandoContent() {
       return;
     }
     if (!setupHumanOk) {
-      setStartAnalysisError('Confirmá que no sos un robot.');
+      setStartAnalysisError('Marcá la casilla para confirmar que sos humano.');
       return;
     }
     const em = setupEmail.trim();
@@ -937,69 +937,73 @@ function VerificandoContent() {
               ))}
             </div>
 
-            <div className="flex items-start gap-3 pr-10">
-              <span
-                className={cn(
-                  'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1',
-                  publicSetupStep === 2
-                    ? 'bg-violet-600 text-white ring-violet-700/30'
-                    : 'bg-violet-100 text-violet-700 ring-violet-200/60'
-                )}
-              >
-                {publicSetupStep === 1 ? (
-                  <Lock className="h-6 w-6" aria-hidden />
-                ) : publicSetupStep === 2 ? (
-                  <Mail className="h-6 w-6" aria-hidden />
-                ) : (
-                  <Globe className="h-6 w-6" aria-hidden />
-                )}
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-                  Paso {publicSetupStep} de 3
+            {publicSetupStep === 1 ? (
+              <div className="flex flex-col items-center px-2 pb-1 pt-1 text-center sm:px-4">
+                <Lock className="h-10 w-10 text-slate-400" strokeWidth={1.25} aria-hidden />
+                <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Paso 1 de 3
                 </p>
                 <h1 id="setup-modal-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                  {publicSetupStep === 1 && 'Confirmá que sos humano y empezamos'}
-                  {publicSetupStep === 2 && 'Desbloqueá el envío a tu mail'}
-                  {publicSetupStep === 3 && 'Competidores'}
+                  Confirmá que sos humano y empezamos
                 </h1>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {publicSetupStep === 1 &&
-                    'Con un click activamos el análisis en vivo de tu sitio. Después vas a ver el progreso paso a paso hasta tu Cleexs Score.'}
-                  {publicSetupStep === 2 &&
-                    'Escribí el correo donde querés recibir el aviso cuando el análisis cierre.'}
-                  {publicSetupStep === 3 &&
-                    'Te sugerimos competidores de tu sector (a veces 3 o 4). Completá o editá hasta cinco URLs válidas; las que falten las cargás vos antes de guardar.'}
+                <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600">
+                  Con un click activamos el análisis en vivo de tu sitio. Después vas a ver el progreso paso a paso hasta
+                  tu Cleexs Score.
                 </p>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-3 pr-10">
+                <span
+                  className={cn(
+                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1',
+                    publicSetupStep === 2
+                      ? 'bg-violet-600 text-white ring-violet-700/30'
+                      : 'bg-violet-100 text-violet-700 ring-violet-200/60'
+                  )}
+                >
+                  {publicSetupStep === 2 ? (
+                    <Mail className="h-6 w-6" aria-hidden />
+                  ) : (
+                    <Globe className="h-6 w-6" aria-hidden />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+                    Paso {publicSetupStep} de 3
+                  </p>
+                  <h1 id="setup-modal-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                    {publicSetupStep === 2 && 'Desbloqueá el envío a tu mail'}
+                    {publicSetupStep === 3 && 'Competidores'}
+                  </h1>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    {publicSetupStep === 2 &&
+                      'Escribí el correo donde querés recibir el aviso cuando el análisis cierre.'}
+                    {publicSetupStep === 3 &&
+                      'Te sugerimos competidores de tu sector (a veces 3 o 4). Completá o editá hasta cinco URLs válidas; las que falten las cargás vos antes de guardar.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {publicSetupStep === 1 && (
-              <section className="mt-8 border-t border-slate-100 pt-8">
-                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                  <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
-                    <span className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={setupHumanOk}
-                        onChange={(e) => setSetupHumanOk(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
-                      />
-                      <span className="text-sm font-medium text-slate-800">No soy un robot</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
-                      <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
-                      <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
-                      <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
-                    </span>
+              <section className="mt-6 sm:mt-8">
+                <div className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-4 sm:px-5">
+                  <label className="flex w-full cursor-pointer items-center gap-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={setupHumanOk}
+                      onChange={(e) => setSetupHumanOk(e.target.checked)}
+                      className="h-[18px] w-[18px] shrink-0 rounded border-slate-400 text-violet-600 focus:ring-2 focus:ring-violet-500"
+                    />
+                    <span className="text-sm font-medium text-slate-800">Soy Humano</span>
                   </label>
                 </div>
                 <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
-                  Al continuar aceptás los{' '}
+                  Acepto{' '}
                   <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
                     Términos
                   </a>{' '}
-                  y la{' '}
+                  y{' '}
                   <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
                     Privacidad
                   </a>
@@ -1218,41 +1222,32 @@ function VerificandoContent() {
               aria-labelledby="legacy-setup-title"
             >
               <div className="flex flex-col items-center text-center">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 ring-1 ring-slate-200/80">
-                  <Lock className="h-6 w-6" aria-hidden />
-                </span>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-violet-600">Paso 1 de 2</p>
+                <Lock className="h-10 w-10 text-slate-400" strokeWidth={1.25} aria-hidden />
+                <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 1 de 2</p>
                 <h1 id="legacy-setup-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                   Confirmá que sos humano y seguimos
                 </h1>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600">
                   Necesitamos tu correo para enviarte el informe. Primero confirmá que sos una persona.
                 </p>
               </div>
-              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                <label className="flex cursor-pointer flex-wrap items-center justify-between gap-4">
-                  <span className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={legacySetupHumanOk}
-                      onChange={(e) => setLegacySetupHumanOk(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-400 text-violet-600 focus:ring-violet-500"
-                    />
-                    <span className="text-sm font-medium text-slate-800">No soy un robot</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
-                    <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
-                    <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
-                    <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
-                  </span>
+              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-100 px-4 py-4 sm:px-5">
+                <label className="flex w-full cursor-pointer items-center gap-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={legacySetupHumanOk}
+                    onChange={(e) => setLegacySetupHumanOk(e.target.checked)}
+                    className="h-[18px] w-[18px] shrink-0 rounded border-slate-400 text-violet-600 focus:ring-2 focus:ring-violet-500"
+                  />
+                  <span className="text-sm font-medium text-slate-800">Soy Humano</span>
                 </label>
               </div>
               <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
-                Al continuar aceptás los{' '}
+                Acepto{' '}
                 <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
                   Términos
                 </a>{' '}
-                y la{' '}
+                y{' '}
                 <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
                   Privacidad
                 </a>
