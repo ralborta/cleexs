@@ -2,9 +2,10 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
-import { Boxes, Globe, Loader2, Mail, Pencil, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
+import { Boxes, Globe, Loader2, Mail, Pencil, Plus, Save, Shield, Sparkles, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -101,8 +102,13 @@ function VerificandoContent() {
   const [startAnalysisLoading, setStartAnalysisLoading] = useState(false);
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null);
   const setupWizardInitRef = useRef<string | null>(null);
+  const [modalPortalHost, setModalPortalHost] = useState<HTMLElement | null>(null);
 
   const [heroIdx, setHeroIdx] = useState(0);
+  useEffect(() => {
+    setModalPortalHost(document.body);
+  }, []);
+
   useEffect(() => {
     const id = setInterval(() => {
       setHeroIdx((i) => (i + 1) % HERO.length);
@@ -157,7 +163,7 @@ function VerificandoContent() {
     isPreRunBackdrop
       ? ANALYSIS_STEP_CARD_LABELS[Math.min(10, ANALYSIS_STEP_CARD_LABELS.length - 1)] ?? ''
       : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
-  const displayCompletedCount = isPreRunBackdrop ? 10 : completedCount;
+  const displayCompletedCount = isPreRunBackdrop ? ONBOARDING_STEP_LABELS.length : completedCount;
   const displayBarPct = isPreRunBackdrop ? 91 : barPct;
   const displayCaptchaVerified = captchaVerified || isPreRunBackdrop;
   const ctx: SitePreviewContext = useMemo(
@@ -810,21 +816,38 @@ function VerificandoContent() {
         </p>
       </div>
 
-      {diagnostic.status === 'awaiting_user' && (
-        <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-900/35 p-4 backdrop-blur-[2px] sm:items-center">
-          <form
-            onSubmit={handleSetupStartAnalysis}
-            className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
-            role="dialog"
-            aria-modal
-            aria-labelledby="setup-modal-title"
-          >
-            <h1 id="setup-modal-title" className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Confirmá y completá tus datos
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Estos datos son necesarios para continuar con tu análisis.
-            </p>
+      {modalPortalHost &&
+        diagnostic.status === 'awaiting_user' &&
+        createPortal(
+          <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center">
+            <form
+              onSubmit={handleSetupStartAnalysis}
+              className="relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+              role="dialog"
+              aria-modal
+              aria-labelledby="setup-modal-title"
+            >
+              <button
+                type="button"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                onClick={() => router.push('/diagnostico/crear')}
+                aria-label="Cerrar y volver al inicio del diagnóstico"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+              <div className="flex items-start gap-3 pr-10">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 ring-1 ring-violet-200/60">
+                  <Shield className="h-6 w-6" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h1 id="setup-modal-title" className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                    Confirmá y completá tus datos
+                  </h1>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Estos datos son necesarios para continuar con tu análisis.
+                  </p>
+                </div>
+              </div>
 
             <section className="mt-8 border-t border-slate-100 pt-8">
               <h2 className="text-base font-bold text-slate-900">Verificación humana</h2>
@@ -884,6 +907,9 @@ function VerificandoContent() {
                     key={idx}
                     className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1.5 sm:gap-3"
                   >
+                    <span className="w-6 shrink-0 pt-0.5 text-center text-xs font-bold tabular-nums text-slate-400">
+                      {idx + 1}
+                    </span>
                     <input
                       type="checkbox"
                       checked={competitorRowSelected[idx]}
@@ -996,11 +1022,14 @@ function VerificandoContent() {
               .
             </p>
           </form>
-        </div>
-      )}
+        </div>,
+        modalPortalHost
+        )}
 
-      {diagnostic.status === 'detecting_competitors' && (
-        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-[2px]">
+      {modalPortalHost &&
+        diagnostic.status === 'detecting_competitors' &&
+        createPortal(
+        <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-md">
           <div className="flex max-w-sm flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
             <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
             <p className="mt-4 text-center text-lg font-semibold text-slate-900">Detectando competidores</p>
@@ -1008,11 +1037,16 @@ function VerificandoContent() {
               Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
             </p>
           </div>
-        </div>
-      )}
+        </div>,
+        modalPortalHost
+        )}
 
-      {diagnostic.status === 'running' && !diagnostic.email && !captchaVerified && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
+      {modalPortalHost &&
+        diagnostic.status === 'running' &&
+        !diagnostic.email &&
+        !captchaVerified &&
+        createPortal(
+        <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
           <form
             onSubmit={handleLegacySetupSave}
             className="my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
@@ -1091,8 +1125,9 @@ function VerificandoContent() {
               .
             </p>
           </form>
-        </div>
-      )}
+        </div>,
+        modalPortalHost
+        )}
     </main>
   );
 }
