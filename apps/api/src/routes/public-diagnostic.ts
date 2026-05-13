@@ -13,7 +13,7 @@ import {
 } from '../lib/diagnostic-ai';
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
-import { runSatelliteAnalysis, type SatelliteModuleResult } from '../lib/satellite-client';
+import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
 
 /** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
 const GENERIC_TLDS = new Set(['com', 'net', 'org', 'info', 'biz', 'edu', 'gov', 'int', 'io', 'ai', 'app']);
@@ -303,12 +303,38 @@ function extractSatelliteModuleFromAnalysis(analysisJson: unknown): SatelliteMod
 
 /** Evita respuestas de varios MB en GET /diagnostic/:id (polling + JSON gigante desde Postgres). */
 const MAX_PUBLIC_RESPONSE_TEXT_CHARS = 14_000;
-const MAX_SATELLITE_TOOL_DETAIL_JSON_CHARS = 8_000;
+const MAX_SATELLITE_TOOL_DETAIL_JSON_CHARS = 88_000;
 
 function truncatePromptResponseText(text: string | null | undefined): string | undefined {
   if (text == null || text === '') return undefined;
   if (text.length <= MAX_PUBLIC_RESPONSE_TEXT_CHARS) return text;
   return `${text.slice(0, MAX_PUBLIC_RESPONSE_TEXT_CHARS)}… [truncado]`;
+}
+
+/** Ajusta `detail` de una herramienta satélite al tope de caracteres JSON sin descartar toda la estructura. */
+function fitSatelliteToolDetailToMaxJsonChars(detail: unknown, maxChars: number): Record<string, unknown> {
+  let maxStr = 16_000;
+  for (let q = 0; q < 18; q++) {
+    const adj = deepTruncateSatelliteDetail(detail, maxStr);
+    try {
+      if (JSON.stringify(adj).length <= maxChars) {
+        return adj as Record<string, unknown>;
+      }
+    } catch {
+      break;
+    }
+    maxStr = Math.max(320, Math.floor(maxStr * 0.5));
+  }
+  try {
+    const last = deepTruncateSatelliteDetail(detail, 320) as Record<string, unknown>;
+    return {
+      ...last,
+      _truncated: true,
+      _note: 'Detalle muy grande: se muestra una versión muy compacta.',
+    };
+  } catch {
+    return { _truncated: true, _note: 'Detalle no serializable.' };
+  }
 }
 
 /** Recorta `detail` por herramienta del módulo satélite en la respuesta HTTP (no altera lo guardado en DB). */
@@ -340,11 +366,7 @@ function sanitizeAnalysisJsonForPublicGet(json: unknown): object {
       if (s.length > MAX_SATELLITE_TOOL_DETAIL_JSON_CHARS) {
         newTools[key] = {
           ...t,
-          detail: {
-            _truncated: true,
-            _note: 'Detalle recortado en la API por tamaño; usá el análisis técnico o Cleexs Tools.',
-            score: t.score,
-          },
+          detail: fitSatelliteToolDetailToMaxJsonChars(d, MAX_SATELLITE_TOOL_DETAIL_JSON_CHARS),
         };
       } else {
         newTools[key] = t;
@@ -359,7 +381,7 @@ function sanitizeAnalysisJsonForPublicGet(json: unknown): object {
 
 /** Límite blando del JSON completo al hacer UPDATE en Postgres (evita conexiones largas / resets). */
 const MAX_DB_ANALYSIS_JSON_STRING_CHARS = 1_400_000;
-const MAX_DB_SATELLITE_TOOL_DETAIL_CHARS = 12_000;
+const MAX_DB_SATELLITE_TOOL_DETAIL_CHARS = 88_000;
 
 /**
  * Recorta análisis + satélite antes de persistir en `analysis_json`.
@@ -417,18 +439,14 @@ function shrinkAnalysisJsonForPersistence(input: object): object {
               const ds = JSON.stringify(d);
               if (ds.length > MAX_DB_SATELLITE_TOOL_DETAIL_CHARS) {
                 nt[k] = {
-                  score: t.score,
-                  error: t.error,
-                  detail: {
-                    _truncated: true,
-                    _note: 'Recortado al guardar por tamaño.',
-                  },
+                  ...t,
+                  detail: fitSatelliteToolDetailToMaxJsonChars(d, MAX_DB_SATELLITE_TOOL_DETAIL_CHARS),
                 };
               } else {
                 nt[k] = t;
               }
             } catch {
-              nt[k] = { score: t.score, error: t.error };
+              nt[k] = { ...t, detail: { score: t.score, error: t.error } };
             }
           } else {
             nt[k] = t;

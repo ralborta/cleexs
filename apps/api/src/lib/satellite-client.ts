@@ -81,20 +81,70 @@ function normalizePriority(value: string | undefined): string {
   return 'info';
 }
 
-/** Serializa el objeto tool completo para el desplegable en MIS (con tope de tamaño). */
+/**
+ * Reduce tamaño del JSON del satélite acortando solo strings largos (mantiene claves, arrays y objetos).
+ * Usado al guardar y al servir el detalle por herramienta.
+ */
+export function deepTruncateSatelliteDetail(value: unknown, maxStringLen: number, depth = 0): unknown {
+  if (depth > 40) return '[…]';
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'string') {
+    if (value.length <= maxStringLen) return value;
+    const keep = Math.max(48, maxStringLen - 28);
+    return `${value.slice(0, keep)}… [texto acortado]`;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => deepTruncateSatelliteDetail(item, maxStringLen, depth + 1));
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(o)) {
+      out[k] = deepTruncateSatelliteDetail(v, maxStringLen, depth + 1);
+    }
+    return out;
+  }
+  return value;
+}
+
+function parseSatelliteToolDetailStoreMaxChars(): number {
+  const raw = process.env.SATELLITE_TOOL_DETAIL_STORE_MAX_CHARS?.trim();
+  if (raw === undefined || raw === '') return 110_000;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 12_000) return 110_000;
+  return Math.min(Math.floor(n), 220_000);
+}
+
+/** Serializa el objeto tool completo para el desplegable; prioriza traer todo lo que quepa con recorte suave. */
 function toolDetailForStorage(t: SatelliteToolResult): Record<string, unknown> | undefined {
   try {
     const plain = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
-    const str = JSON.stringify(plain);
-    /** Tope por herramienta al persistir (10 tools × esto + análisis IA debe caber en un UPDATE estable). */
-    const max = 28_000;
+    const max = parseSatelliteToolDetailStoreMaxChars();
+    let str = JSON.stringify(plain);
     if (str.length <= max) return plain;
+
+    let maxStr = 16_000;
+    for (let i = 0; i < 16; i++) {
+      const candidate = deepTruncateSatelliteDetail(plain, maxStr) as Record<string, unknown>;
+      str = JSON.stringify(candidate);
+      if (str.length <= max) {
+        return {
+          ...candidate,
+          _truncated: true,
+          _note:
+            'Algunos textos largos se acortaron para conservar el máximo de estructura y datos útiles en el informe.',
+        };
+      }
+      maxStr = Math.max(400, Math.floor(maxStr * 0.52));
+    }
     return {
       score: plain.score,
       error: plain.error,
       suggestions: plain.suggestions,
       _truncated: true,
-      _note: 'Respuesta muy grande; abrí Cleexs Tools para el detalle completo.',
+      _note:
+        'El detalle sigue siendo muy grande; mostramos score y sugerencias. Para el volcado completo abrí Cleexs Tools con el mismo sitio.',
     };
   } catch {
     return undefined;

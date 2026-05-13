@@ -1413,12 +1413,6 @@ function SatelliteToolDetailPanel({
           <p className="leading-snug">{err}</p>
         </div>
       )}
-      {truncated && note && (
-        <div className="flex gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-          <p className="leading-snug">{note}</p>
-        </div>
-      )}
 
       {suggestions && suggestions.length > 0 && (
         <div className="space-y-3">
@@ -1460,6 +1454,13 @@ function SatelliteToolDetailPanel({
       )}
 
       {detail && <SatelliteDetailSections detail={detail} />}
+
+      {truncated && note ? (
+        <div className="flex gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+          <p>{note}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
