@@ -2,7 +2,6 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
 import { Boxes, Globe, Loader2, Mail, Pencil, Plus, Save, Shield, Sparkles, Trash2, X } from 'lucide-react';
@@ -102,13 +101,8 @@ function VerificandoContent() {
   const [startAnalysisLoading, setStartAnalysisLoading] = useState(false);
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null);
   const setupWizardInitRef = useRef<string | null>(null);
-  const [modalPortalHost, setModalPortalHost] = useState<HTMLElement | null>(null);
 
   const [heroIdx, setHeroIdx] = useState(0);
-  useEffect(() => {
-    setModalPortalHost(document.body);
-  }, []);
-
   useEffect(() => {
     const id = setInterval(() => {
       setHeroIdx((i) => (i + 1) % HERO.length);
@@ -131,12 +125,14 @@ function VerificandoContent() {
   const waitingCompletedSinceRef = useRef<number | null>(null);
 
   const stepsList = diagnostic?.steps ?? [];
+  const normalizedDiagnosticStatus = String(diagnostic?.status ?? '').trim().toLowerCase();
   const isPreRunBackdrop =
-    diagnostic?.status === 'awaiting_user' || diagnostic?.status === 'detecting_competitors';
+    normalizedDiagnosticStatus === 'awaiting_user' ||
+    normalizedDiagnosticStatus === 'detecting_competitors';
   const analysisRunningPhase =
-    diagnostic?.status === 'running' ||
-    diagnostic?.status === 'completed' ||
-    diagnostic?.status === 'failed';
+    normalizedDiagnosticStatus === 'running' ||
+    normalizedDiagnosticStatus === 'completed' ||
+    normalizedDiagnosticStatus === 'failed';
 
   const activeIndex = useMemo(() => {
     if (stepsList.length === 0) return 0;
@@ -153,7 +149,7 @@ function VerificandoContent() {
   const brandLabel = diagnostic?.brandName ?? null;
   const domain = diagnostic?.domain ?? '';
   const domainShort = (domain || '').replace(/^https?:\/\//, '');
-  const isRunning = diagnostic?.status === 'running';
+  const isRunning = normalizedDiagnosticStatus === 'running';
   const allStepsDone = stepsList.length > 0 && stepsList.every((s) => s.completed);
   const isFinalizing = isRunning && allStepsDone;
   const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6;
@@ -184,9 +180,9 @@ function VerificandoContent() {
     if (isPreRunBackdrop) return Math.min(10, ANALYSIS_STEP_CARD_LABELS.length - 1);
     const firstPending = stepsList.findIndex((s) => !s.completed);
     if (firstPending >= 0) return firstPending;
-    if (diagnostic?.status === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
+    if (normalizedDiagnosticStatus === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
     return Math.max(activeIndex, 0);
-  }, [stepsList, diagnostic?.status, activeIndex, isPreRunBackdrop]);
+  }, [stepsList, normalizedDiagnosticStatus, activeIndex, isPreRunBackdrop]);
 
   const advancePipeline = useCallback((next: number) => {
     setPipeline(next);
@@ -259,16 +255,18 @@ function VerificandoContent() {
   }, [diagnosticId]);
 
   useEffect(() => {
-    if (diagnostic?.status !== 'awaiting_user' || !diagnostic.id) return;
-    if (setupWizardInitRef.current === diagnostic.id) return;
-    setupWizardInitRef.current = diagnostic.id;
+    if (normalizedDiagnosticStatus !== 'awaiting_user') return;
+    const d = diagnostic;
+    if (!d?.id) return;
+    if (setupWizardInitRef.current === d.id) return;
+    setupWizardInitRef.current = d.id;
     setSetupHumanOk(false);
     setSetupEmail('');
-    setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
+    setCompetitorUrls(fiveUrlsFromDraft(d.setupDraft));
     setCompetitorRowSelected([true, true, true, true, true]);
     setStartAnalysisError(null);
-    // Solo al entrar en awaiting_user para este id; no incluir setupDraft para no pisar URLs editadas en cada poll.
-  }, [diagnostic?.status, diagnostic?.id]);
+    // Solo al entrar en awaiting_user para este id; no incluir setupDraft en deps para no pisar URLs en cada poll.
+  }, [normalizedDiagnosticStatus, diagnostic?.id]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -596,7 +594,7 @@ function VerificandoContent() {
   const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
   const allCompetitorsSelected = competitorRowSelected.every(Boolean);
   const canSubmitAwaitingSetup =
-    diagnostic.status === 'awaiting_user' &&
+    normalizedDiagnosticStatus === 'awaiting_user' &&
     setupHumanOk &&
     setupEmail.trim().includes('@') &&
     trimmedSetupCompetitorUrls.length === 5 &&
@@ -816,10 +814,8 @@ function VerificandoContent() {
         </p>
       </div>
 
-      {modalPortalHost &&
-        diagnostic.status === 'awaiting_user' &&
-        createPortal(
-          <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center">
+      {normalizedDiagnosticStatus === 'awaiting_user' && (
+        <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center">
             <form
               onSubmit={handleSetupStartAnalysis}
               className="relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
@@ -1022,13 +1018,10 @@ function VerificandoContent() {
               .
             </p>
           </form>
-        </div>,
-        modalPortalHost
-        )}
+        </div>
+      )}
 
-      {modalPortalHost &&
-        diagnostic.status === 'detecting_competitors' &&
-        createPortal(
+      {normalizedDiagnosticStatus === 'detecting_competitors' && (
         <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-md">
           <div className="flex max-w-sm flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
             <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
@@ -1037,15 +1030,12 @@ function VerificandoContent() {
               Analizamos tu sector para sugerirte cinco competidores directos. Suele tardar unos segundos.
             </p>
           </div>
-        </div>,
-        modalPortalHost
-        )}
+        </div>
+      )}
 
-      {modalPortalHost &&
-        diagnostic.status === 'running' &&
+      {normalizedDiagnosticStatus === 'running' &&
         !diagnostic.email &&
-        !captchaVerified &&
-        createPortal(
+        !captchaVerified && (
         <div className="pointer-events-auto fixed inset-0 z-[10050] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm sm:items-center">
           <form
             onSubmit={handleLegacySetupSave}
@@ -1125,9 +1115,8 @@ function VerificandoContent() {
               .
             </p>
           </form>
-        </div>,
-        modalPortalHost
-        )}
+        </div>
+      )}
     </main>
   );
 }
