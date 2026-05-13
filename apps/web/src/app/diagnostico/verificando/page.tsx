@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
-import { Boxes, Loader2, Lock, Mail, Sparkles } from 'lucide-react';
+import { Boxes, Loader2, Lock, Mail, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,6 @@ function VerificandoContent() {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [captchaPopupOpen, setCaptchaPopupOpen] = useState(true);
 
-  const [wizardStep, setWizardStep] = useState(0);
   const [setupHumanOk, setSetupHumanOk] = useState(false);
   const [setupEmail, setSetupEmail] = useState('');
   const [competitorUrls, setCompetitorUrls] = useState<string[]>(['', '', '', '', '']);
@@ -229,16 +228,13 @@ function VerificandoContent() {
     }
   }, [advancePipeline]);
 
+  // Solo saltar el captcha del onboarding clásico cuando el análisis ya arrancó CON email
+  // (flujo nuevo POST /start). Si está `running` sin email, el usuario debe ver el modal.
   useEffect(() => {
-    if (
-      diagnostic?.status === 'running' ||
-      diagnostic?.status === 'completed' ||
-      diagnostic?.status === 'failed'
-    ) {
-      setCaptchaVerified(true);
-      setCaptchaPopupOpen(false);
-    }
-  }, [diagnostic?.status]);
+    if (diagnostic?.status !== 'running' || !diagnostic.email) return;
+    setCaptchaVerified(true);
+    setCaptchaPopupOpen(false);
+  }, [diagnostic?.status, diagnostic?.email]);
 
   useEffect(() => {
     setupWizardInitRef.current = null;
@@ -248,7 +244,6 @@ function VerificandoContent() {
     if (diagnostic?.status !== 'awaiting_user' || !diagnostic.id) return;
     if (setupWizardInitRef.current === diagnostic.id) return;
     setupWizardInitRef.current = diagnostic.id;
-    setWizardStep(0);
     setSetupHumanOk(false);
     setSetupEmail('');
     setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
@@ -423,6 +418,8 @@ function VerificandoContent() {
         { visitorId: vid }
       );
       trackOnboarding('onboarding_setup_completed', { diagnosticId });
+      setCaptchaVerified(true);
+      setCaptchaPopupOpen(false);
       const data = await publicDiagnosticApi.get(diagnosticId, tierQParam === 'gold' ? 'gold' : undefined);
       setDiagnostic(data);
     } catch (err) {
@@ -533,110 +530,73 @@ function VerificandoContent() {
   }
 
   if (diagnostic.status === 'awaiting_user') {
+    const trimmedUrls = competitorUrls.map((u) => u.trim());
+    const canSubmitSetup =
+      setupHumanOk &&
+      setupEmail.trim().includes('@') &&
+      trimmedUrls.length === 5 &&
+      trimmedUrls.every(Boolean);
+
+    const restoreSuggestedCompetitors = () => {
+      setCompetitorUrls(fiveUrlsFromDraft(diagnostic.setupDraft));
+    };
+
     return (
-      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center bg-slate-100 px-4 py-10">
-        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-          <div className="mb-6 text-center">
-            <Lock className="mx-auto mb-2 h-8 w-8 text-slate-400" aria-hidden />
-            <h1 className="text-xl font-bold text-slate-900">Antes de arrancar el análisis</h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Verificación, correo y competidores (podés editar las URLs sugeridas).
-            </p>
-          </div>
-
-          <ol className="mb-6 flex gap-2 text-xs font-medium text-slate-500">
-            <li
-              className={cn(
-                'flex-1 rounded-lg border px-2 py-2 text-center',
-                wizardStep === 0 ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-slate-200'
-              )}
-            >
-              1 · Verificación
-            </li>
-            <li
-              className={cn(
-                'flex-1 rounded-lg border px-2 py-2 text-center',
-                wizardStep === 1 ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-slate-200'
-              )}
-            >
-              2 · Correo
-            </li>
-            <li
-              className={cn(
-                'flex-1 rounded-lg border px-2 py-2 text-center',
-                wizardStep === 2 ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-slate-200'
-              )}
-            >
-              3 · Competidores
-            </li>
-          </ol>
-
-          {wizardStep === 0 && (
-            <div className="space-y-4">
-              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <input
-                  type="checkbox"
-                  checked={setupHumanOk}
-                  onChange={(e) => setSetupHumanOk(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm font-medium text-slate-800">No soy un robot</span>
+      <main className="min-h-[calc(100vh-72px)] bg-[#121212] px-4 py-10 text-white">
+        <div className="mx-auto w-full max-w-lg">
+          <form
+            onSubmit={handleSetupStartAnalysis}
+            className="rounded-2xl border border-neutral-800 bg-[#121212] p-6 shadow-2xl sm:p-8"
+          >
+            <section className="mb-10">
+              <h2 className="text-lg font-bold tracking-tight text-white">Verificación humana</h2>
+              <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-neutral-700 bg-[#1E1E1E] px-4 py-3.5">
+                <span className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={setupHumanOk}
+                    onChange={(e) => {
+                      const v = e.target.checked;
+                      setSetupHumanOk(v);
+                      if (v && diagnosticId) {
+                        trackOnboarding('onboarding_captcha_completed', { diagnosticId });
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-neutral-500 bg-neutral-900 text-sky-500 focus:ring-sky-500"
+                  />
+                  <span className="text-sm font-medium text-neutral-100">No soy un robot</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-0.5" aria-hidden title="Verificación">
+                  <span className="h-3.5 w-3.5 rounded-full bg-[#4285F4]" />
+                  <span className="h-3.5 w-3.5 rounded-full bg-[#34A853]" />
+                  <span className="h-3.5 w-3.5 rounded-full bg-[#FBBC05]" />
+                </span>
               </label>
-              <Button
-                type="button"
-                className="w-full"
-                disabled={!setupHumanOk}
-                onClick={() => {
-                  setWizardStep(1);
-                  if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
-                }}
-              >
-                Continuar
-              </Button>
-            </div>
-          )}
+            </section>
 
-          {wizardStep === 1 && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 rounded-lg border border-violet-100 bg-violet-50/80 p-3">
-                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-                <p className="text-xs text-violet-900">
-                  Te avisamos cuando el informe esté listo. No compartimos tu correo con terceros.
-                </p>
-              </div>
+            <section className="mb-10">
+              <h2 className="text-lg font-bold tracking-tight text-white">Tu correo electrónico</h2>
+              <p className="mt-1.5 text-sm text-neutral-400">
+                Te enviaremos el reporte detallado a esta dirección.
+              </p>
               <input
                 type="email"
                 value={setupEmail}
                 onChange={(e) => setSetupEmail(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                placeholder="correo@empresa.com"
+                className="mt-4 w-full rounded-xl border border-neutral-700 bg-[#1E1E1E] px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none ring-sky-500/30 focus:border-sky-500/60 focus:ring-2"
+                placeholder="ejemplo@correo.com"
                 autoComplete="email"
               />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setWizardStep(0)}>
-                  Atrás
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 bg-primary-600 text-white hover:bg-primary-700"
-                  disabled={!setupEmail.trim().includes('@')}
-                  onClick={() => setWizardStep(2)}
-                >
-                  Continuar
-                </Button>
-              </div>
-            </div>
-          )}
+            </section>
 
-          {wizardStep === 2 && (
-            <form onSubmit={handleSetupStartAnalysis} className="space-y-4">
-              <p className="text-xs text-slate-600">
-                Confirmá o editá las cinco URLs de competencia. Cada una debe ser un sitio distinto al tuyo.
+            <section className="mb-8">
+              <h2 className="text-lg font-bold tracking-tight text-white">Tus competidores</h2>
+              <p className="mt-1.5 text-sm text-neutral-400">
+                Hemos identificado estos competidores. Podés editarlos si lo deseás.
               </p>
-              <div className="space-y-2">
+              <div className="mt-4 space-y-2.5">
                 {competitorUrls.map((val, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="w-6 text-center text-xs font-semibold text-slate-400">{idx + 1}</span>
                     <input
                       type="text"
                       inputMode="url"
@@ -646,43 +606,63 @@ function VerificandoContent() {
                         next[idx] = e.target.value;
                         setCompetitorUrls(next);
                       }}
-                      className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="https://competidor.com"
+                      className="min-w-0 flex-1 rounded-xl border border-neutral-700 bg-[#1E1E1E] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 outline-none ring-sky-500/30 focus:border-sky-500/60 focus:ring-2"
+                      placeholder={`https://www.competidor${idx + 1}.com`}
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = [...competitorUrls];
+                        next[idx] = '';
+                        setCompetitorUrls(next);
+                      }}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-700 text-neutral-400 transition hover:border-red-900/50 hover:bg-red-950/30 hover:text-red-300"
+                      aria-label={`Quitar competidor ${idx + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
               </div>
-              {startAnalysisError && (
-                <p className="text-sm text-destructive" role="alert">
-                  {startAnalysisError}
-                </p>
-              )}
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
-                  Atrás
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-primary-600 text-white hover:bg-primary-700"
-                  disabled={startAnalysisLoading}
-                >
-                  {startAnalysisLoading ? 'Iniciando…' : 'Comenzar análisis'}
-                </Button>
-              </div>
-            </form>
-          )}
+              <button
+                type="button"
+                onClick={restoreSuggestedCompetitors}
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-neutral-400 transition hover:text-sky-400"
+              >
+                <Plus className="h-4 w-4" />
+                + Agregar competidor
+              </button>
+              <p className="mt-1 text-xs text-neutral-500">
+                Restaurá las URLs sugeridas por Cleexs (necesitamos exactamente cinco).
+              </p>
+            </section>
 
-          <p className="mt-6 text-center text-[11px] text-slate-500">
-            Al continuar aceptás los{' '}
-            <a href="/terminos" className="underline">
-              Términos
-            </a>{' '}
-            y la{' '}
-            <a href="/privacidad" className="underline">
-              Privacidad
-            </a>
-            .
-          </p>
+            {startAnalysisError && (
+              <p className="mb-4 text-sm text-red-400" role="alert">
+                {startAnalysisError}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={!canSubmitSetup || startAnalysisLoading}
+              className="h-12 w-full rounded-xl bg-[#00A3FF] text-base font-bold text-white shadow-lg shadow-sky-900/40 hover:bg-[#0090e0] disabled:opacity-40"
+            >
+              {startAnalysisLoading ? 'Generando…' : 'Generar Diagnóstico'}
+            </Button>
+
+            <p className="mt-6 text-center text-[11px] text-neutral-500">
+              Al continuar aceptás los{' '}
+              <a href="/terminos" className="text-sky-400 underline hover:text-sky-300">
+                Términos
+              </a>{' '}
+              y la{' '}
+              <a href="/privacidad" className="text-sky-400 underline hover:text-sky-300">
+                Privacidad
+              </a>
+              .
+            </p>
+          </form>
         </div>
       </main>
     );
