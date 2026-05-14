@@ -1119,7 +1119,7 @@ function formatDetailPrimitive(
     const t = value.trim();
     if (!t.length) return null;
     if (looksLikeRawMarkup(t)) {
-      return 'La respuesta parece HTML/XML (no es texto plano tipo robots.txt). Acá mostramos un extracto; el contenido completo puede no mostrarse en esta vista.';
+      return 'La respuesta parece HTML o XML (no es texto plano con URLs, como un sitemap o robots.txt legibles línea a línea). En este panel no mostramos el cuerpo completo por tamaño y legibilidad.';
     }
     if (t.length > maxStr) {
       return `${t.slice(0, maxStr)}… [${t.length - maxStr} caracteres más no mostrados aquí]`;
@@ -1327,15 +1327,40 @@ function SatelliteDetailSections({ detail }: { detail: Record<string, unknown> }
   );
 }
 
+const AEO_SKELETON_HINTS = [
+  'Seguimos analizando tu sitio…',
+  'En sitios con mucho contenido puede demorar un poco más.',
+  'Podés usar el resto del informe arriba; esta sección se actualiza sola.',
+  'Estamos consolidando señales técnicas del dominio.',
+] as const;
+
 function SatelliteModuleSkeleton() {
+  const [hintIdx, setHintIdx] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setHintIdx((i) => (i + 1) % AEO_SKELETON_HINTS.length);
+    }, 10_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   return (
     <Card className="border border-dashed border-primary-200/80 bg-white shadow-md">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl text-foreground">
-          <Sparkles className="h-5 w-5 shrink-0 animate-pulse text-primary-600" />
-          <span className="inline-block h-6 w-56 rounded-md bg-slate-200/90 animate-pulse" />
+      <CardHeader className="space-y-3 pb-3">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-xl text-foreground">
+          <Sparkles className="h-5 w-5 shrink-0 animate-pulse text-primary-600" aria-hidden />
+          <span>Análisis técnico del sitio (AEO)</span>
         </CardTitle>
-        <div className="h-4 max-w-md rounded bg-slate-100 animate-pulse" />
+        <div className="space-y-2">
+          <div className="aeo-progress-track" aria-hidden />
+          <p className="text-sm font-semibold text-primary-900 sm:text-base">Generando análisis técnico del sitio…</p>
+          <p
+            key={hintIdx}
+            className="text-xs leading-relaxed text-slate-600 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 sm:text-sm"
+          >
+            {AEO_SKELETON_HINTS[hintIdx]}
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
@@ -1367,12 +1392,9 @@ function SatelliteModuleSkeleton() {
             aria-hidden
           />
           <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">
-              Analizando el sitio (análisis técnico AEO)
-            </p>
+            <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">Proceso en curso</p>
             <p className="text-xs leading-relaxed text-primary-900/85 sm:text-sm">
-              Suele tardar unos segundos o un par de minutos según el sitio. El resto del informe ya podés usarlo
-              arriba; esta sección se actualiza sola.
+              La página se actualiza sola cuando termine. No hace falta recargar manualmente.
             </p>
           </div>
         </div>
@@ -1442,7 +1464,6 @@ function SatelliteToolDetailPanel({
                     </span>
                   </div>
                   <p className="text-sm font-semibold leading-snug">{message}</p>
-                  {item.detail && <p className="mt-1.5 text-xs leading-relaxed text-current/80">{item.detail}</p>}
                   {item.action && (
                     <p className="mt-1.5 text-xs font-semibold leading-relaxed">→ {item.action}</p>
                   )}

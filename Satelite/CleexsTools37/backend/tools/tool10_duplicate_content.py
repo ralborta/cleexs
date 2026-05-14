@@ -256,8 +256,8 @@ class DuplicateContentFinder:
             total_dup = sum(d["count"] for d in duplicates)
             suggestions.append({
                 "priority": "alta",
-                "message": f"{total_dup} paginas con contenido exactamente duplicado",
-                "detail": "El contenido duplicado confunde a las IAs y diluye tu autoridad. Usa canonicals o consolida estas paginas.",
+                "message": f"{total_dup} páginas con contenido exactamente duplicado",
+                "detail": "",
                 "urls": [d["urls"] for d in duplicates[:3]],
             })
 
@@ -265,8 +265,8 @@ class DuplicateContentFinder:
         if high_similar:
             suggestions.append({
                 "priority": "alta",
-                "message": f"{len(high_similar)} pares de paginas con contenido muy similar (>70%)",
-                "detail": "Paginas muy parecidas compiten entre si. Considera combinarlas o diferenciar claramente el contenido.",
+                "message": f"{len(high_similar)} pares de páginas con contenido muy similar (>70%)",
+                "detail": "",
                 "urls": [[s["url_a"], s["url_b"]] for s in high_similar[:3]],
             })
 
@@ -275,7 +275,7 @@ class DuplicateContentFinder:
             suggestions.append({
                 "priority": "media",
                 "message": f"{len(medium_similar)} pares con similitud moderada (30-70%)",
-                "detail": "Revisa estas paginas para asegurar que cada una aporta valor unico.",
+                "detail": "",
                 "urls": [[s["url_a"], s["url_b"]] for s in medium_similar[:3]],
             })
 
@@ -283,8 +283,8 @@ class DuplicateContentFinder:
         if thin:
             suggestions.append({
                 "priority": "media",
-                "message": f"{len(thin)} paginas con contenido muy corto (<100 palabras)",
-                "detail": "Paginas thin content son dificiles de diferenciar y aportan poco valor para las IAs.",
+                "message": f"{len(thin)} páginas con contenido muy corto (<100 palabras)",
+                "detail": "",
                 "urls": [p["url"] for p in thin[:5]],
             })
 
@@ -292,7 +292,7 @@ class DuplicateContentFinder:
             suggestions.append({
                 "priority": "info",
                 "message": "No se encontraron problemas significativos de contenido duplicado",
-                "detail": "Tu sitio tiene buen nivel de contenido unico.",
+                "detail": "",
                 "urls": [],
             })
 

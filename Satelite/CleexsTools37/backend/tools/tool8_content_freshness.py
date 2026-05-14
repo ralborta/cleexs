@@ -245,8 +245,8 @@ class ContentFreshnessChecker:
             urls = [p.url for p in outdated[:5]]
             suggestions.append({
                 "priority": "alta",
-                "message": f"{len(outdated)} paginas desactualizadas (mas de 1 ano sin modificar)",
-                "detail": "El contenido viejo pierde relevancia para las IAs. Actualiza fechas, datos y estadisticas.",
+                "message": f"{len(outdated)} páginas desactualizadas (más de 1 año sin modificar)",
+                "detail": "",
                 "urls": urls,
             })
 
@@ -254,8 +254,8 @@ class ContentFreshnessChecker:
         if no_dates:
             suggestions.append({
                 "priority": "media",
-                "message": f"{len(no_dates)} paginas sin fecha visible",
-                "detail": "Las IAs y buscadores priorizan contenido con fechas claras. Agrega datePublished y dateModified en meta tags o JSON-LD.",
+                "message": f"{len(no_dates)} páginas sin fecha visible",
+                "detail": "",
                 "urls": [p.url for p in no_dates[:5]],
             })
 
@@ -263,8 +263,8 @@ class ContentFreshnessChecker:
         if thin:
             suggestions.append({
                 "priority": "media",
-                "message": f"{len(thin)} paginas con contenido muy corto",
-                "detail": "Paginas con poco texto son dificiles de citar para las IAs. Expande el contenido con informacion relevante.",
+                "message": f"{len(thin)} páginas con contenido muy corto",
+                "detail": "",
                 "urls": [p.url for p in thin[:5]],
             })
 
@@ -272,8 +272,8 @@ class ContentFreshnessChecker:
         if aging:
             suggestions.append({
                 "priority": "baja",
-                "message": f"{len(aging)} paginas envejeciendo (3-12 meses sin actualizar)",
-                "detail": "Revisa estas paginas y actualiza los datos si es necesario para mantener la relevancia.",
+                "message": f"{len(aging)} páginas envejeciendo (3-12 meses sin actualizar)",
+                "detail": "",
                 "urls": [p.url for p in aging[:5]],
             })
 
@@ -281,7 +281,7 @@ class ContentFreshnessChecker:
             suggestions.append({
                 "priority": "info",
                 "message": "Tu contenido se ve actualizado",
-                "detail": "La mayoria de tus paginas tienen fechas recientes. Sigue actualizando regularmente.",
+                "detail": "",
                 "urls": [],
             })
 
