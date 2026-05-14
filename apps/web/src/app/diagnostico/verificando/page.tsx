@@ -107,8 +107,8 @@ function VerificandoContent() {
   const setupWizardInitRef = useRef<string | null>(null);
   /** True si el usuario editó alguna URL de competidor (no pisar con polls del borrador). */
   const competitorUrlsTouchedRef = useRef(false);
-  /** Evita setState en cada poll si el borrador sugerido no cambió. */
-  const lastHydratedDraftKeyRef = useRef('');
+  /** Evita pisar URLs si el usuario ya editó; guardamos JSON de sugeridos para detectar cambios reales del servidor. */
+  const lastHydratedSuggestedJsonRef = useRef('');
   /** Nodo al final de `document.body` para que los modales queden por encima del resto del DOM. */
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
@@ -278,11 +278,17 @@ function VerificandoContent() {
   useEffect(() => {
     setupWizardInitRef.current = null;
     competitorUrlsTouchedRef.current = false;
-    lastHydratedDraftKeyRef.current = '';
+    lastHydratedSuggestedJsonRef.current = '';
     setLegacySetupHumanOk(false);
     setPublicSetupStep(1);
     setLegacyPublicStep(1);
   }, [diagnosticId]);
+
+  useEffect(() => {
+    if (normalizedDiagnosticStatus === 'detecting_competitors') {
+      lastHydratedSuggestedJsonRef.current = '';
+    }
+  }, [normalizedDiagnosticStatus]);
 
   useEffect(() => {
     if (normalizedDiagnosticStatus !== 'awaiting_user') return;
@@ -303,11 +309,12 @@ function VerificandoContent() {
     const draftUrls = fiveUrlsFromDraft(diagnostic.setupDraft);
     if (!draftUrls.some((u) => u.trim())) return;
     if (competitorUrlsTouchedRef.current) return;
-    const key = draftUrls.map((u) => u.trim()).join('\n');
-    if (key === lastHydratedDraftKeyRef.current) return;
-    lastHydratedDraftKeyRef.current = key;
+    const suggestedJson = JSON.stringify(diagnostic.setupDraft?.suggestedCompetitorUrls ?? []);
+    const uiEmpty = !competitorUrls.some((u) => u.trim());
+    if (!uiEmpty && suggestedJson === lastHydratedSuggestedJsonRef.current) return;
+    lastHydratedSuggestedJsonRef.current = suggestedJson;
     setCompetitorUrls(draftUrls);
-  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft]);
+  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft, competitorUrls]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -1136,7 +1143,9 @@ function VerificandoContent() {
                       onClick={() => {
                         competitorUrlsTouchedRef.current = false;
                         const next = fiveUrlsFromDraft(diagnostic.setupDraft);
-                        lastHydratedDraftKeyRef.current = next.map((u) => u.trim()).join('\n');
+                        lastHydratedSuggestedJsonRef.current = JSON.stringify(
+                          diagnostic.setupDraft?.suggestedCompetitorUrls ?? []
+                        );
                         setCompetitorUrls(next);
                       }}
                       className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
