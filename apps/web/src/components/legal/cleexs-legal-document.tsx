@@ -1,40 +1,44 @@
 const docDate = '13 de mayo de 2026';
 
-const p = 'mb-4 text-[17px] leading-[1.75] text-slate-800 antialiased';
-const h2 = 'mt-12 scroll-mt-28 border-b border-slate-200 pb-2 text-2xl font-bold tracking-tight text-slate-900 first:mt-0';
-const h3 = 'mt-8 text-lg font-semibold text-slate-900';
-const ul = 'mb-4 list-disc space-y-2 pl-6 text-[17px] leading-[1.75] text-slate-800';
-const lead = 'mb-8 text-lg font-medium leading-relaxed text-slate-700';
+const p = 'mb-3 text-[14px] leading-[1.65] text-slate-700 antialiased';
+const h2 =
+  'mt-8 scroll-mt-28 border-b border-slate-200 pb-1.5 text-lg font-bold tracking-tight text-slate-900 first:mt-0 sm:text-xl';
+const h3 = 'mt-5 text-[14px] font-semibold text-slate-900';
+const ul = 'mb-3 list-disc space-y-1.5 pl-5 text-[14px] leading-[1.65] text-slate-700 marker:text-slate-400';
+const lead = 'mb-5 text-[14px] leading-relaxed text-slate-600';
 
 export function CleexsLegalDocument() {
   return (
-    <article className="mx-auto max-w-3xl scroll-smooth px-4 pb-32 pt-8 sm:px-6 sm:pt-10">
-      <header className="mb-10 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/40 p-6 shadow-sm ring-1 ring-violet-100/60 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-violet-700">Cleexs · Documento legal</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Términos y privacidad</h1>
-        <p className={`mt-3 ${lead}`}>
-          Texto completo para el flujo de diagnóstico y uso de la plataforma. Tipografía cómoda para lectura prolongada.
+    <article className="mx-auto max-w-2xl scroll-smooth px-4 pb-28 pt-6 sm:px-5 sm:pt-8">
+      <header className="mb-6 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/80 via-white to-indigo-50/30 p-5 shadow-sm ring-1 ring-violet-100/50 sm:p-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700">Cleexs · Documento legal</p>
+        <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Términos y privacidad</h1>
+        <p className={`mt-2 ${lead}`}>
+          Texto completo para el flujo de diagnóstico y el uso de la plataforma.
         </p>
-        <nav className="mt-4 flex flex-wrap gap-2 text-sm font-medium">
+        <nav className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
           <a
             href="#terminos-de-servicio"
-            className="rounded-full bg-white px-4 py-2 text-violet-800 shadow-sm ring-1 ring-violet-200/80 transition hover:bg-violet-50"
+            className="rounded-full bg-white px-3 py-1.5 text-violet-800 shadow-sm ring-1 ring-violet-200/80 transition hover:bg-violet-50"
           >
             Ir a Términos de servicio
           </a>
           <a
             href="#politica-de-privacidad"
-            className="rounded-full bg-white px-4 py-2 text-indigo-800 shadow-sm ring-1 ring-indigo-200/80 transition hover:bg-indigo-50"
+            className="rounded-full bg-white px-3 py-1.5 text-indigo-800 shadow-sm ring-1 ring-indigo-200/80 transition hover:bg-indigo-50"
           >
             Ir a Política de privacidad
           </a>
         </nav>
       </header>
 
-      <section id="terminos-de-servicio" className="scroll-mt-24">
+      <section
+        id="terminos-de-servicio"
+        className="scroll-mt-24 rounded-xl border border-slate-200/90 bg-white/85 p-5 shadow-sm ring-1 ring-slate-100/80 sm:p-6"
+      >
         <h2 className={h2}>Términos de servicio de Cleexs</h2>
-        <p className="text-sm font-medium text-slate-500">Última actualización: {docDate}</p>
-        <p className={`mt-6 ${p}`}>
+        <p className="text-xs font-medium text-slate-500">Última actualización: {docDate}</p>
+        <p className={`mt-4 ${p}`}>
           Bienvenido a Cleexs. Estos Términos de Servicio regulan el acceso y uso de nuestra plataforma, sitio web,
           reportes, herramientas, análisis, recomendaciones y servicios relacionados con posicionamiento digital, SEO,
           visibilidad en buscadores, presencia en motores de búsqueda impulsados por inteligencia artificial y análisis
@@ -213,10 +217,13 @@ export function CleexsLegalDocument() {
         </p>
       </section>
 
-      <section id="politica-de-privacidad" className="scroll-mt-24 border-t border-slate-200 pt-14">
+      <section
+        id="politica-de-privacidad"
+        className="mt-6 scroll-mt-24 rounded-xl border border-slate-200/90 bg-white/85 p-5 shadow-sm ring-1 ring-slate-100/80 sm:p-6"
+      >
         <h2 className={h2}>Política de privacidad de Cleexs</h2>
-        <p className="text-sm font-medium text-slate-500">Última actualización: {docDate}</p>
-        <p className={`mt-6 ${p}`}>
+        <p className="text-xs font-medium text-slate-500">Última actualización: {docDate}</p>
+        <p className={`mt-4 ${p}`}>
           En Cleexs valoramos la privacidad. Esta Política explica qué información recopilamos, cómo la utilizamos, con
           quién podemos compartirla, cuánto tiempo la conservamos y qué derechos tienen los usuarios. Al utilizar Cleexs,
           el usuario acepta el tratamiento conforme a esta Política.
