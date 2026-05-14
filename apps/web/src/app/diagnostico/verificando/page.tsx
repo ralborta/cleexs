@@ -1013,11 +1013,11 @@ function VerificandoContent() {
                 </div>
                 <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
                   Acepto{' '}
-                  <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                  <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
                     Términos
                   </a>{' '}
                   y{' '}
-                  <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                  <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
                     Privacidad
                   </a>
                   .
@@ -1187,11 +1187,11 @@ function VerificandoContent() {
 
                 <p className="mt-6 text-center text-[11px] text-slate-500">
                   Al guardar aceptás los{' '}
-                  <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                  <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
                     Términos
                   </a>{' '}
                   y la{' '}
-                  <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                  <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
                     Privacidad
                   </a>
                   .
@@ -1259,11 +1259,11 @@ function VerificandoContent() {
               </div>
               <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
                 Acepto{' '}
-                <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
                   Términos
                 </a>{' '}
                 y{' '}
-                <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
                   Privacidad
                 </a>
                 .
@@ -1330,11 +1330,11 @@ function VerificandoContent() {
               </div>
               <p className="mt-6 text-center text-[11px] text-slate-500">
                 Al guardar aceptás los{' '}
-                <a href="/terminos" className="text-violet-600 underline hover:text-violet-700">
+                <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
                   Términos
                 </a>{' '}
                 y la{' '}
-                <a href="/privacidad" className="text-violet-600 underline hover:text-violet-700">
+                <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
                   Privacidad
                 </a>
                 .
