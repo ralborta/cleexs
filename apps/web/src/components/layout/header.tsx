@@ -25,6 +25,14 @@ function isStandalonePortalPath(pathname: string | null): boolean {
   return pathname.startsWith('/portal-crecimiento') || pathname.startsWith('/portal-cliente');
 }
 
+/** Páginas legales públicas: el cliente no debe ver el menú interno (Diagnóstico, Planes, etc.). */
+function isPublicLegalPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname.startsWith('/legal/')) return true;
+  if (pathname === '/terminos' || pathname === '/privacidad') return true;
+  return false;
+}
+
 function isAdminPath(pathname: string | null): boolean {
   if (!pathname) return false;
   return pathname.startsWith('/admin');
@@ -41,7 +49,8 @@ function logoHrefForPath(pathname: string | null): string {
 export function Header() {
   const pathname = usePathname();
   if (isAdminPath(pathname)) return null;
-  const minimal = isPublicDiagnosticPath(pathname) || isStandalonePortalPath(pathname);
+  const minimal =
+    isPublicDiagnosticPath(pathname) || isStandalonePortalPath(pathname) || isPublicLegalPath(pathname);
   const logoHref = logoHrefForPath(pathname);
 
   if (minimal) {

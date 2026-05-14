@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, us
 import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
+import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import { ArrowLeft, Boxes, Globe, Loader2, Lock, Mail, Pencil, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -21,6 +22,11 @@ function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+/** Salida explícita del flujo público: marketing (cleexs.net), nunca a rutas internas de la app. */
+function exitPublicSetupToMarketingSite() {
+  window.location.assign(CLEEXS_MARKETING_URL);
 }
 
 function PulsingDots() {
@@ -932,8 +938,8 @@ function VerificandoContent() {
             <button
               type="button"
               className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-              onClick={() => router.push('/diagnostico/crear')}
-              aria-label="Cerrar y volver al inicio del diagnóstico"
+              onClick={exitPublicSetupToMarketingSite}
+              aria-label="Cerrar y volver al sitio público de Cleexs"
             >
               <X className="h-5 w-5" aria-hidden />
             </button>
@@ -1027,7 +1033,7 @@ function VerificandoContent() {
                     type="button"
                     variant="outline"
                     className="rounded-xl"
-                    onClick={() => router.push('/diagnostico/crear')}
+                    onClick={exitPublicSetupToMarketingSite}
                   >
                     Cancelar
                   </Button>
