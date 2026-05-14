@@ -269,6 +269,40 @@ function filterComparisonSummaryToTrackedParticipants(
   );
 }
 
+function mergeConfiguredCompetitorsWithZeroShare(
+  filteredRows: ComparisonRow[],
+  competitorsList: string[],
+  brandNm: string,
+  aliases: string[],
+): ComparisonRow[] {
+  const rowKeys = (name: string) => {
+    const n = normalizeName(name);
+    const base = name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    const nb = normalizeName(base);
+    return new Set([n, nb].filter(Boolean));
+  };
+  const covered = new Set<string>();
+  for (const r of filteredRows) {
+    for (const k of rowKeys(r.name)) covered.add(k);
+  }
+  const merged = [...filteredRows];
+  for (const raw of competitorsList) {
+    const t = raw.trim();
+    if (!t || isBrandEntry(t, brandNm, aliases)) continue;
+    const keys = [...rowKeys(t)];
+    if (keys.some((k) => covered.has(k))) continue;
+    merged.push({
+      name: t,
+      type: 'competitor',
+      appearances: 0,
+      averagePosition: 0,
+      share: 0,
+    });
+    keys.forEach((k) => covered.add(k));
+  }
+  return merged.sort((a, b) => b.share - a.share);
+}
+
 function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
   return (
     <div className={cn('h-2 w-full overflow-hidden rounded-full bg-slate-200', className)}>
@@ -427,11 +461,16 @@ export function ReporteModerno({
     runResult.competitors?.length > 0
       ? runResult.competitors
       : Array.from(new Set(rawComparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
-  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
-    rawComparisonSummary,
+  const comparisonSummary = mergeConfiguredCompetitorsWithZeroShare(
+    filterComparisonSummaryToTrackedParticipants(
+      rawComparisonSummary,
+      brandName,
+      brandAliases,
+      competitorsUsed,
+    ),
+    competitorsUsed,
     brandName,
     brandAliases,
-    competitorsUsed,
   );
   const leaderRow = comparisonSummary[0];
   const secondRow = comparisonSummary[1];
@@ -514,7 +553,7 @@ export function ReporteModerno({
   });
 
   // Datos para comparativo directo (barras)
-  const topForBars = comparisonSummary.slice(0, 6);
+  const topForBars = comparisonSummary;
   const barData = topForBars.map((row) => ({
     name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
     value: row.share,
@@ -586,7 +625,7 @@ export function ReporteModerno({
       }
     });
   });
-  const bubbleData = comparisonSummary.slice(0, 6).map((row) => {
+  const bubbleData = comparisonSummary.map((row) => {
     const isBrand = row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases);
     const count1 = isBrand ? results.filter((r) => r.top3Json?.some((e) => e.position === 1 && isBrandEntry(e.name, brandName, brandAliases))).length : (top1ByBrand.get(normalizeName(row.name)) ?? 0);
     const pct1 = totalPrompts ? (count1 / totalPrompts) * 100 : 0;
@@ -600,7 +639,7 @@ export function ReporteModerno({
   });
 
   // Datos para Treemap (cuota de voz)
-  const treemapData = comparisonSummary.slice(0, 6).map((row) => ({
+  const treemapData = comparisonSummary.map((row) => ({
     name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
     size: row.share,
     isBrand: row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases),

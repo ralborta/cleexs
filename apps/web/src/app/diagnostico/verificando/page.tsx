@@ -476,8 +476,13 @@ function VerificandoContent() {
     if (!diagnosticId || !diagnostic) return;
     setStartAnalysisError(null);
     const trimmed = competitorUrls.map((u) => u.trim());
-    if (trimmed.some((u) => !u)) {
-      setStartAnalysisError('Completá las 5 URLs de competidores.');
+    const filledCompetitorUrls = trimmed.filter(Boolean);
+    if (filledCompetitorUrls.length < 1) {
+      setStartAnalysisError('Agregá al menos una URL de competidor válida.');
+      return;
+    }
+    if (filledCompetitorUrls.length > 5) {
+      setStartAnalysisError('Como máximo 5 URLs de competidores.');
       return;
     }
     if (!setupHumanOk) {
@@ -496,7 +501,7 @@ function VerificandoContent() {
         diagnosticId,
         {
           email: em,
-          competitorUrls: trimmed,
+          competitorUrls: filledCompetitorUrls,
           ...(typeof diagnostic.setupDraft?.useSerp === 'boolean'
             ? { useSerp: diagnostic.setupDraft.useSerp }
             : {}),
@@ -679,11 +684,12 @@ function VerificandoContent() {
   }
 
   const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
+  const filledSetupCompetitorCount = trimmedSetupCompetitorUrls.filter(Boolean).length;
   const canFinalizePublicSetup =
     setupHumanOk &&
     setupEmail.trim().includes('@') &&
-    trimmedSetupCompetitorUrls.length === 5 &&
-    trimmedSetupCompetitorUrls.every(Boolean);
+    filledSetupCompetitorCount >= 1 &&
+    filledSetupCompetitorCount <= 5;
 
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
@@ -979,7 +985,7 @@ function VerificandoContent() {
                     {publicSetupStep === 2 &&
                       'Escribí el correo donde querés recibir el aviso cuando el análisis cierre.'}
                     {publicSetupStep === 3 &&
-                      'Te sugerimos competidores de tu sector (a veces 3 o 4). Completá o editá hasta cinco URLs válidas; las que falten las cargás vos antes de guardar.'}
+                      'Te sugerimos competidores de tu sector. Podés dejar solo los que quieras comparar: con al menos una URL válida el análisis continúa (hasta cinco).'}
                   </p>
                 </div>
               </div>

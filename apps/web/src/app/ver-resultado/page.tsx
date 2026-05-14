@@ -185,6 +185,40 @@ const filterComparisonSummaryToTrackedParticipants = (
   );
 };
 
+const mergeConfiguredCompetitorsWithZeroShare = (
+  filteredRows: ComparisonRow[],
+  competitorsList: string[],
+  brandNm: string,
+  aliases: string[],
+): ComparisonRow[] => {
+  const rowKeys = (name: string) => {
+    const n = normalizeName(name);
+    const base = name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    const nb = normalizeName(base);
+    return new Set([n, nb].filter(Boolean));
+  };
+  const covered = new Set<string>();
+  for (const r of filteredRows) {
+    for (const k of rowKeys(r.name)) covered.add(k);
+  }
+  const merged = [...filteredRows];
+  for (const raw of competitorsList) {
+    const t = raw.trim();
+    if (!t || isBrandEntry(t, brandNm, aliases)) continue;
+    const keys = [...rowKeys(t)];
+    if (keys.some((k) => covered.has(k))) continue;
+    merged.push({
+      name: t,
+      type: 'competitor',
+      appearances: 0,
+      averagePosition: 0,
+      share: 0,
+    });
+    keys.forEach((k) => covered.add(k));
+  }
+  return merged.sort((a, b) => b.share - a.share);
+};
+
 /** Vista limitada Freemium: solo Cleexs Score + CTA */
 function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }) {
   return (
@@ -318,11 +352,16 @@ function ReporteCompleto({
     runResult.competitors?.length > 0
       ? runResult.competitors
       : Array.from(new Set(rawComparisonSummary.filter((r) => r.type === 'competitor').map((r) => r.name)));
-  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
-    rawComparisonSummary,
+  const comparisonSummary = mergeConfiguredCompetitorsWithZeroShare(
+    filterComparisonSummaryToTrackedParticipants(
+      rawComparisonSummary,
+      brandName,
+      brandAliases,
+      competitorsUsed,
+    ),
+    competitorsUsed,
     brandName,
     brandAliases,
-    competitorsUsed,
   );
 
   return (

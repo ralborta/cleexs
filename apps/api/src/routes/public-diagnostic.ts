@@ -584,7 +584,7 @@ async function isFirstRunForDomain(diagnosticId: string, domain: string): Promis
 /**
  * Pipeline completo del diagnóstico público (Brand, Run OpenAI/Gemini, análisis, satélite, emails).
  * El análisis técnico del sitio (satélite) corre en paralelo con la corrida OpenAI (misma URL). El análisis escrito IA exige resultados OpenAI.
- * Se invoca solo tras `POST .../start` (usuario confirmó email + 5 competidores).
+ * Se invoca solo tras `POST .../start` (usuario confirmó email + entre 1 y 5 competidores).
  */
 async function executePublicDiagnosticPipeline(params: {
   log: PublicDiagLog;
@@ -610,9 +610,9 @@ async function executePublicDiagnosticPipeline(params: {
   } = params;
 
   const competitorNames = competitorRows.map((c) => c.name).filter(Boolean);
-  if (competitorNames.length < 5) {
+  if (competitorNames.length < 1) {
     throw new Error(
-      `Diagnóstico abortado: se requieren 5 competidores; hay ${competitorNames.length} válidos para ${brandForRun}`
+      `Diagnóstico abortado: se requiere al menos 1 competidor; hay ${competitorNames.length} válidos para ${brandForRun}`
     );
   }
 
@@ -915,24 +915,30 @@ function parsePublicSetupDraft(json: unknown): {
   return { suggestedCompetitorUrls, marketCountry, useSerp };
 }
 
-/** Normaliza exactamente 5 URLs de competidor a dominio host; null si inválido o duplicado. */
-function parseFiveCompetitorDomains(urls: unknown): string[] | null {
-  if (!Array.isArray(urls) || urls.length !== 5) return null;
+const MAX_PUBLIC_COMPETITOR_URLS = 5;
+
+/** Entre 1 y 5 URLs no vacías → dominios únicos; null si inválido, duplicado o fuera de rango. */
+function parsePublicCompetitorDomains(urls: unknown): { domains: string[]; originalUrls: string[] } | null {
+  if (!Array.isArray(urls) || urls.length < 1 || urls.length > MAX_PUBLIC_COMPETITOR_URLS) return null;
   const seen = new Set<string>();
-  const out: string[] = [];
-  for (const u of urls) {
-    if (typeof u !== 'string' || !u.trim()) return null;
+  const domains: string[] = [];
+  const originalUrls: string[] = [];
+  for (const raw of urls) {
+    const trimmed = typeof raw === 'string' ? raw.trim() : '';
+    if (!trimmed) continue;
     let host: string;
     try {
-      host = normalizeDomain(u.trim());
+      host = normalizeDomain(trimmed);
     } catch {
       return null;
     }
     if (!host || seen.has(host)) return null;
     seen.add(host);
-    out.push(host);
+    domains.push(host);
+    originalUrls.push(trimmed);
   }
-  return out;
+  if (domains.length < 1 || domains.length > MAX_PUBLIC_COMPETITOR_URLS) return null;
+  return { domains, originalUrls };
 }
 
 /** Variantes para matchear la respuesta del modelo con lo que cargó el usuario (parseTop3). */
@@ -1150,7 +1156,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // POST /api/public/diagnostic/:id/start — email + 5 URLs competidor; consume cupo y ejecuta pipeline.
+  // POST /api/public/diagnostic/:id/start — email + 1–5 URLs competidor; consume cupo y ejecuta pipeline.
   fastify.post<{
     Params: { id: string };
     Body: { email: string; competitorUrls: string[]; useSerp?: boolean };
@@ -1158,7 +1164,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const schema = z.object({
         email: z.string().email(),
-        competitorUrls: z.array(z.string().max(500)).length(5),
+        competitorUrls: z
+          .array(z.string().max(500))
+          .min(1)
+          .max(MAX_PUBLIC_COMPETITOR_URLS)
+          .refine((arr) => arr.some((s) => String(s).trim().length > 0), 'Al menos una URL de competidor.'),
         useSerp: z.boolean().optional(),
       });
       const parsed = schema.safeParse(request.body);
@@ -1183,12 +1193,13 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const domains = parseFiveCompetitorDomains(competitorUrls);
-      if (!domains) {
+      const parsedUrls = parsePublicCompetitorDomains(competitorUrls);
+      if (!parsedUrls) {
         return reply.code(400).send({
-          error: 'Necesitamos exactamente 5 URLs de competidores válidas y con dominios distintos.',
+          error: `Necesitamos entre 1 y ${MAX_PUBLIC_COMPETITOR_URLS} URLs de competidores válidas, sin repetir dominio.`,
         });
       }
+      const { domains, originalUrls } = parsedUrls;
 
       const ownHost = diagnostic.domain.toLowerCase();
       if (domains.some((h) => h === ownHost)) {
@@ -1229,10 +1240,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'URL de sitio inválida para este diagnóstico.' });
       }
 
-      const competitorRows = competitorRowsFromDomains(
-        domains,
-        competitorUrls.map((u) => `${u}`.trim())
-      );
+      const competitorRows = competitorRowsFromDomains(domains, originalUrls);
 
       await prisma.publicDiagnostic.update({
         where: { id },

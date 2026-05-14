@@ -145,6 +145,41 @@ const filterComparisonSummaryToTrackedParticipants = (
   );
 };
 
+/** Incluye competidores configurados que no aparecieron en ningún Top 3 (0% de share). */
+const mergeConfiguredCompetitorsWithZeroShare = (
+  filteredRows: ComparisonRow[],
+  competitorsList: string[],
+  brandNm: string,
+  aliases: string[],
+): ComparisonRow[] => {
+  const rowKeys = (name: string) => {
+    const n = normalizeName(name);
+    const base = name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    const nb = normalizeName(base);
+    return new Set([n, nb].filter(Boolean));
+  };
+  const covered = new Set<string>();
+  for (const r of filteredRows) {
+    for (const k of rowKeys(r.name)) covered.add(k);
+  }
+  const merged = [...filteredRows];
+  for (const raw of competitorsList) {
+    const t = raw.trim();
+    if (!t || isBrandEntry(t, brandNm, aliases)) continue;
+    const keys = [...rowKeys(t)];
+    if (keys.some((k) => covered.has(k))) continue;
+    merged.push({
+      name: t,
+      type: 'competitor',
+      appearances: 0,
+      averagePosition: 0,
+      share: 0,
+    });
+    keys.forEach((k) => covered.add(k));
+  }
+  return merged.sort((a, b) => b.share - a.share);
+};
+
 function scoreLabelEs(score: number) {
   if (score >= 70) return 'alto';
   if (score >= 45) return 'medio';
@@ -364,11 +399,16 @@ export function ReporteCorridas({
     runResult.competitors?.length > 0
       ? runResult.competitors
       : Array.from(new Set(rawComparisonSummary.filter((row) => row.type === 'competitor').map((row) => row.name)));
-  const comparisonSummary = filterComparisonSummaryToTrackedParticipants(
-    rawComparisonSummary,
+  const comparisonSummary = mergeConfiguredCompetitorsWithZeroShare(
+    filterComparisonSummaryToTrackedParticipants(
+      rawComparisonSummary,
+      brandName,
+      brandAliases,
+      competitorsUsed,
+    ),
+    competitorsUsed,
     brandName,
     brandAliases,
-    competitorsUsed,
   );
   const competitorUrlMap = new Map(
     (runResult.competitorDetails ?? [])
@@ -457,7 +497,7 @@ export function ReporteCorridas({
     };
   });
 
-  const topCompetitors = comparisonSummary.slice(0, 5).map((row) => ({
+  const topCompetitors = comparisonSummary.map((row) => ({
     name: isBrandEntry(row.name, brandName, brandAliases) ? 'Tu marca' : row.name,
     sourceName: row.name,
     share: Number(row.share.toFixed(1)),
@@ -842,13 +882,13 @@ export function ReporteCorridas({
               ) : (
                 <div className="flex flex-1 flex-col">
                   <p className="mb-2 text-[11px] font-medium text-slate-500">
-                    Top {Math.min(topCompetitors.length, 5)} por % en Top 3
+                    Orden por % en Top 3 ({topCompetitors.filter((c) => !c.isBrand).length} competidores)
                   </p>
                   {topCompetitors.length === 0 ? (
                     <p className="text-xs text-slate-500">Sin competidores suficientes en esta corrida.</p>
                   ) : (
                     <ul className="space-y-1.5">
-                      {topCompetitors.slice(0, 5).map((c, idx) => (
+                      {topCompetitors.map((c, idx) => (
                         <li
                           key={`${c.name}-${idx}`}
                           className={cn(
