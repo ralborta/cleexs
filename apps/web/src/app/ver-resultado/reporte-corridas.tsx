@@ -1348,7 +1348,7 @@ export function ReporteCorridas({
             <div className="flex items-start justify-between gap-3 px-4 pb-1 pt-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Tendencia</p>
-                <p className="text-sm font-bold text-slate-900">Evolución del score</p>
+                <p className="text-sm font-bold text-slate-900">Evolución del Cleexs Score</p>
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
                 <LineChartIcon className="h-5 w-5" strokeWidth={2} aria-hidden />

@@ -832,7 +832,7 @@ export default function ReportesClientePage() {
                       </div>
 
                       <div>
-                        <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400">Evolución del score</h3>
+                        <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400">Evolución del Cleexs Score</h3>
                         <div className="mt-3 h-[200px] w-full rounded-xl border border-slate-100 bg-slate-50/50 p-2">
                           {evolutionPreview.length >= 2 ? (
                             <ResponsiveContainer width="100%" height="100%">
