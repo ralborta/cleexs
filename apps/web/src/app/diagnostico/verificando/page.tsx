@@ -930,7 +930,11 @@ function VerificandoContent() {
           style={{ zIndex: 2147483000 }}
         >
           <div
-            className="relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
+            className={cn(
+              'relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8',
+              (publicSetupStep === 1 || publicSetupStep === 2) &&
+                'flex min-h-[31rem] flex-col sm:min-h-[33rem]'
+            )}
             role="dialog"
             aria-modal
             aria-labelledby="setup-modal-title"
@@ -1005,7 +1009,25 @@ function VerificandoContent() {
             )}
 
             {publicSetupStep === 1 && (
-              <section className="mt-6 sm:mt-8">
+              <form
+                className="mt-6 sm:mt-8"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handlePublicSetupStep1Next();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' || e.repeat) return;
+                  if (e.nativeEvent.isComposing) return;
+                  const el = e.target as HTMLElement;
+                  if (el.closest('a[href]')) return;
+                  const btn = el.closest('button');
+                  if (btn?.getAttribute('type') === 'button') return;
+                  if (btn?.getAttribute('type') === 'submit') return;
+                  if (!setupHumanOk) return;
+                  e.preventDefault();
+                  handlePublicSetupStep1Next();
+                }}
+              >
                 <div className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-4 sm:px-5">
                   <label className="flex w-full cursor-pointer items-center gap-3 text-left">
                     <input
@@ -1038,19 +1060,24 @@ function VerificandoContent() {
                     Cancelar
                   </Button>
                   <Button
-                    type="button"
+                    type="submit"
                     className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6"
                     disabled={!setupHumanOk}
-                    onClick={handlePublicSetupStep1Next}
                   >
                     Continuar
                   </Button>
                 </div>
-              </section>
+              </form>
             )}
 
             {publicSetupStep === 2 && (
-              <section className="mt-8 border-t border-slate-100 pt-8">
+              <form
+                className="mt-8 border-t border-slate-100 pt-8"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handlePublicSetupStep2Next();
+                }}
+              >
                 <div className="rounded-2xl border border-violet-200/90 bg-gradient-to-b from-violet-50/95 via-white to-white p-5 shadow-sm ring-1 ring-violet-100/80">
                   <input
                     type="email"
@@ -1079,15 +1106,11 @@ function VerificandoContent() {
                     <ArrowLeft className="h-4 w-4" aria-hidden />
                     Atrás
                   </Button>
-                  <Button
-                    type="button"
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6"
-                    onClick={handlePublicSetupStep2Next}
-                  >
+                  <Button type="submit" className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6">
                     Continuar
                   </Button>
                 </div>
-              </section>
+              </form>
             )}
 
             {publicSetupStep === 3 && (
@@ -1236,11 +1259,27 @@ function VerificandoContent() {
           style={{ zIndex: 2147483000 }}
         >
           {legacyPublicStep === 1 ? (
-            <div
+            <form
               className="my-auto w-full max-w-lg rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8"
               role="dialog"
               aria-modal
               aria-labelledby="legacy-setup-title"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleLegacyStep1Next();
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' || e.repeat) return;
+                if (e.nativeEvent.isComposing) return;
+                const el = e.target as HTMLElement;
+                if (el.closest('a[href]')) return;
+                const btn = el.closest('button');
+                if (btn?.getAttribute('type') === 'button') return;
+                if (btn?.getAttribute('type') === 'submit') return;
+                if (!legacySetupHumanOk) return;
+                e.preventDefault();
+                handleLegacyStep1Next();
+              }}
             >
               <div className="flex flex-col items-center text-center">
                 <Lock className="h-10 w-10 text-slate-400" strokeWidth={1.25} aria-hidden />
@@ -1276,15 +1315,14 @@ function VerificandoContent() {
               </p>
               <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
                 <Button
-                  type="button"
+                  type="submit"
                   className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8"
                   disabled={!legacySetupHumanOk}
-                  onClick={handleLegacyStep1Next}
                 >
                   Continuar
                 </Button>
               </div>
-            </div>
+            </form>
           ) : (
             <form
               onSubmit={handleLegacySetupSave}
