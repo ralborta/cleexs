@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   '/prueba-gratuita',
   '/planes',
   '/score',
+  '/r/wa',
   '/terminos',
   '/privacidad',
   '/legal/cleexs',
@@ -31,6 +32,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname.startsWith('/diagnostico/verificando')) return true;
   if (pathname.startsWith('/ver-resultado')) return true;
   if (pathname.startsWith('/score')) return true;
+  if (pathname.startsWith('/r/wa')) return true;
   if (pathname.startsWith('/legal/')) return true;
   if (pathname === '/terminos' || pathname === '/privacidad') return true;
   if (pathname.startsWith('/admin')) return true;
@@ -43,6 +45,7 @@ function isPublicPath(pathname: string): boolean {
   if (path.startsWith('/diagnostico/verificando')) return true;
   if (path.startsWith('/ver-resultado')) return true;
   if (path.startsWith('/score')) return true;
+  if (path.startsWith('/r/wa')) return true;
   if (path.startsWith('/legal/')) return true;
   if (path === '/terminos' || path === '/privacidad') return true;
   return false;
@@ -61,6 +64,7 @@ export function middleware(request: NextRequest) {
       pathname.startsWith('/diagnostico/verificando') ||
       pathname.startsWith('/ver-resultado') ||
       pathname.startsWith('/score') ||
+      pathname.startsWith('/r/wa') ||
       pathname.startsWith('/legal/') ||
       pathname === '/terminos' ||
       pathname === '/privacidad' ||

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
 /** Rutas con header mínimo: solo logo, sin menú completo */
-const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];
+const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes', '/r/wa'];
 const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
 
 function isPublicDiagnosticPath(pathname: string | null): boolean {

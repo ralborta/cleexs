@@ -488,6 +488,9 @@ export interface PublicDiagnostic {
     | 'completed'
     | 'failed';
   tier?: 'gold' | 'freemium';
+  sourceChannel?: string | null;
+  resultUrl?: string | null;
+  channelView?: 'whatsapp_lite';
   isFirstRun?: boolean;
   showFullReport?: boolean;
   runId?: string | null;
@@ -592,6 +595,47 @@ export const publicDiagnosticApi = {
       `/api/public/diagnostic/${id}?${tier ? `tier=${tier}&` : ''}_=${Date.now()}`,
       { cache: 'no-store' }
     ),
+};
+
+/** Canal WhatsApp (BuilderBot). Requiere `WHATSAPP_CHANNEL_API_KEY` en la API. */
+export const publicDiagnosticWhatsAppApi = {
+  create: (body: {
+    phone: string;
+    url?: string;
+    message?: string;
+    refCode?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+  }) =>
+    api<{
+      diagnosticId: string;
+      status: string;
+      resultUrl: string;
+      domain: string;
+      brandName: string;
+    }>('/api/public/diagnostic/whatsapp', {
+      method: 'POST',
+      headers: {
+        'x-cleexs-channel-key': process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_API_KEY || '',
+      },
+      body: JSON.stringify(body),
+    }),
+  getTeaser: (diagnosticId: string) =>
+    api<{
+      status: string;
+      domain?: string;
+      brandName?: string;
+      cleexsScore: number | null;
+      teaserLine: string | null;
+      resultUrl: string;
+      ready: boolean;
+    }>(`/api/public/diagnostic/whatsapp/${encodeURIComponent(diagnosticId)}/teaser`, {
+      cache: 'no-store',
+      headers: {
+        'x-cleexs-channel-key': process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_API_KEY || '',
+      },
+    }),
 };
 
 export const publicDiagnosticShareApi = {

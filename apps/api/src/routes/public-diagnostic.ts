@@ -14,6 +14,17 @@ import {
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
+import {
+  buildWaResultUrl,
+  buildWhatsAppTeaserLine,
+  extractUrlFromWhatsAppMessage,
+  getWaChannelDailyLimit,
+  getWaCompetitorWaitMs,
+  isWhatsAppSourceChannel,
+  normalizeWaPhone,
+  verifyWhatsAppChannelApiKey,
+  waPlaceholderEmail,
+} from '../lib/whatsapp-channel';
 
 /** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
 const GENERIC_TLDS = new Set(['com', 'net', 'org', 'info', 'biz', 'edu', 'gov', 'int', 'io', 'ai', 'app']);
@@ -596,6 +607,10 @@ async function executePublicDiagnosticPipeline(params: {
   defaultCountry: string;
   marketConfidenceMin: number;
   competitorRows: Array<{ name: string; domain: string; aliases: string[] }>;
+  /** Canal WhatsApp: no ejecutar módulo satélite externo. */
+  skipSatellite?: boolean;
+  /** Canal WhatsApp: solo Cleexs core (OpenAI), sin corrida Gemini. */
+  skipGemini?: boolean;
 }): Promise<void> {
   const {
     log,
@@ -607,6 +622,8 @@ async function executePublicDiagnosticPipeline(params: {
     defaultCountry,
     marketConfidenceMin,
     competitorRows,
+    skipSatellite = false,
+    skipGemini = false,
   } = params;
 
   const competitorNames = competitorRows.map((c) => c.name).filter(Boolean);
@@ -729,15 +746,17 @@ async function executePublicDiagnosticPipeline(params: {
    * Ejecutar ambas en paralelo reduce el tiempo total antes de análisis IA + Gemini.
    */
   let satellitePrefetch: SatelliteModuleResult | null = null;
-  const satelliteDuringRunPromise = (async () => {
-    if (!trimmedUrl) return;
-    try {
-      satellitePrefetch = await runSatelliteAnalysis(trimmedUrl);
-    } catch (satErr) {
-      log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
-      satellitePrefetch = null;
-    }
-  })();
+  const satelliteDuringRunPromise = skipSatellite
+    ? Promise.resolve()
+    : (async () => {
+        if (!trimmedUrl) return;
+        try {
+          satellitePrefetch = await runSatelliteAnalysis(trimmedUrl);
+        } catch (satErr) {
+          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
+          satellitePrefetch = null;
+        }
+      })();
 
   await Promise.all([
     executeRun(run.id, { promptVersionId: promptVersion.id }),
@@ -745,7 +764,7 @@ async function executePublicDiagnosticPipeline(params: {
   ]);
 
   log.info(
-    { diagnosticId, satelliteStarted: Boolean(trimmedUrl) },
+    { diagnosticId, satelliteStarted: !skipSatellite && Boolean(trimmedUrl) },
     'executeRun y análisis técnico del sitio (si hubo URL) completados en paralelo'
   );
 
@@ -868,7 +887,10 @@ async function executePublicDiagnosticPipeline(params: {
     }
   };
 
-  await Promise.all([runGeminiBranch(), runAnalysisSatelliteBranch()]);
+  await Promise.all([
+    skipGemini ? Promise.resolve() : runGeminiBranch(),
+    runAnalysisSatelliteBranch(),
+  ]);
 
   void ensureShareSlug(diagnosticId).catch((err) =>
     log.warn({ err, diagnosticId }, 'No se pudo asignar share_slug')
@@ -877,22 +899,24 @@ async function executePublicDiagnosticPipeline(params: {
   const current = await prisma.publicDiagnostic.findUnique({
     where: { id: diagnosticId },
   });
-  if (current?.email) {
+  const emailForNotify = current?.email?.trim() || '';
+  const isWaPlaceholderEmail = emailForNotify.endsWith('@whatsapp.cleexs.net');
+  if (emailForNotify && !isWaPlaceholderEmail) {
     const baseUrl = getAppBaseUrlForPublicLinks();
     try {
       if (!isEmailDisabled() && isEmailConfigured()) {
         await sendDiagnosticLink(
-          current.email,
+          emailForNotify,
           diagnosticId,
           baseUrl,
           analysisJson ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail) : null
         );
         try {
-          await sendShareCleexsFollowUpEmail(current.email, diagnosticId, baseUrl, current.brandName);
+          await sendShareCleexsFollowUpEmail(emailForNotify, diagnosticId, baseUrl, current!.brandName);
         } catch (shareErr) {
           log.error({ err: shareErr, diagnosticId }, 'Error al enviar email de compartir');
         }
-        log.info({ diagnosticId, email: current.email }, 'Email enviado');
+        log.info({ diagnosticId, email: emailForNotify }, 'Email enviado');
       }
     } catch (mailErr) {
       log.error({ err: mailErr, diagnosticId }, 'Error al enviar email');
@@ -994,6 +1018,219 @@ function competitorRowsFromDomains(
   });
 }
 
+function stripSatelliteFromAnalysisJson(json: unknown): object | null {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+  const o = { ...(json as Record<string, unknown>) };
+  const ext = o.externalModules;
+  if (ext && typeof ext === 'object' && !Array.isArray(ext)) {
+    const em = { ...(ext as Record<string, unknown>) };
+    delete em.satelliteAeo;
+    if (Object.keys(em).length === 0) delete o.externalModules;
+    else o.externalModules = em;
+  }
+  return o as object;
+}
+
+async function runCompetitorDetectionJob(params: {
+  log: PublicDiagLog;
+  diagnosticId: string;
+  brandForRun: string;
+  trimmedUrl: string;
+  domain: string;
+  serp: boolean;
+  defaultCountry: string;
+  marketConfidenceMin: number;
+}): Promise<{ suggestedCompetitorUrls: string[]; marketCountry: string; useSerp: boolean }> {
+  const {
+    log,
+    diagnosticId,
+    brandForRun,
+    trimmedUrl,
+    domain,
+    serp,
+    defaultCountry,
+    marketConfidenceMin,
+  } = params;
+
+  const countryFromTld = getCountryFromDomain(trimmedUrl);
+  const analysisContext = await resolveBrandAnalysisContext({
+    brandName: brandForRun,
+    websiteUrl: trimmedUrl,
+    fallbackCountry: defaultCountry,
+    fallbackIndustry: 'General',
+    knownCountry: countryFromTld || undefined,
+    useSearchEvidence: serp,
+  });
+  const marketCountry =
+    countryFromTld ??
+    (analysisContext.confidence >= marketConfidenceMin
+      ? analysisContext.country || defaultCountry
+      : defaultCountry);
+
+  const seenHosts = new Set<string>();
+  const suggestedCompetitorUrls: string[] = [];
+  const ownHost = domain.toLowerCase();
+  for (const c of analysisContext.competitors) {
+    if (suggestedCompetitorUrls.length >= 5) break;
+    const rawCandidates: string[] = [];
+    const d = c.domain?.trim();
+    if (d) rawCandidates.push(d);
+    if (!d && c.name?.trim()) {
+      const guess = slugHostGuessFromCompetitorName(c.name);
+      if (guess) rawCandidates.push(guess);
+    }
+    for (const raw of rawCandidates) {
+      if (suggestedCompetitorUrls.length >= 5) break;
+      let host: string;
+      try {
+        const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        host = normalizeDomain(withScheme);
+      } catch {
+        continue;
+      }
+      if (!host || host === ownHost || seenHosts.has(host)) continue;
+      seenHosts.add(host);
+      suggestedCompetitorUrls.push(`https://${host}`);
+    }
+  }
+
+  if (suggestedCompetitorUrls.length === 0) {
+    log.warn(
+      { diagnosticId, competitorCount: analysisContext.competitors.length },
+      'Detección de competidores: ninguna URL sugerida'
+    );
+  }
+
+  await prisma.publicDiagnostic.update({
+    where: { id: diagnosticId },
+    data: {
+      status: 'awaiting_user',
+      setupDraftJson: {
+        suggestedCompetitorUrls,
+        marketCountry,
+        useSerp: serp,
+      },
+    },
+  });
+
+  return { suggestedCompetitorUrls, marketCountry, useSerp: serp };
+}
+
+async function waitForDiagnosticStatus(
+  diagnosticId: string,
+  targetStatus: string,
+  timeoutMs: number
+): Promise<boolean> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const row = await prisma.publicDiagnostic.findUnique({
+      where: { id: diagnosticId },
+      select: { status: true },
+    });
+    if (!row) return false;
+    if (row.status === targetStatus) return true;
+    if (row.status === 'failed') return false;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  return false;
+}
+
+async function autoStartWhatsAppDiagnostic(params: {
+  log: PublicDiagLog;
+  diagnosticId: string;
+  waPhone: string;
+  defaultCountry: string;
+  marketConfidenceMin: number;
+}): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
+  const { log, diagnosticId, waPhone, defaultCountry, marketConfidenceMin } = params;
+
+  const ready = await waitForDiagnosticStatus(
+    diagnosticId,
+    'awaiting_user',
+    getWaCompetitorWaitMs()
+  );
+  if (!ready) {
+    return {
+      ok: false,
+      code: 'competitors_timeout',
+      message: 'No pudimos detectar competidores a tiempo. Pedile al usuario que reintente en unos minutos.',
+    };
+  }
+
+  const diagnostic = await prisma.publicDiagnostic.findUnique({ where: { id: diagnosticId } });
+  if (!diagnostic || diagnostic.status !== 'awaiting_user') {
+    return { ok: false, code: 'invalid_state', message: 'El diagnóstico no está listo para iniciar.' };
+  }
+
+  const draft = parsePublicSetupDraft(diagnostic.setupDraftJson);
+  const suggested = draft?.suggestedCompetitorUrls ?? [];
+  if (suggested.length < 1) {
+    return {
+      ok: false,
+      code: 'needs_competitors',
+      message:
+        'No detectamos competidores automáticamente. Pedile al usuario una URL de un competidor (ej. competidor.com).',
+    };
+  }
+
+  const parsedUrls = parsePublicCompetitorDomains(suggested.slice(0, MAX_PUBLIC_COMPETITOR_URLS));
+  if (!parsedUrls) {
+    return { ok: false, code: 'needs_competitors', message: 'Competidores sugeridos inválidos.' };
+  }
+
+  const ownHost = diagnostic.domain.toLowerCase();
+  if (parsedUrls.domains.some((h) => h === ownHost)) {
+    return { ok: false, code: 'needs_competitors', message: 'Los competidores sugeridos coinciden con el sitio.' };
+  }
+
+  const trimmedUrl =
+    diagnostic.domain && !diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '';
+  if (!trimmedUrl) {
+    return { ok: false, code: 'invalid_url', message: 'URL de sitio inválida.' };
+  }
+
+  const email = waPlaceholderEmail(waPhone);
+  const useSerp = draft?.useSerp ?? true;
+  const competitorRows = competitorRowsFromDomains(parsedUrls.domains, parsedUrls.originalUrls);
+
+  await prisma.publicDiagnostic.update({
+    where: { id: diagnosticId },
+    data: {
+      email,
+      status: 'running',
+      setupDraftJson: {
+        ...(draft ?? {}),
+        confirmedCompetitorUrls: suggested,
+        confirmedAt: new Date().toISOString(),
+        channelAutoStart: 'whatsapp_yt',
+      },
+    },
+  });
+
+  try {
+    await executePublicDiagnosticPipeline({
+      log,
+      diagnosticId,
+      diagnosticDomain: diagnostic.domain,
+      brandForRun: diagnostic.brandName,
+      trimmedUrl,
+      useSerp,
+      defaultCountry,
+      marketConfidenceMin,
+      competitorRows,
+      skipSatellite: true,
+      skipGemini: true,
+    });
+    return { ok: true };
+  } catch (err) {
+    log.error({ err, diagnosticId }, 'Error en pipeline canal WhatsApp');
+    await prisma.publicDiagnostic
+      .update({ where: { id: diagnosticId }, data: { status: 'failed' } })
+      .catch(() => {});
+    return { ok: false, code: 'pipeline_failed', message: 'Error al ejecutar el diagnóstico.' };
+  }
+}
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -1075,65 +1312,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       setImmediate(async () => {
         try {
-          const countryFromTld = getCountryFromDomain(trimmedUrl);
-          const analysisContext = await resolveBrandAnalysisContext({
-            brandName: brandForRun,
-            websiteUrl: trimmedUrl,
-            fallbackCountry: defaultCountry,
-            fallbackIndustry: 'General',
-            knownCountry: countryFromTld || undefined,
-            useSearchEvidence: serp,
-          });
-          const marketCountry =
-            countryFromTld ??
-            (analysisContext.confidence >= marketConfidenceMin
-              ? analysisContext.country || defaultCountry
-              : defaultCountry);
-
-          const seenHosts = new Set<string>();
-          const suggestedCompetitorUrls: string[] = [];
-          const ownHost = domain.toLowerCase();
-          for (const c of analysisContext.competitors) {
-            if (suggestedCompetitorUrls.length >= 5) break;
-            const rawCandidates: string[] = [];
-            const d = c.domain?.trim();
-            if (d) rawCandidates.push(d);
-            if (!d && c.name?.trim()) {
-              const guess = slugHostGuessFromCompetitorName(c.name);
-              if (guess) rawCandidates.push(guess);
-            }
-            for (const raw of rawCandidates) {
-              if (suggestedCompetitorUrls.length >= 5) break;
-              let host: string;
-              try {
-                const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                host = normalizeDomain(withScheme);
-              } catch {
-                continue;
-              }
-              if (!host || host === ownHost || seenHosts.has(host)) continue;
-              seenHosts.add(host);
-              suggestedCompetitorUrls.push(`https://${host}`);
-            }
-          }
-
-          if (suggestedCompetitorUrls.length === 0) {
-            fastify.log.warn(
-              { diagnosticId: diagId, competitorCount: analysisContext.competitors.length },
-              'Detección de competidores: ninguna URL sugerida (dominios nulos y sin heurística); el usuario completa en el wizard'
-            );
-          }
-
-          await prisma.publicDiagnostic.update({
-            where: { id: diagId },
-            data: {
-              status: 'awaiting_user',
-              setupDraftJson: {
-                suggestedCompetitorUrls,
-                marketCountry,
-                useSerp: serp,
-              },
-            },
+          await runCompetitorDetectionJob({
+            log: fastify.log,
+            diagnosticId: diagId,
+            brandForRun,
+            trimmedUrl,
+            domain,
+            serp,
+            defaultCountry,
+            marketConfidenceMin,
           });
         } catch (err) {
           fastify.log.error({ err, diagnosticId: diagId }, 'Error en detección de competidores');
@@ -1354,6 +1541,224 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     return reply.code(200).send({ ok: true, emailSent, ...(emailError && { emailError }) });
+  });
+
+  // POST /api/public/diagnostic/whatsapp — BuilderBot: URL + teléfono → diagnóstico auto (sin satélite)
+  fastify.post<{
+    Body: {
+      phone: string;
+      url?: string;
+      message?: string;
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
+  }>('/diagnostic/whatsapp', async (request, reply) => {
+    const channelKey = request.headers['x-cleexs-channel-key'];
+    const keyHeader = Array.isArray(channelKey) ? channelKey[0] : channelKey;
+    if (!verifyWhatsAppChannelApiKey(keyHeader)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized' });
+    }
+
+    try {
+      const trackingField = z
+        .string()
+        .trim()
+        .max(120)
+        .regex(/^[a-zA-Z0-9_-]+$/, 'Formato inválido')
+        .optional();
+      const schema = z.object({
+        phone: z.string().min(8).max(32),
+        url: z.string().max(500).optional(),
+        message: z.string().max(2000).optional(),
+        refCode: trackingField,
+        utmSource: trackingField,
+        utmMedium: trackingField,
+        utmCampaign: trackingField,
+      });
+      const parsed = schema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
+          code: 'validation_error',
+        });
+      }
+
+      const {
+        phone,
+        url: urlBody,
+        message,
+        refCode,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+      } = parsed.data;
+
+      const waPhone = normalizeWaPhone(phone);
+      if (!waPhone) {
+        return reply.code(400).send({
+          error: 'Teléfono inválido. Usá formato internacional (ej. 54911…).',
+          code: 'invalid_phone',
+        });
+      }
+
+      const trimmedUrl = (urlBody?.trim() || extractUrlFromWhatsAppMessage(message || '') || '').trim();
+      if (!trimmedUrl) {
+        return reply.code(400).send({
+          error: 'No encontramos una URL en el mensaje. Enviá el dominio de tu empresa (ej. tudominio.com).',
+          code: 'no_url',
+        });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return reply.code(503).send({
+          error: 'El servicio de análisis no está disponible.',
+          code: 'service_unavailable',
+        });
+      }
+
+      const dailyLimit = getWaChannelDailyLimit();
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentCount = await prisma.publicDiagnostic.count({
+        where: {
+          waPhone,
+          createdAt: { gte: since },
+          status: { not: 'failed' },
+        },
+      });
+      if (recentCount >= dailyLimit) {
+        return reply.code(429).send({
+          error: `Límite diario alcanzado (${dailyLimit} diagnósticos por número).`,
+          code: 'rate_limited',
+        });
+      }
+
+      const domain = normalizeDomain(trimmedUrl);
+      const brandForRun = deriveBrandFromDomain(domain);
+      const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+      const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
+      const serp = true;
+      const baseUrl = getAppBaseUrlForPublicLinks();
+
+      const diagnostic = await prisma.publicDiagnostic.create({
+        data: {
+          brandName: brandForRun,
+          domain,
+          status: 'detecting_competitors',
+          tier: 'freemium',
+          sourceChannel: 'whatsapp_yt',
+          waPhone,
+          refCode: (refCode || 'youtube_tv').toLowerCase(),
+          utmSource: (utmSource || 'youtube').toLowerCase(),
+          utmMedium: (utmMedium || 'whatsapp').toLowerCase(),
+          utmCampaign: (utmCampaign || 'qr_tv').toLowerCase(),
+        },
+      });
+
+      const diagId = diagnostic.id;
+      const resultUrl = buildWaResultUrl(diagId, baseUrl);
+
+      setImmediate(async () => {
+        try {
+          await runCompetitorDetectionJob({
+            log: fastify.log,
+            diagnosticId: diagId,
+            brandForRun,
+            trimmedUrl,
+            domain,
+            serp,
+            defaultCountry,
+            marketConfidenceMin,
+          });
+          const started = await autoStartWhatsAppDiagnostic({
+            log: fastify.log,
+            diagnosticId: diagId,
+            waPhone,
+            defaultCountry,
+            marketConfidenceMin,
+          });
+          if (!started.ok) {
+            fastify.log.warn({ diagnosticId: diagId, ...started }, 'Canal WA: auto-start no completado');
+          }
+        } catch (err) {
+          fastify.log.error({ err, diagnosticId: diagId }, 'Error en flujo canal WhatsApp');
+          await prisma.publicDiagnostic
+            .update({ where: { id: diagId }, data: { status: 'failed' } })
+            .catch(() => {});
+        }
+      });
+
+      return reply.code(201).send({
+        diagnosticId: diagId,
+        status: 'detecting_competitors',
+        resultUrl,
+        domain,
+        brandName: brandForRun,
+      });
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/whatsapp');
+      return reply.code(500).send({ error: 'Error interno.', code: 'internal_error' });
+    }
+  });
+
+  // GET /api/public/diagnostic/whatsapp/:id/teaser — BuilderBot: score + copy cuando terminó
+  fastify.get<{ Params: { id: string } }>('/diagnostic/whatsapp/:id/teaser', async (request, reply) => {
+    const channelKey = request.headers['x-cleexs-channel-key'];
+    const keyHeader = Array.isArray(channelKey) ? channelKey[0] : channelKey;
+    if (!verifyWhatsAppChannelApiKey(keyHeader)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized' });
+    }
+
+    const { id } = request.params;
+    const row = await prisma.publicDiagnostic.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        domain: true,
+        brandName: true,
+        status: true,
+        sourceChannel: true,
+        runId: true,
+        analysisJson: true,
+      },
+    });
+    if (!row) {
+      return reply.code(404).send({ error: 'Diagnóstico no encontrado', code: 'not_found' });
+    }
+    if (!isWhatsAppSourceChannel(row.sourceChannel)) {
+      return reply.code(403).send({ error: 'No es un diagnóstico del canal WhatsApp.', code: 'forbidden' });
+    }
+
+    const baseUrl = getAppBaseUrlForPublicLinks();
+    const resultUrl = buildWaResultUrl(row.id, baseUrl);
+
+    if (row.status !== 'completed' || !row.runId) {
+      return reply.send({
+        status: row.status,
+        resultUrl,
+        cleexsScore: null as number | null,
+        teaserLine: null as string | null,
+        ready: false,
+      });
+    }
+
+    const run = await prisma.run.findUnique({
+      where: { id: row.runId },
+      include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+    });
+    const cleexsScore = run?.priaReports[0]?.priaTotal ?? null;
+    const teaserLine = buildWhatsAppTeaserLine(cleexsScore, row.analysisJson);
+
+    return reply.send({
+      status: row.status,
+      domain: row.domain,
+      brandName: row.brandName,
+      cleexsScore,
+      teaserLine,
+      resultUrl,
+      ready: true,
+    });
   });
 
   type ShareRunResult = {
@@ -1757,6 +2162,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         runId: true,
         runGeminiId: true,
         email: true,
+        sourceChannel: true,
         createdAt: true,
         updatedAt: true,
         shareSlug: true,
@@ -1783,7 +2189,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const tier =
       request.query?.tier === 'gold' || (diagnostic.tier ?? 'freemium') === 'gold' ? 'gold' : 'freemium';
     const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
-    const showFullReport = tier === 'gold' || isFirstRun;
+    const isWaChannel = isWhatsAppSourceChannel(row.sourceChannel);
+    const showFullReport = isWaChannel ? true : tier === 'gold' || isFirstRun;
 
     const runResultShape = {
       brandId: '' as string,
@@ -1834,6 +2241,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         useSerp?: boolean;
       } | null;
       email?: string | null;
+      sourceChannel?: string | null;
+      resultUrl?: string | null;
+      channelView?: 'whatsapp_lite';
     } = {
       id: diagnostic.id,
       domain: diagnostic.domain,
@@ -1846,10 +2256,18 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runGeminiId: diagnostic.runGeminiId ?? null,
       shareSlug: shareSlugOut,
       setupDraft: setupDraft ?? null,
-      email: row.email ?? null,
+      email:
+        row.email && !row.email.endsWith('@whatsapp.cleexs.net') ? row.email : null,
+      sourceChannel: row.sourceChannel ?? null,
+      ...(isWaChannel
+        ? {
+            resultUrl: buildWaResultUrl(diagnostic.id, getAppBaseUrlForPublicLinks()),
+            channelView: 'whatsapp_lite' as const,
+          }
+        : {}),
     };
 
-    if (diagnostic.analysisJson) {
+    if (diagnostic.analysisJson && !isWaChannel) {
       base.satelliteModule = extractSatelliteModuleFromAnalysis(diagnostic.analysisJson);
     }
 
@@ -1900,8 +2318,17 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       base.steps = steps;
       base.progressPercent = progressPercent;
 
-      if (diagnostic.status === 'completed' && showFullReport && diagnostic.analysisJson && typeof diagnostic.analysisJson === 'object' && !Array.isArray(diagnostic.analysisJson)) {
-        base.analysisJson = sanitizeAnalysisJsonForPublicGet(diagnostic.analysisJson);
+      if (
+        diagnostic.status === 'completed' &&
+        showFullReport &&
+        diagnostic.analysisJson &&
+        typeof diagnostic.analysisJson === 'object' &&
+        !Array.isArray(diagnostic.analysisJson)
+      ) {
+        const sanitized = sanitizeAnalysisJsonForPublicGet(diagnostic.analysisJson);
+        base.analysisJson = isWaChannel
+          ? (stripSatelliteFromAnalysisJson(sanitized) ?? sanitized)
+          : sanitized;
       }
 
       if (run && diagnostic.status === 'completed' && run.priaReports[0]) {
@@ -1928,22 +2355,44 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             competitors: fullRun.brand.competitors.map((c) => c.name),
             competitorDetails: fullRun.brand.competitors.map((c) => ({ name: c.name, domain: c.domain })),
             brandAliases: fullRun.brand.aliases.map((a) => a.alias),
-            promptResults: showFullReport
-              ? fullRun.promptResults.map((pr) => ({
-                  category: pr.prompt?.category?.name ?? 'General',
-                  score: pr.score,
-                  promptText: pr.prompt?.promptText ?? '',
-                  responseText: truncatePromptResponseText(pr.responseText),
-                  top3Json: pr.top3Json as Array<{ position: number; name: string; type: string; reason?: string }>,
-                  flags: (pr.flags as Record<string, boolean>) ?? {},
-                }))
-              : [],
+            promptResults:
+              showFullReport && !isWaChannel
+                ? fullRun.promptResults.map((pr) => ({
+                    category: pr.prompt?.category?.name ?? 'General',
+                    score: pr.score,
+                    promptText: pr.prompt?.promptText ?? '',
+                    responseText: truncatePromptResponseText(pr.responseText),
+                    top3Json: pr.top3Json as Array<{
+                      position: number;
+                      name: string;
+                      type: string;
+                      reason?: string;
+                    }>,
+                    flags: (pr.flags as Record<string, boolean>) ?? {},
+                  }))
+                : isWaChannel
+                  ? fullRun.promptResults.map((pr) => ({
+                      category: pr.prompt?.category?.name ?? 'General',
+                      score: pr.score,
+                      top3Json: pr.top3Json as Array<{
+                        position: number;
+                        name: string;
+                        type: string;
+                        reason?: string;
+                      }>,
+                    }))
+                  : [],
           };
         }
       }
 
       // Run Gemini: mismo formato de runResult para score y métricas por modelo
-      if (diagnostic.runGeminiId && diagnostic.status === 'completed' && showFullReport) {
+      if (
+        !isWaChannel &&
+        diagnostic.runGeminiId &&
+        diagnostic.status === 'completed' &&
+        showFullReport
+      ) {
         const runGemini = await prisma.run.findUnique({
           where: { id: diagnostic.runGeminiId },
           include: {
