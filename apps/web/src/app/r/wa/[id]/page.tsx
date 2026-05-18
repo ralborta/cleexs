@@ -85,10 +85,11 @@ export default function WhatsAppResultPage() {
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-slate-100/80 to-white">
-      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto flex max-w-md items-center justify-center gap-2">
-          <CleexsMark className="h-7 w-auto" />
-          <span className="text-sm font-semibold text-slate-800">Tu diagnóstico</span>
+      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/95 px-4 py-4 backdrop-blur-md">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-1 text-center">
+          <CleexsMark className="h-9 w-9" />
+          <p className="text-lg font-bold tracking-tight text-slate-900">Cleexs</p>
+          <p className="text-sm font-medium text-slate-500">Tu diagnóstico</p>
         </div>
       </header>
 

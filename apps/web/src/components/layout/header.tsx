@@ -7,14 +7,25 @@ import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
 /** Rutas con header mínimo: solo logo, sin menú completo */
-const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes', '/r/wa'];
+const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];
 const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
+const WA_RESULT_PATH_PREFIX = '/r/wa';
+
+function pathMatchesPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/** Canal WhatsApp: sin header global; la página define su propio encabezado. */
+function isWhatsAppResultPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathMatchesPrefix(pathname, WA_RESULT_PATH_PREFIX);
+}
 
 function isPublicDiagnosticPath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname.startsWith('/planes')) return true;
   if (pathname.startsWith('/score')) return true;
-  if (MINIMAL_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'))) return true;
+  if (MINIMAL_HEADER_PATHS.some((p) => pathMatchesPrefix(pathname, p))) return true;
   if (pathname.startsWith(VERIFYING_PATH_PREFIX)) return true;
   return false;
 }
@@ -49,6 +60,7 @@ function logoHrefForPath(pathname: string | null): string {
 export function Header() {
   const pathname = usePathname();
   if (isAdminPath(pathname)) return null;
+  if (isWhatsAppResultPath(pathname)) return null;
   const minimal =
     isPublicDiagnosticPath(pathname) || isStandalonePortalPath(pathname) || isPublicLegalPath(pathname);
   const logoHref = logoHrefForPath(pathname);

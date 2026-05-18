@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   AtSign,
+  BarChart3,
   Crown,
   FileCheck,
   Medal,
@@ -17,6 +18,7 @@ import {
   Target,
   TrendingUp,
   Trophy,
+  Users,
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -62,6 +64,26 @@ export function ScoreRing({ value }: { value: number }) {
   );
 }
 
+function SectionHeading({
+  icon: Icon,
+  title,
+  hint,
+}: {
+  icon: LucideIcon;
+  title: string;
+  hint?: string;
+}) {
+  return (
+    <div className="px-0.5">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 shrink-0 text-primary-600" />
+        <h2 className="text-sm font-bold text-slate-900">{title}</h2>
+      </div>
+      {hint ? <p className="mt-0.5 pl-6 text-[11px] text-slate-500">{hint}</p> : null}
+    </div>
+  );
+}
+
 function MiniStat({
   icon: Icon,
   value,
@@ -85,6 +107,7 @@ function MiniStat({
 }
 
 function MetricTile({
+  title,
   icon: Icon,
   pct,
   num,
@@ -92,6 +115,7 @@ function MetricTile({
   barClass,
   iconClass,
 }: {
+  title: string;
   icon: LucideIcon;
   pct: number;
   num: number;
@@ -101,6 +125,7 @@ function MetricTile({
 }) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+      <p className="mb-2 text-[11px] font-semibold leading-tight text-slate-600">{title}</p>
       <div className="mb-2 flex items-center justify-between">
         <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', iconClass)}>
           <Icon className="h-3.5 w-3.5 text-white" />
@@ -127,10 +152,6 @@ function IntentionBars({ items }: { items: WaRunMetrics['intentionScores'] }) {
 
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <Target className="h-4 w-4 text-primary-600" />
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Por intención</span>
-      </div>
       <div className="space-y-3">
         {items.slice(0, 4).map((item, i) => (
           <div key={item.key}>
@@ -165,10 +186,6 @@ function CompetitorBars({
 
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <Trophy className="h-4 w-4 text-amber-500" />
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Top 3 IA</span>
-      </div>
       <div className="space-y-2.5">
         {ranking.map((row, idx) => {
           const isBrand = row.type === 'brand' || isBrandEntry(row.name, brandName, brandAliases);
@@ -234,13 +251,7 @@ function PresenceFunnel({ m }: { m: WaRunMetrics }) {
 
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-primary-600" />
-          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Funnel</span>
-        </div>
-        <span className="text-[10px] tabular-nums text-slate-400">{m.totalPrompts} prompts</span>
-      </div>
+      <p className="mb-3 text-right text-[10px] tabular-nums text-slate-400">{m.totalPrompts} prompts</p>
       <div className="space-y-2">
         {steps.map((s, i) => {
           const widthPct = 100 - i * 12;
@@ -301,6 +312,8 @@ export function WaMobileDashboard({
 
       <ScoreRing value={m.displayScore} />
 
+      <SectionHeading icon={Sparkles} title="Resumen" hint="Posición frente al grupo en esta corrida" />
+
       <div className="grid grid-cols-3 gap-2">
         <MiniStat
           icon={Medal}
@@ -322,8 +335,15 @@ export function WaMobileDashboard({
         />
       </div>
 
+      <SectionHeading
+        icon={BarChart3}
+        title="Métricas del análisis"
+        hint="Señales clave sobre las respuestas de ChatGPT"
+      />
+
       <div className="grid grid-cols-2 gap-2">
         <MetricTile
+          title="Formato IA"
           icon={FileCheck}
           pct={m.formatConfidence}
           num={m.parseableCount}
@@ -332,6 +352,7 @@ export function WaMobileDashboard({
           iconClass="bg-violet-500"
         />
         <MetricTile
+          title="Mención de marca"
           icon={AtSign}
           pct={m.mentionRate}
           num={m.mentionCount}
@@ -340,6 +361,7 @@ export function WaMobileDashboard({
           iconClass="bg-sky-500"
         />
         <MetricTile
+          title="Aparición en Top 3"
           icon={TrendingUp}
           pct={m.top3Rate}
           num={m.top3Count}
@@ -348,6 +370,7 @@ export function WaMobileDashboard({
           iconClass="bg-amber-500"
         />
         <MetricTile
+          title="Posición #1"
           icon={Crown}
           pct={m.top1Rate}
           num={m.top1Count}
@@ -357,8 +380,21 @@ export function WaMobileDashboard({
         />
       </div>
 
+      <SectionHeading
+        icon={Target}
+        title="Por intención de búsqueda"
+        hint="Calidad, precio, consideración y urgencia"
+      />
       <IntentionBars items={m.intentionScores} />
+
+      <SectionHeading
+        icon={Users}
+        title="Competidores"
+        hint="Cuota en el Top 3 de recomendaciones de IA"
+      />
       <CompetitorBars ranking={m.ranking} brandName={runResult.brandName} brandAliases={brandAliases} />
+
+      <SectionHeading icon={TrendingUp} title="Funnel de presencia" hint="De prompts hasta ser #1" />
       <PresenceFunnel m={m} />
     </div>
   );
