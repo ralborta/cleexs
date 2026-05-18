@@ -16,7 +16,14 @@ import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-a
 import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
 import {
   buildWaResultUrl,
+  buildWhatsAppCompletedReply,
+  buildWhatsAppErrorReply,
+  buildWhatsAppNeedUrlReply,
+  buildWhatsAppNoUrlReply,
+  buildWhatsAppStartedReply,
+  buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
+  classifyWaInboundMessage,
   extractUrlFromWhatsAppMessage,
   getWaChannelDailyLimit,
   getWaCompetitorWaitMs,
@@ -1231,6 +1238,205 @@ async function autoStartWhatsAppDiagnostic(params: {
   }
 }
 
+type WaChannelStartResult =
+  | {
+      ok: true;
+      diagnosticId: string;
+      status: string;
+      resultUrl: string;
+      domain: string;
+      brandName: string;
+    }
+  | { ok: false; httpStatus: number; code: string; message: string };
+
+async function startWhatsAppChannelDiagnostic(params: {
+  log: PublicDiagLog;
+  waPhone: string;
+  trimmedUrl: string;
+  refCode?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+}): Promise<WaChannelStartResult> {
+  const { log, waPhone, trimmedUrl, refCode, utmSource, utmMedium, utmCampaign } = params;
+
+  if (!process.env.OPENAI_API_KEY) {
+    return {
+      ok: false,
+      httpStatus: 503,
+      code: 'service_unavailable',
+      message: 'El servicio de análisis no está disponible.',
+    };
+  }
+
+  const dailyLimit = getWaChannelDailyLimit();
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentCount = await prisma.publicDiagnostic.count({
+    where: {
+      waPhone,
+      createdAt: { gte: since },
+      status: { not: 'failed' },
+    },
+  });
+  if (recentCount >= dailyLimit) {
+    return {
+      ok: false,
+      httpStatus: 429,
+      code: 'rate_limited',
+      message: `Límite diario alcanzado (${dailyLimit} diagnósticos por número).`,
+    };
+  }
+
+  const domain = normalizeDomain(trimmedUrl);
+  const brandForRun = deriveBrandFromDomain(domain);
+  const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+  const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
+  const serp = true;
+  const baseUrl = getAppBaseUrlForPublicLinks();
+
+  const diagnostic = await prisma.publicDiagnostic.create({
+    data: {
+      brandName: brandForRun,
+      domain,
+      status: 'detecting_competitors',
+      tier: 'freemium',
+      sourceChannel: 'whatsapp_yt',
+      waPhone,
+      refCode: (refCode || 'youtube_tv').toLowerCase(),
+      utmSource: (utmSource || 'youtube').toLowerCase(),
+      utmMedium: (utmMedium || 'whatsapp').toLowerCase(),
+      utmCampaign: (utmCampaign || 'qr_tv').toLowerCase(),
+    },
+  });
+
+  const diagId = diagnostic.id;
+  const resultUrl = buildWaResultUrl(diagId, baseUrl);
+
+  setImmediate(async () => {
+    try {
+      await runCompetitorDetectionJob({
+        log,
+        diagnosticId: diagId,
+        brandForRun,
+        trimmedUrl,
+        domain,
+        serp,
+        defaultCountry,
+        marketConfidenceMin,
+      });
+      const started = await autoStartWhatsAppDiagnostic({
+        log,
+        diagnosticId: diagId,
+        waPhone,
+        defaultCountry,
+        marketConfidenceMin,
+      });
+      if (!started.ok) {
+        log.warn({ diagnosticId: diagId, ...started }, 'Canal WA: auto-start no completado');
+      }
+    } catch (err) {
+      log.error({ err, diagnosticId: diagId }, 'Error en flujo canal WhatsApp');
+      await prisma.publicDiagnostic
+        .update({ where: { id: diagId }, data: { status: 'failed' } })
+        .catch(() => {});
+    }
+  });
+
+  return {
+    ok: true,
+    diagnosticId: diagId,
+    status: 'detecting_competitors',
+    resultUrl,
+    domain,
+    brandName: brandForRun,
+  };
+}
+
+async function resolveWhatsAppTeaserPayload(diagnosticId: string): Promise<
+  | { ok: false; httpStatus: number; code: string; message: string }
+  | {
+      ok: true;
+      status: string;
+      domain: string;
+      brandName: string;
+      resultUrl: string;
+      cleexsScore: number | null;
+      teaserLine: string | null;
+      ready: boolean;
+    }
+> {
+  const row = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: {
+      id: true,
+      domain: true,
+      brandName: true,
+      status: true,
+      sourceChannel: true,
+      runId: true,
+      analysisJson: true,
+    },
+  });
+  if (!row) {
+    return { ok: false, httpStatus: 404, code: 'not_found', message: 'Diagnóstico no encontrado' };
+  }
+  if (!isWhatsAppSourceChannel(row.sourceChannel)) {
+    return {
+      ok: false,
+      httpStatus: 403,
+      code: 'forbidden',
+      message: 'No es un diagnóstico del canal WhatsApp.',
+    };
+  }
+
+  const baseUrl = getAppBaseUrlForPublicLinks();
+  const resultUrl = buildWaResultUrl(row.id, baseUrl);
+
+  if (row.status !== 'completed' || !row.runId) {
+    return {
+      ok: true,
+      status: row.status,
+      domain: row.domain,
+      brandName: row.brandName,
+      resultUrl,
+      cleexsScore: null,
+      teaserLine: null,
+      ready: false,
+    };
+  }
+
+  const run = await prisma.run.findUnique({
+    where: { id: row.runId },
+    include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+  });
+  const cleexsScore = run?.priaReports[0]?.priaTotal ?? null;
+  const teaserLine = buildWhatsAppTeaserLine(cleexsScore, row.analysisJson);
+
+  return {
+    ok: true,
+    status: row.status,
+    domain: row.domain,
+    brandName: row.brandName,
+    resultUrl,
+    cleexsScore,
+    teaserLine,
+    ready: true,
+  };
+}
+
+function verifyWaChannelRequest(request: { headers: Record<string, unknown> }): boolean {
+  const channelKey = request.headers['x-cleexs-channel-key'];
+  const keyHeader = Array.isArray(channelKey) ? channelKey[0] : channelKey;
+  return verifyWhatsAppChannelApiKey(typeof keyHeader === 'string' ? keyHeader : undefined);
+}
+
+const waTrackingField = z
+  .string()
+  .trim()
+  .max(120)
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Formato inválido')
+  .optional();
+
 const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Turnstile deshabilitado (URLs dinámicas de Vercel). Reactivar cuando haya dominio estable.
 
@@ -1555,27 +1761,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       utmCampaign?: string;
     };
   }>('/diagnostic/whatsapp', async (request, reply) => {
-    const channelKey = request.headers['x-cleexs-channel-key'];
-    const keyHeader = Array.isArray(channelKey) ? channelKey[0] : channelKey;
-    if (!verifyWhatsAppChannelApiKey(keyHeader)) {
+    if (!verifyWaChannelRequest(request)) {
       return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized' });
     }
 
     try {
-      const trackingField = z
-        .string()
-        .trim()
-        .max(120)
-        .regex(/^[a-zA-Z0-9_-]+$/, 'Formato inválido')
-        .optional();
       const schema = z.object({
         phone: z.string().min(8).max(32),
         url: z.string().max(500).optional(),
         message: z.string().max(2000).optional(),
-        refCode: trackingField,
-        utmSource: trackingField,
-        utmMedium: trackingField,
-        utmCampaign: trackingField,
+        refCode: waTrackingField,
+        utmSource: waTrackingField,
+        utmMedium: waTrackingField,
+        utmCampaign: waTrackingField,
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -1585,15 +1783,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const {
-        phone,
-        url: urlBody,
-        message,
-        refCode,
-        utmSource,
-        utmMedium,
-        utmCampaign,
-      } = parsed.data;
+      const { phone, url: urlBody, message, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
 
       const waPhone = normalizeWaPhone(phone);
       if (!waPhone) {
@@ -1611,90 +1801,28 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      if (!process.env.OPENAI_API_KEY) {
-        return reply.code(503).send({
-          error: 'El servicio de análisis no está disponible.',
-          code: 'service_unavailable',
+      const started = await startWhatsAppChannelDiagnostic({
+        log: fastify.log,
+        waPhone,
+        trimmedUrl,
+        refCode,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+      });
+      if (!started.ok) {
+        return reply.code(started.httpStatus).send({
+          error: started.message,
+          code: started.code,
         });
       }
-
-      const dailyLimit = getWaChannelDailyLimit();
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const recentCount = await prisma.publicDiagnostic.count({
-        where: {
-          waPhone,
-          createdAt: { gte: since },
-          status: { not: 'failed' },
-        },
-      });
-      if (recentCount >= dailyLimit) {
-        return reply.code(429).send({
-          error: `Límite diario alcanzado (${dailyLimit} diagnósticos por número).`,
-          code: 'rate_limited',
-        });
-      }
-
-      const domain = normalizeDomain(trimmedUrl);
-      const brandForRun = deriveBrandFromDomain(domain);
-      const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
-      const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
-      const serp = true;
-      const baseUrl = getAppBaseUrlForPublicLinks();
-
-      const diagnostic = await prisma.publicDiagnostic.create({
-        data: {
-          brandName: brandForRun,
-          domain,
-          status: 'detecting_competitors',
-          tier: 'freemium',
-          sourceChannel: 'whatsapp_yt',
-          waPhone,
-          refCode: (refCode || 'youtube_tv').toLowerCase(),
-          utmSource: (utmSource || 'youtube').toLowerCase(),
-          utmMedium: (utmMedium || 'whatsapp').toLowerCase(),
-          utmCampaign: (utmCampaign || 'qr_tv').toLowerCase(),
-        },
-      });
-
-      const diagId = diagnostic.id;
-      const resultUrl = buildWaResultUrl(diagId, baseUrl);
-
-      setImmediate(async () => {
-        try {
-          await runCompetitorDetectionJob({
-            log: fastify.log,
-            diagnosticId: diagId,
-            brandForRun,
-            trimmedUrl,
-            domain,
-            serp,
-            defaultCountry,
-            marketConfidenceMin,
-          });
-          const started = await autoStartWhatsAppDiagnostic({
-            log: fastify.log,
-            diagnosticId: diagId,
-            waPhone,
-            defaultCountry,
-            marketConfidenceMin,
-          });
-          if (!started.ok) {
-            fastify.log.warn({ diagnosticId: diagId, ...started }, 'Canal WA: auto-start no completado');
-          }
-        } catch (err) {
-          fastify.log.error({ err, diagnosticId: diagId }, 'Error en flujo canal WhatsApp');
-          await prisma.publicDiagnostic
-            .update({ where: { id: diagId }, data: { status: 'failed' } })
-            .catch(() => {});
-        }
-      });
 
       return reply.code(201).send({
-        diagnosticId: diagId,
-        status: 'detecting_competitors',
-        resultUrl,
-        domain,
-        brandName: brandForRun,
+        diagnosticId: started.diagnosticId,
+        status: started.status,
+        resultUrl: started.resultUrl,
+        domain: started.domain,
+        brandName: started.brandName,
       });
     } catch (err) {
       fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/whatsapp');
@@ -1702,62 +1830,191 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // GET /api/public/diagnostic/whatsapp/:id/teaser — BuilderBot: score + copy cuando terminó
-  fastify.get<{ Params: { id: string } }>('/diagnostic/whatsapp/:id/teaser', async (request, reply) => {
-    const channelKey = request.headers['x-cleexs-channel-key'];
-    const keyHeader = Array.isArray(channelKey) ? channelKey[0] : channelKey;
-    if (!verifyWhatsAppChannelApiKey(keyHeader)) {
-      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized' });
+  // POST /api/public/diagnostic/whatsapp/webhook — BuilderBot: mensaje entrante → reply listo para WA
+  fastify.post<{
+    Body: {
+      phone: string;
+      message?: string;
+      url?: string;
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
+  }>('/diagnostic/whatsapp/webhook', async (request, reply) => {
+    if (!verifyWaChannelRequest(request)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized', reply: '' });
     }
 
-    const { id } = request.params;
-    const row = await prisma.publicDiagnostic.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        domain: true,
-        brandName: true,
-        status: true,
-        sourceChannel: true,
-        runId: true,
-        analysisJson: true,
-      },
-    });
-    if (!row) {
-      return reply.code(404).send({ error: 'Diagnóstico no encontrado', code: 'not_found' });
-    }
-    if (!isWhatsAppSourceChannel(row.sourceChannel)) {
-      return reply.code(403).send({ error: 'No es un diagnóstico del canal WhatsApp.', code: 'forbidden' });
-    }
+    try {
+      const schema = z.object({
+        phone: z.string().min(8).max(32),
+        message: z.string().max(2000).optional(),
+        url: z.string().max(500).optional(),
+        refCode: waTrackingField,
+        utmSource: waTrackingField,
+        utmMedium: waTrackingField,
+        utmCampaign: waTrackingField,
+      });
+      const parsed = schema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.send({
+          code: 'validation_error',
+          reply: buildWhatsAppNeedUrlReply(),
+          ready: false,
+        });
+      }
 
-    const baseUrl = getAppBaseUrlForPublicLinks();
-    const resultUrl = buildWaResultUrl(row.id, baseUrl);
+      const { phone, message, url: urlBody, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
+      const waPhone = normalizeWaPhone(phone);
+      if (!waPhone) {
+        return reply.send({
+          code: 'invalid_phone',
+          reply: 'No pudimos leer tu número. Escribinos de nuevo desde WhatsApp.',
+          ready: false,
+        });
+      }
 
-    if (row.status !== 'completed' || !row.runId) {
+      const inboundText = `${message || urlBody || ''}`.trim();
+      const intent = classifyWaInboundMessage(inboundText);
+      if (intent === 'no_web') {
+        return reply.send({ code: 'no_web', reply: buildWhatsAppNoUrlReply(), ready: false });
+      }
+      if (intent === 'empty' || intent === 'unclear') {
+        return reply.send({ code: 'need_url', reply: buildWhatsAppNeedUrlReply(), ready: false });
+      }
+
+      const trimmedUrl = (urlBody?.trim() || extractUrlFromWhatsAppMessage(inboundText) || '').trim();
+      if (!trimmedUrl) {
+        return reply.send({ code: 'need_url', reply: buildWhatsAppNeedUrlReply(), ready: false });
+      }
+
+      const started = await startWhatsAppChannelDiagnostic({
+        log: fastify.log,
+        waPhone,
+        trimmedUrl,
+        refCode,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+      });
+      if (!started.ok) {
+        return reply.send({
+          code: started.code,
+          reply: buildWhatsAppErrorReply(started.code, started.message),
+          ready: false,
+        });
+      }
+
       return reply.send({
-        status: row.status,
-        resultUrl,
-        cleexsScore: null as number | null,
-        teaserLine: null as string | null,
+        code: 'started',
+        reply: buildWhatsAppStartedReply(started.domain, started.resultUrl),
+        diagnosticId: started.diagnosticId,
+        resultUrl: started.resultUrl,
+        domain: started.domain,
+        brandName: started.brandName,
+        status: started.status,
+        ready: false,
+      });
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/whatsapp/webhook');
+      return reply.code(500).send({
+        code: 'internal_error',
+        reply: buildWhatsAppErrorReply('internal_error'),
         ready: false,
       });
     }
+  });
 
-    const run = await prisma.run.findUnique({
-      where: { id: row.runId },
-      include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
-    });
-    const cleexsScore = run?.priaReports[0]?.priaTotal ?? null;
-    const teaserLine = buildWhatsAppTeaserLine(cleexsScore, row.analysisJson);
+  // GET /api/public/diagnostic/whatsapp/webhook/reply?diagnosticId= — poll BuilderBot: mensaje final o “casi listo”
+  fastify.get<{ Querystring: { diagnosticId?: string } }>(
+    '/diagnostic/whatsapp/webhook/reply',
+    async (request, reply) => {
+      if (!verifyWaChannelRequest(request)) {
+        return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized', reply: '' });
+      }
+
+      const diagnosticId = `${request.query.diagnosticId || ''}`.trim();
+      if (!diagnosticId) {
+        return reply.code(400).send({
+          code: 'validation_error',
+          reply: 'Falta diagnosticId.',
+          ready: false,
+        });
+      }
+
+      const payload = await resolveWhatsAppTeaserPayload(diagnosticId);
+      if (!payload.ok) {
+        return reply.code(payload.httpStatus).send({
+          code: payload.code,
+          reply: buildWhatsAppErrorReply(payload.code, payload.message),
+          ready: false,
+        });
+      }
+
+      if (payload.status === 'failed') {
+        return reply.send({
+          code: 'failed',
+          reply: buildWhatsAppErrorReply('pipeline_failed'),
+          status: payload.status,
+          resultUrl: payload.resultUrl,
+          ready: false,
+        });
+      }
+
+      if (!payload.ready || payload.cleexsScore == null) {
+        return reply.send({
+          code: 'running',
+          reply: buildWhatsAppStillRunningReply(payload.domain, payload.resultUrl),
+          status: payload.status,
+          domain: payload.domain,
+          brandName: payload.brandName,
+          resultUrl: payload.resultUrl,
+          diagnosticId,
+          ready: false,
+        });
+      }
+
+      return reply.send({
+        code: 'completed',
+        reply: buildWhatsAppCompletedReply({
+          domain: payload.domain,
+          brandName: payload.brandName,
+          cleexsScore: payload.cleexsScore,
+          teaserLine: payload.teaserLine || buildWhatsAppTeaserLine(payload.cleexsScore, null),
+          resultUrl: payload.resultUrl,
+        }),
+        status: payload.status,
+        domain: payload.domain,
+        brandName: payload.brandName,
+        cleexsScore: payload.cleexsScore,
+        teaserLine: payload.teaserLine,
+        resultUrl: payload.resultUrl,
+        diagnosticId,
+        ready: true,
+      });
+    }
+  );
+
+  // GET /api/public/diagnostic/whatsapp/:id/teaser — BuilderBot: score + copy cuando terminó
+  fastify.get<{ Params: { id: string } }>('/diagnostic/whatsapp/:id/teaser', async (request, reply) => {
+    if (!verifyWaChannelRequest(request)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized' });
+    }
+
+    const payload = await resolveWhatsAppTeaserPayload(request.params.id);
+    if (!payload.ok) {
+      return reply.code(payload.httpStatus).send({ error: payload.message, code: payload.code });
+    }
 
     return reply.send({
-      status: row.status,
-      domain: row.domain,
-      brandName: row.brandName,
-      cleexsScore,
-      teaserLine,
-      resultUrl,
-      ready: true,
+      status: payload.status,
+      domain: payload.domain,
+      brandName: payload.brandName,
+      cleexsScore: payload.cleexsScore,
+      teaserLine: payload.teaserLine,
+      resultUrl: payload.resultUrl,
+      ready: payload.ready,
     });
   });
 

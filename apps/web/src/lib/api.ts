@@ -636,6 +636,54 @@ export const publicDiagnosticWhatsAppApi = {
         'x-cleexs-channel-key': process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_API_KEY || '',
       },
     }),
+  /** Mensaje entrante → texto listo para enviar por WA (BuilderBot add_http). */
+  webhookInbound: (body: {
+    phone: string;
+    message?: string;
+    url?: string;
+    refCode?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+  }) =>
+    api<{
+      code: string;
+      reply: string;
+      diagnosticId?: string;
+      resultUrl?: string;
+      domain?: string;
+      brandName?: string;
+      status?: string;
+      ready: boolean;
+    }>('/api/public/diagnostic/whatsapp/webhook', {
+      method: 'POST',
+      headers: {
+        'x-cleexs-channel-key': process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_API_KEY || '',
+      },
+      body: JSON.stringify(body),
+    }),
+  /** Poll: reply listo para WA cuando el análisis terminó (o mensaje “casi listo”). */
+  webhookReply: (diagnosticId: string) =>
+    api<{
+      code: string;
+      reply: string;
+      status?: string;
+      domain?: string;
+      brandName?: string;
+      cleexsScore?: number | null;
+      teaserLine?: string | null;
+      resultUrl?: string;
+      diagnosticId?: string;
+      ready: boolean;
+    }>(
+      `/api/public/diagnostic/whatsapp/webhook/reply?diagnosticId=${encodeURIComponent(diagnosticId)}`,
+      {
+        cache: 'no-store',
+        headers: {
+          'x-cleexs-channel-key': process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_API_KEY || '',
+        },
+      }
+    ),
 };
 
 export const publicDiagnosticShareApi = {

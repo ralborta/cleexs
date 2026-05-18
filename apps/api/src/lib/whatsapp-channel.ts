@@ -85,3 +85,86 @@ export function buildWhatsAppTeaserLine(
   if (cleexsScore >= 45) return 'Probabilidad media de recomendación en ChatGPT; hay margen de mejora.';
   return 'Probabilidad baja de recomendación en ChatGPT; el diagnóstico muestra cómo mejorar.';
 }
+
+export type WaInboundIntent = 'url' | 'no_web' | 'empty' | 'unclear';
+
+export function classifyWaInboundMessage(message: string): WaInboundIntent {
+  const text = `${message || ''}`.trim();
+  if (!text) return 'empty';
+  if (/^(no tengo|sin web|no tengo web|no tengo sitio|no tengo página|no tengo dominio|solo instagram|solo red)/i.test(text)) {
+    return 'no_web';
+  }
+  if (extractUrlFromWhatsAppMessage(text)) return 'url';
+  if (text.length < 4) return 'empty';
+  return 'unclear';
+}
+
+export function buildWhatsAppNoUrlReply(): string {
+  return (
+    'Para el diagnóstico gratis necesitamos la URL de tu sitio (ej. tudominio.com).\n\n' +
+    'Si no tenés web, escribinos por ahora la URL de tu perfil principal (LinkedIn o Instagram con link en bio).'
+  );
+}
+
+export function buildWhatsAppNeedUrlReply(): string {
+  return (
+    'Hola, soy Cleexs.net 👋\n\n' +
+    'Pasame la URL de tu empresa (ej. tudominio.com) y te digo gratis tu Cleexs Score y qué tan probable es que ChatGPT te recomiende.'
+  );
+}
+
+export function buildWhatsAppStartedReply(domain: string, resultUrl: string): string {
+  return (
+    `Perfecto, analizamos *${domain}*.\n\n` +
+    `En 2 a 4 minutos te enviamos tu *Cleexs Score* y el link al diagnóstico en el celular.\n\n` +
+    `Podés ir abriendo:\n${resultUrl}`
+  );
+}
+
+export function buildWhatsAppStillRunningReply(domain: string, resultUrl: string): string {
+  return (
+    `Seguimos analizando *${domain}*… casi listo.\n\n` +
+    `Abrí el diagnóstico en tu celular:\n${resultUrl}`
+  );
+}
+
+export function buildWhatsAppCompletedReply(params: {
+  domain: string;
+  brandName: string;
+  cleexsScore: number;
+  teaserLine: string;
+  resultUrl: string;
+}): string {
+  const { domain, brandName, cleexsScore, teaserLine, resultUrl } = params;
+  const scoreRounded = Math.round(cleexsScore);
+  return (
+    `¡Listo! *${brandName}* (${domain})\n\n` +
+    `*Cleexs Score: ${scoreRounded}/100*\n` +
+    `${teaserLine}\n\n` +
+    `Mirá el diagnóstico completo en el celular:\n${resultUrl}`
+  );
+}
+
+export function buildWhatsAppErrorReply(code: string, fallback?: string): string {
+  if (code === 'rate_limited') {
+    return 'Alcanzaste el límite de diagnósticos gratis por hoy. Volvé mañana o escribinos a hola@cleexs.net';
+  }
+  if (code === 'needs_competitors') {
+    return (
+      'No pudimos detectar competidores automáticamente. Mandanos una URL de un competidor (ej. competidor.com) y relanzamos el análisis.'
+    );
+  }
+  if (code === 'service_unavailable') {
+    return 'El análisis no está disponible en este momento. Intentá de nuevo en unos minutos.';
+  }
+  return fallback || 'No pudimos iniciar el diagnóstico. Revisá la URL e intentá de nuevo.';
+}
+
+/** Enlace wa.me para QR de campaña TV/YouTube. */
+export function buildWaMeCampaignUrl(phoneE164Digits: string, prefilledText?: string): string {
+  const digits = phoneE164Digits.replace(/\D/g, '');
+  const text =
+    prefilledText ??
+    'Hola, soy de Cleexs.net. El url de mi empresa es ';
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
