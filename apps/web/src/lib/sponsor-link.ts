@@ -1,14 +1,45 @@
-import { CLEEXS_APP_URL, CLEEXS_MARKETING_URL } from '@/lib/site';
+import {
+  buildSponsorWhatsAppPrefillMessage,
+  buildWaMeUrl,
+  normalizeSponsorTrackingCode,
+  slugifySponsorDisplayName,
+} from '@cleexs/shared';
+import { CLEEXS_APP_URL, CLEEXS_MARKETING_URL, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+
+export {
+  buildSponsorGentilezaLine,
+  buildSponsorWhatsAppPrefillMessage,
+  buildSponsorWhatsAppPublicMessage,
+  buildWaMeUrl,
+} from '@cleexs/shared';
 
 /** Misma normalización que `/diagnostico/crear` al persistir ref y UTM. */
 export function normalizeTrackingValue(input: string): string | undefined {
-  const cleaned = input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-  if (!cleaned) return undefined;
-  return cleaned.slice(0, 120);
+  return normalizeSponsorTrackingCode(input);
 }
 
 export function slugifySponsorLabel(label: string): string {
-  return normalizeTrackingValue(label.trim().replace(/\s+/g, '_')) ?? '';
+  return slugifySponsorDisplayName(label);
+}
+
+export type SponsorWhatsAppLinkParams = {
+  phoneE164?: string;
+  sponsorDisplayName: string;
+  refCode: string;
+  customMessage?: string;
+};
+
+export function buildSponsorWhatsAppUrl(params: SponsorWhatsAppLinkParams): string | null {
+  const phone = (params.phoneE164 || CLEEXS_WHATSAPP_PHONE_E164).replace(/\D/g, '');
+  if (!phone) return null;
+  const ref = normalizeTrackingValue(params.refCode);
+  if (!ref) return null;
+  const text = buildSponsorWhatsAppPrefillMessage({
+    sponsorDisplayName: params.sponsorDisplayName,
+    refCode: ref,
+    customBody: params.customMessage,
+  });
+  return buildWaMeUrl(phone, text);
 }
 
 export type SponsorLinkParams = {

@@ -27,3 +27,11 @@ export const CLEEXS_SPONSOR_LINK_BASE_URL = (
 export const CLEEXS_TOOLS_PUBLIC_URL = (
   process.env.NEXT_PUBLIC_CLEEXS_TOOLS_URL?.trim().replace(/\/$/, '') || ''
 ) as string;
+
+/**
+ * Número WhatsApp Business de Cleexs (solo dígitos E.164, ej. 54911…).
+ * Usado en QR de auspiciadores (wa.me).
+ */
+export const CLEEXS_WHATSAPP_PHONE_E164 = (
+  process.env.NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE?.trim().replace(/\D/g, '') || ''
+) as string;

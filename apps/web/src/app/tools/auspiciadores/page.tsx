@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { SponsorLinkBuilder } from '@/components/tools/sponsor-link-builder';
 
 export const metadata: Metadata = {
-  title: 'Links de auspiciador · Cleexs',
-  description: 'Generá enlaces y códigos QR con tracking ref y UTM para diagnósticos Cleexs.',
+  title: 'Auspiciadores · Cleexs',
+  description: 'Links web, QR WhatsApp y seguimiento por ref para campañas de auspiciadores.',
   robots: { index: false, follow: false },
 };
 

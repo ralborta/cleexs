@@ -17,6 +17,7 @@ import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/di
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
 import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
+import { extractSponsorRefFromWhatsAppMessage } from '@cleexs/shared';
 import { notifyWhatsAppDiagnosticCompleted } from '../lib/whatsapp-notify';
 import {
   buildWaResultUrl,
@@ -1786,20 +1787,28 @@ async function processWhatsAppUrlHttpRequest(params: {
     return { reply: 'No pudimos leer tu número.', code: 'invalid_phone', ready: false };
   }
 
-  const trimmedUrl = await resolveWebsiteUrlFromWhatsAppMessage(`${message || ''}`.trim());
+  const inboundMessage = `${message || ''}`.trim();
+  const trimmedUrl = await resolveWebsiteUrlFromWhatsAppMessage(inboundMessage);
   if (!trimmedUrl) {
     return { reply: buildWhatsAppAskUrlReply(), code: 'no_url', ready: false };
   }
+
+  const parsedTracking = extractSponsorRefFromWhatsAppMessage(inboundMessage);
+  const effectiveRef = (refCode || parsedTracking.refCode)?.toLowerCase();
+  const effectiveUtmSource = utmSource || (effectiveRef ? 'auspiciador' : undefined);
+  const effectiveUtmMedium = utmMedium || (effectiveRef ? 'whatsapp' : undefined);
+  const effectiveUtmCampaign =
+    utmCampaign || (effectiveRef ? effectiveRef : undefined);
 
   const started = await startWhatsAppChannelDiagnostic({
     log,
     waPhone,
     waRecipient: (waRecipient || phone).trim(),
     trimmedUrl,
-    refCode,
-    utmSource,
-    utmMedium,
-    utmCampaign,
+    refCode: effectiveRef,
+    utmSource: effectiveUtmSource,
+    utmMedium: effectiveUtmMedium,
+    utmCampaign: effectiveUtmCampaign,
   });
 
   if (!started.ok) {
@@ -2207,14 +2216,17 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      const parsedTracking = extractSponsorRefFromWhatsAppMessage(inboundText);
+      const effectiveRef = (refCode || parsedTracking.refCode)?.toLowerCase();
+
       const started = await startWhatsAppChannelDiagnostic({
         log: fastify.log,
         waPhone,
         trimmedUrl,
-        refCode,
-        utmSource,
-        utmMedium,
-        utmCampaign,
+        refCode: effectiveRef,
+        utmSource: utmSource || (effectiveRef ? 'auspiciador' : undefined),
+        utmMedium: utmMedium || (effectiveRef ? 'whatsapp' : undefined),
+        utmCampaign: utmCampaign || effectiveRef,
       });
       if (!started.ok) {
         return reply.code(started.httpStatus).send({

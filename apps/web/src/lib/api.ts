@@ -382,6 +382,17 @@ export interface PlatformDashboard {
       visits: number;
     }>;
   };
+  whatsappReferrals: {
+    totalDiagnostics: number;
+    topReferrers: Array<{
+      refCode: string;
+      visits: number;
+      completedDiagnostics: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
+    }>;
+  };
 }
 
 // Diagnóstico público (flujo sin login)

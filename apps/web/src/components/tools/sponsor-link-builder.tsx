@@ -11,7 +11,8 @@ import {
   slugifySponsorLabel,
 } from '@/lib/sponsor-link';
 import { SponsorTrackingPanel } from '@/components/tools/sponsor-tracking-panel';
-import { Check, Copy, Download, ExternalLink, Link2, QrCode } from 'lucide-react';
+import { SponsorWhatsAppQrModal } from '@/components/tools/sponsor-whatsapp-qr-modal';
+import { Check, Copy, Download, ExternalLink, Link2, MessageCircle, QrCode } from 'lucide-react';
 
 const fieldCls =
   'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25';
@@ -28,6 +29,7 @@ export function SponsorLinkBuilder() {
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
+  const [waQrOpen, setWaQrOpen] = useState(false);
 
   useEffect(() => {
     if (refTouched) return;
@@ -104,11 +106,10 @@ export function SponsorLinkBuilder() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center">
           <CleexsMark className="h-11 w-11" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Links de auspiciador</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Auspiciadores</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Generá el enlace y el QR, y seguí las visitas por código{' '}
-          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">ref</code> en la sección de seguimiento de
-          abajo.
+          Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por{' '}
+          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">ref</code> (web y canal WhatsApp).
         </p>
         <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Acceso libre temporal. No compartas esta URL públicamente hasta que agreguemos protección.
@@ -259,7 +260,35 @@ export function SponsorLinkBuilder() {
         )}
       </section>
 
+      <section className="mt-6 rounded-2xl border border-emerald-200/80 bg-gradient-to-b from-emerald-50/50 to-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className={labelCls}>WhatsApp</p>
+            <p className="mt-1 text-sm text-slate-600">
+              QR con mensaje <strong className="font-medium text-slate-800">Gentileza de …</strong> y tracking{' '}
+              <code className="text-xs">ref:</code> en el texto prefijado.
+            </p>
+          </div>
+          <Button
+            type="button"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            disabled={!refValid}
+            onClick={() => setWaQrOpen(true)}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Generar QR WhatsApp
+          </Button>
+        </div>
+      </section>
+
       <SponsorTrackingPanel activeRef={refCode} />
+
+      <SponsorWhatsAppQrModal
+        open={waQrOpen}
+        onClose={() => setWaQrOpen(false)}
+        sponsorName={sponsorName}
+        refCode={refCode}
+      />
     </div>
   );
 }

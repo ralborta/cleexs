@@ -674,6 +674,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
           status: true,
           email: true,
           createdAt: true,
+          sourceChannel: true,
         },
         orderBy: { createdAt: 'desc' },
         take: 5000,
@@ -808,6 +809,56 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       .sort((a, b) => b.visits - a.visits)
       .slice(0, 10);
 
+    const isWhatsAppDiagnostic = (channel: string | null | undefined) =>
+      `${channel || ''}`.trim().toLowerCase() === 'whatsapp_yt';
+
+    const waRefMap = new Map<
+      string,
+      {
+        refCode: string;
+        visits: number;
+        completedDiagnostics: number;
+        capturedEmails: number;
+        latestAt: Date;
+      }
+    >();
+    for (const row of trackedDiagnostics) {
+      if (!isWhatsAppDiagnostic(row.sourceChannel) && row.utmMedium?.toLowerCase() !== 'whatsapp') {
+        continue;
+      }
+      if (!row.refCode) continue;
+      const ref = row.refCode.trim().toLowerCase();
+      if (!ref) continue;
+      const current = waRefMap.get(ref) || {
+        refCode: ref,
+        visits: 0,
+        completedDiagnostics: 0,
+        capturedEmails: 0,
+        latestAt: row.createdAt,
+      };
+      current.visits += 1;
+      if (row.status === 'completed') current.completedDiagnostics += 1;
+      if (row.email) current.capturedEmails += 1;
+      if (row.createdAt > current.latestAt) current.latestAt = row.createdAt;
+      waRefMap.set(ref, current);
+    }
+
+    const topWhatsAppReferrers = Array.from(waRefMap.values())
+      .map((row) => ({
+        refCode: row.refCode,
+        visits: row.visits,
+        completedDiagnostics: row.completedDiagnostics,
+        capturedEmails: row.capturedEmails,
+        completionRate: row.visits > 0 ? (row.completedDiagnostics / row.visits) * 100 : 0,
+        latestAt: row.latestAt,
+      }))
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 15);
+
+    const whatsappTotal = trackedDiagnostics.filter(
+      (row) => isWhatsAppDiagnostic(row.sourceChannel) || row.utmMedium?.toLowerCase() === 'whatsapp'
+    ).length;
+
     return {
       summary: {
         totalRuns,
@@ -826,6 +877,10 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
         totalTrackedDiagnostics: trackedDiagnostics.length,
         topReferrers,
         topSources,
+      },
+      whatsappReferrals: {
+        totalDiagnostics: whatsappTotal,
+        topReferrers: topWhatsAppReferrers,
       },
     };
   });
