@@ -299,27 +299,6 @@ export const reportsApi = {
   getPlatformDashboard: () => api<PlatformDashboard>('/api/reports/platform-dashboard'),
 };
 
-/** Métricas de auspiciadores vía proxy same-origin (Route Handler en Vercel). */
-export const sponsorToolsApi = {
-  getMetrics: async (): Promise<PlatformDashboard> => {
-    const response = await fetch('/api/tools/sponsor-metrics', {
-      cache: 'no-store',
-      headers: { Accept: 'application/json' },
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Error al cargar métricas' }));
-      throw new Error(
-        typeof error.error === 'string' ? error.error : `HTTP ${response.status}`
-      );
-    }
-    const data = (await response.json()) as PlatformDashboard;
-    if (!data.whatsappReferrals) {
-      data.whatsappReferrals = { totalDiagnostics: 0, topReferrers: [] };
-    }
-    return data;
-  },
-};
-
 export const leadsApi = {
   list: (tenantId: string) => api<LeadSource[]>(`/api/leads?tenantId=${tenantId}`),
   discover: (data: { tenantId: string; runId?: string; domain?: string; enrich?: boolean }) =>

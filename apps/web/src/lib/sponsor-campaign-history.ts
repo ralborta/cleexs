@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'cleexs_sponsor_campaign_history_v1';
-const MAX_ENTRIES = 40;
+const MAX_ENTRIES = 3;
 
 export type SponsorCampaignHistoryEntry = {
   refCode: string;

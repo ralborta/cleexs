@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { sponsorToolsApi, type PlatformDashboard } from '@/lib/api';
+import { reportsApi, type PlatformDashboard } from '@/lib/api';
 import { normalizeTrackingValue } from '@/lib/sponsor-link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -135,11 +135,16 @@ export function SponsorTrackingPanel({ activeRef }: { activeRef: string }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await sponsorToolsApi.getMetrics();
+      const data = await reportsApi.getPlatformDashboard();
       setDashboard(data);
     } catch (err) {
       setDashboard(null);
-      setError(err instanceof Error ? err.message : 'No pudimos cargar las métricas.');
+      const raw = err instanceof Error ? err.message : 'No pudimos cargar las métricas.';
+      const friendly =
+        raw === 'Load failed' || raw === 'Failed to fetch'
+          ? 'No pudimos conectar con la API. Revisá que NEXT_PUBLIC_API_URL en Vercel apunte al backend en Railway.'
+          : raw;
+      setError(friendly);
     } finally {
       setLoading(false);
     }

@@ -66,8 +66,7 @@ export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsApp
           <div>
             <h2 className="text-sm font-bold text-slate-800">Campañas recientes</h2>
             <p className="mt-1 text-xs text-slate-500">
-              Cuando copies un link o generes un QR, aparecerá acá para reenviarla (guardado en este
-              navegador).
+              Las últimas 3 campañas que copies o generes (guardado en este navegador).
             </p>
           </div>
         </div>
@@ -83,8 +82,8 @@ export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsApp
           <div>
             <h2 className="text-lg font-bold text-slate-900">Campañas recientes</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Links y QR guardados en este navegador ({entries.length}). Podés copiarlos o cargarlos
-              en el formulario.
+              Últimas {entries.length} campañas en este navegador. Copiá de nuevo o cargá en el
+              formulario.
             </p>
           </div>
         </div>
