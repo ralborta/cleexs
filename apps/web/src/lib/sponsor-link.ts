@@ -1,4 +1,4 @@
-import { CLEEXS_APP_URL, CLEEXS_SPONSOR_LINK_BASE_URL } from '@/lib/site';
+import { CLEEXS_APP_URL, CLEEXS_MARKETING_URL } from '@/lib/site';
 
 /** Misma normalización que `/diagnostico/crear` al persistir ref y UTM. */
 export function normalizeTrackingValue(input: string): string | undefined {
@@ -16,15 +16,13 @@ export type SponsorLinkParams = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
-  /** Dominio base sin path; por defecto cleexs.net (CLEEXS_SPONSOR_LINK_BASE_URL) */
   baseUrl?: string;
 };
 
-function buildSponsorDiagnosticUrlWithBase(baseUrl: string, params: SponsorLinkParams): string | null {
+function buildTrackingSearchParams(params: SponsorLinkParams): URLSearchParams | null {
   const ref = normalizeTrackingValue(params.ref);
   if (!ref) return null;
 
-  const base = baseUrl.replace(/\/$/, '');
   const search = new URLSearchParams();
   search.set('ref', ref);
 
@@ -36,16 +34,29 @@ function buildSponsorDiagnosticUrlWithBase(baseUrl: string, params: SponsorLinkP
   if (utmMedium) search.set('utm_medium', utmMedium);
   if (utmCampaign) search.set('utm_campaign', utmCampaign);
 
+  return search;
+}
+
+/**
+ * Home de cleexs.net con ref/UTM (lo que pide marketing: aterriza en la web pública).
+ * El tracking al diagnóstico se completa cuando WP reenvía esos params a la app al hacer "Checkear visibilidad".
+ */
+export function buildSponsorMarketingHomeUrl(params: SponsorLinkParams): string | null {
+  const search = buildTrackingSearchParams(params);
+  if (!search) return null;
+  const base = (params.baseUrl?.trim() || CLEEXS_MARKETING_URL).replace(/\/$/, '');
+  return `${base}/?${search.toString()}`;
+}
+
+/** Diagnóstico directo en la app (pruebas o enlaces internos). */
+export function buildSponsorDiagnosticAppUrl(params: SponsorLinkParams): string | null {
+  const search = buildTrackingSearchParams(params);
+  if (!search) return null;
+  const base = CLEEXS_APP_URL.replace(/\/$/, '');
   return `${base}/diagnostico/crear?${search.toString()}`;
 }
 
-/** Link público para compartir (cleexs.net por defecto). */
+/** @deprecated Usar buildSponsorMarketingHomeUrl — alias por compatibilidad. */
 export function buildSponsorDiagnosticUrl(params: SponsorLinkParams): string | null {
-  const base = (params.baseUrl?.trim() || CLEEXS_SPONSOR_LINK_BASE_URL).replace(/\/$/, '');
-  return buildSponsorDiagnosticUrlWithBase(base, params);
-}
-
-/** Misma campaña en app.cleexs.net (diagnóstico directo, sin pasar por marketing). */
-export function buildSponsorDiagnosticAppUrl(params: SponsorLinkParams): string | null {
-  return buildSponsorDiagnosticUrlWithBase(CLEEXS_APP_URL, params);
+  return buildSponsorMarketingHomeUrl(params);
 }

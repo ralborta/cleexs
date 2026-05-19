@@ -16,12 +16,11 @@ export const CLEEXS_APP_URL = (
 ) as string;
 
 /**
- * Base para links de campaña / auspiciador (QR, flyers).
- * Por defecto app.cleexs.net: el diagnóstico vive ahí. cleexs.net es WordPress y no tiene /diagnostico/crear
- * (404) salvo redirect en Hostinger. Para usar cleexs.net: NEXT_PUBLIC_SPONSOR_LINK_BASE_URL + regla 301 en WP.
+ * Base marketing para links de campaña (home cleexs.net con ?ref= y UTM).
+ * Override opcional: NEXT_PUBLIC_SPONSOR_LINK_BASE_URL
  */
 export const CLEEXS_SPONSOR_LINK_BASE_URL = (
-  process.env.NEXT_PUBLIC_SPONSOR_LINK_BASE_URL?.trim().replace(/\/$/, '') || CLEEXS_APP_URL
+  process.env.NEXT_PUBLIC_SPONSOR_LINK_BASE_URL?.trim().replace(/\/$/, '') || CLEEXS_MARKETING_URL
 ) as string;
 
 /** URL opcional (despliegue) para “análisis técnico ampliado” del sitio; si está vacío, no hay botón extra. */
