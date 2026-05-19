@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { reportsApi, type PlatformDashboard } from '@/lib/api';
+import { sponsorToolsApi, type PlatformDashboard } from '@/lib/api';
 import { normalizeTrackingValue } from '@/lib/sponsor-link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -135,7 +135,7 @@ export function SponsorTrackingPanel({ activeRef }: { activeRef: string }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await reportsApi.getPlatformDashboard();
+      const data = await sponsorToolsApi.getMetrics();
       setDashboard(data);
     } catch (err) {
       setDashboard(null);
