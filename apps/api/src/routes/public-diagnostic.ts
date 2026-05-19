@@ -225,8 +225,18 @@ function slugHostGuessFromCompetitorName(name: string): string | null {
 }
 
 function normalizeDomain(url: string): string {
+  // Sufijos donde el dominio registrable incluye 3+ etiquetas (ej. colegio.edu.ar, no "edu.ar").
   const COMPOUND_PUBLIC_SUFFIXES = new Set([
+    // Argentina (nic.ar): segundo nivel bajo .ar
     'com.ar',
+    'edu.ar',
+    'gob.ar',
+    'gov.ar',
+    'int.ar',
+    'mil.ar',
+    'net.ar',
+    'org.ar',
+    'tur.ar',
     'com.py',
     'com.uy',
     'com.bo',
@@ -234,8 +244,24 @@ function normalizeDomain(url: string): string {
     'com.ec',
     'com.ve',
     'com.mx',
+    'gob.mx',
+    'edu.mx',
+    'org.mx',
+    'net.mx',
     'com.co',
+    'edu.co',
+    'org.co',
+    'net.co',
     'co.cr',
+    // Reino Unido / usos típicos multi-parte
+    'co.uk',
+    'org.uk',
+    'ac.uk',
+    'gov.uk',
+    'com.br',
+    'edu.br',
+    'org.br',
+    'net.br',
   ]);
 
   try {
