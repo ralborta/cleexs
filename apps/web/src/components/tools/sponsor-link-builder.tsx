@@ -4,12 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-import { CLEEXS_APP_URL, CLEEXS_SPONSOR_LINK_BASE_URL } from '@/lib/site';
-import {
-  buildSponsorDiagnosticAppUrl,
-  buildSponsorDiagnosticUrl,
-  slugifySponsorLabel,
-} from '@/lib/sponsor-link';
+import { CLEEXS_APP_URL, CLEEXS_MARKETING_URL, CLEEXS_SPONSOR_LINK_BASE_URL } from '@/lib/site';
+import { buildSponsorDiagnosticUrl, slugifySponsorLabel } from '@/lib/sponsor-link';
 import { SponsorTrackingPanel } from '@/components/tools/sponsor-tracking-panel';
 import { Check, Copy, Download, ExternalLink, Link2, QrCode } from 'lucide-react';
 
@@ -46,7 +42,10 @@ export function SponsorLinkBuilder() {
   );
 
   const generatedUrl = useMemo(() => buildSponsorDiagnosticUrl(linkParams), [linkParams]);
-  const appDirectUrl = useMemo(() => buildSponsorDiagnosticAppUrl(linkParams), [linkParams]);
+  const marketingPreviewUrl = useMemo(
+    () => buildSponsorDiagnosticUrl({ ...linkParams, baseUrl: CLEEXS_MARKETING_URL }),
+    [linkParams]
+  );
 
   const refValid = Boolean(generatedUrl);
 
@@ -193,7 +192,8 @@ export function SponsorLinkBuilder() {
       <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
         <p className={labelCls}>Enlace para compartir (público)</p>
         <p className="mt-1 text-[11px] text-slate-500">
-          Dominio: {CLEEXS_SPONSOR_LINK_BASE_URL} → diagnóstico en {CLEEXS_APP_URL}
+          El diagnóstico corre en <strong className="text-slate-700">{CLEEXS_APP_URL}</strong> (cleexs.net es la web
+          WordPress y no tiene esta ruta sin un redirect en el hosting).
         </p>
 
         {refValid && generatedUrl ? (
@@ -201,13 +201,12 @@ export function SponsorLinkBuilder() {
             <p className="mt-3 break-all rounded-xl border border-slate-200 bg-white px-3 py-3 font-mono text-xs leading-relaxed text-slate-800">
               {generatedUrl}
             </p>
-            {appDirectUrl && appDirectUrl !== generatedUrl ? (
-              <details className="mt-3 text-[11px] text-slate-500">
-                <summary className="cursor-pointer font-medium text-slate-600">Link directo app (pruebas)</summary>
-                <p className="mt-2 break-all rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 font-mono text-[10px] text-slate-600">
-                  {appDirectUrl}
-                </p>
-              </details>
+            {marketingPreviewUrl && marketingPreviewUrl !== generatedUrl ? (
+              <p className="mt-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                <strong>cleexs.net</strong> hoy da 404 en esta ruta (es WordPress). Cuando exista redirect en
+                Hostinger, podrás usar:{' '}
+                <span className="break-all font-mono text-[10px]">{marketingPreviewUrl}</span>
+              </p>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               <Button type="button" onClick={() => void copyUrl()} className="gap-2">
