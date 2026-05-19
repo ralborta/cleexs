@@ -20,9 +20,22 @@ type Props = {
   onClose: () => void;
   sponsorName: string;
   refCode: string;
+  initialCustomMessage?: string;
+  onWhatsAppReady?: (data: {
+    whatsAppUrl: string;
+    whatsAppMessage: string;
+    customMessage: string;
+  }) => void;
 };
 
-export function SponsorWhatsAppQrModal({ open, onClose, sponsorName, refCode }: Props) {
+export function SponsorWhatsAppQrModal({
+  open,
+  onClose,
+  sponsorName,
+  refCode,
+  initialCustomMessage,
+  onWhatsAppReady,
+}: Props) {
   const [phone, setPhone] = useState(CLEEXS_WHATSAPP_PHONE_E164);
   const [customMessage, setCustomMessage] = useState('');
   const [messageTouched, setMessageTouched] = useState(false);
@@ -36,11 +49,16 @@ export function SponsorWhatsAppQrModal({ open, onClose, sponsorName, refCode }: 
   useEffect(() => {
     if (!open) return;
     setPhone(CLEEXS_WHATSAPP_PHONE_E164);
-    setMessageTouched(false);
-    setCustomMessage('');
     setQrDataUrl(null);
     setQrError(null);
-  }, [open]);
+    if (initialCustomMessage?.trim()) {
+      setCustomMessage(initialCustomMessage.trim());
+      setMessageTouched(true);
+    } else {
+      setMessageTouched(false);
+      setCustomMessage('');
+    }
+  }, [open, initialCustomMessage]);
 
   useEffect(() => {
     if (!open || !refValid) return;
@@ -103,6 +121,15 @@ export function SponsorWhatsAppQrModal({ open, onClose, sponsorName, refCode }: 
       cancelled = true;
     };
   }, [open, waMeUrl]);
+
+  useEffect(() => {
+    if (!open || !waMeUrl || !onWhatsAppReady) return;
+    onWhatsAppReady({
+      whatsAppUrl: waMeUrl,
+      whatsAppMessage: fullMessagePreview,
+      customMessage: customMessage.trim(),
+    });
+  }, [open, waMeUrl, fullMessagePreview, customMessage, onWhatsAppReady]);
 
   const copyText = useCallback(async (text: string, kind: 'link' | 'message') => {
     try {

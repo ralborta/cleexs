@@ -10,8 +10,10 @@ import {
   buildSponsorMarketingHomeUrl,
   slugifySponsorLabel,
 } from '@/lib/sponsor-link';
+import { SponsorCampaignHistoryPanel } from '@/components/tools/sponsor-campaign-history-panel';
 import { SponsorTrackingPanel } from '@/components/tools/sponsor-tracking-panel';
 import { SponsorWhatsAppQrModal } from '@/components/tools/sponsor-whatsapp-qr-modal';
+import { patchSponsorCampaignHistory } from '@/lib/sponsor-campaign-history';
 import { Check, Copy, Download, ExternalLink, Link2, MessageCircle, QrCode } from 'lucide-react';
 
 const fieldCls =
@@ -30,6 +32,8 @@ export function SponsorLinkBuilder() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
   const [waQrOpen, setWaQrOpen] = useState(false);
+  const [waInitialMessage, setWaInitialMessage] = useState<string | undefined>();
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   useEffect(() => {
     if (refTouched) return;
@@ -81,16 +85,40 @@ export function SponsorLinkBuilder() {
     };
   }, [showQr, generatedUrl]);
 
+  const persistCampaign = useCallback(
+    (patch: {
+      whatsAppUrl?: string | null;
+      whatsAppMessage?: string | null;
+      customWaMessage?: string | null;
+    }) => {
+      if (!generatedUrl || !refCode.trim()) return;
+      patchSponsorCampaignHistory(refCode, {
+        sponsorName,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        marketingUrl: generatedUrl,
+        appDiagnosticUrl: appDiagnosticUrl ?? null,
+        whatsAppUrl: patch.whatsAppUrl,
+        whatsAppMessage: patch.whatsAppMessage,
+        whatsAppCustomMessage: patch.customWaMessage,
+      });
+      setHistoryRefresh((n) => n + 1);
+    },
+    [generatedUrl, refCode, sponsorName, utmSource, utmMedium, utmCampaign, appDiagnosticUrl]
+  );
+
   const copyUrl = useCallback(async () => {
     if (!generatedUrl) return;
     try {
       await navigator.clipboard.writeText(generatedUrl);
       setCopied(true);
+      persistCampaign({});
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       /* ignore */
     }
-  }, [generatedUrl]);
+  }, [generatedUrl, persistCampaign]);
 
   function downloadQr() {
     if (!qrDataUrl || !refCode) return;
@@ -98,6 +126,32 @@ export function SponsorLinkBuilder() {
     a.href = qrDataUrl;
     a.download = `cleexs-qr-${refCode}.png`;
     a.click();
+    persistCampaign({});
+  }
+
+  function openWhatsAppQr(initialMessage?: string) {
+    setWaInitialMessage(initialMessage);
+    setWaQrOpen(true);
+    persistCampaign({});
+  }
+
+  function loadCampaignFromHistory(entry: {
+    refCode: string;
+    sponsorName: string;
+    utmSource: string;
+    utmMedium: string;
+    utmCampaign: string;
+    whatsAppMessage: string | null;
+    whatsAppCustomMessage?: string | null;
+  }) {
+    setRefTouched(true);
+    setRefCode(entry.refCode);
+    setSponsorName(entry.sponsorName);
+    setUtmSource(entry.utmSource);
+    setUtmMedium(entry.utmMedium);
+    setUtmCampaign(entry.utmCampaign);
+    setWaInitialMessage(entry.whatsAppMessage ?? undefined);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   return (
@@ -273,13 +327,22 @@ export function SponsorLinkBuilder() {
             type="button"
             className="gap-2 bg-emerald-600 hover:bg-emerald-700"
             disabled={!refValid}
-            onClick={() => setWaQrOpen(true)}
+            onClick={() => openWhatsAppQr()}
           >
             <MessageCircle className="h-4 w-4" />
             Generar QR WhatsApp
           </Button>
         </div>
       </section>
+
+      <SponsorCampaignHistoryPanel
+        refreshKey={historyRefresh}
+        onLoad={loadCampaignFromHistory}
+        onOpenWhatsAppQr={(entry) => {
+          loadCampaignFromHistory(entry);
+          openWhatsAppQr(entry.whatsAppCustomMessage ?? undefined);
+        }}
+      />
 
       <SponsorTrackingPanel activeRef={refCode} />
 
@@ -288,6 +351,14 @@ export function SponsorLinkBuilder() {
         onClose={() => setWaQrOpen(false)}
         sponsorName={sponsorName}
         refCode={refCode}
+        initialCustomMessage={waInitialMessage}
+        onWhatsAppReady={({ whatsAppUrl, whatsAppMessage, customMessage }) => {
+          persistCampaign({
+            whatsAppUrl,
+            whatsAppMessage,
+            customWaMessage: customMessage,
+          });
+        }}
       />
     </div>
   );
