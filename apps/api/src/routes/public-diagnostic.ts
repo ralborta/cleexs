@@ -977,15 +977,77 @@ function parsePublicSetupDraft(json: unknown): {
   suggestedCompetitorUrls: string[];
   marketCountry?: string;
   useSerp?: boolean;
+  competitorRescueAttemptedAt?: string;
 } | null {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
   const o = json as Record<string, unknown>;
   const urls = o.suggestedCompetitorUrls;
-  if (!Array.isArray(urls)) return null;
-  const suggestedCompetitorUrls = urls.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
+  const suggestedCompetitorUrls = Array.isArray(urls)
+    ? urls.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : [];
   const marketCountry = typeof o.marketCountry === 'string' ? o.marketCountry : undefined;
   const useSerp = typeof o.useSerp === 'boolean' ? o.useSerp : undefined;
-  return { suggestedCompetitorUrls, marketCountry, useSerp };
+  const competitorRescueAttemptedAt =
+    typeof o.competitorRescueAttemptedAt === 'string' ? o.competitorRescueAttemptedAt : undefined;
+  return { suggestedCompetitorUrls, marketCountry, useSerp, competitorRescueAttemptedAt };
+}
+
+function setupDraftJsonRecord(json: unknown): Record<string, unknown> {
+  if (json && typeof json === 'object' && !Array.isArray(json)) {
+    return { ...(json as Record<string, unknown>) };
+  }
+  return {};
+}
+
+/** Si el borrador no tiene URLs, un segundo pase de rescue antes de mostrar el wizard vacío. */
+async function refillSuggestedCompetitorsIfEmpty(params: {
+  diagnosticId: string;
+  brandName: string;
+  domain: string;
+  setupDraftJson: unknown;
+  minRetryGapMs?: number;
+}): Promise<{
+  suggestedCompetitorUrls: string[];
+  marketCountry?: string;
+  useSerp?: boolean;
+  competitorRescueAttemptedAt?: string;
+} | null> {
+  const draft = parsePublicSetupDraft(params.setupDraftJson);
+  if ((draft?.suggestedCompetitorUrls?.length ?? 0) > 0) return draft;
+
+  const domain = params.domain.trim().toLowerCase();
+  if (!domain || domain.startsWith('brand-')) return draft;
+
+  const attemptedAt = draft?.competitorRescueAttemptedAt;
+  const attemptedMs = attemptedAt ? Date.parse(attemptedAt) : 0;
+  const minGap = params.minRetryGapMs ?? 12_000;
+  if (attemptedMs && !Number.isNaN(attemptedMs) && Date.now() - attemptedMs < minGap) {
+    return draft;
+  }
+
+  const trimmedUrl = `https://${domain}`;
+  const marketCountry =
+    draft?.marketCountry?.trim() ||
+    (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+  const rescued = await rescueWaCompetitorUrls({
+    brandForRun: params.brandName,
+    trimmedUrl,
+    domain,
+    marketCountry,
+  });
+
+  const nextJson = {
+    ...setupDraftJsonRecord(params.setupDraftJson),
+    suggestedCompetitorUrls: rescued,
+    marketCountry,
+    ...(typeof draft?.useSerp === 'boolean' ? { useSerp: draft.useSerp } : {}),
+    competitorRescueAttemptedAt: new Date().toISOString(),
+  };
+  await prisma.publicDiagnostic.update({
+    where: { id: params.diagnosticId },
+    data: { setupDraftJson: nextJson },
+  });
+  return parsePublicSetupDraft(nextJson);
 }
 
 const MAX_PUBLIC_COMPETITOR_URLS = 5;
@@ -1232,6 +1294,37 @@ async function runCompetitorDetectionJob(params: {
       if (suggestedCompetitorUrls.length >= 5) break;
       suggestedCompetitorUrls.push(url);
     }
+  }
+
+  if (suggestedCompetitorUrls.length === 0) {
+    const secondRescue = await refillSuggestedCompetitorsIfEmpty({
+      diagnosticId,
+      brandName: brandForRun,
+      domain,
+      setupDraftJson: { suggestedCompetitorUrls: [], marketCountry, useSerp: serp },
+      minRetryGapMs: 0,
+    });
+    for (const url of secondRescue?.suggestedCompetitorUrls ?? []) {
+      if (suggestedCompetitorUrls.length >= 5) break;
+      suggestedCompetitorUrls.push(url);
+    }
+  }
+
+  if (suggestedCompetitorUrls.length === 0) {
+    log.warn({ diagnosticId, domain }, 'Detección de competidores: sin URLs tras rescue');
+    await prisma.publicDiagnostic.update({
+      where: { id: diagnosticId },
+      data: {
+        status: 'failed',
+        setupDraftJson: {
+          suggestedCompetitorUrls: [],
+          marketCountry,
+          useSerp: serp,
+          competitorRescueAttemptedAt: new Date().toISOString(),
+        },
+      },
+    });
+    return { suggestedCompetitorUrls: [], marketCountry, useSerp: serp };
   }
 
   await prisma.publicDiagnostic.update({
@@ -2868,7 +2961,16 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
 
-    const setupDraft = parsePublicSetupDraft(row.setupDraftJson);
+    let setupDraft = parsePublicSetupDraft(row.setupDraftJson);
+    if (row.status === 'awaiting_user') {
+      setupDraft =
+        (await refillSuggestedCompetitorsIfEmpty({
+          diagnosticId: id,
+          brandName: row.brandName,
+          domain: row.domain,
+          setupDraftJson: row.setupDraftJson,
+        })) ?? setupDraft;
+    }
 
     let analysisJson: unknown = null;
     if (row.status === 'completed') {

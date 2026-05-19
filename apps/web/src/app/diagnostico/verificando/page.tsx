@@ -320,7 +320,7 @@ function VerificandoContent() {
     if (!uiEmpty && suggestedJson === lastHydratedSuggestedJsonRef.current) return;
     lastHydratedSuggestedJsonRef.current = suggestedJson;
     setCompetitorUrls(draftUrls);
-  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft, competitorUrls]);
+  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft, competitorUrls, publicSetupStep]);
 
   useEffect(() => {
     if (!diagnosticId) return;
@@ -475,8 +475,17 @@ function VerificandoContent() {
       return;
     }
     setStartAnalysisError(null);
+    competitorUrlsTouchedRef.current = false;
+    lastHydratedSuggestedJsonRef.current = '';
+    const draftUrls = fiveUrlsFromDraft(diagnostic?.setupDraft ?? null);
+    if (draftUrls.some((u) => u.trim())) {
+      setCompetitorUrls(draftUrls);
+      lastHydratedSuggestedJsonRef.current = JSON.stringify(
+        diagnostic?.setupDraft?.suggestedCompetitorUrls ?? []
+      );
+    }
     setPublicSetupStep(3);
-  }, [setupEmail]);
+  }, [setupEmail, diagnostic?.setupDraft]);
 
   const handleLegacyStep1Next = useCallback(() => {
     if (!legacySetupHumanOk) return;
@@ -698,6 +707,12 @@ function VerificandoContent() {
 
   const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
   const filledSetupCompetitorCount = trimmedSetupCompetitorUrls.filter(Boolean).length;
+  const suggestedFromServer = diagnostic.setupDraft?.suggestedCompetitorUrls ?? [];
+  const awaitingCompetitorSuggestions =
+    publicSetupStep === 3 &&
+    normalizedDiagnosticStatus === 'awaiting_user' &&
+    filledSetupCompetitorCount < 1 &&
+    suggestedFromServer.length < 1;
   const canFinalizePublicSetup =
     setupHumanOk &&
     setupEmail.trim().includes('@') &&
@@ -1039,17 +1054,6 @@ function VerificandoContent() {
                     <span className="text-sm font-medium text-slate-800">Soy Humano</span>
                   </label>
                 </div>
-                <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
-                  Acepto{' '}
-                  <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
-                    Términos
-                  </a>{' '}
-                  y{' '}
-                  <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
-                    Privacidad
-                  </a>
-                  .
-                </p>
                 <div className="mt-8 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-6">
                   <Button
                     type="button"
@@ -1116,6 +1120,15 @@ function VerificandoContent() {
             {publicSetupStep === 3 && (
               <form onSubmit={handleSetupStartAnalysis}>
                 <section className="mt-8 border-t border-slate-100 pt-8">
+                  {awaitingCompetitorSuggestions && (
+                    <div
+                      className="mb-4 flex items-center gap-3 rounded-xl border border-violet-200/80 bg-violet-50/60 px-4 py-3 text-sm text-violet-900"
+                      role="status"
+                    >
+                      <Loader2 className="h-5 w-5 shrink-0 animate-spin text-violet-600" aria-hidden />
+                      <span>Buscando competidores de tu sector… Si tarda, podés cargar las URLs a mano abajo.</span>
+                    </div>
+                  )}
                   <div className="mt-4 space-y-2.5">
                     {competitorUrls.map((val, idx) => (
                       <div
@@ -1132,9 +1145,16 @@ function VerificandoContent() {
                           id={`comp-url-${idx}`}
                           value={val}
                           onChange={(e) => {
-                            competitorUrlsTouchedRef.current = true;
+                            const nextVal = e.target.value;
+                            const hydrated = fiveUrlsFromDraft(diagnostic.setupDraft);
+                            const wasHydratedEmpty = !hydrated.some((u) => u.trim());
+                            if (!wasHydratedEmpty && nextVal !== (hydrated[idx] ?? '')) {
+                              competitorUrlsTouchedRef.current = true;
+                            } else if (wasHydratedEmpty && nextVal.trim()) {
+                              competitorUrlsTouchedRef.current = true;
+                            }
                             const next = [...competitorUrls];
-                            next[idx] = e.target.value;
+                            next[idx] = nextVal;
                             setCompetitorUrls(next);
                           }}
                           className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-0"
@@ -1302,17 +1322,6 @@ function VerificandoContent() {
                   <span className="text-sm font-medium text-slate-800">Soy Humano</span>
                 </label>
               </div>
-              <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
-                Acepto{' '}
-                <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
-                  Términos
-                </a>{' '}
-                y{' '}
-                <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
-                  Privacidad
-                </a>
-                .
-              </p>
               <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
                 <Button
                   type="submit"
