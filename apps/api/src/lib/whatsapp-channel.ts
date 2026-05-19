@@ -10,6 +10,31 @@ export type WaChannelLog = {
   error: (obj: unknown, msg?: string) => void;
 };
 
+const recentWaOutgoing = new Map<string, number>();
+const WA_OUTGOING_DEDUPE_MS = 12_000;
+
+/** Dominios que son solo sufijo público (.edu.ar), no un sitio real. */
+export function isPlaceholderPublicSuffixOnlyDomain(domain: string): boolean {
+  const d = domain.toLowerCase().replace(/^www\./, '').trim();
+  if (!d || !d.includes('.')) return true;
+  const parts = d.split('.');
+  if (parts.length === 2 && parts[1] === 'ar') {
+    return ['com', 'edu', 'gob', 'gov', 'org', 'net', 'mil', 'int', 'tur'].includes(parts[0]);
+  }
+  const compoundOnly = new Set([
+    'com.ar',
+    'edu.ar',
+    'gob.ar',
+    'gov.ar',
+    'org.ar',
+    'net.ar',
+    'mil.ar',
+    'int.ar',
+    'tur.ar',
+  ]);
+  return compoundOnly.has(d);
+}
+
 /** Envío fiable por API (el flow {{reply}} a veces no llega en el 2.º mensaje). */
 export async function deliverWaReplyToUser(
   log: WaChannelLog,
@@ -18,6 +43,21 @@ export async function deliverWaReplyToUser(
 ): Promise<void> {
   const text = replyText.trim();
   if (!text || !isBuilderBotSendConfigured()) return;
+
+  const dedupeKey = `${recipient.trim()}:${text}`;
+  const now = Date.now();
+  const prev = recentWaOutgoing.get(dedupeKey);
+  if (prev != null && now - prev < WA_OUTGOING_DEDUPE_MS) {
+    log.info({ recipient: recipient.trim() }, 'Canal WA: mensaje duplicado omitido');
+    return;
+  }
+  recentWaOutgoing.set(dedupeKey, now);
+  if (recentWaOutgoing.size > 500) {
+    for (const [k, t] of recentWaOutgoing) {
+      if (now - t > WA_OUTGOING_DEDUPE_MS) recentWaOutgoing.delete(k);
+    }
+  }
+
   try {
     await sendWhatsAppMessage({ number: recipient.trim(), message: text, checkIfExists: true });
     log.info({ recipient: recipient.trim() }, 'Canal WA: mensaje enviado por BuilderBot API');
@@ -263,7 +303,19 @@ export function buildWhatsAppCompletedReply(params: {
 export function buildWhatsAppErrorReply(code: string, fallback?: string): string {
   if (code === 'rate_limited') return 'Límite diario alcanzado. Probá mañana.';
   if (code === 'analysis_in_progress') {
-    return 'Ya hay un análisis en curso para tu número. Esperá unos minutos o abrí el link que te enviamos.';
+    return (
+      fallback ||
+      'Ya hay un análisis en curso para tu número. Esperá unos minutos o abrí el link que te enviamos.'
+    );
+  }
+  if (code === 'invalid_domain') {
+    return (
+      fallback ||
+      'Enviá el dominio completo de tu sitio (ej. empresa.edu.ar), no solo el sufijo (.edu.ar).'
+    );
+  }
+  if (code === 'needs_competitors' || code === 'competitors_timeout' || code === 'pipeline_failed') {
+    return fallback || 'No pudimos completar el análisis. Reenviá la URL de tu sitio en un mensaje nuevo.';
   }
   if (code === 'service_unavailable') return 'No disponible ahora. Intentá en unos minutos.';
   return fallback || 'No pudimos analizar esa URL. Revisala e intentá de nuevo.';

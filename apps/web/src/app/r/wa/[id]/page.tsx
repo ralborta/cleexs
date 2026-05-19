@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { Button } from '@/components/ui/button';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
-import { Loader2, Mail } from 'lucide-react';
+import { CheckCircle2, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { WaMobileDashboard } from './wa-mobile-dashboard';
 
 export default function WhatsAppResultPage() {
@@ -34,6 +34,8 @@ export default function WhatsAppResultPage() {
 
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
+    const pollStartedAt = Date.now();
+    const STUCK_MS = 6 * 60 * 1000;
 
     const poll = async () => {
       try {
@@ -50,6 +52,16 @@ export default function WhatsAppResultPage() {
           setLoading(false);
           if (timer) clearInterval(timer);
           return;
+        }
+        const stuck =
+          Date.now() - pollStartedAt > STUCK_MS &&
+          (d.status === 'awaiting_user' || d.status === 'detecting_competitors');
+        if (stuck) {
+          setLoading(false);
+          setError(
+            'El análisis está tardando más de lo habitual. Volvé a WhatsApp: reenviá la URL de tu sitio para reintentar.'
+          );
+          if (timer) clearInterval(timer);
         }
       } catch {
         if (!cancelled) setError('No pudimos cargar tu diagnóstico. Reintentá en un momento.');
@@ -84,50 +96,81 @@ export default function WhatsAppResultPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-slate-100/80 to-white">
-      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/95 px-4 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-md flex-col items-center gap-1 text-center">
-          <CleexsMark className="h-9 w-9" />
-          <p className="text-lg font-bold tracking-tight text-slate-900">Cleexs</p>
-          <p className="text-sm font-medium text-slate-500">Tu diagnóstico</p>
+    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#0b1220]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(37,99,235,0.35),transparent)]" />
+      <div className="pointer-events-none absolute -right-24 top-32 h-64 w-64 rounded-full bg-violet-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-16 bottom-40 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
+
+      <header className="relative z-10 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/CleexsLogo.png"
+              alt="Cleexs"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-xl shadow-lg shadow-primary-900/40 ring-1 ring-white/10"
+              priority
+            />
+            <div>
+              <p className="text-base font-bold tracking-tight text-white">Cleexs</p>
+              <p className="text-[11px] font-medium text-slate-400">Diagnóstico IA</p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+            <MessageCircle className="h-3 w-3" aria-hidden />
+            WhatsApp
+          </span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-3 pb-10 pt-4">
+      <main className="relative z-10 mx-auto max-w-md px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2">
         {loading && (
-          <div className="flex flex-col items-center gap-4 py-16 text-center">
-            <Loader2 className="h-10 w-10 animate-spin text-primary-600" />
-            <div>
-              <p className="text-base font-semibold text-slate-900">Analizando tu sitio</p>
-              <p className="mt-1 text-sm text-slate-500">
-                {diagnostic?.domain ? diagnostic.domain : 'Esto puede tardar unos minutos'}
-              </p>
+          <section className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-5 text-center">
+              <div className="relative">
+                <div className="absolute inset-0 animate-ping rounded-full bg-primary-500/20" />
+                <Loader2 className="relative h-11 w-11 animate-spin text-primary-400" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-white">Analizando tu sitio</p>
+                <p className="mt-1.5 text-sm text-slate-400">
+                  {diagnostic?.domain ? diagnostic.domain : 'Simulando consultas en ChatGPT…'}
+                </p>
+              </div>
               {diagnostic?.progressPercent != null && (
-                <div className="mx-auto mt-4 h-2 w-56 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-primary-600 transition-all duration-500"
-                    style={{ width: `${diagnostic.progressPercent}%` }}
-                  />
+                <div className="w-full max-w-[240px]">
+                  <div className="mb-1.5 flex justify-between text-[10px] font-medium tabular-nums text-slate-500">
+                    <span>Progreso</span>
+                    <span>{diagnostic.progressPercent}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-primary-500 to-sky-400 transition-all duration-500"
+                      style={{ width: `${diagnostic.progressPercent}%` }}
+                    />
+                  </div>
                 </div>
               )}
+              <p className="text-xs text-slate-500">Podés volver a WhatsApp; te avisamos cuando esté listo.</p>
             </div>
-          </div>
+          </section>
         )}
 
         {!loading && error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-6 text-center text-sm text-rose-800">
+          <section className="mt-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-6 text-center text-sm text-rose-100">
             {error}
-          </div>
+          </section>
         )}
 
         {!loading && diagnostic?.status === 'failed' && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-900">
+          <section className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-6 text-center text-sm text-amber-100">
             No pudimos completar el análisis. Escribinos por WhatsApp y lo revisamos.
-          </div>
+          </section>
         )}
 
         {!loading && runResult && diagnostic && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <WaMobileDashboard
               runResult={runResult}
               analysisJson={diagnostic.analysisJson}
@@ -135,22 +178,33 @@ export default function WhatsAppResultPage() {
             />
 
             {!emailDone && !diagnostic.email && (
-              <section className="rounded-2xl border border-primary-200 bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-center gap-2">
-                  <Mail className="h-4 w-4 text-primary-600" />
-                  <span className="text-sm font-semibold text-slate-900">Informe por email</span>
+              <section className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03] p-5 shadow-xl shadow-black/20 backdrop-blur-md">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-500/20">
+                    <Mail className="h-5 w-5 text-primary-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Informe completo por email</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                      Te enviamos el detalle ampliado y cómo mejorar tu visibilidad en IA.
+                    </p>
+                  </div>
                 </div>
-                <form onSubmit={submitEmail} className="flex flex-col gap-2">
+                <form onSubmit={submitEmail} className="flex flex-col gap-2.5">
                   <input
                     type="email"
                     placeholder="tu@empresa.com"
                     value={email}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     required
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm"
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-primary-400/50 focus:ring-2 focus:ring-primary-500/40"
                     autoComplete="email"
                   />
-                  <Button type="submit" disabled={emailSaving} className="h-11 w-full rounded-xl">
+                  <Button
+                    type="submit"
+                    disabled={emailSaving}
+                    className="h-12 w-full rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-sm font-semibold shadow-lg shadow-primary-900/30 hover:from-primary-500 hover:to-primary-400"
+                  >
                     {emailSaving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -160,13 +214,14 @@ export default function WhatsAppResultPage() {
                       'Recibir informe'
                     )}
                   </Button>
-                  {emailError && <p className="text-center text-xs text-rose-600">{emailError}</p>}
+                  {emailError && <p className="text-center text-xs text-rose-300">{emailError}</p>}
                 </form>
               </section>
             )}
 
             {(emailDone || diagnostic.email) && (
-              <p className="text-center text-sm font-medium text-emerald-700">
+              <p className="flex items-center justify-center gap-2 text-center text-sm font-medium text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
                 Revisá tu correo en los próximos minutos.
               </p>
             )}

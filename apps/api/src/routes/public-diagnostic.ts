@@ -9,7 +9,9 @@ import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { EntitlementAction, Prisma } from '@prisma/client';
 import { runOutreachForRun } from '../lib/outreach';
 import {
+  getTop5Competitors,
   resolveBrandAnalysisContext,
+  resolveCompetitorDomains,
 } from '../lib/diagnostic-ai';
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
@@ -32,6 +34,7 @@ import {
   getWaChannelDailyLimit,
   getWaCompetitorWaitMs,
   isCleexsFaqOnlyMessage,
+  isPlaceholderPublicSuffixOnlyDomain,
   isWhatsAppSourceChannel,
   normalizeWaPhone,
   verifyWhatsAppChannelApiKey,
@@ -1074,6 +1077,80 @@ function stripSatelliteFromAnalysisJson(json: unknown): object | null {
   return o as object;
 }
 
+/** Segundo intento cuando la detección inicial no devuelve URLs (p. ej. ifts1.com.ar). */
+async function rescueWaCompetitorUrls(params: {
+  brandForRun: string;
+  trimmedUrl: string;
+  domain: string;
+  marketCountry: string;
+}): Promise<string[]> {
+  const { brandForRun, trimmedUrl, domain, marketCountry } = params;
+  const rescuePass = await getTop5Competitors({
+    brandName: brandForRun,
+    websiteUrl: trimmedUrl,
+    country: marketCountry,
+    allowProbableLocalFallback: true,
+  });
+  const resolved = await resolveCompetitorDomains(
+    rescuePass.competitors,
+    marketCountry,
+    undefined,
+    rescuePass.verticalSummary
+  );
+
+  const ownHost = domain.toLowerCase();
+  const seenHosts = new Set<string>();
+  const urls: string[] = [];
+  for (const c of resolved) {
+    if (urls.length >= 5) break;
+    let host = c.domain?.trim() || null;
+    if (!host && c.name?.trim()) {
+      const guess = slugHostGuessFromCompetitorName(c.name);
+      if (guess) {
+        try {
+          host = normalizeDomain(`https://${guess}`);
+        } catch {
+          host = null;
+        }
+      }
+    }
+    if (!host) continue;
+    try {
+      host = normalizeDomain(/^https?:\/\//i.test(host) ? host : `https://${host}`);
+    } catch {
+      continue;
+    }
+    if (!host || host === ownHost || seenHosts.has(host)) continue;
+    seenHosts.add(host);
+    urls.push(`https://${host}`);
+  }
+  return urls;
+}
+
+async function notifyWaChannelFailure(
+  log: PublicDiagLog,
+  diagnosticId: string,
+  code: string,
+  message: string
+): Promise<void> {
+  await prisma.publicDiagnostic
+    .update({ where: { id: diagnosticId }, data: { status: 'failed' } })
+    .catch(() => {});
+
+  const row = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: { waPhone: true, setupDraftJson: true, sourceChannel: true },
+  });
+  if (!row?.waPhone || !isWhatsAppSourceChannel(row.sourceChannel)) return;
+
+  const draft =
+    row.setupDraftJson && typeof row.setupDraftJson === 'object' && !Array.isArray(row.setupDraftJson)
+      ? (row.setupDraftJson as { waRecipient?: string })
+      : null;
+  const recipient = draft?.waRecipient?.trim() || row.waPhone;
+  await deliverWaReplyToUser(log, recipient, buildWhatsAppErrorReply(code, message));
+}
+
 async function runCompetitorDetectionJob(params: {
   log: PublicDiagLog;
   diagnosticId: string;
@@ -1140,8 +1217,18 @@ async function runCompetitorDetectionJob(params: {
   if (suggestedCompetitorUrls.length === 0) {
     log.warn(
       { diagnosticId, competitorCount: analysisContext.competitors.length },
-      'Detección de competidores: ninguna URL sugerida'
+      'Detección de competidores: ninguna URL sugerida; reintento rescue'
     );
+    const rescued = await rescueWaCompetitorUrls({
+      brandForRun,
+      trimmedUrl,
+      domain,
+      marketCountry,
+    });
+    for (const url of rescued) {
+      if (suggestedCompetitorUrls.length >= 5) break;
+      suggestedCompetitorUrls.push(url);
+    }
   }
 
   await prisma.publicDiagnostic.update({
@@ -1206,13 +1293,40 @@ async function autoStartWhatsAppDiagnostic(params: {
   }
 
   const draft = parsePublicSetupDraft(diagnostic.setupDraftJson);
-  const suggested = draft?.suggestedCompetitorUrls ?? [];
+  let suggested = draft?.suggestedCompetitorUrls ?? [];
+  if (suggested.length < 1) {
+    const trimmedUrl =
+      diagnostic.domain && !diagnostic.domain.startsWith('brand-')
+        ? `https://${diagnostic.domain}`
+        : '';
+    const marketCountry = draft?.marketCountry || defaultCountry;
+    if (trimmedUrl) {
+      suggested = await rescueWaCompetitorUrls({
+        brandForRun: diagnostic.brandName,
+        trimmedUrl,
+        domain: diagnostic.domain,
+        marketCountry,
+      });
+      if (suggested.length > 0) {
+        await prisma.publicDiagnostic.update({
+          where: { id: diagnosticId },
+          data: {
+            setupDraftJson: {
+              ...(draft ?? {}),
+              suggestedCompetitorUrls: suggested,
+              marketCountry,
+            },
+          },
+        });
+      }
+    }
+  }
   if (suggested.length < 1) {
     return {
       ok: false,
       code: 'needs_competitors',
       message:
-        'No detectamos competidores automáticamente. Pedile al usuario una URL de un competidor (ej. competidor.com).',
+        'No pudimos detectar competidores para ese sitio. Reenviá la URL o probá con otra empresa.',
     };
   }
 
@@ -1310,6 +1424,16 @@ async function startWhatsAppChannelDiagnostic(params: {
 
   const domain = normalizeDomain(trimmedUrl);
 
+  if (isPlaceholderPublicSuffixOnlyDomain(domain)) {
+    return {
+      ok: false,
+      httpStatus: 400,
+      code: 'invalid_domain',
+      message:
+        'Enviá el dominio completo de tu sitio (ej. colegioguadalupe.edu.ar), no solo el sufijo (.edu.ar).',
+    };
+  }
+
   const dupeRecent = await prisma.publicDiagnostic.findFirst({
     where: {
       waPhone,
@@ -1332,20 +1456,47 @@ async function startWhatsAppChannelDiagnostic(params: {
     };
   }
 
-  const inProgress = await prisma.publicDiagnostic.findFirst({
+  // awaiting_user en WA es transitorio (auto-start); no bloquear reintentos si quedó colgado.
+  const staleWaAwaiting = await prisma.publicDiagnostic.findMany({
     where: {
       waPhone,
-      status: { in: ['detecting_competitors', 'running', 'awaiting_user'] },
+      status: 'awaiting_user',
+      sourceChannel: 'whatsapp_yt',
+      createdAt: { gte: new Date(Date.now() - 25 * 60 * 1000) },
+    },
+    select: { id: true, setupDraftJson: true },
+  });
+  for (const row of staleWaAwaiting) {
+    const draft = parsePublicSetupDraft(row.setupDraftJson);
+    if ((draft?.suggestedCompetitorUrls?.length ?? 0) < 1) {
+      await prisma.publicDiagnostic
+        .update({ where: { id: row.id }, data: { status: 'failed' } })
+        .catch(() => {});
+    }
+  }
+
+  let inProgress = await prisma.publicDiagnostic.findFirst({
+    where: {
+      waPhone,
+      status: { in: ['detecting_competitors', 'running'] },
       createdAt: { gte: new Date(Date.now() - 25 * 60 * 1000) },
     },
     orderBy: { createdAt: 'desc' },
   });
+  if (inProgress && isPlaceholderPublicSuffixOnlyDomain(inProgress.domain)) {
+    await prisma.publicDiagnostic.update({
+      where: { id: inProgress.id },
+      data: { status: 'failed' },
+    });
+    inProgress = null;
+  }
   if (inProgress && inProgress.domain !== domain) {
+    const progressUrl = buildWaResultUrl(inProgress.id, getAppBaseUrlForPublicLinks());
     return {
       ok: false,
       httpStatus: 409,
       code: 'analysis_in_progress',
-      message: `Ya estamos analizando ${inProgress.domain}.`,
+      message: `Ya estamos analizando *${inProgress.domain}*. Informe en curso: ${progressUrl}`,
     };
   }
 
@@ -1412,12 +1563,16 @@ async function startWhatsAppChannelDiagnostic(params: {
       });
       if (!started.ok) {
         log.warn({ diagnosticId: diagId, ...started }, 'Canal WA: auto-start no completado');
+        await notifyWaChannelFailure(log, diagId, started.code, started.message);
       }
     } catch (err) {
       log.error({ err, diagnosticId: diagId }, 'Error en flujo canal WhatsApp');
-      await prisma.publicDiagnostic
-        .update({ where: { id: diagId }, data: { status: 'failed' } })
-        .catch(() => {});
+      await notifyWaChannelFailure(
+        log,
+        diagId,
+        'pipeline_failed',
+        'Hubo un error al analizar tu sitio. Reenviá la URL en un mensaje nuevo.'
+      );
     }
   });
 
@@ -2175,30 +2330,20 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
 
       if (trimmedUrl) {
-        const result = await processWhatsAppUrlHttpRequest({
-          log: fastify.log,
-          phone,
-          message: bodyText,
-          waRecipient: recipient,
-        });
-        await deliverWaReplyToUser(fastify.log, recipient, result.reply);
-        return reply.send({ ok: true, code: result.code, diagnosticId: result.diagnosticId });
+        // El flow «URL diagnóstico» ya llama al webhook y envía la respuesta por API.
+        return reply.send({ ok: true, skipped: 'url_handled_by_flow' });
       }
 
       let textToSend: string;
       let code: string;
 
       if (isCleexsFaqOnlyMessage(bodyText)) {
-        textToSend = buildWhatsAppCleexsFaqReply();
-        code = 'cleexs_info';
-      } else {
-        textToSend = buildWhatsAppAskUrlReply();
-        code = 'need_url';
+        await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppCleexsFaqReply());
+        return reply.send({ ok: true, code: 'cleexs_info' });
       }
 
-      await deliverWaReplyToUser(fastify.log, recipient, textToSend);
-
-      return reply.send({ ok: true, code });
+      // Sin URL: el flow de entrada ya pide la URL; no duplicar mensajes por API.
+      return reply.send({ ok: true, skipped: 'no_url_entrada_flow' });
     } catch (err) {
       fastify.log.error({ err }, 'Error POST /whatsapp/builderbot-inbound');
       return reply.code(500).send({ ok: false });
