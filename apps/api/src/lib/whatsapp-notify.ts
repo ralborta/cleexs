@@ -28,6 +28,7 @@ export async function notifyWhatsAppDiagnosticCompleted(
       status: true,
       sourceChannel: true,
       waPhone: true,
+      setupDraftJson: true,
       runId: true,
       analysisJson: true,
     },
@@ -52,9 +53,15 @@ export async function notifyWhatsAppDiagnosticCompleted(
     resultUrl,
   });
 
+  const draft =
+    row.setupDraftJson && typeof row.setupDraftJson === 'object' && !Array.isArray(row.setupDraftJson)
+      ? (row.setupDraftJson as { waRecipient?: string })
+      : null;
+  const recipient = draft?.waRecipient?.trim() || row.waPhone;
+
   try {
-    await sendWhatsAppMessage({ number: row.waPhone, message });
-    log.info({ diagnosticId, waPhone: row.waPhone }, 'Canal WA: score enviado por BuilderBot API');
+    await sendWhatsAppMessage({ number: recipient, message, checkIfExists: true });
+    log.info({ diagnosticId, recipient }, 'Canal WA: score enviado por BuilderBot API');
   } catch (err) {
     log.error({ err, diagnosticId }, 'Canal WA: error al enviar score por BuilderBot');
   }

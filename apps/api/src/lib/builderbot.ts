@@ -18,6 +18,15 @@ export function isBuilderBotSendConfigured(): boolean {
   return Boolean(botId && apiKey);
 }
 
+/** Número E.164 o JID (@lid / @s.whatsapp.net) tal como BuilderBot espera. */
+export function formatBuilderBotRecipient(raw: string): string {
+  const s = `${raw || ''}`.trim();
+  if (!s) return '';
+  if (s.includes('@')) return s;
+  const digits = s.replace(/\D/g, '');
+  return digits || s;
+}
+
 export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise<unknown> {
   const { number, message, mediaUrl, checkIfExists = false } = options;
   const BOT_ID = (process.env.BUILDERBOT_BOT_ID || '').trim();
@@ -27,10 +36,15 @@ export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise
     throw new Error('BuilderBot: definí BUILDERBOT_BOT_ID y BUILDERBOT_API_KEY');
   }
 
+  const recipient = formatBuilderBotRecipient(number);
+  if (!recipient) {
+    throw new Error('BuilderBot: número o JID de destino vacío');
+  }
+
   const url = `${BUILDERBOT_BASE_URL}/api/v2/${BOT_ID}/messages`;
   const body: Record<string, unknown> = {
     messages: { content: message, ...(mediaUrl ? { mediaUrl } : {}) },
-    number: `${number}`.replace(/\D/g, ''),
+    number: recipient,
     checkIfExists,
   };
 

@@ -34,6 +34,7 @@ import {
   normalizeWaPhone,
   verifyWhatsAppChannelApiKey,
   waPlaceholderEmail,
+  waRecipientFromFlowBody,
 } from '../lib/whatsapp-channel';
 
 /** TLDs genéricos: no indican país (ej. nike.com = global). .co es Colombia, no va aquí. */
@@ -1259,13 +1260,15 @@ type WaChannelStartResult =
 async function startWhatsAppChannelDiagnostic(params: {
   log: PublicDiagLog;
   waPhone: string;
+  waRecipient?: string;
   trimmedUrl: string;
   refCode?: string;
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
 }): Promise<WaChannelStartResult> {
-  const { log, waPhone, trimmedUrl, refCode, utmSource, utmMedium, utmCampaign } = params;
+  const { log, waPhone, waRecipient, trimmedUrl, refCode, utmSource, utmMedium, utmCampaign } = params;
+  const recipientForSend = (waRecipient || waPhone).trim();
 
   if (!process.env.OPENAI_API_KEY) {
     return {
@@ -1309,6 +1312,7 @@ async function startWhatsAppChannelDiagnostic(params: {
       tier: 'freemium',
       sourceChannel: 'whatsapp_yt',
       waPhone,
+      setupDraftJson: recipientForSend ? { waRecipient: recipientForSend } : undefined,
       refCode: (refCode || 'youtube_tv').toLowerCase(),
       utmSource: (utmSource || 'youtube').toLowerCase(),
       utmMedium: (utmMedium || 'whatsapp').toLowerCase(),
@@ -1442,6 +1446,7 @@ async function processWhatsAppUrlHttpRequest(params: {
   log: PublicDiagLog;
   phone: string;
   message: string;
+  waRecipient?: string;
   refCode?: string;
   utmSource?: string;
   utmMedium?: string;
@@ -1456,7 +1461,7 @@ async function processWhatsAppUrlHttpRequest(params: {
   brandName?: string;
   status?: string;
 }> {
-  const { log, phone, message, refCode, utmSource, utmMedium, utmCampaign } = params;
+  const { log, phone, message, waRecipient, refCode, utmSource, utmMedium, utmCampaign } = params;
   const waPhone = normalizeWaPhone(phone);
   if (!waPhone) {
     return { reply: 'No pudimos leer tu número.', code: 'invalid_phone', ready: false };
@@ -1470,6 +1475,7 @@ async function processWhatsAppUrlHttpRequest(params: {
   const started = await startWhatsAppChannelDiagnostic({
     log,
     waPhone,
+    waRecipient: (waRecipient || phone).trim(),
     trimmedUrl,
     refCode,
     utmSource,
@@ -1495,24 +1501,6 @@ async function processWhatsAppUrlHttpRequest(params: {
     brandName: started.brandName,
     status: started.status,
   };
-}
-
-/** El plugin HTTP de BuilderBot no siempre rellena {{reply}}; enviamos nosotros (Mis Reclamos). */
-async function pushWhatsAppFlowReplyToUser(
-  log: PublicDiagLog,
-  phone: string,
-  replyText: string
-): Promise<void> {
-  const text = replyText.trim();
-  if (!text || !isBuilderBotSendConfigured()) return;
-  const waPhone = normalizeWaPhone(phone);
-  if (!waPhone) return;
-  try {
-    await sendWhatsAppMessage({ number: waPhone, message: text });
-    log.info({ waPhone }, 'Canal WA: mensaje enviado por BuilderBot API');
-  } catch (err) {
-    log.error({ err, waPhone }, 'Canal WA: error al enviar por BuilderBot API');
-  }
 }
 
 const waTrackingField = z
@@ -1919,6 +1907,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   const waUrlFlowBodySchema = z.object({
     from: z.union([z.string(), z.number()]).optional(),
     phone: z.string().max(32).optional(),
+    recipient: z.union([z.string(), z.number()]).optional(),
+    chatId: z.union([z.string(), z.number()]).optional(),
+    jid: z.string().max(120).optional(),
+    lid: z.union([z.string(), z.number()]).optional(),
     message: z.string().max(2000).optional(),
     body: z.string().max(2000).optional(),
     url: z.string().max(500).optional(),
@@ -1966,12 +1958,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       log: fastify.log,
       phone: phoneFromPathOrBody,
       message: messageText,
+      waRecipient: waRecipientFromFlowBody(request.body) || phoneFromPathOrBody,
       refCode: trackingFields.refCode ?? tracking?.refCode,
       utmSource: trackingFields.utmSource ?? tracking?.utmSource,
       utmMedium: trackingFields.utmMedium ?? tracking?.utmMedium,
       utmCampaign: trackingFields.utmCampaign ?? tracking?.utmCampaign,
     });
-    void pushWhatsAppFlowReplyToUser(fastify.log, phoneFromPathOrBody, result.reply);
     return reply.send(result);
   }
 

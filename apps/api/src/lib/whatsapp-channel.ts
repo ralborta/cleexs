@@ -139,6 +139,17 @@ export function normalizeWaPhone(phone: string): string | null {
   return digits;
 }
 
+/** Identificador de chat tal como lo envía BuilderBot (teléfono o JID/LID). */
+export function waRecipientFromFlowBody(body: unknown): string {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return '';
+  const o = body as Record<string, unknown>;
+  for (const key of ['recipient', 'chatId', 'jid', 'lid', 'from', 'phone']) {
+    const v = o[key];
+    if (v != null && `${v}`.trim()) return `${v}`.trim();
+  }
+  return '';
+}
+
 export function waPlaceholderEmail(normalizedPhone: string): string {
   return `wa+${normalizedPhone}@whatsapp.cleexs.net`;
 }
