@@ -2,6 +2,30 @@
  * Canal WhatsApp TV: BuilderBot enruta mensajes; Cleexs solo analiza URLs y avisa al terminar.
  */
 
+import { isBuilderBotSendConfigured, sendWhatsAppMessage } from './builderbot';
+
+export type WaChannelLog = {
+  info: (obj: unknown, msg?: string) => void;
+  warn: (obj: unknown, msg?: string) => void;
+  error: (obj: unknown, msg?: string) => void;
+};
+
+/** Envío fiable por API (el flow {{reply}} a veces no llega en el 2.º mensaje). */
+export async function deliverWaReplyToUser(
+  log: WaChannelLog,
+  recipient: string,
+  replyText: string
+): Promise<void> {
+  const text = replyText.trim();
+  if (!text || !isBuilderBotSendConfigured()) return;
+  try {
+    await sendWhatsAppMessage({ number: recipient.trim(), message: text, checkIfExists: true });
+    log.info({ recipient: recipient.trim() }, 'Canal WA: mensaje enviado por BuilderBot API');
+  } catch (err) {
+    log.error({ err, recipient: recipient.trim() }, 'Canal WA: error al enviar por BuilderBot API');
+  }
+}
+
 const URL_IN_TEXT =
   /(?:https?:\/\/)?(?:www\.)?([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)(?:\/[^\s]*)?/gi;
 
@@ -211,6 +235,15 @@ export function buildWhatsAppStartedReply(domain: string, resultUrl: string): st
   );
 }
 
+/** Re-envío del mismo diagnóstico reciente (evita silencio en el 2.º intento). */
+export function buildWhatsAppAlreadyStartedReply(domain: string, resultUrl: string): string {
+  return (
+    `Ya tenemos tu análisis de *${domain}* en marcha (o recién terminado).\n` +
+    `Informe: ${resultUrl}\n\n` +
+    `Para *otro* sitio, mandá solo la nueva URL en un mensaje.`
+  );
+}
+
 /** Mensaje final: backend → API BuilderBot (cuando termina el análisis). */
 export function buildWhatsAppCompletedReply(params: {
   domain: string;
@@ -229,6 +262,9 @@ export function buildWhatsAppCompletedReply(params: {
 
 export function buildWhatsAppErrorReply(code: string, fallback?: string): string {
   if (code === 'rate_limited') return 'Límite diario alcanzado. Probá mañana.';
+  if (code === 'analysis_in_progress') {
+    return 'Ya hay un análisis en curso para tu número. Esperá unos minutos o abrí el link que te enviamos.';
+  }
   if (code === 'service_unavailable') return 'No disponible ahora. Intentá en unos minutos.';
   return fallback || 'No pudimos analizar esa URL. Revisala e intentá de nuevo.';
 }

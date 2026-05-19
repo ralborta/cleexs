@@ -22,9 +22,11 @@ import {
   buildWhatsAppCleexsFaqReply,
   buildWhatsAppCompletedReply,
   buildWhatsAppErrorReply,
+  buildWhatsAppAlreadyStartedReply,
   buildWhatsAppStartedReply,
   buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
+  deliverWaReplyToUser,
   extractUrlFromWhatsAppMessage,
   resolveWebsiteUrlFromWhatsAppMessage,
   getWaChannelDailyLimit,
@@ -1254,6 +1256,7 @@ type WaChannelStartResult =
       resultUrl: string;
       domain: string;
       brandName: string;
+      reused?: boolean;
     }
   | { ok: false; httpStatus: number; code: string; message: string };
 
@@ -1279,6 +1282,47 @@ async function startWhatsAppChannelDiagnostic(params: {
     };
   }
 
+  const domain = normalizeDomain(trimmedUrl);
+
+  const dupeRecent = await prisma.publicDiagnostic.findFirst({
+    where: {
+      waPhone,
+      domain,
+      createdAt: { gte: new Date(Date.now() - 2 * 60 * 1000) },
+      status: { not: 'failed' },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (dupeRecent) {
+    const baseUrl = getAppBaseUrlForPublicLinks();
+    return {
+      ok: true,
+      diagnosticId: dupeRecent.id,
+      status: dupeRecent.status,
+      resultUrl: buildWaResultUrl(dupeRecent.id, baseUrl),
+      domain: dupeRecent.domain,
+      brandName: dupeRecent.brandName,
+      reused: true,
+    };
+  }
+
+  const inProgress = await prisma.publicDiagnostic.findFirst({
+    where: {
+      waPhone,
+      status: { in: ['detecting_competitors', 'running', 'awaiting_user'] },
+      createdAt: { gte: new Date(Date.now() - 25 * 60 * 1000) },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (inProgress && inProgress.domain !== domain) {
+    return {
+      ok: false,
+      httpStatus: 409,
+      code: 'analysis_in_progress',
+      message: `Ya estamos analizando ${inProgress.domain}.`,
+    };
+  }
+
   const dailyLimit = getWaChannelDailyLimit();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const recentCount = await prisma.publicDiagnostic.count({
@@ -1296,8 +1340,6 @@ async function startWhatsAppChannelDiagnostic(params: {
       message: `Límite diario alcanzado (${dailyLimit} diagnósticos por número).`,
     };
   }
-
-  const domain = normalizeDomain(trimmedUrl);
   const brandForRun = deriveBrandFromDomain(domain);
   const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
   const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
@@ -1491,9 +1533,13 @@ async function processWhatsAppUrlHttpRequest(params: {
     };
   }
 
+  const reply = started.reused
+    ? buildWhatsAppAlreadyStartedReply(started.domain, started.resultUrl)
+    : buildWhatsAppStartedReply(started.domain, started.resultUrl);
+
   return {
-    reply: buildWhatsAppStartedReply(started.domain, started.resultUrl),
-    code: 'started',
+    reply,
+    code: started.reused ? 'already_started' : 'started',
     ready: false,
     diagnosticId: started.diagnosticId,
     resultUrl: started.resultUrl,
@@ -1954,16 +2000,18 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const trackingFields = parsed.success ? parsed.data : {};
     const messageText = waMessageFromFlowBody(request.body);
 
+    const recipient = waRecipientFromFlowBody(request.body) || phoneFromPathOrBody;
     const result = await processWhatsAppUrlHttpRequest({
       log: fastify.log,
       phone: phoneFromPathOrBody,
       message: messageText,
-      waRecipient: waRecipientFromFlowBody(request.body) || phoneFromPathOrBody,
+      waRecipient: recipient,
       refCode: trackingFields.refCode ?? tracking?.refCode,
       utmSource: trackingFields.utmSource ?? tracking?.utmSource,
       utmMedium: trackingFields.utmMedium ?? tracking?.utmMedium,
       utmCampaign: trackingFields.utmCampaign ?? tracking?.utmCampaign,
     });
+    void deliverWaReplyToUser(fastify.log, recipient, result.reply);
     return reply.send(result);
   }
 
@@ -2097,11 +2145,18 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const phone = String(data.from);
+      const recipient = waRecipientFromFlowBody(data) || phone;
       const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
 
-      // Con URL: lo procesa el flow «URL diagnóstico» (plugin HTTP POST con {body}), no duplicar acá.
       if (trimmedUrl) {
-        return reply.send({ ok: true, skipped: 'handled_by_url_flow_http' });
+        const result = await processWhatsAppUrlHttpRequest({
+          log: fastify.log,
+          phone,
+          message: bodyText,
+          waRecipient: recipient,
+        });
+        await deliverWaReplyToUser(fastify.log, recipient, result.reply);
+        return reply.send({ ok: true, code: result.code, diagnosticId: result.diagnosticId });
       }
 
       let textToSend: string;
@@ -2115,11 +2170,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         code = 'need_url';
       }
 
-      if (isBuilderBotSendConfigured()) {
-        await sendWhatsAppMessage({ number: phone, message: textToSend });
-      } else {
-        fastify.log.warn({ code }, 'BUILDERBOT_* no configurado; no se envió WhatsApp');
-      }
+      await deliverWaReplyToUser(fastify.log, recipient, textToSend);
 
       return reply.send({ ok: true, code });
     } catch (err) {
