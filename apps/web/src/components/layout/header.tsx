@@ -10,6 +10,7 @@ import { CleexsMark } from '@/components/brand/cleexs-mark';
 const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];
 const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
 const WA_RESULT_PATH_PREFIX = '/r/wa';
+const TOOLS_PATH_PREFIX = '/tools';
 
 function pathMatchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -49,6 +50,12 @@ function isAdminPath(pathname: string | null): boolean {
   return pathname.startsWith('/admin');
 }
 
+/** Herramientas internas (ej. links de auspiciador): sin menú global. */
+function isToolsPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathMatchesPrefix(pathname, TOOLS_PATH_PREFIX);
+}
+
 /** Logo lleva al inicio coherente con la zona (portales ≠ app interna). */
 function logoHrefForPath(pathname: string | null): string {
   if (!pathname) return '/';
@@ -60,6 +67,7 @@ function logoHrefForPath(pathname: string | null): string {
 export function Header() {
   const pathname = usePathname();
   if (isAdminPath(pathname)) return null;
+  if (isToolsPath(pathname)) return null;
   if (isWhatsAppResultPath(pathname)) return null;
   const minimal =
     isPublicDiagnosticPath(pathname) || isStandalonePortalPath(pathname) || isPublicLegalPath(pathname);
