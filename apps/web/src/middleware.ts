@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   '/terminos',
   '/privacidad',
   '/legal/cleexs',
+  '/tools/auspiciadores',
 ];
 
 /**
@@ -36,6 +37,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname.startsWith('/legal/')) return true;
   if (pathname === '/terminos' || pathname === '/privacidad') return true;
   if (pathname.startsWith('/admin')) return true;
+  if (pathname.startsWith('/tools/auspiciadores')) return true;
   return false;
 }
 
