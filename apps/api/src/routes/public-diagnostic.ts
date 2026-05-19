@@ -28,8 +28,11 @@ import {
   buildWhatsAppStartedReply,
   buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
+  deliverWaChannelStart,
   deliverWaReplyToUser,
   extractUrlFromWhatsAppMessage,
+  buildWhatsAppGreetingReply,
+  isWaGreetingMessage,
   resolveWebsiteUrlFromWhatsAppMessage,
   getWaChannelDailyLimit,
   getWaCompetitorWaitMs,
@@ -1714,6 +1717,15 @@ async function processWhatsAppUrlHttpRequest(params: {
     };
   }
 
+  const recipient = (waRecipient || phone).trim();
+  await deliverWaChannelStart(
+    log,
+    recipient,
+    started.domain,
+    started.resultUrl,
+    !!started.reused
+  );
+
   const reply = started.reused
     ? buildWhatsAppAlreadyStartedReply(started.domain, started.resultUrl)
     : buildWhatsAppStartedReply(started.domain, started.resultUrl);
@@ -2192,7 +2204,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       utmMedium: trackingFields.utmMedium ?? tracking?.utmMedium,
       utmCampaign: trackingFields.utmCampaign ?? tracking?.utmCampaign,
     });
-    void deliverWaReplyToUser(fastify.log, recipient, result.reply);
+    if (result.code !== 'started' && result.code !== 'already_started') {
+      void deliverWaReplyToUser(fastify.log, recipient, result.reply);
+    }
     return reply.send(result);
   }
 
@@ -2330,19 +2344,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
 
       if (trimmedUrl) {
-        // El flow «URL diagnóstico» ya llama al webhook y envía la respuesta por API.
         return reply.send({ ok: true, skipped: 'url_handled_by_flow' });
       }
 
-      let textToSend: string;
-      let code: string;
+      if (isWaGreetingMessage(bodyText)) {
+        await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppGreetingReply());
+        return reply.send({ ok: true, code: 'greeting' });
+      }
 
       if (isCleexsFaqOnlyMessage(bodyText)) {
         await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppCleexsFaqReply());
         return reply.send({ ok: true, code: 'cleexs_info' });
       }
 
-      // Sin URL: el flow de entrada ya pide la URL; no duplicar mensajes por API.
       return reply.send({ ok: true, skipped: 'no_url_entrada_flow' });
     } catch (err) {
       fastify.log.error({ err }, 'Error POST /whatsapp/builderbot-inbound');

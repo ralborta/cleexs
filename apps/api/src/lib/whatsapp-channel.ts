@@ -82,9 +82,11 @@ const CLEEXS_FAQ =
 export const BUILDERBOT_FAQ_ASSISTANT_PROMPT = `Sos el asistente oficial de Cleexs.net en WhatsApp (campaña diagnóstico gratis por QR/TV).
 
 IDIOMA Y FORMATO
-- Español rioplatense, tono claro y profesional.
-- Máximo 4 líneas por mensaje (WhatsApp).
-- Sin listas largas ni markdown complejo.
+- Español rioplatense, cercano y profesional.
+- Máximo 5 líneas por mensaje (WhatsApp).
+- Usá emojis con moderación (1-3 por mensaje): 👋 ✨ 📊 🎯 💡 🤖
+- Podés usar *negrita* de WhatsApp para resaltar 1-2 palabras clave.
+- Sin listas numeradas largas ni bloques densos.
 
 QUÉ ES CLEEXS (podés ampliar con la base de conocimiento adjunta)
 - Cleexs ayuda a marcas y empresas a entender y mejorar su visibilidad en respuestas de inteligencia artificial (ChatGPT, Gemini y similares).
@@ -108,11 +110,14 @@ FUERA DE ALCANCE — RECHAZÁ SIEMPRE (respuesta fija corta, sin inventar)
 - Clima, deportes, política, salud personal, recetas, chistes, tareas escolares, código, traducciones largas.
 - Opiniones sobre terceros, noticias del día, temas personales no relacionados con Cleexs.
 - Pedidos de análisis sin URL, scores inventados, precios exactos de planes si no están en los documentos.
-Plantilla de rechazo: "Solo puedo ayudarte con Cleexs y tu diagnóstico de visibilidad en IA. Pasame la URL de tu empresa (ej. empresa.com) o preguntame qué es el Cleexs Score."
+Plantilla de rechazo: "🙂 Solo puedo ayudarte con Cleexs y tu visibilidad en IA. Pasame la URL de tu empresa (ej. empresa.com) o preguntame qué es el *Cleexs Score*."
+
+SI TE SALUDAN (hola, buenas, etc.)
+- Respondé: "¡Hola! 👋 Soy tu asistente de *Cleexs*. ¿En qué puedo ayudarte? Si querés tu diagnóstico gratis, pasame la URL de tu sitio (ej. empresa.com)."
 
 SI ENVÍAN URL DE SU EMPRESA
-- No digas que ya analizaste ni des un score.
-- Respondé: "Perfecto. Enviá solo la URL en un mensaje (ej. tuempresa.com) y en minutos te llega tu Cleexs Score por acá."
+- No digas que ya analizaste ni des un score (eso lo envía el sistema automático).
+- Respondé breve: "¡Genial! 🙌 Si aún no arrancó solo, mandá la URL en un mensaje aparte (ej. tuempresa.com)."
 
 REGLAS ESTRICTAS
 - Usá la base de conocimiento cuando exista; si no hay dato, decí que más info está en https://cleexs.net — no inventes cifras ni promesas.
@@ -243,6 +248,12 @@ export function getWaCompetitorWaitMs(): number {
   return Number.isFinite(n) && n > 10_000 ? Math.min(n, 180_000) : 90_000;
 }
 
+function scoreBandEmoji(score: number): string {
+  if (score >= 70) return '🟢';
+  if (score >= 45) return '🟡';
+  return '🔴';
+}
+
 export function buildWhatsAppTeaserLine(
   cleexsScore: number | null,
   analysisJson: unknown
@@ -254,37 +265,66 @@ export function buildWhatsAppTeaserLine(
         ? (o.analisisOpenAI as { resumenEjecutivo?: string })
         : null;
     const line = open?.resumenEjecutivo?.trim() || (o as { resumenEjecutivo?: string }).resumenEjecutivo?.trim();
-    if (line) return line.slice(0, 120);
+    if (line) return line.slice(0, 140);
   }
-  if (cleexsScore == null) return 'Tu diagnóstico está listo.';
-  if (cleexsScore >= 70) return 'Buena visibilidad en ChatGPT.';
-  if (cleexsScore >= 45) return 'Visibilidad media en ChatGPT.';
-  return 'Hay margen para mejorar en ChatGPT.';
+  if (cleexsScore == null) return '✨ Tu diagnóstico ya está disponible.';
+  if (cleexsScore >= 70) return '💡 Buena visibilidad: ChatGPT suele recomendar tu marca.';
+  if (cleexsScore >= 45) return '💡 Visibilidad media: hay espacio para destacar más.';
+  return '💡 Hay margen para mejorar tu presencia en ChatGPT.';
 }
 
-/** Ack inmediato tras HTTP (flow URL en BuilderBot). */
-export function buildWhatsAppStillRunningReply(domain: string, resultUrl: string): string {
-  return `Seguimos con *${domain}*…\n${resultUrl}`;
+/** Saludo simple (hola, buenas…). */
+export function isWaGreetingMessage(message: string): boolean {
+  const t = `${message || ''}`.trim().toLowerCase().replace(/[¡!?.]+$/g, '');
+  if (!t || t.length > 40) return false;
+  if (extractUrlFromWhatsAppMessage(message)) return false;
+  return /^(hola|holaa|holaaa|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hey|hi|hello|que tal|como estas|como andas)$/.test(
+    t
+  );
 }
 
+export function buildWhatsAppGreetingReply(): string {
+  return (
+    '¡Hola! 👋 Soy tu asistente de *Cleexs*.\n\n' +
+    '¿En qué puedo ayudarte?\n\n' +
+    '📊 Para tu *Cleexs Score* gratis, pasame la URL de tu sitio\n' +
+    '_(ej. tuempresa.com)_'
+  );
+}
+
+/** Ack inmediato: link primero, score llega después en otro mensaje. */
 export function buildWhatsAppStartedReply(domain: string, resultUrl: string): string {
   return (
-    `Perfecto, analizamos *${domain}*.\n` +
-    `En unos minutos te enviamos tu Cleexs Score por acá.\n` +
+    '✅ *¡Recibido!* Ya analizamos tu sitio\n' +
+    `🌐 *${domain}*\n\n` +
+    '📱 *Seguí tu informe en vivo:*\n' +
+    `${resultUrl}\n\n` +
+    '⏳ En *2 a 5 min* te enviamos tu *Cleexs Score* por acá.\n' +
+    '_Podés abrir el link mientras tanto._'
+  );
+}
+
+export function buildWhatsAppStillRunningReply(domain: string, resultUrl: string): string {
+  return (
+    '⏳ *Seguimos analizando*\n' +
+    `🌐 *${domain}*\n\n` +
+    '📱 Informe en vivo:\n' +
     `${resultUrl}`
   );
 }
 
-/** Re-envío del mismo diagnóstico reciente (evita silencio en el 2.º intento). */
+/** Re-envío del mismo diagnóstico reciente. */
 export function buildWhatsAppAlreadyStartedReply(domain: string, resultUrl: string): string {
   return (
-    `Ya tenemos tu análisis de *${domain}* en marcha (o recién terminado).\n` +
-    `Informe: ${resultUrl}\n\n` +
-    `Para *otro* sitio, mandá solo la nueva URL en un mensaje.`
+    'ℹ️ *Ya tenemos este análisis*\n' +
+    `🌐 *${domain}*\n\n` +
+    '📱 Tu informe:\n' +
+    `${resultUrl}\n\n` +
+    '🔄 Para *otro sitio*, mandá solo la nueva URL en un mensaje.'
   );
 }
 
-/** Mensaje final: backend → API BuilderBot (cuando termina el análisis). */
+/** Mensaje final: solo score (el link ya se envió al inicio). */
 export function buildWhatsAppCompletedReply(params: {
   domain: string;
   brandName: string;
@@ -292,44 +332,75 @@ export function buildWhatsAppCompletedReply(params: {
   teaserLine: string;
   resultUrl: string;
 }): string {
-  const { domain, brandName, cleexsScore, teaserLine, resultUrl } = params;
+  const { brandName, cleexsScore, teaserLine } = params;
+  const score = Math.round(cleexsScore);
+  const emoji = scoreBandEmoji(score);
   return (
-    `*${brandName}* · Cleexs Score: *${Math.round(cleexsScore)}/100*\n` +
+    '🎯 *¡Tu Cleexs Score está listo!*\n\n' +
+    `${emoji} *${brandName}*\n` +
+    `📊 *${score}/100*\n\n` +
     `${teaserLine}\n\n` +
-    `Informe: ${resultUrl}`
+    '👆 Abrí el *link del informe* que te enviamos al inicio para ver el detalle completo.'
   );
 }
 
 export function buildWhatsAppErrorReply(code: string, fallback?: string): string {
-  if (code === 'rate_limited') return 'Límite diario alcanzado. Probá mañana.';
+  if (code === 'rate_limited') {
+    return '⏸️ *Límite diario alcanzado*\n\nProbá de nuevo mañana o escribinos en cleexs.net 🙂';
+  }
   if (code === 'analysis_in_progress') {
     return (
       fallback ||
-      'Ya hay un análisis en curso para tu número. Esperá unos minutos o abrí el link que te enviamos.'
+      '⏳ *Ya hay un análisis en curso*\n\nEsperá unos minutos o abrí el link que te enviamos antes.'
     );
   }
   if (code === 'invalid_domain') {
     return (
       fallback ||
-      'Enviá el dominio completo de tu sitio (ej. empresa.edu.ar), no solo el sufijo (.edu.ar).'
+      '⚠️ *URL incompleta*\n\nEnviá el dominio completo\n_(ej. colegio.edu.ar, no solo .edu.ar)_'
     );
   }
   if (code === 'needs_competitors' || code === 'competitors_timeout' || code === 'pipeline_failed') {
-    return fallback || 'No pudimos completar el análisis. Reenviá la URL de tu sitio en un mensaje nuevo.';
+    return (
+      fallback ||
+      '😕 *No pudimos completar el análisis*\n\nReenviá la URL de tu sitio en un mensaje nuevo.'
+    );
   }
-  if (code === 'service_unavailable') return 'No disponible ahora. Intentá en unos minutos.';
-  return fallback || 'No pudimos analizar esa URL. Revisala e intentá de nuevo.';
+  if (code === 'service_unavailable') {
+    return '🔧 *Servicio no disponible*\n\nIntentá de nuevo en unos minutos.';
+  }
+  return fallback || '😕 No pudimos analizar esa URL. Revisala e intentá de nuevo.';
 }
 
 export function buildWhatsAppAskUrlReply(): string {
-  return 'Pasame la URL de tu empresa (ej. tudominio.com) y te damos gratis tu Cleexs Score.';
+  return (
+    '👋 *Cleexs Score gratis*\n\n' +
+    'Pasame la URL de tu empresa y medimos si ChatGPT te recomienda 🤖\n\n' +
+    '📝 _Ejemplo:_ tuempresa.com'
+  );
 }
 
 export function buildWhatsAppCleexsFaqReply(): string {
   return (
-    'Cleexs mide si ChatGPT recomienda tu marca (score 0-100). Es gratis.\n\n' +
-    'Pasame la URL de tu sitio, ej. empresa.com'
+    '✨ *Cleexs* mide si la IA (ChatGPT y similares) recomienda tu marca.\n\n' +
+    '📊 El *Cleexs Score* (0–100) resume esa visibilidad.\n' +
+    '🎁 Por WhatsApp es *gratis*.\n\n' +
+    '👉 Pasame la URL de tu sitio _(ej. empresa.com)_ y arrancamos.'
   );
+}
+
+/** Envío inmediato al iniciar diagnóstico (link + aviso de espera). */
+export async function deliverWaChannelStart(
+  log: WaChannelLog,
+  recipient: string,
+  domain: string,
+  resultUrl: string,
+  reused: boolean
+): Promise<void> {
+  const text = reused
+    ? buildWhatsAppAlreadyStartedReply(domain, resultUrl)
+    : buildWhatsAppStartedReply(domain, resultUrl);
+  await deliverWaReplyToUser(log, recipient, text);
 }
 
 export function buildWhatsAppMissingUrlReply(): string {
