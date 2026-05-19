@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { CheckCircle2, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { WaMobileDashboard } from './wa-mobile-dashboard';
@@ -104,14 +104,9 @@ export default function WhatsAppResultPage() {
       <header className="relative z-10 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <Image
-              src="/CleexsLogo.png"
-              alt="Cleexs"
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-xl shadow-lg shadow-primary-900/40 ring-1 ring-white/10"
-              priority
-            />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center" aria-hidden>
+              <CleexsMark className="h-9 w-9 drop-shadow-[0_2px_12px_rgba(37,99,235,0.45)]" />
+            </div>
             <div>
               <p className="text-base font-bold tracking-tight text-white">Cleexs</p>
               <p className="text-[11px] font-medium text-slate-400">Diagnóstico IA</p>

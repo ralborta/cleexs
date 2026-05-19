@@ -71,7 +71,7 @@ export function ScoreRing({ value }: { value: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-5xl font-bold tabular-nums tracking-tight text-white">{Math.round(value)}</span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Score</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">Cleexs Score</span>
         <span className={cn('mt-1 text-xs font-bold', tone.text)}>{tone.label}</span>
       </div>
     </div>
