@@ -4,8 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-import { CLEEXS_APP_URL } from '@/lib/site';
-import { buildSponsorDiagnosticUrl, slugifySponsorLabel } from '@/lib/sponsor-link';
+import { CLEEXS_APP_URL, CLEEXS_SPONSOR_LINK_BASE_URL } from '@/lib/site';
+import {
+  buildSponsorDiagnosticAppUrl,
+  buildSponsorDiagnosticUrl,
+  slugifySponsorLabel,
+} from '@/lib/sponsor-link';
 import { SponsorTrackingPanel } from '@/components/tools/sponsor-tracking-panel';
 import { Check, Copy, Download, ExternalLink, Link2, QrCode } from 'lucide-react';
 
@@ -31,16 +35,18 @@ export function SponsorLinkBuilder() {
     if (slug) setRefCode(slug);
   }, [sponsorName, refTouched]);
 
-  const generatedUrl = useMemo(
-    () =>
-      buildSponsorDiagnosticUrl({
-        ref: refCode,
-        utmSource,
-        utmMedium,
-        utmCampaign: utmCampaign || undefined,
-      }),
+  const linkParams = useMemo(
+    () => ({
+      ref: refCode,
+      utmSource,
+      utmMedium,
+      utmCampaign: utmCampaign || undefined,
+    }),
     [refCode, utmSource, utmMedium, utmCampaign]
   );
+
+  const generatedUrl = useMemo(() => buildSponsorDiagnosticUrl(linkParams), [linkParams]);
+  const appDirectUrl = useMemo(() => buildSponsorDiagnosticAppUrl(linkParams), [linkParams]);
 
   const refValid = Boolean(generatedUrl);
 
@@ -185,14 +191,24 @@ export function SponsorLinkBuilder() {
       </form>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
-        <p className={labelCls}>Enlace para compartir</p>
-        <p className="mt-1 text-[11px] text-slate-500">Base: {CLEEXS_APP_URL}</p>
+        <p className={labelCls}>Enlace para compartir (público)</p>
+        <p className="mt-1 text-[11px] text-slate-500">
+          Dominio: {CLEEXS_SPONSOR_LINK_BASE_URL} → diagnóstico en {CLEEXS_APP_URL}
+        </p>
 
         {refValid && generatedUrl ? (
           <>
             <p className="mt-3 break-all rounded-xl border border-slate-200 bg-white px-3 py-3 font-mono text-xs leading-relaxed text-slate-800">
               {generatedUrl}
             </p>
+            {appDirectUrl && appDirectUrl !== generatedUrl ? (
+              <details className="mt-3 text-[11px] text-slate-500">
+                <summary className="cursor-pointer font-medium text-slate-600">Link directo app (pruebas)</summary>
+                <p className="mt-2 break-all rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 font-mono text-[10px] text-slate-600">
+                  {appDirectUrl}
+                </p>
+              </details>
+            ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               <Button type="button" onClick={() => void copyUrl()} className="gap-2">
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}

@@ -1,4 +1,4 @@
-import { CLEEXS_APP_URL } from '@/lib/site';
+import { CLEEXS_APP_URL, CLEEXS_SPONSOR_LINK_BASE_URL } from '@/lib/site';
 
 /** Misma normalización que `/diagnostico/crear` al persistir ref y UTM. */
 export function normalizeTrackingValue(input: string): string | undefined {
@@ -16,15 +16,15 @@ export type SponsorLinkParams = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
-  /** Dominio base sin path; por defecto CLEEXS_APP_URL */
+  /** Dominio base sin path; por defecto cleexs.net (CLEEXS_SPONSOR_LINK_BASE_URL) */
   baseUrl?: string;
 };
 
-export function buildSponsorDiagnosticUrl(params: SponsorLinkParams): string | null {
+function buildSponsorDiagnosticUrlWithBase(baseUrl: string, params: SponsorLinkParams): string | null {
   const ref = normalizeTrackingValue(params.ref);
   if (!ref) return null;
 
-  const base = (params.baseUrl?.trim() || CLEEXS_APP_URL).replace(/\/$/, '');
+  const base = baseUrl.replace(/\/$/, '');
   const search = new URLSearchParams();
   search.set('ref', ref);
 
@@ -37,4 +37,15 @@ export function buildSponsorDiagnosticUrl(params: SponsorLinkParams): string | n
   if (utmCampaign) search.set('utm_campaign', utmCampaign);
 
   return `${base}/diagnostico/crear?${search.toString()}`;
+}
+
+/** Link público para compartir (cleexs.net por defecto). */
+export function buildSponsorDiagnosticUrl(params: SponsorLinkParams): string | null {
+  const base = (params.baseUrl?.trim() || CLEEXS_SPONSOR_LINK_BASE_URL).replace(/\/$/, '');
+  return buildSponsorDiagnosticUrlWithBase(base, params);
+}
+
+/** Misma campaña en app.cleexs.net (diagnóstico directo, sin pasar por marketing). */
+export function buildSponsorDiagnosticAppUrl(params: SponsorLinkParams): string | null {
+  return buildSponsorDiagnosticUrlWithBase(CLEEXS_APP_URL, params);
 }

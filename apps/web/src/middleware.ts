@@ -26,6 +26,19 @@ const PUBLIC_PATHS = [
  */
 const PUBLIC_TEST_HOST = process.env.PUBLIC_TEST_HOST || '';
 
+const MARKETING_HOSTS = new Set(['cleexs.net', 'www.cleexs.net']);
+const APP_ORIGIN = (process.env.NEXT_PUBLIC_APP_URL || 'https://app.cleexs.net').replace(/\/$/, '');
+
+/** cleexs.net/diagnostico/* → app.cleexs.net (mismo path y query, para links de auspiciador). */
+function marketingToAppRedirect(request: NextRequest): NextResponse | null {
+  const host = (request.headers.get('host') || request.nextUrl.hostname || '').split(':')[0];
+  if (!MARKETING_HOSTS.has(host)) return null;
+  if (!request.nextUrl.pathname.startsWith('/diagnostico')) return null;
+
+  const target = new URL(request.nextUrl.pathname + request.nextUrl.search, APP_ORIGIN);
+  return NextResponse.redirect(target);
+}
+
 /** Rutas permitidas cuando se accede desde el subdominio de pruebas (solo esa página + flujo resultado) */
 function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname === '/' || pathname === '/diagnostico/crear' || pathname === '/prueba-gratuita') return true;
@@ -54,6 +67,9 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
+  const marketingRedirect = marketingToAppRedirect(request);
+  if (marketingRedirect) return marketingRedirect;
+
   const pathname = request.nextUrl.pathname;
   const host = request.headers.get('host') || request.nextUrl.hostname || '';
 
