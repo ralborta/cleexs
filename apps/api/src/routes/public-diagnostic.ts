@@ -14,19 +14,22 @@ import {
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
+import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
+import { notifyWhatsAppDiagnosticCompleted } from '../lib/whatsapp-notify';
 import {
   buildWaResultUrl,
+  buildWhatsAppAskUrlReply,
+  buildWhatsAppCleexsFaqReply,
   buildWhatsAppCompletedReply,
   buildWhatsAppErrorReply,
-  buildWhatsAppNeedUrlReply,
-  buildWhatsAppNoUrlReply,
   buildWhatsAppStartedReply,
   buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
-  classifyWaInboundMessage,
   extractUrlFromWhatsAppMessage,
+  resolveWebsiteUrlFromWhatsAppMessage,
   getWaChannelDailyLimit,
   getWaCompetitorWaitMs,
+  isCleexsFaqOnlyMessage,
   isWhatsAppSourceChannel,
   normalizeWaPhone,
   verifyWhatsAppChannelApiKey,
@@ -929,6 +932,10 @@ async function executePublicDiagnosticPipeline(params: {
       log.error({ err: mailErr, diagnosticId }, 'Error al enviar email');
     }
   }
+
+  if (isWhatsAppSourceChannel(current?.sourceChannel) && current?.waPhone) {
+    void notifyWhatsAppDiagnosticCompleted(log as FastifyBaseLogger, diagnosticId);
+  }
 }
 
 function parsePublicSetupDraft(json: unknown): {
@@ -1430,6 +1437,84 @@ function verifyWaChannelRequest(request: { headers: Record<string, unknown> }): 
   return verifyWhatsAppChannelApiKey(typeof keyHeader === 'string' ? keyHeader : undefined);
 }
 
+/** Solo flow URL de BuilderBot (plugin HTTP): inicia diagnóstico si hay dominio. */
+async function processWhatsAppUrlHttpRequest(params: {
+  log: PublicDiagLog;
+  phone: string;
+  message: string;
+  refCode?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+}): Promise<{
+  reply: string;
+  code: string;
+  ready: boolean;
+  diagnosticId?: string;
+  resultUrl?: string;
+  domain?: string;
+  brandName?: string;
+  status?: string;
+}> {
+  const { log, phone, message, refCode, utmSource, utmMedium, utmCampaign } = params;
+  const waPhone = normalizeWaPhone(phone);
+  if (!waPhone) {
+    return { reply: 'No pudimos leer tu número.', code: 'invalid_phone', ready: false };
+  }
+
+  const trimmedUrl = await resolveWebsiteUrlFromWhatsAppMessage(`${message || ''}`.trim());
+  if (!trimmedUrl) {
+    return { reply: buildWhatsAppAskUrlReply(), code: 'no_url', ready: false };
+  }
+
+  const started = await startWhatsAppChannelDiagnostic({
+    log,
+    waPhone,
+    trimmedUrl,
+    refCode,
+    utmSource,
+    utmMedium,
+    utmCampaign,
+  });
+
+  if (!started.ok) {
+    return {
+      reply: buildWhatsAppErrorReply(started.code, started.message),
+      code: started.code,
+      ready: false,
+    };
+  }
+
+  return {
+    reply: buildWhatsAppStartedReply(started.domain, started.resultUrl),
+    code: 'started',
+    ready: false,
+    diagnosticId: started.diagnosticId,
+    resultUrl: started.resultUrl,
+    domain: started.domain,
+    brandName: started.brandName,
+    status: started.status,
+  };
+}
+
+/** El plugin HTTP de BuilderBot no siempre rellena {{reply}}; enviamos nosotros (Mis Reclamos). */
+async function pushWhatsAppFlowReplyToUser(
+  log: PublicDiagLog,
+  phone: string,
+  replyText: string
+): Promise<void> {
+  const text = replyText.trim();
+  if (!text || !isBuilderBotSendConfigured()) return;
+  const waPhone = normalizeWaPhone(phone);
+  if (!waPhone) return;
+  try {
+    await sendWhatsAppMessage({ number: waPhone, message: text });
+    log.info({ waPhone }, 'Canal WA: mensaje enviado por BuilderBot API');
+  } catch (err) {
+    log.error({ err, waPhone }, 'Canal WA: error al enviar por BuilderBot API');
+  }
+}
+
 const waTrackingField = z
   .string()
   .trim()
@@ -1793,10 +1878,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const trimmedUrl = (urlBody?.trim() || extractUrlFromWhatsAppMessage(message || '') || '').trim();
+      const inboundText = (urlBody?.trim() || message || '').trim();
+      const trimmedUrl = extractUrlFromWhatsAppMessage(inboundText);
       if (!trimmedUrl) {
         return reply.code(400).send({
-          error: 'No encontramos una URL en el mensaje. Enviá el dominio de tu empresa (ej. tudominio.com).',
+          error: 'No encontramos una URL en el mensaje.',
           code: 'no_url',
         });
       }
@@ -1830,7 +1916,119 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // POST /api/public/diagnostic/whatsapp/webhook — BuilderBot: mensaje entrante → reply listo para WA
+  const waUrlFlowBodySchema = z.object({
+    from: z.union([z.string(), z.number()]).optional(),
+    phone: z.string().max(32).optional(),
+    message: z.string().max(2000).optional(),
+    body: z.string().max(2000).optional(),
+    url: z.string().max(500).optional(),
+    refCode: waTrackingField,
+    utmSource: waTrackingField,
+    utmMedium: waTrackingField,
+    utmCampaign: waTrackingField,
+  });
+
+  function waMessageFromFlowBody(body: unknown): string {
+    if (typeof body === 'string') return body.trim();
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      const o = body as { message?: string; body?: string; url?: string };
+      return `${o.message ?? o.body ?? o.url ?? ''}`.trim();
+    }
+    return '';
+  }
+
+  function waPhoneFromFlowRequest(pathFrom: string | undefined, body: unknown): string {
+    if (pathFrom?.trim()) return pathFrom.trim();
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      const o = body as { from?: string | number; phone?: string };
+      if (o.from != null && `${o.from}`.trim()) return String(o.from).trim();
+      if (o.phone?.trim()) return o.phone.trim();
+    }
+    return '';
+  }
+
+  async function handleWhatsAppUrlFlowHttp(
+    request: { body: unknown },
+    reply: { send: (p: unknown) => unknown; code: (n: number) => { send: (p: unknown) => unknown } },
+    phoneFromPathOrBody: string,
+    tracking?: {
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    }
+  ) {
+    const parsed = waUrlFlowBodySchema.safeParse(request.body);
+    const trackingFields = parsed.success ? parsed.data : {};
+    const messageText = waMessageFromFlowBody(request.body);
+
+    const result = await processWhatsAppUrlHttpRequest({
+      log: fastify.log,
+      phone: phoneFromPathOrBody,
+      message: messageText,
+      refCode: trackingFields.refCode ?? tracking?.refCode,
+      utmSource: trackingFields.utmSource ?? tracking?.utmSource,
+      utmMedium: trackingFields.utmMedium ?? tracking?.utmMedium,
+      utmCampaign: trackingFields.utmCampaign ?? tracking?.utmCampaign,
+    });
+    void pushWhatsAppFlowReplyToUser(fastify.log, phoneFromPathOrBody, result.reply);
+    return reply.send(result);
+  }
+
+  // POST /api/public/diagnostic/whatsapp/url — BuilderBot: from + message en body (recomendado)
+  fastify.post<{ Body: Record<string, unknown> }>('/diagnostic/whatsapp/url', async (request, reply) => {
+    if (!verifyWaChannelRequest(request)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized', reply: '' });
+    }
+    try {
+      const phone = waPhoneFromFlowRequest(undefined, request.body);
+      if (!phone) {
+        return reply.send({
+          code: 'invalid_phone',
+          reply: 'No pudimos leer tu número (from).',
+          ready: false,
+        });
+      }
+      return await handleWhatsAppUrlFlowHttp(request, reply, phone);
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /whatsapp/url');
+      return reply.code(500).send({
+        code: 'internal_error',
+        reply: buildWhatsAppErrorReply('internal_error'),
+        ready: false,
+      });
+    }
+  });
+
+  // POST /api/public/diagnostic/whatsapp/url/:from — alternativa: from en ruta + message en body
+  fastify.post<{ Params: { from: string }; Body: Record<string, unknown> }>(
+    '/diagnostic/whatsapp/url/:from',
+    async (request, reply) => {
+      if (!verifyWaChannelRequest(request)) {
+        return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized', reply: '' });
+      }
+      try {
+        const phone = waPhoneFromFlowRequest(request.params.from, request.body);
+        if (!phone) {
+          return reply.send({
+            code: 'invalid_phone',
+            reply: 'No pudimos leer tu número (from).',
+            ready: false,
+          });
+        }
+        return await handleWhatsAppUrlFlowHttp(request, reply, phone);
+      } catch (err) {
+        fastify.log.error({ err, from: request.params.from, body: request.body }, 'Error POST /whatsapp/url/:from');
+        return reply.code(500).send({
+          code: 'internal_error',
+          reply: buildWhatsAppErrorReply('internal_error'),
+          ready: false,
+        });
+      }
+    }
+  );
+
+  // POST /api/public/diagnostic/whatsapp/webhook — alternativa: phone + message en JSON (legacy)
   fastify.post<{
     Body: {
       phone: string;
@@ -1858,63 +2056,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
-        return reply.send({
-          code: 'validation_error',
-          reply: buildWhatsAppNeedUrlReply(),
-          ready: false,
-        });
+        return reply.send({ code: 'validation_error', reply: buildWhatsAppAskUrlReply(), ready: false });
       }
 
       const { phone, message, url: urlBody, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
-      const waPhone = normalizeWaPhone(phone);
-      if (!waPhone) {
-        return reply.send({
-          code: 'invalid_phone',
-          reply: 'No pudimos leer tu número. Escribinos de nuevo desde WhatsApp.',
-          ready: false,
-        });
-      }
-
-      const inboundText = `${message || urlBody || ''}`.trim();
-      const intent = classifyWaInboundMessage(inboundText);
-      if (intent === 'no_web') {
-        return reply.send({ code: 'no_web', reply: buildWhatsAppNoUrlReply(), ready: false });
-      }
-      if (intent === 'empty' || intent === 'unclear') {
-        return reply.send({ code: 'need_url', reply: buildWhatsAppNeedUrlReply(), ready: false });
-      }
-
-      const trimmedUrl = (urlBody?.trim() || extractUrlFromWhatsAppMessage(inboundText) || '').trim();
-      if (!trimmedUrl) {
-        return reply.send({ code: 'need_url', reply: buildWhatsAppNeedUrlReply(), ready: false });
-      }
-
-      const started = await startWhatsAppChannelDiagnostic({
-        log: fastify.log,
-        waPhone,
-        trimmedUrl,
+      return await handleWhatsAppUrlFlowHttp(request, reply, phone, {
         refCode,
         utmSource,
         utmMedium,
         utmCampaign,
-      });
-      if (!started.ok) {
-        return reply.send({
-          code: started.code,
-          reply: buildWhatsAppErrorReply(started.code, started.message),
-          ready: false,
-        });
-      }
-
-      return reply.send({
-        code: 'started',
-        reply: buildWhatsAppStartedReply(started.domain, started.resultUrl),
-        diagnosticId: started.diagnosticId,
-        resultUrl: started.resultUrl,
-        domain: started.domain,
-        brandName: started.brandName,
-        status: started.status,
-        ready: false,
       });
     } catch (err) {
       fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/whatsapp/webhook');
@@ -1926,7 +2076,67 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // GET /api/public/diagnostic/whatsapp/webhook/reply?diagnosticId= — poll BuilderBot: mensaje final o “casi listo”
+  // POST /api/public/whatsapp/builderbot-inbound — Webhook del proyecto BuilderBot (patrón Mis Reclamos)
+  const builderbotInboundSchema = z.object({
+    eventName: z.string(),
+    data: z
+      .object({
+        body: z.union([z.string(), z.number()]).optional(),
+        from: z.union([z.string(), z.number()]),
+      })
+      .passthrough(),
+  });
+
+  fastify.post('/whatsapp/builderbot-inbound', async (request, reply) => {
+    try {
+      const parsed = builderbotInboundSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ ok: false, error: 'Formato inválido' });
+      }
+
+      const { eventName, data } = parsed.data;
+      if (eventName !== 'message.incoming') {
+        return reply.send({ ok: true, skipped: eventName });
+      }
+
+      const bodyText = data.body != null ? String(data.body).trim() : '';
+      if (!bodyText || /^_event_/i.test(bodyText)) {
+        return reply.send({ ok: true, skipped: 'empty_or_system_event' });
+      }
+
+      const phone = String(data.from);
+      const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
+
+      // Con URL: lo procesa el flow «URL diagnóstico» (plugin HTTP POST con {body}), no duplicar acá.
+      if (trimmedUrl) {
+        return reply.send({ ok: true, skipped: 'handled_by_url_flow_http' });
+      }
+
+      let textToSend: string;
+      let code: string;
+
+      if (isCleexsFaqOnlyMessage(bodyText)) {
+        textToSend = buildWhatsAppCleexsFaqReply();
+        code = 'cleexs_info';
+      } else {
+        textToSend = buildWhatsAppAskUrlReply();
+        code = 'need_url';
+      }
+
+      if (isBuilderBotSendConfigured()) {
+        await sendWhatsAppMessage({ number: phone, message: textToSend });
+      } else {
+        fastify.log.warn({ code }, 'BUILDERBOT_* no configurado; no se envió WhatsApp');
+      }
+
+      return reply.send({ ok: true, code });
+    } catch (err) {
+      fastify.log.error({ err }, 'Error POST /whatsapp/builderbot-inbound');
+      return reply.code(500).send({ ok: false });
+    }
+  });
+
+  // GET /api/public/diagnostic/whatsapp/webhook/reply?diagnosticId= — poll opcional
   fastify.get<{ Querystring: { diagnosticId?: string } }>(
     '/diagnostic/whatsapp/webhook/reply',
     async (request, reply) => {
@@ -1996,7 +2206,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
-  // GET /api/public/diagnostic/whatsapp/:id/teaser — BuilderBot: score + copy cuando terminó
+  // GET /api/public/diagnostic/whatsapp/:id/teaser — poll opcional (el envío final va por API BuilderBot)
   fastify.get<{ Params: { id: string } }>('/diagnostic/whatsapp/:id/teaser', async (request, reply) => {
     if (!verifyWaChannelRequest(request)) {
       return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized' });
