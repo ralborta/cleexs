@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +9,6 @@ import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
 
 export default function PlanesPage() {
-  const router = useRouter();
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
   const [pagoOpen, setPagoOpen] = useState(false);
   const [planForPago, setPlanForPago] = useState<PlanDefinition['id']>('crecimiento');
@@ -143,7 +141,7 @@ export default function PlanesPage() {
         onOpenChange={setPagoOpen}
         planId={planForPago}
         billingMode={billingMode}
-        onConfirm={() => router.push('/diagnostico/crear')}
+        onConfirm={() => setPagoOpen(false)}
       />
     </main>
   );

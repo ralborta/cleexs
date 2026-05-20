@@ -20,6 +20,7 @@
     "fastify": "^4.24.3",
     "fastify-raw-body": "^4.3.0",
     "jsonwebtoken": "^9.0.2",
+    "mercadopago": "^2.12.1",
     "nodemailer": "^8.0.1",
     "prisma": "^5.7.0",
     "resend": "^6.12.2",

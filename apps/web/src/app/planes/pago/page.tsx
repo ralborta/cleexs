@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { Suspense, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { PlanPaymentPanel } from '@/components/planes/plan-payment-panel';
 import type { BillingMode } from '@/lib/plans';
 
 function PagoContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const planId = searchParams.get('plan') ?? 'crecimiento';
   const billing: BillingMode = useMemo(
@@ -30,7 +29,7 @@ function PagoContent() {
         <PlanPaymentPanel
           planId={planId}
           billingMode={billing}
-          onConfirm={() => router.push('/diagnostico/crear')}
+          onConfirm={() => undefined}
         />
 
         <p className="mt-6 text-center">

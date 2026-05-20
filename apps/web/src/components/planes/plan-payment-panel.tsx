@@ -7,6 +7,8 @@ import { APP_PLANS, getAnnualPrice, type BillingMode } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
 export type PaymentMethod = 'card' | 'paypal' | 'transfer';
+const TOKEN_KEY = 'cleexs_portal_token';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 function formatMoney(amount: number | null): string {
   if (amount == null) return '—';
@@ -20,14 +22,16 @@ function formatMoney(amount: number | null): string {
 export interface PlanPaymentPanelProps {
   planId: string;
   billingMode: BillingMode;
-  /** Confirmar pago (sin integración real) */
-  onConfirm: () => void;
+  /** Callback opcional tras iniciar el checkout. */
+  onConfirm?: () => void;
   /** Ocultar texto inferior duplicado en modal */
   hideFooterSsl?: boolean;
 }
 
 export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl }: PlanPaymentPanelProps) {
   const [method, setMethod] = useState<PaymentMethod>('card');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const plan = useMemo(() => APP_PLANS.find((p) => p.id === planId) ?? APP_PLANS[1], [planId]);
 
@@ -39,6 +43,45 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
 
   const periodLabel =
     plan.monthlyPrice == null ? '' : billingMode === 'annual' ? 'Plan anual' : 'Plan mensual';
+
+  const startCheckout = async () => {
+    if (method !== 'card') {
+      setError('Las suscripciones automáticas de Mercado Pago requieren tarjeta.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null;
+      if (!token) {
+        setError('Para pagar necesitás iniciar sesión en el portal. Así podemos activar el plan en tu cuenta.');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/subscriptions/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ planId, billingMode }),
+      });
+
+      const json = (await res.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string };
+      if (!res.ok || !json.checkoutUrl) {
+        throw new Error(json.error || 'No se pudo iniciar el checkout de Mercado Pago.');
+      }
+
+      onConfirm?.();
+      window.location.href = json.checkoutUrl;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo iniciar el checkout.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div>
@@ -210,8 +253,18 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
             <span className="text-slate-600">Total</span>
             <span className="font-semibold tabular-nums text-slate-900">{formatMoney(amount)}</span>
           </div>
-          <Button type="button" className="mt-6 w-full bg-primary-600 hover:bg-primary-700" onClick={onConfirm}>
-            Confirmar pago
+          {error ? (
+            <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            className="mt-6 w-full bg-primary-600 hover:bg-primary-700"
+            onClick={() => void startCheckout()}
+            disabled={submitting || plan.id !== 'crecimiento'}
+          >
+            {submitting ? 'Redirigiendo a Mercado Pago…' : 'Ir a Mercado Pago'}
           </Button>
           <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
             <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />

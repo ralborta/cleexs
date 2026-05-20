@@ -22,10 +22,12 @@ import adminProvisionRoutes from './routes/admin-provision';
 import adminEmailRoutes from './routes/admin-email';
 import adminDashboardRoutes from './routes/admin-dashboard';
 import webhooksResendRoutes from './routes/webhooks-resend';
+import webhooksMercadoPagoRoutes from './routes/webhooks-mercadopago';
 import authPortalRoutes from './routes/auth-portal';
 import meReferralRoutes from './routes/me-referral';
 import portalWeeklyPromptsRoutes from './routes/portal-weekly-prompts';
 import referralRoutes from './routes/referrals';
+import subscriptionRoutes from './routes/subscriptions';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -105,6 +107,7 @@ async function bootstrap() {
   await server.register(usageRoutes, { prefix: '/api' });
   await server.register(meReferralRoutes, { prefix: '/api' });
   await server.register(referralRoutes, { prefix: '/api' });
+  await server.register(subscriptionRoutes, { prefix: '/api' });
   await server.register(portalWeeklyPromptsRoutes, { prefix: '/api/portal' });
   await server.register(profileRoutes, { prefix: '/api' });
   await server.register(adminEntitlementRoutes, { prefix: '/api/admin' });
@@ -112,6 +115,7 @@ async function bootstrap() {
   await server.register(adminEmailRoutes, { prefix: '/api/admin' });
   await server.register(adminDashboardRoutes, { prefix: '/api/admin' });
   await server.register(webhooksResendRoutes, { prefix: '/api' });
+  await server.register(webhooksMercadoPagoRoutes, { prefix: '/api' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server

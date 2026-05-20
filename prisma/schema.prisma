@@ -27,41 +27,70 @@ enum TenantStatus {
   archived
 }
 
+enum BillingCurrency {
+  ARS
+  USD
+}
+
+enum BillingInterval {
+  monthly
+  annual
+}
+
+enum SubscriptionStatus {
+  pending
+  authorized
+  paused
+  cancelled
+  expired
+}
+
+enum PaymentStatus {
+  pending
+  approved
+  rejected
+  cancelled
+  refunded
+  charged_back
+}
+
 model Tenant {
-  id              String        @id @default(uuid())
-  tenantCode      String        @unique @map("tenant_code")
-  tenantPath      String        @map("tenant_path") // ej: "000/001/014"
-  parentTenantId  String?       @map("parent_tenant_id")
-  tenantType      TenantType    @map("tenant_type")
-  planId          String        @map("plan_id")
-  status          TenantStatus  @default(active)
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  id             String       @id @default(uuid())
+  tenantCode     String       @unique @map("tenant_code")
+  tenantPath     String       @map("tenant_path") // ej: "000/001/014"
+  parentTenantId String?      @map("parent_tenant_id")
+  tenantType     TenantType   @map("tenant_type")
+  planId         String       @map("plan_id")
+  status         TenantStatus @default(active)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   // Slug único para enlaces ?ref= del programa portal referidos (portal cliente).
-  referralSlug                 String?   @unique @map("referral_slug")
-  referredByTenantId           String?   @map("referred_by_tenant_id")
-  referralCount                Int       @default(0) @map("referral_count")
-  referralRewardAt             DateTime? @map("referral_reward_at")
-  referralUpsellDismissedAt    DateTime? @map("referral_upsell_dismissed_at")
+  referralSlug              String?   @unique @map("referral_slug")
+  referredByTenantId        String?   @map("referred_by_tenant_id")
+  referralCount             Int       @default(0) @map("referral_count")
+  referralRewardAt          DateTime? @map("referral_reward_at")
+  referralUpsellDismissedAt DateTime? @map("referral_upsell_dismissed_at")
 
   // Relations
-  parent          Tenant?       @relation("TenantHierarchy", fields: [parentTenantId], references: [id])
-  children        Tenant[]      @relation("TenantHierarchy")
-  referredByTenant Tenant?      @relation("TenantReferralInvites", fields: [referredByTenantId], references: [id])
-  referredTenants  Tenant[]     @relation("TenantReferralInvites")
-  plan            Plan          @relation(fields: [planId], references: [id])
-  users           User[]
-  brands          Brand[]
-  promptVersions  PromptVersion[]
-  promptCategories PromptCategory[]
-  runs            Run[]
-  leadSources     LeadSource[]
-  usageEvents     UsageLedger[]
-  brandAccesses   TenantBrandAccess[]
-  entitlementOverrides EntitlementOverride[]
-  profileClaims   ProfileClaim[]
+  parent                      Tenant?                      @relation("TenantHierarchy", fields: [parentTenantId], references: [id])
+  children                    Tenant[]                     @relation("TenantHierarchy")
+  referredByTenant            Tenant?                      @relation("TenantReferralInvites", fields: [referredByTenantId], references: [id])
+  referredTenants             Tenant[]                     @relation("TenantReferralInvites")
+  plan                        Plan                         @relation(fields: [planId], references: [id])
+  users                       User[]
+  brands                      Brand[]
+  promptVersions              PromptVersion[]
+  promptCategories            PromptCategory[]
+  runs                        Run[]
+  leadSources                 LeadSource[]
+  usageEvents                 UsageLedger[]
+  brandAccesses               TenantBrandAccess[]
+  entitlementOverrides        EntitlementOverride[]
+  profileClaims               ProfileClaim[]
   cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
+  subscriptions               Subscription[]
+  payments                    Payment[]
 
   @@index([parentTenantId])
   @@index([tenantCode])
@@ -72,22 +101,107 @@ model Tenant {
 }
 
 model Plan {
-  id                  String    @id @default(uuid())
-  name                String
-  runsPerMonth        Int       @default(10) @map("runs_per_month")
-  promptsActiveLimit  Int       @default(50) @map("prompts_active_limit")
-  brandsLimit         Int       @default(5) @map("brands_limit")
-  competitorsLimit    Int       @default(10) @map("competitors_limit")
-  retentionMonths     Int       @default(12) @map("retention_months")
-  automationEnabled   Boolean   @default(false) @map("automation_enabled")
-  priceMonthly        Float?    @map("price_monthly")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  name               String
+  runsPerMonth       Int      @default(10) @map("runs_per_month")
+  promptsActiveLimit Int      @default(50) @map("prompts_active_limit")
+  brandsLimit        Int      @default(5) @map("brands_limit")
+  competitorsLimit   Int      @default(10) @map("competitors_limit")
+  retentionMonths    Int      @default(12) @map("retention_months")
+  automationEnabled  Boolean  @default(false) @map("automation_enabled")
+  priceMonthly       Float?   @map("price_monthly")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenants             Tenant[]
+  tenants       Tenant[]
+  subscriptions Subscription[]
 
   @@map("plans")
+}
+
+model Subscription {
+  id                  String             @id @default(uuid())
+  tenantId            String             @map("tenant_id")
+  planId              String             @map("plan_id")
+  status              SubscriptionStatus @default(pending)
+  billingInterval     BillingInterval    @default(monthly) @map("billing_interval")
+  currency            BillingCurrency    @default(ARS)
+  amountUsd           Decimal            @map("amount_usd") @db.Decimal(12, 2)
+  amountArs           Decimal            @map("amount_ars") @db.Decimal(12, 2)
+  fxRate              Decimal            @map("fx_rate") @db.Decimal(12, 4)
+  mpPreapprovalId     String?            @unique @map("mp_preapproval_id")
+  mpPreapprovalPlanId String?            @map("mp_preapproval_plan_id")
+  payerEmail          String?            @map("payer_email")
+  reason              String?
+  initPoint           String?            @map("init_point") @db.Text
+  sandboxInitPoint    String?            @map("sandbox_init_point") @db.Text
+  startedAt           DateTime?          @map("started_at")
+  currentPeriodStart  DateTime?          @map("current_period_start")
+  currentPeriodEnd    DateTime?          @map("current_period_end")
+  cancelledAt         DateTime?          @map("cancelled_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@index([tenantId, status])
+  @@index([planId])
+  @@index([status, currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                   String          @id @default(uuid())
+  tenantId             String          @map("tenant_id")
+  subscriptionId       String?         @map("subscription_id")
+  status               PaymentStatus   @default(pending)
+  currency             BillingCurrency @default(ARS)
+  amountUsd            Decimal?        @map("amount_usd") @db.Decimal(12, 2)
+  amountArs            Decimal         @map("amount_ars") @db.Decimal(12, 2)
+  netReceivedAmountArs Decimal?        @map("net_received_amount_ars") @db.Decimal(12, 2)
+  fxRate               Decimal?        @map("fx_rate") @db.Decimal(12, 4)
+  mpPaymentId          String?         @unique @map("mp_payment_id")
+  mpPreapprovalId      String?         @map("mp_preapproval_id")
+  mpMerchantOrderId    String?         @map("mp_merchant_order_id")
+  paymentMethodId      String?         @map("payment_method_id")
+  paymentTypeId        String?         @map("payment_type_id")
+  statusDetail         String?         @map("status_detail")
+  payerEmail           String?         @map("payer_email")
+  paidAt               DateTime?       @map("paid_at")
+  rawPayload           Json?           @map("raw_payload")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([subscriptionId])
+  @@index([status, createdAt])
+  @@index([mpPreapprovalId])
+  @@map("payments")
+}
+
+model WebhookEvent {
+  id           String    @id @default(uuid())
+  provider     String    @default("mercadopago")
+  eventId      String    @map("event_id")
+  eventType    String    @map("event_type")
+  action       String?
+  resourceId   String?   @map("resource_id")
+  payload      Json?
+  processedAt  DateTime? @map("processed_at")
+  errorMessage String?   @map("error_message") @db.Text
+  receivedAt   DateTime  @default(now()) @map("received_at")
+
+  @@unique([provider, eventId])
+  @@index([eventType, receivedAt])
+  @@index([resourceId])
+  @@index([processedAt])
+  @@map("webhook_events")
 }
 
 // ============================================
@@ -120,20 +234,20 @@ enum ProfileClaimStatus {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   name         String?
-  passwordHash String?   @map("password_hash")
-  tenantId     String    @map("tenant_id")
-  role         UserRole  @default(viewer)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  passwordHash String?  @map("password_hash")
+  tenantId     String   @map("tenant_id")
+  role         UserRole @default(viewer)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
-  usageEvents UsageLedger[]
-  claims      ProfileClaim[]
-  entitlementOverrides EntitlementOverride[]
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id])
+  usageEvents                 UsageLedger[]
+  claims                      ProfileClaim[]
+  entitlementOverrides        EntitlementOverride[]
   cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
 
   @@index([tenantId])
@@ -170,41 +284,41 @@ enum SizeSegment {
 }
 
 model Brand {
-  id           String       @id @default(uuid())
-  tenantId     String       @map("tenant_id")
-  name         String
-  domain       String?
-  industry     String?
-  productType  String?      @map("product_type")
-  country      String?
-  objective    String?
-  description  String?      @db.Text
+  id                           String        @id @default(uuid())
+  tenantId                     String        @map("tenant_id")
+  name                         String
+  domain                       String?
+  industry                     String?
+  productType                  String?       @map("product_type")
+  country                      String?
+  objective                    String?
+  description                  String?       @db.Text
   // Clasificacion automatica por dominio
-  businessType BusinessType? @default(unknown) @map("business_type")
-  category     String?      @map("category")
-  subcategory  String?      @map("subcategory")
-  geoMarket    String?      @map("geo_market")
-  sizeSegment  SizeSegment? @default(unknown) @map("size_segment")
-  autoDetected Boolean      @default(false) @map("auto_detected")
-  classifierMeta Json?      @map("classifier_meta")
-  runSchedule  RunSchedule? @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
+  businessType                 BusinessType? @default(unknown) @map("business_type")
+  category                     String?       @map("category")
+  subcategory                  String?       @map("subcategory")
+  geoMarket                    String?       @map("geo_market")
+  sizeSegment                  SizeSegment?  @default(unknown) @map("size_segment")
+  autoDetected                 Boolean       @default(false) @map("auto_detected")
+  classifierMeta               Json?         @map("classifier_meta")
+  runSchedule                  RunSchedule?  @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
   /// Prompt guardado en portal (1 de 5) usado en corridas `weekly_portal` cuando está seleccionado
-  selectedWeeklyPortalPromptId String? @map("selected_weekly_portal_prompt_id")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+  selectedWeeklyPortalPromptId String?       @map("selected_weekly_portal_prompt_id")
+  createdAt                    DateTime      @default(now()) @map("created_at")
+  updatedAt                    DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
-  aliases     BrandAlias[]
-  competitors Competitor[]
-  runs        Run[]
-  portalSavedPrompts              BrandPortalSavedPrompt[] @relation("BrandPortalSavedPrompts")
-  selectedWeeklyPortalPrompt      BrandPortalSavedPrompt?  @relation("BrandSelectedWeeklyPrompt", fields: [selectedWeeklyPortalPromptId], references: [id], onDelete: SetNull)
-  priaReports PRIAReport[]
-  leadSources LeadSource[]
-  usageEvents UsageLedger[]
-  tenantAccesses TenantBrandAccess[]
-  profileClaims ProfileClaim[]
+  tenant                     Tenant                   @relation(fields: [tenantId], references: [id])
+  aliases                    BrandAlias[]
+  competitors                Competitor[]
+  runs                       Run[]
+  portalSavedPrompts         BrandPortalSavedPrompt[] @relation("BrandPortalSavedPrompts")
+  selectedWeeklyPortalPrompt BrandPortalSavedPrompt?  @relation("BrandSelectedWeeklyPrompt", fields: [selectedWeeklyPortalPromptId], references: [id], onDelete: SetNull)
+  priaReports                PRIAReport[]
+  leadSources                LeadSource[]
+  usageEvents                UsageLedger[]
+  tenantAccesses             TenantBrandAccess[]
+  profileClaims              ProfileClaim[]
 
   @@index([tenantId])
   @@index([runSchedule])
@@ -220,15 +334,15 @@ model BrandPortalSavedPrompt {
   brandId    String   @map("brand_id")
   slot       Int // 0..4
   title      String   @default("")
-  promptText String   @db.Text @map("prompt_text")
+  promptText String   @map("prompt_text") @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  brand                Brand    @relation("BrandPortalSavedPrompts", fields: [brandId], references: [id], onDelete: Cascade)
-  shadowPrompt         Prompt?
-  brandsSelectingThis  Brand[]  @relation("BrandSelectedWeeklyPrompt")
-  runsSnapshot         Run[]    @relation("RunWeeklyPortalPrompt")
-  executions           BrandPortalSavedPromptExecution[]
+  brand               Brand                             @relation("BrandPortalSavedPrompts", fields: [brandId], references: [id], onDelete: Cascade)
+  shadowPrompt        Prompt?
+  brandsSelectingThis Brand[]                           @relation("BrandSelectedWeeklyPrompt")
+  runsSnapshot        Run[]                             @relation("RunWeeklyPortalPrompt")
+  executions          BrandPortalSavedPromptExecution[]
 
   @@unique([brandId, slot])
   @@index([brandId])
@@ -241,13 +355,13 @@ model BrandPortalSavedPromptExecution {
   savedPromptId      String   @map("saved_prompt_id")
   runId              String?  @map("run_id")
   source             String   @default("portal_manual")
-  promptTextSnapshot String   @db.Text @map("prompt_text_snapshot")
-  responseText       String   @db.Text @map("response_text")
+  promptTextSnapshot String   @map("prompt_text_snapshot") @db.Text
+  responseText       String   @map("response_text") @db.Text
   analysisJson       Json?    @map("analysis_json")
   createdAt          DateTime @default(now()) @map("created_at")
 
   savedPrompt BrandPortalSavedPrompt @relation(fields: [savedPromptId], references: [id], onDelete: Cascade)
-  run        Run?                    @relation(fields: [runId], references: [id], onDelete: SetNull)
+  run         Run?                   @relation(fields: [runId], references: [id], onDelete: SetNull)
 
   @@index([savedPromptId, createdAt])
   @@index([runId])
@@ -261,7 +375,7 @@ model BrandAlias {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@unique([brandId, alias])
   @@index([brandId])
@@ -269,24 +383,24 @@ model BrandAlias {
 }
 
 model Competitor {
-  id        String   @id @default(uuid())
-  brandId   String   @map("brand_id")
-  name      String
-  domain    String?
-  aliases   Json?    // Array de strings como JSON
+  id              String        @id @default(uuid())
+  brandId         String        @map("brand_id")
+  name            String
+  domain          String?
+  aliases         Json? // Array de strings como JSON
   // Clasificacion coherente con la marca medida
-  businessType BusinessType? @default(unknown) @map("business_type")
-  category     String?       @map("category")
-  subcategory  String?       @map("subcategory")
-  geoMarket    String?       @map("geo_market")
-  autoDetected Boolean       @default(false) @map("auto_detected")
-  validated    Boolean       @default(false) @map("validated")
-  discoveryReason String?    @db.Text @map("discovery_reason")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  businessType    BusinessType? @default(unknown) @map("business_type")
+  category        String?       @map("category")
+  subcategory     String?       @map("subcategory")
+  geoMarket       String?       @map("geo_market")
+  autoDetected    Boolean       @default(false) @map("auto_detected")
+  validated       Boolean       @default(false) @map("validated")
+  discoveryReason String?       @map("discovery_reason") @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([brandId])
   @@index([domain])
@@ -300,14 +414,14 @@ model Competitor {
 model PromptVersion {
   id        String   @id @default(uuid())
   tenantId  String   @map("tenant_id")
-  name      String   // ej: "PROMPTS_v1", "PROMPTS_v2"
+  name      String // ej: "PROMPTS_v1", "PROMPTS_v2"
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  prompts   Prompt[]
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  prompts Prompt[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -323,8 +437,8 @@ model PromptCategory {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  prompts   Prompt[]
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  prompts Prompt[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -332,23 +446,23 @@ model PromptCategory {
 }
 
 model Prompt {
-  id              String   @id @default(uuid())
-  promptVersionId String   @map("prompt_version_id")
-  categoryId      String?  @map("category_id")
-  name            String?  // nombre corto por tipo, ej. "Urgencia (30%) - Recomendación"
-  promptText      String   @db.Text @map("prompt_text")
-  active          Boolean  @default(true)
+  id                       String   @id @default(uuid())
+  promptVersionId          String   @map("prompt_version_id")
+  categoryId               String?  @map("category_id")
+  name                     String? // nombre corto por tipo, ej. "Urgencia (30%) - Recomendación"
+  promptText               String   @map("prompt_text") @db.Text
+  active                   Boolean  @default(true)
   /// Enlaza el prompt técnico (inactivo) generado desde BrandPortalSavedPrompt
-  brandPortalSavedPromptId String? @unique @map("brand_portal_saved_prompt_id")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  brandPortalSavedPromptId String?  @unique @map("brand_portal_saved_prompt_id")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
   // Relations
-  promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
-  category        PromptCategory? @relation(fields: [categoryId], references: [id])
+  promptVersion          PromptVersion           @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
+  category               PromptCategory?         @relation(fields: [categoryId], references: [id])
   brandPortalSavedPrompt BrandPortalSavedPrompt? @relation(fields: [brandPortalSavedPromptId], references: [id], onDelete: SetNull)
-  promptResults   PromptResult[]
-  leadSources     LeadSource[]
+  promptResults          PromptResult[]
+  leadSources            LeadSource[]
 
   @@index([promptVersionId])
   @@index([categoryId])
@@ -368,29 +482,29 @@ enum RunStatus {
 }
 
 model Run {
-  id          String      @id @default(uuid())
-  tenantId    String      @map("tenant_id")
-  brandId     String      @map("brand_id")
-  periodStart DateTime    @map("period_start")
-  periodEnd   DateTime    @map("period_end")
-  runType     String      @default("monthly") @map("run_type")
+  id                        String    @id @default(uuid())
+  tenantId                  String    @map("tenant_id")
+  brandId                   String    @map("brand_id")
+  periodStart               DateTime  @map("period_start")
+  periodEnd                 DateTime  @map("period_end")
+  runType                   String    @default("monthly") @map("run_type")
   /// Si se setea al crear el run, executeRun usa solo ese prompt guardado (snapshot)
-  weeklyPortalSavedPromptId String? @map("weekly_portal_saved_prompt_id")
-  status      RunStatus   @default(pending)
-  modelMeta   Json?       @map("model_meta") // { model, temperature, etc }
-  tokensUsed  Int?        @default(0) @map("tokens_used")
-  costUsd     Float?      @default(0) @map("cost_usd")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  weeklyPortalSavedPromptId String?   @map("weekly_portal_saved_prompt_id")
+  status                    RunStatus @default(pending)
+  modelMeta                 Json?     @map("model_meta") // { model, temperature, etc }
+  tokensUsed                Int?      @default(0) @map("tokens_used")
+  costUsd                   Float?    @default(0) @map("cost_usd")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
-  brand       Brand       @relation(fields: [brandId], references: [id])
-  weeklyPortalSavedPrompt BrandPortalSavedPrompt? @relation("RunWeeklyPortalPrompt", fields: [weeklyPortalSavedPromptId], references: [id], onDelete: SetNull)
+  tenant                      Tenant                            @relation(fields: [tenantId], references: [id])
+  brand                       Brand                             @relation(fields: [brandId], references: [id])
+  weeklyPortalSavedPrompt     BrandPortalSavedPrompt?           @relation("RunWeeklyPortalPrompt", fields: [weeklyPortalSavedPromptId], references: [id], onDelete: SetNull)
   portalSavedPromptExecutions BrandPortalSavedPromptExecution[]
-  promptResults PromptResult[]
-  priaReports PRIAReport[]
-  leadSources LeadSource[]
+  promptResults               PromptResult[]
+  priaReports                 PRIAReport[]
+  leadSources                 LeadSource[]
 
   @@index([tenantId])
   @@index([brandId])
@@ -401,22 +515,22 @@ model Run {
 }
 
 model PromptResult {
-  id              String   @id @default(uuid())
-  runId           String   @map("run_id")
-  promptId        String   @map("prompt_id")
-  responseText    String   @db.Text @map("response_text")
-  top3Json        Json     @map("top3_json") // [{ position: 1, name: "...", type: "brand|competitor" }]
-  score           Float    @default(0)
-  flags           Json     @default("{}") // { ambiguous_ranking, no_ranking, etc }
-  truncated       Boolean  @default(false)
-  manualOverride  Boolean  @default(false) @map("manual_override")
-  overrideTop3Json Json?   @map("override_top3_json") // Si hay override, guardar el original aquí
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  runId            String   @map("run_id")
+  promptId         String   @map("prompt_id")
+  responseText     String   @map("response_text") @db.Text
+  top3Json         Json     @map("top3_json") // [{ position: 1, name: "...", type: "brand|competitor" }]
+  score            Float    @default(0)
+  flags            Json     @default("{}") // { ambiguous_ranking, no_ranking, etc }
+  truncated        Boolean  @default(false)
+  manualOverride   Boolean  @default(false) @map("manual_override")
+  overrideTop3Json Json?    @map("override_top3_json") // Si hay override, guardar el original aquí
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
-  run             Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
-  prompt          Prompt   @relation(fields: [promptId], references: [id])
+  run    Run    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  prompt Prompt @relation(fields: [promptId], references: [id])
 
   @@unique([runId, promptId])
   @@index([runId])
@@ -429,16 +543,16 @@ model PromptResult {
 // ============================================
 
 model PRIAReport {
-  id                    String   @id @default(uuid())
-  runId                 String   @map("run_id")
-  brandId               String   @map("brand_id")
-  priaTotal             Float    @map("pria_total") // 0-100
-  priaByCategoryJson    Json     @map("pria_by_category_json") // { categoryId: pria }
-  createdAt             DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(uuid())
+  runId              String   @map("run_id")
+  brandId            String   @map("brand_id")
+  priaTotal          Float    @map("pria_total") // 0-100
+  priaByCategoryJson Json     @map("pria_by_category_json") // { categoryId: pria }
+  createdAt          DateTime @default(now()) @map("created_at")
 
   // Relations
-  run                   Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
-  brand                 Brand    @relation(fields: [brandId], references: [id])
+  run   Run   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id])
 
   @@unique([runId, brandId])
   @@index([runId])
@@ -451,27 +565,27 @@ model PRIAReport {
 // ============================================
 
 model PublicDiagnostic {
-  id          String   @id @default(uuid())
-  brandName   String   @map("brand_name") // marca ingresada por el usuario (obligatoria)
-  domain      String   // dominio normalizado; múltiples corridas permitidas (Fase 3 Freemium)
-  industry    String?  @map("industry") // determinado por IA antes del run
-  refCode     String?  @map("ref_code") // código de embajador/referido (ej: ana23)
-  utmSource   String?  @map("utm_source")
-  utmMedium   String?  @map("utm_medium")
-  utmCampaign String?  @map("utm_campaign")
-  sourceChannel String? @map("source_channel") // web | whatsapp_yt | ...
-  waPhone     String?  @map("wa_phone") // E.164 normalizado; límites anti-abuso canal WA
-  tier        String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
-  email       String?  // capturado al final del flujo (para enviar resultado)
-  status      String   @default("pending") // pending | detecting_competitors | awaiting_user | running | completed | failed
-  runId       String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
-  runGeminiId String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
-  analysisJson Json?   @map("analysis_json") // análisis detallado con IA (Fase 2)
+  id             String   @id @default(uuid())
+  brandName      String   @map("brand_name") // marca ingresada por el usuario (obligatoria)
+  domain         String // dominio normalizado; múltiples corridas permitidas (Fase 3 Freemium)
+  industry       String?  @map("industry") // determinado por IA antes del run
+  refCode        String?  @map("ref_code") // código de embajador/referido (ej: ana23)
+  utmSource      String?  @map("utm_source")
+  utmMedium      String?  @map("utm_medium")
+  utmCampaign    String?  @map("utm_campaign")
+  sourceChannel  String?  @map("source_channel") // web | whatsapp_yt | ...
+  waPhone        String?  @map("wa_phone") // E.164 normalizado; límites anti-abuso canal WA
+  tier           String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
+  email          String? // capturado al final del flujo (para enviar resultado)
+  status         String   @default("pending") // pending | detecting_competitors | awaiting_user | running | completed | failed
+  runId          String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
+  runGeminiId    String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
+  analysisJson   Json?    @map("analysis_json") // análisis detallado con IA (Fase 2)
   // Borrador previo al run: URLs sugeridas de competidores, país (fase captcha + confirmación).
-  setupDraftJson Json? @map("setup_draft_json")
-  shareSlug   String?  @unique @map("share_slug") // URL pública /score/{slug}
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  setupDraftJson Json?    @map("setup_draft_json")
+  shareSlug      String?  @unique @map("share_slug") // URL pública /score/{slug}
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   shareVisits PublicDiagnosticShareVisit[]
   usageEvents UsageLedger[]
@@ -485,12 +599,12 @@ model PublicDiagnostic {
 
 // Visitas únicas al enlace compartido (desbloqueo viral tras N visitas).
 model PublicDiagnosticShareVisit {
-  id             String   @id @default(uuid())
-  diagnosticId   String   @map("diagnostic_id")
-  visitorId      String   @map("visitor_id") // UUID estable en el navegador del visitante
-  createdAt      DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  diagnosticId String   @map("diagnostic_id")
+  visitorId    String   @map("visitor_id") // UUID estable en el navegador del visitante
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  diagnostic     PublicDiagnostic @relation(fields: [diagnosticId], references: [id], onDelete: Cascade)
+  diagnostic PublicDiagnostic @relation(fields: [diagnosticId], references: [id], onDelete: Cascade)
 
   @@unique([diagnosticId, visitorId])
   @@index([diagnosticId])
@@ -510,7 +624,7 @@ model ReferralCampaign {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  clicks      ReferralClick[]
+  clicks ReferralClick[]
 
   @@index([active])
   @@index([createdAt])
@@ -519,15 +633,15 @@ model ReferralCampaign {
 
 // Clicks reales al link corto /r/:ref antes de redirigir al sitio público.
 model ReferralClick {
-  id          String   @id @default(uuid())
-  campaignId  String?  @map("campaign_id")
-  refCode     String   @map("ref_code")
-  targetUrl   String   @map("target_url")
-  ipHash      String?  @map("ip_hash")
-  userAgentHash String? @map("user_agent_hash")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid())
+  campaignId    String?  @map("campaign_id")
+  refCode       String   @map("ref_code")
+  targetUrl     String   @map("target_url")
+  ipHash        String?  @map("ip_hash")
+  userAgentHash String?  @map("user_agent_hash")
+  createdAt     DateTime @default(now()) @map("created_at")
 
-  campaign    ReferralCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaign ReferralCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([campaignId])
   @@index([refCode])
@@ -552,10 +666,10 @@ model UsageLedger {
   metaJson           Json?             @map("meta_json")
   createdAt          DateTime          @default(now()) @map("created_at")
 
-  user               User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  tenant             Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  brand              Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  publicDiagnostic   PublicDiagnostic? @relation(fields: [publicDiagnosticId], references: [id], onDelete: SetNull)
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  brand            Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  publicDiagnostic PublicDiagnostic? @relation(fields: [publicDiagnosticId], references: [id], onDelete: SetNull)
 
   @@index([action, periodStart, periodEnd])
   @@index([actorType, anonymousId, periodStart])
@@ -583,17 +697,17 @@ model TenantBrandAccess {
 }
 
 model EntitlementOverride {
-  id            String   @id @default(uuid())
-  tenantId      String?  @map("tenant_id")
-  userId        String?  @map("user_id")
-  grantPlan     String   @map("grant_plan")
-  reason        String?
-  startsAt      DateTime @map("starts_at")
-  endsAt        DateTime? @map("ends_at")
-  active        Boolean  @default(true)
-  createdBy     String?  @map("created_by")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  tenantId  String?   @map("tenant_id")
+  userId    String?   @map("user_id")
+  grantPlan String    @map("grant_plan")
+  reason    String?
+  startsAt  DateTime  @map("starts_at")
+  endsAt    DateTime? @map("ends_at")
+  active    Boolean   @default(true)
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -604,19 +718,19 @@ model EntitlementOverride {
 }
 
 model ProfileClaim {
-  id            String             @id @default(uuid())
-  tenantId      String             @map("tenant_id")
-  userId        String             @map("user_id")
-  brandId       String             @map("brand_id")
-  profileSlug   String?            @map("profile_slug")
-  claimMethod   String             @default("manual")
-  corporateEmail String?           @map("corporate_email")
-  status        ProfileClaimStatus @default(pending)
-  note          String?
-  reviewedBy    String?            @map("reviewed_by")
-  reviewedAt    DateTime?          @map("reviewed_at")
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
+  id             String             @id @default(uuid())
+  tenantId       String             @map("tenant_id")
+  userId         String             @map("user_id")
+  brandId        String             @map("brand_id")
+  profileSlug    String?            @map("profile_slug")
+  claimMethod    String             @default("manual")
+  corporateEmail String?            @map("corporate_email")
+  status         ProfileClaimStatus @default(pending)
+  note           String?
+  reviewedBy     String?            @map("reviewed_by")
+  reviewedAt     DateTime?          @map("reviewed_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -645,12 +759,12 @@ model LeadSource {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant           Tenant   @relation(fields: [tenantId], references: [id])
-  brand            Brand?   @relation(fields: [brandId], references: [id])
-  run              Run?     @relation(fields: [runId], references: [id])
-  prompt           Prompt?  @relation(fields: [promptId], references: [id])
-  contacts         LeadContact[]
-  emails           LeadEmail[]
+  tenant   Tenant        @relation(fields: [tenantId], references: [id])
+  brand    Brand?        @relation(fields: [brandId], references: [id])
+  run      Run?          @relation(fields: [runId], references: [id])
+  prompt   Prompt?       @relation(fields: [promptId], references: [id])
+  contacts LeadContact[]
+  emails   LeadEmail[]
 
   @@index([tenantId])
   @@index([brandId])
@@ -665,15 +779,15 @@ model LeadContact {
   name         String?
   email        String
   role         String?
-  source       String   // firecrawl | hunter | browserbase
+  source       String // firecrawl | hunter | browserbase
   score        Float?   @default(0)
   verified     Boolean  @default(false)
   status       String   @default("new") // new | queued | sent | ignored
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  leadSource   LeadSource @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
-  emails       LeadEmail[]
+  leadSource LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+  emails     LeadEmail[]
 
   @@unique([leadSourceId, email])
   @@index([email])
@@ -681,20 +795,20 @@ model LeadContact {
 }
 
 model LeadEmail {
-  id           String   @id @default(uuid())
-  leadSourceId String   @map("lead_source_id")
-  leadContactId String  @map("lead_contact_id")
-  subject      String
-  body         String   @db.Text
-  provider     String?  // resend | sendgrid | manual
-  status       String   @default("draft") // draft | queued | sent | failed
-  sentAt       DateTime? @map("sent_at")
-  metaJson     Json?    @map("meta_json")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String    @id @default(uuid())
+  leadSourceId  String    @map("lead_source_id")
+  leadContactId String    @map("lead_contact_id")
+  subject       String
+  body          String    @db.Text
+  provider      String? // resend | sendgrid | manual
+  status        String    @default("draft") // draft | queued | sent | failed
+  sentAt        DateTime? @map("sent_at")
+  metaJson      Json?     @map("meta_json")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  leadSource   LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
-  leadContact  LeadContact @relation(fields: [leadContactId], references: [id], onDelete: Cascade)
+  leadSource  LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+  leadContact LeadContact @relation(fields: [leadContactId], references: [id], onDelete: Cascade)
 
   @@index([leadSourceId])
   @@index([leadContactId])
@@ -720,35 +834,35 @@ enum CleexsEmailSendStatus {
 }
 
 model CleexsInternalEmailCampaign {
-  id              String                 @id @default(uuid())
-  slug            String                 @unique
-  weekIndex       Int                    @map("week_index")
-  scoreBucket     CleexsEmailScoreBucket @map("score_bucket")
-  title           String
-  description     String?                @db.Text
-  espTemplateId   String?                @map("esp_template_id")
-  active          Boolean                @default(true)
-  priority        Int                    @default(0)
-  createdAt       DateTime               @default(now()) @map("created_at")
-  updatedAt       DateTime               @updatedAt @map("updated_at")
+  id            String                 @id @default(uuid())
+  slug          String                 @unique
+  weekIndex     Int                    @map("week_index")
+  scoreBucket   CleexsEmailScoreBucket @map("score_bucket")
+  title         String
+  description   String?                @db.Text
+  espTemplateId String?                @map("esp_template_id")
+  active        Boolean                @default(true)
+  priority      Int                    @default(0)
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
 
   @@index([weekIndex, scoreBucket, active])
   @@map("cleexs_internal_email_campaigns")
 }
 
 model CleexsInternalEmailSendLog {
-  id             String                 @id @default(uuid())
-  recipientEmail String                 @map("recipient_email")
-  userId         String?                @map("user_id")
-  tenantId       String?                @map("tenant_id")
-  campaignSlug   String                 @map("campaign_slug")
-  scoreBucket    String?                @map("score_bucket")
-  cleexsScore    Int?                   @map("cleexs_score")
-  mergeSummary   Json?                  @map("merge_summary")
+  id             String                @id @default(uuid())
+  recipientEmail String                @map("recipient_email")
+  userId         String?               @map("user_id")
+  tenantId       String?               @map("tenant_id")
+  campaignSlug   String                @map("campaign_slug")
+  scoreBucket    String?               @map("score_bucket")
+  cleexsScore    Int?                  @map("cleexs_score")
+  mergeSummary   Json?                 @map("merge_summary")
   status         CleexsEmailSendStatus
-  externalId     String?                @map("external_id")
-  errorMessage   String?                @map("error_message") @db.Text
-  createdAt      DateTime               @default(now()) @map("created_at")
+  externalId     String?               @map("external_id")
+  errorMessage   String?               @map("error_message") @db.Text
+  createdAt      DateTime              @default(now()) @map("created_at")
 
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
@@ -775,4 +889,3 @@ model CleexsResendWebhookEvent {
   @@index([occurredAt])
   @@map("cleexs_resend_webhook_events")
 }
-
