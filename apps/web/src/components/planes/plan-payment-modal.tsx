@@ -51,16 +51,11 @@ export function PlanPaymentModal({
         <div className="px-6 pb-2 pt-8 pr-14 text-center sm:px-8">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Pago seguro</p>
           <h2 id="plan-payment-title" className="mt-3 text-2xl font-bold text-primary-900 sm:text-[1.65rem]">
-            Selecciona tu método de pago
+            Activar Premium
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Realiza el pago seguro para acceder a nuestro servicio
+            Te redirigimos a Mercado Pago para completar la suscripción con tarjeta
           </p>
-        </div>
-
-        <div className="mx-6 mb-4 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 sm:mx-8">
-          <p className="text-sm font-semibold text-slate-900">Selecciona tu método de pago</p>
-          <p className="text-xs text-slate-500">Realiza el pago seguro para acceder a nuestro servicio</p>
         </div>
 
         <div className="px-6 pb-8 sm:px-8">

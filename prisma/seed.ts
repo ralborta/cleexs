@@ -24,6 +24,24 @@ async function main() {
 
   console.log('✅ Plan creado:', basicPlan.name);
 
+  const premiumPlan = await prisma.plan.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000002' },
+    update: { name: 'Cleexs Premium' },
+    create: {
+      id: '00000000-0000-0000-0000-000000000002',
+      name: 'Cleexs Premium',
+      runsPerMonth: 100,
+      promptsActiveLimit: 25,
+      brandsLimit: 5,
+      competitorsLimit: 10,
+      retentionMonths: 24,
+      automationEnabled: true,
+      priceMonthly: 99,
+    },
+  });
+
+  console.log('✅ Plan creado:', premiumPlan.name);
+
   // 2. Crear Master Tenant (ROOT - 000)
   const rootTenant = await prisma.tenant.upsert({
     where: { tenantCode: '000' },

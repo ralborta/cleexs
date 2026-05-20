@@ -1,7 +1,8 @@
-import { BillingInterval, SubscriptionStatus, UserRole } from '@prisma/client';
+import { BillingInterval, Prisma, SubscriptionStatus, UserRole } from '@prisma/client';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import {
+  ensurePremiumPlan,
   getBillingCurrency,
   getBillingUsdToArsRate,
   getPlanBillingAmountUsd,
@@ -20,119 +21,134 @@ function toBillingInterval(value: z.infer<typeof checkoutSchema>['billingMode'])
   return value === 'annual' ? BillingInterval.annual : BillingInterval.monthly;
 }
 
-async function resolveChargeablePlan(planKey: 'crecimiento') {
-  const plan = await prisma.plan.findFirst({
-    where: {
-      OR: [
-        { name: { contains: 'crecimiento', mode: 'insensitive' } },
-        { name: { contains: 'premium', mode: 'insensitive' } },
-        { name: { contains: 'growth', mode: 'insensitive' } },
-        { name: { contains: 'pro', mode: 'insensitive' } },
-      ],
-    },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  if (!plan) {
-    throw new Error(`No se encontró el plan cobrable ${planKey} en la tabla plans.`);
+function checkoutErrorMessage(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2021') {
+      return 'Falta aplicar la migración de facturación en la base de datos (tabla subscriptions).';
+    }
   }
+  if (error instanceof Error) {
+    if (error.message.includes('MP_ACCESS_TOKEN')) {
+      return 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).';
+    }
+    return error.message;
+  }
+  return 'No se pudo iniciar el checkout.';
+}
 
-  return plan;
+function mercadoPagoCheckoutUrl(preapproval: { init_point?: string | null; sandbox_init_point?: string | null }) {
+  return preapproval.sandbox_init_point ?? preapproval.init_point ?? null;
 }
 
 const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof checkoutSchema> }>('/subscriptions/checkout', async (request, reply) => {
-    const portalUser = await resolvePortalUserFromRequest(request);
-    if (!portalUser) {
-      return reply.code(401).send({
-        error: 'Para pagar necesitás iniciar sesión en el portal, así podemos activar el plan en tu cuenta.',
-      });
-    }
-
-    const actor = await prisma.user.findUnique({
-      where: { id: portalUser.userId },
-      select: { role: true },
-    });
-    if (actor?.role !== UserRole.owner) {
-      return reply.code(403).send({ error: 'Solo el administrador de la cuenta puede contratar el plan.' });
-    }
-
-    const parsed = checkoutSchema.safeParse(request.body ?? {});
-    if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear suscripción.' });
-
-    const interval = toBillingInterval(parsed.data.billingMode);
-    const plan = await resolveChargeablePlan(parsed.data.planId);
-    const fxRate = getBillingUsdToArsRate();
-    const amountUsd = getPlanBillingAmountUsd(parsed.data.planId, interval);
-    const amountArs = usdToArs(amountUsd, fxRate);
-    const publicUrl = getPublicAppUrl();
-    const reason =
-      interval === BillingInterval.annual
-        ? `Cleexs Premium anual - ${amountUsd} USD referenciales`
-        : `Cleexs Premium mensual - ${amountUsd} USD referenciales`;
-
-    const subscription = await prisma.subscription.create({
-      data: {
-        tenantId: portalUser.tenantId,
-        planId: plan.id,
-        status: SubscriptionStatus.pending,
-        billingInterval: interval,
-        currency: getBillingCurrency(),
-        amountUsd,
-        amountArs,
-        fxRate,
-        payerEmail: portalUser.email,
-        reason,
-      },
-    });
-
     try {
-      const preapproval = await getPreApprovalClient().create({
-        body: {
-          reason,
-          payer_email: portalUser.email,
-          external_reference: subscription.id,
-          back_url: `${publicUrl}/pago/exito?subscription=${encodeURIComponent(subscription.id)}`,
-          status: 'pending',
-          auto_recurring: {
-            frequency: interval === BillingInterval.annual ? 12 : 1,
-            frequency_type: 'months',
-            transaction_amount: amountArs,
-            currency_id: 'ARS',
-          },
-        },
-      });
+      const portalUser = await resolvePortalUserFromRequest(request);
+      if (!portalUser) {
+        return reply.code(401).send({
+          error: 'Para pagar necesitás iniciar sesión en el portal, así podemos activar el plan en tu cuenta.',
+        });
+      }
 
-      const checkoutUrl = preapproval.init_point;
-      await prisma.subscription.update({
-        where: { id: subscription.id },
+      const actor = await prisma.user.findUnique({
+        where: { id: portalUser.userId },
+        select: { role: true },
+      });
+      if (actor?.role !== UserRole.owner) {
+        return reply.code(403).send({ error: 'Solo el administrador de la cuenta puede contratar el plan.' });
+      }
+
+      const parsed = checkoutSchema.safeParse(request.body ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear suscripción.' });
+
+      if (!process.env.MP_ACCESS_TOKEN?.trim()) {
+        return reply.code(503).send({ error: 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).' });
+      }
+
+      const interval = toBillingInterval(parsed.data.billingMode);
+      const plan = await ensurePremiumPlan(prisma);
+      const fxRate = getBillingUsdToArsRate();
+      const amountUsd = getPlanBillingAmountUsd(parsed.data.planId, interval);
+      const amountArs = usdToArs(amountUsd, fxRate);
+      const publicUrl = getPublicAppUrl();
+      const reason =
+        interval === BillingInterval.annual
+          ? `Cleexs Premium anual - ${amountUsd} USD referenciales`
+          : `Cleexs Premium mensual - ${amountUsd} USD referenciales`;
+
+      const subscription = await prisma.subscription.create({
         data: {
-          mpPreapprovalId: preapproval.id,
-          payerEmail: preapproval.payer_email ?? portalUser.email,
-          initPoint: checkoutUrl,
-          sandboxInitPoint: checkoutUrl,
+          tenantId: portalUser.tenantId,
+          planId: plan.id,
+          status: SubscriptionStatus.pending,
+          billingInterval: interval,
+          currency: getBillingCurrency(),
+          amountUsd,
+          amountArs,
+          fxRate,
+          payerEmail: portalUser.email,
+          reason,
         },
       });
 
-      return {
-        ok: true,
-        subscriptionId: subscription.id,
-        mpPreapprovalId: preapproval.id,
-        checkoutUrl,
-        amount: {
-          usd: amountUsd,
-          ars: amountArs,
-          fxRate,
-          currency: 'ARS',
-        },
-      };
+      try {
+        const preapproval = await getPreApprovalClient().create({
+          body: {
+            reason,
+            payer_email: portalUser.email,
+            external_reference: subscription.id,
+            back_url: `${publicUrl}/pago/exito?subscription=${encodeURIComponent(subscription.id)}`,
+            auto_recurring: {
+              frequency: interval === BillingInterval.annual ? 12 : 1,
+              frequency_type: 'months',
+              transaction_amount: amountArs,
+              currency_id: 'ARS',
+            },
+          },
+        });
+
+        const mpLinks = preapproval as typeof preapproval & {
+          init_point?: string | null;
+          sandbox_init_point?: string | null;
+        };
+        const checkoutUrl = mercadoPagoCheckoutUrl(mpLinks);
+        if (!checkoutUrl) {
+          throw new Error('Mercado Pago no devolvió URL de checkout.');
+        }
+
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: {
+            mpPreapprovalId: preapproval.id,
+            payerEmail: preapproval.payer_email ?? portalUser.email,
+            initPoint: mpLinks.init_point ?? checkoutUrl,
+            sandboxInitPoint: mpLinks.sandbox_init_point ?? checkoutUrl,
+          },
+        });
+
+        return {
+          ok: true,
+          subscriptionId: subscription.id,
+          mpPreapprovalId: preapproval.id,
+          checkoutUrl,
+          amount: {
+            usd: amountUsd,
+            ars: amountArs,
+            fxRate,
+            currency: 'ARS',
+          },
+        };
+      } catch (error) {
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: { status: SubscriptionStatus.cancelled, cancelledAt: new Date() },
+        });
+        fastify.log.error({ err: error }, 'Mercado Pago preapproval create failed');
+        return reply.code(502).send({ error: 'Mercado Pago no pudo crear la suscripción. Revisá credenciales TEST y el monto en ARS.' });
+      }
     } catch (error) {
-      await prisma.subscription.update({
-        where: { id: subscription.id },
-        data: { status: SubscriptionStatus.cancelled, cancelledAt: new Date() },
-      });
-      fastify.log.error({ err: error }, 'Mercado Pago preapproval create failed');
-      return reply.code(502).send({ error: 'Mercado Pago no pudo crear la suscripción.' });
+      fastify.log.error({ err: error }, 'subscriptions/checkout failed');
+      return reply.code(500).send({ error: checkoutErrorMessage(error) });
     }
   });
 

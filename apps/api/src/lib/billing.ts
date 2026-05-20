@@ -1,5 +1,8 @@
 import { BillingCurrency, BillingInterval, SubscriptionStatus, type PrismaClient } from '@prisma/client';
 
+/** Plan de DB vinculado a suscripciones Mercado Pago (Premium / crecimiento). */
+export const PREMIUM_PLAN_ID = '00000000-0000-0000-0000-000000000002';
+
 const DEFAULT_USD_TO_ARS_RATE = 1400;
 const PREMIUM_MONTHLY_USD = 99;
 const PREMIUM_ANNUAL_DISCOUNT = 0.8;
@@ -51,4 +54,25 @@ export async function getActiveSubscription(prisma: PrismaClient, tenantId: stri
 export async function hasActiveSubscription(prisma: PrismaClient, tenantId: string, now = new Date()) {
   const subscription = await getActiveSubscription(prisma, tenantId, now);
   return Boolean(subscription);
+}
+
+/** Garantiza fila en `plans` para activar Premium tras el cobro (evita 500 si solo existe Basic). */
+export async function ensurePremiumPlan(prisma: PrismaClient) {
+  return prisma.plan.upsert({
+    where: { id: PREMIUM_PLAN_ID },
+    update: {
+      name: 'Cleexs Premium',
+    },
+    create: {
+      id: PREMIUM_PLAN_ID,
+      name: 'Cleexs Premium',
+      runsPerMonth: 100,
+      promptsActiveLimit: 25,
+      brandsLimit: 5,
+      competitorsLimit: 10,
+      retentionMonths: 24,
+      automationEnabled: true,
+      priceMonthly: PREMIUM_MONTHLY_USD,
+    },
+  });
 }
