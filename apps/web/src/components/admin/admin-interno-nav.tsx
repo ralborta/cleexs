@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Link2, Mail, Users } from 'lucide-react';
+import { Link2, Mail, MousePointerClick, Users } from 'lucide-react';
 
 const links = [
   { href: '/admin/cuentas', label: 'Cuentas y cortesías', icon: Users },
   { href: '/admin/email', label: 'Email · secuencia', icon: Mail },
+  { href: '/admin/referidores', label: 'Referidores', icon: MousePointerClick },
   { href: '/tools/auspiciadores', label: 'Links auspiciador', icon: Link2 },
 ] as const;
 

@@ -497,6 +497,44 @@ model PublicDiagnosticShareVisit {
   @@map("public_diagnostic_share_visits")
 }
 
+// Campañas internas de referidores / auspiciadores para links de tráfico a Cleexs.
+model ReferralCampaign {
+  id          String   @id @default(uuid())
+  refCode     String   @unique @map("ref_code")
+  name        String
+  utmSource   String?  @map("utm_source")
+  utmMedium   String?  @map("utm_medium")
+  utmCampaign String?  @map("utm_campaign")
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  clicks      ReferralClick[]
+
+  @@index([active])
+  @@index([createdAt])
+  @@map("referral_campaigns")
+}
+
+// Clicks reales al link corto /r/:ref antes de redirigir al sitio público.
+model ReferralClick {
+  id          String   @id @default(uuid())
+  campaignId  String?  @map("campaign_id")
+  refCode     String   @map("ref_code")
+  targetUrl   String   @map("target_url")
+  ipHash      String?  @map("ip_hash")
+  userAgentHash String? @map("user_agent_hash")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  campaign    ReferralCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([refCode])
+  @@index([createdAt])
+  @@map("referral_clicks")
+}
+
 model UsageLedger {
   id                 String            @id @default(uuid())
   action             EntitlementAction
