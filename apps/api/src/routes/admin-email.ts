@@ -8,6 +8,7 @@ import {
 import { z } from 'zod';
 import { sendInternalCampaignTestEmail } from '../lib/internal-email-campaign-send';
 import { sendAdminTestEmail } from '../lib/internal-email-send';
+import { resolveMarketingRecipients, sendMarketingEmail } from '../lib/marketing-email';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { prisma } from '../lib/prisma';
 
@@ -64,6 +65,21 @@ const sendCampaignTestBody = z.object({
   campaignId: z.string().uuid(),
 });
 
+const broadcastBody = z.object({
+  subject: z.string().trim().min(3).max(180),
+  body: z.string().trim().min(3).max(8000),
+  segment: z.enum(['all', 'free', 'premium']).default('free'),
+  ctaLabel: z.string().trim().min(1).max(80).optional(),
+  ctaUrl: z.string().url().optional(),
+  campaignSlug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-_]*$/i).optional(),
+  limit: z.number().int().min(1).max(1000).default(250),
+  dryRun: z.boolean().default(true),
+});
+
+function todaySlugPart() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof sendTestBody> }>('/email/send-test', async (request, reply) => {
     if (!requireAdminSecret(request)) {
@@ -116,6 +132,89 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
         e && typeof e === 'object' && 'statusCode' in e ? Number((e as { statusCode: unknown }).statusCode) || 502 : 502;
       return reply.code(code).send({ error: msg });
     }
+  });
+
+  fastify.post<{ Body: z.infer<typeof broadcastBody> }>('/email/broadcast', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = broadcastBody.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    const campaignSlug = parsed.data.campaignSlug || `broadcast-${todaySlugPart()}`;
+    const recipients = await resolveMarketingRecipients({
+      segment: parsed.data.segment,
+      limit: parsed.data.limit,
+    });
+
+    if (parsed.data.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        campaignSlug,
+        segment: parsed.data.segment,
+        totalRecipients: recipients.length,
+        sample: recipients.slice(0, 10).map((r) => ({
+          email: r.email,
+          planName: r.planName,
+          brandName: r.brandName,
+          domain: r.domain,
+          cleexsScore: r.cleexsScore,
+          scoreBucket: r.scoreBucket,
+        })),
+      };
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const errors: Array<{ email: string; error: string }> = [];
+
+    for (const recipient of recipients) {
+      const alreadySent = await prisma.cleexsInternalEmailSendLog.findFirst({
+        where: {
+          recipientEmail: recipient.email,
+          campaignSlug,
+          status: CleexsEmailSendStatus.sent,
+        },
+        select: { id: true },
+      });
+      if (alreadySent) continue;
+
+      try {
+        await sendMarketingEmail({
+          recipient,
+          campaignSlug,
+          subject: parsed.data.subject,
+          body: parsed.data.body,
+          ctaLabel: parsed.data.ctaLabel,
+          ctaUrl: parsed.data.ctaUrl,
+          mergeSummary: {
+            mode: 'admin_broadcast',
+            segment: parsed.data.segment,
+          },
+        });
+        sent += 1;
+      } catch (e) {
+        failed += 1;
+        if (errors.length < 20) errors.push({ email: recipient.email, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    return {
+      ok: failed === 0,
+      dryRun: false,
+      campaignSlug,
+      segment: parsed.data.segment,
+      totalRecipients: recipients.length,
+      sent,
+      failed,
+      errors,
+    };
   });
 
   fastify.post('/email/campaigns/seed-defaults', async (request, reply) => {

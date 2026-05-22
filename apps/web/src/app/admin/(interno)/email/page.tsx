@@ -7,6 +7,7 @@ import {
   Inbox,
   LayoutList,
   MailCheck,
+  Megaphone,
   MousePointerClick,
   ScrollText,
   Send,
@@ -77,6 +78,25 @@ type Stats = {
   resendWebhook?: ResendWebhookStats;
 };
 
+type BroadcastResult = {
+  ok: boolean;
+  dryRun: boolean;
+  campaignSlug: string;
+  segment: string;
+  totalRecipients: number;
+  sent?: number;
+  failed?: number;
+  errors?: Array<{ email: string; error: string }>;
+  sample?: Array<{
+    email: string;
+    planName?: string;
+    brandName?: string;
+    domain?: string;
+    cleexsScore?: number;
+    scoreBucket?: string;
+  }>;
+};
+
 export default function AdminEmailOpsPage() {
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +120,13 @@ export default function AdminEmailOpsPage() {
   const [testBusy, setTestBusy] = useState(false);
   const [campaignPreviewBusyId, setCampaignPreviewBusyId] = useState<string | null>(null);
   const [sendActionHint, setSendActionHint] = useState<string | null>(null);
+  const [broadcastSubject, setBroadcastSubject] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [broadcastSegment, setBroadcastSegment] = useState<'free' | 'all' | 'premium'>('free');
+  const [broadcastLimit, setBroadcastLimit] = useState(250);
+  const [broadcastDryRun, setBroadcastDryRun] = useState(true);
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<BroadcastResult | null>(null);
 
   useEffect(() => {
     if (!sendActionHint) return;
@@ -227,6 +254,34 @@ export default function AdminEmailOpsPage() {
       setError(e instanceof Error ? e.message : 'Error');
     } finally {
       setCampaignPreviewBusyId(null);
+    }
+  }
+
+  async function sendBroadcast(e: React.FormEvent) {
+    e.preventDefault();
+    setBroadcastBusy(true);
+    setBroadcastResult(null);
+    setError(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/email/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: broadcastSubject.trim(),
+          body: broadcastBody.trim(),
+          segment: broadcastSegment,
+          limit: broadcastLimit,
+          dryRun: broadcastDryRun,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as BroadcastResult & { error?: string };
+      if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+      setBroadcastResult(data);
+      if (!data.dryRun) await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setBroadcastBusy(false);
     }
   }
 
@@ -360,6 +415,112 @@ export default function AdminEmailOpsPage() {
               <p className="mt-3 text-xs leading-relaxed text-slate-600" role="status">
                 {sendActionHint}
               </p>
+            ) : null}
+          </AdminPanelSection>
+
+          <AdminPanelSection
+            icon={Megaphone}
+            accent="amber"
+            title="Broadcast manual"
+            description={
+              <>
+                Enviá una oferta o aviso a registrados. Por seguridad arranca en{' '}
+                <code className="rounded bg-amber-50 px-1 font-mono text-[11px]">dryRun</code>: primero muestra destinatarios y
+                muestra. Variables disponibles: <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{brandName}}'}</code>,{' '}
+                <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{domain}}'}</code>,{' '}
+                <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{score}}'}</code>,{' '}
+                <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{tip1}}'}</code>.
+              </>
+            }
+          >
+            <form onSubmit={sendBroadcast} className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-[1fr_170px_150px]">
+                <label className="block">
+                  <span className={labelCls}>Asunto</span>
+                  <input
+                    required
+                    value={broadcastSubject}
+                    onChange={(ev) => setBroadcastSubject(ev.target.value)}
+                    placeholder="Hoy 50% off para activar Premium"
+                    className={field}
+                  />
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Segmento</span>
+                  <select
+                    value={broadcastSegment}
+                    onChange={(ev) => setBroadcastSegment(ev.target.value as typeof broadcastSegment)}
+                    className={field}
+                  >
+                    <option value="free">free</option>
+                    <option value="all">all</option>
+                    <option value="premium">premium</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Límite</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={broadcastLimit}
+                    onChange={(ev) => setBroadcastLimit(Number(ev.target.value))}
+                    className={field}
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className={labelCls}>Mensaje</span>
+                <textarea
+                  required
+                  rows={6}
+                  value={broadcastBody}
+                  onChange={(ev) => setBroadcastBody(ev.target.value)}
+                  placeholder={'Hola {{brandName}}, hoy activamos 50% de descuento en Premium.\\n\\nTip para {{domain}}: {{tip1}}'}
+                  className={`${field} resize-y`}
+                />
+              </label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={broadcastDryRun}
+                    onChange={(ev) => setBroadcastDryRun(ev.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  />
+                  Solo prueba / no enviar todavía
+                </label>
+                <button
+                  type="submit"
+                  disabled={broadcastBusy}
+                  className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-600/20 transition hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {broadcastBusy ? 'Procesando…' : broadcastDryRun ? 'Previsualizar destinatarios' : 'Enviar broadcast'}
+                </button>
+              </div>
+            </form>
+            {broadcastResult ? (
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 text-sm text-amber-950">
+                <p className="font-semibold">
+                  {broadcastResult.dryRun ? 'Prueba lista' : 'Broadcast ejecutado'} · {broadcastResult.totalRecipients} destinatarios ·{' '}
+                  <span className="font-mono text-xs">{broadcastResult.campaignSlug}</span>
+                </p>
+                {!broadcastResult.dryRun ? (
+                  <p className="mt-1 text-xs">
+                    Enviados: {broadcastResult.sent ?? 0} · Fallidos: {broadcastResult.failed ?? 0}
+                  </p>
+                ) : null}
+                {broadcastResult.sample?.length ? (
+                  <pre className="mt-3 max-h-56 overflow-auto rounded-xl bg-white/80 p-3 font-mono text-[11px] leading-relaxed text-slate-700">
+                    {JSON.stringify(broadcastResult.sample, null, 2)}
+                  </pre>
+                ) : null}
+                {broadcastResult.errors?.length ? (
+                  <pre className="mt-3 max-h-40 overflow-auto rounded-xl bg-red-50 p-3 font-mono text-[11px] text-red-900">
+                    {JSON.stringify(broadcastResult.errors, null, 2)}
+                  </pre>
+                ) : null}
+              </div>
             ) : null}
           </AdminPanelSection>
 
