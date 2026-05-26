@@ -34,6 +34,11 @@ type Provider = 'resend_inline' | 'smtp';
 
 const DEFAULT_CTA_URL = 'https://app.cleexs.net/planes';
 const DEFAULT_CTA_LABEL = 'Ver Premium';
+const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
+
+function isPlaceholderEmail(email: string | null | undefined): boolean {
+  return Boolean(email?.trim().toLowerCase().endsWith(WA_PLACEHOLDER_EMAIL_DOMAIN));
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -311,6 +316,7 @@ export async function resolveMarketingRecipients(input: {
   const users = await prisma.user.findMany({
     where: {
       email: { contains: '@' },
+      NOT: { email: { endsWith: WA_PLACEHOLDER_EMAIL_DOMAIN } },
       role: 'owner',
       tenant: { status: 'active' },
     },
@@ -327,6 +333,7 @@ export async function resolveMarketingRecipients(input: {
   });
 
   for (const user of users) {
+    if (isPlaceholderEmail(user.email)) continue;
     const planName = user.tenant.plan.name;
     const premium = planIsPremium(planName);
     if (input.segment === 'free' && premium) continue;
@@ -348,7 +355,11 @@ export async function resolveMarketingRecipients(input: {
 
   if (input.segment !== 'premium' && byEmail.size < input.limit) {
     const diagnostics = await prisma.publicDiagnostic.findMany({
-      where: { email: { not: null }, status: 'completed' },
+      where: {
+        email: { not: null },
+        NOT: { email: { endsWith: WA_PLACEHOLDER_EMAIL_DOMAIN } },
+        status: 'completed',
+      },
       orderBy: { updatedAt: 'desc' },
       select: { email: true, brandName: true, domain: true, analysisJson: true, shareSlug: true },
       take: input.limit * 3,
@@ -358,6 +369,7 @@ export async function resolveMarketingRecipients(input: {
     for (const diagnostic of diagnostics) {
       const email = diagnostic.email?.trim().toLowerCase();
       if (!email || byEmail.has(email)) continue;
+      if (isPlaceholderEmail(email)) continue;
       const score = scoreFromAnalysisJson(diagnostic.analysisJson);
       byEmail.set(email, {
         email,
