@@ -1,0 +1,58 @@
+name: Weekly Emails
+
+on:
+  schedule:
+    # Tuesdays at 10:00 Argentina time (13:00 UTC).
+    - cron: '0 13 * * 2'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview recipients without sending emails'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      segment:
+        description: 'Audience segment'
+        required: true
+        default: 'free'
+        type: choice
+        options:
+          - free
+          - all
+          - premium
+      limit:
+        description: 'Maximum recipients'
+        required: true
+        default: '50'
+
+jobs:
+  send-weekly-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger weekly email campaign
+        env:
+          CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          SEGMENT: ${{ github.event_name == 'schedule' && 'free' || inputs.segment }}
+          LIMIT: ${{ github.event_name == 'schedule' && '50' || inputs.limit }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CLEEXS_CRON_SECRET GitHub secret"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --arg segment "$SEGMENT" \
+            --argjson limit "$LIMIT" \
+            --argjson dryRun "$DRY_RUN" \
+            '{segment:$segment, limit:$limit, dryRun:$dryRun}')
+
+          curl --fail-with-body -sS \
+            -X POST "$API_URL/api/cron/weekly-emails" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
