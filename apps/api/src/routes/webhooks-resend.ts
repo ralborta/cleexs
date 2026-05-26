@@ -2,6 +2,7 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsync } from 'fastify';
 import { Webhook } from 'svix';
 import { prisma } from '../lib/prisma';
+import { updateLeadEmailFromResendEvent } from '../lib/lead-email-sender';
 
 type ResendWebhookBody = {
   type: string;
@@ -92,6 +93,14 @@ const webhooksResendRoutes: FastifyPluginAsync = async (fastify) => {
           return reply.code(200).send({ ok: true, duplicate: true });
         }
         throw e;
+      }
+
+      if (emailId) {
+        try {
+          await updateLeadEmailFromResendEvent(emailId, eventType);
+        } catch (e) {
+          fastify.log.warn({ err: e, emailId, eventType }, 'No se pudo actualizar LeadEmail desde webhook Resend');
+        }
       }
 
       return reply.code(200).send({ ok: true });

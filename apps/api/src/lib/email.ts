@@ -33,6 +33,8 @@ export async function sendSmtpMail(opts: {
   subject: string;
   text?: string;
   html?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 }): Promise<{ messageId?: string }> {
   if (isEmailDisabled()) {
     throw Object.assign(new Error('emails_disabled'), { statusCode: 400 });
@@ -46,6 +48,8 @@ export async function sendSmtpMail(opts: {
     subject: opts.subject,
     text: opts.text,
     html: opts.html,
+    replyTo: opts.replyTo,
+    headers: opts.headers,
   });
   return { messageId: info.messageId };
 }

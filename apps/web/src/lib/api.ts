@@ -121,11 +121,13 @@ export interface LeadContact {
 
 export interface LeadEmail {
   id: string;
+  leadContactId: string;
   subject: string;
   body: string;
   provider?: string;
   status: string;
   sentAt?: string;
+  metaJson?: Record<string, unknown>;
 }
 
 export interface LeadSource {
@@ -308,6 +310,14 @@ export const leadsApi = {
     }),
   generateEmail: (data: { leadSourceId: string; leadContactId: string }) =>
     api<LeadEmail>(`/api/leads/email`, { method: 'POST', body: JSON.stringify(data) }),
+  sendEmail: (
+    id: string,
+    data: { mode: 'shadow' | 'real'; shadowTo?: string; subject?: string; body?: string }
+  ) =>
+    api<{ ok: true; mode: 'shadow' | 'real'; provider: string; to: string; originalTo: string; externalId?: string | null }>(
+      `/api/leads/email/${id}/send`,
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
 };
 
 export interface BrandDashboardComparisonRow {

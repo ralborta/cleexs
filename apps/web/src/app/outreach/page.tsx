@@ -8,6 +8,7 @@ import {
   tenantsApi,
   type Brand,
   type LeadContact,
+  type LeadEmail,
   type LeadSource,
 } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,16 +25,163 @@ function contactsBySource(contacts: LeadContact[]): Record<string, LeadContact[]
   return map;
 }
 
+function EmailAction({
+  lead,
+  contact,
+  email,
+  onChanged,
+}: {
+  lead: LeadSource;
+  contact: LeadContact;
+  email?: LeadEmail;
+  onChanged: () => Promise<void>;
+}) {
+  const [draft, setDraft] = useState<LeadEmail | null>(email ?? null);
+  const [subject, setSubject] = useState(email?.subject ?? '');
+  const [body, setBody] = useState(email?.body ?? '');
+  const [shadowTo, setShadowTo] = useState('');
+  const [busy, setBusy] = useState<null | 'draft' | 'shadow' | 'real'>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft(email ?? null);
+    setSubject(email?.subject ?? '');
+    setBody(email?.body ?? '');
+  }, [email]);
+
+  async function ensureDraft() {
+    if (draft) return draft;
+    setBusy('draft');
+    setMsg(null);
+    try {
+      const created = await leadsApi.generateEmail({ leadSourceId: lead.id, leadContactId: contact.id });
+      setDraft(created);
+      setSubject(created.subject);
+      setBody(created.body);
+      await onChanged();
+      return created;
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'No se pudo generar el email.');
+      return null;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function send(mode: 'shadow' | 'real') {
+    const current = await ensureDraft();
+    if (!current) return;
+    setBusy(mode);
+    setMsg(null);
+    try {
+      const result = await leadsApi.sendEmail(current.id, {
+        mode,
+        shadowTo: shadowTo.trim() || undefined,
+        subject,
+        body,
+      });
+      setMsg(
+        mode === 'shadow'
+          ? `Shadow enviado a ${result.to}. El competidor no recibió nada.`
+          : `Enviado a ${result.to}.`
+      );
+      await onChanged();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'No se pudo enviar.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const status = draft?.status || email?.status;
+
+  return (
+    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-slate-700">Email cold outreach</p>
+        {status ? (
+          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
+            {status}
+          </span>
+        ) : null}
+      </div>
+      {!draft && !email ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void ensureDraft()}
+          disabled={busy === 'draft'}
+          className="mt-2 h-8 border-slate-200 bg-white text-xs"
+        >
+          {busy === 'draft' ? 'Generando…' : 'Generar preview'}
+        </Button>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={7}
+            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <input
+            value={shadowTo}
+            onChange={(e) => setShadowTo(e.target.value)}
+            placeholder="Shadow to opcional (si no, OUTREACH_SHADOW_TO)"
+            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void send('shadow')}
+              disabled={!!busy}
+              className="h-8 border-blue-200 bg-white text-xs text-blue-700 hover:bg-blue-50"
+            >
+              {busy === 'shadow' ? 'Enviando…' : 'Shadow send'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void send('real')}
+              disabled={!!busy}
+              className="h-8 bg-red-600 text-xs hover:bg-red-700"
+            >
+              {busy === 'real' ? 'Enviando…' : 'Enviar real'}
+            </Button>
+          </div>
+        </div>
+      )}
+      {msg ? <p className="mt-2 text-xs text-slate-600">{msg}</p> : null}
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+        El envío real queda bloqueado hasta configurar <code>OUTREACH_DOMAIN_VERIFIED=true</code>. Usá shadow para probar sin tocar al competidor.
+      </p>
+    </div>
+  );
+}
+
 function SourceColumn({
   title,
   subtitle,
   accent,
   contacts,
+  lead,
+  emails,
+  onChanged,
 }: {
   title: string;
   subtitle: string;
   accent: 'blue' | 'purple';
   contacts: LeadContact[];
+  lead: LeadSource;
+  emails: LeadEmail[];
+  onChanged: () => Promise<void>;
 }) {
   const accentStyles =
     accent === 'blue'
@@ -94,6 +242,12 @@ function SourceColumn({
               {typeof c.score === 'number' && c.score > 0 && (
                 <p className="mt-1 text-xs text-slate-500">Confianza: {c.score}%</p>
               )}
+              <EmailAction
+                lead={lead}
+                contact={c}
+                email={emails.find((email) => email.leadContactId === c.id)}
+                onChanged={onChanged}
+              />
             </li>
           ))}
         </ul>
@@ -102,7 +256,7 @@ function SourceColumn({
   );
 }
 
-function LeadCard({ lead }: { lead: LeadSource }) {
+function LeadCard({ lead, onChanged }: { lead: LeadSource; onChanged: () => Promise<void> }) {
   const [showEvidence, setShowEvidence] = useState(false);
   const bySource = contactsBySource(lead.contacts || []);
   const firecrawl = bySource['firecrawl'] || [];
@@ -185,12 +339,18 @@ function LeadCard({ lead }: { lead: LeadSource }) {
             subtitle="Emails extraídos de la web del competidor"
             accent="blue"
             contacts={firecrawl}
+            lead={lead}
+            emails={lead.emails || []}
+            onChanged={onChanged}
           />
           <SourceColumn
             title="Hunter.io"
             subtitle="Domain search con nombre y rol"
             accent="purple"
             contacts={hunter}
+            lead={lead}
+            emails={lead.emails || []}
+            onChanged={onChanged}
           />
         </div>
       </CardContent>
@@ -378,6 +538,10 @@ export default function OutreachPage() {
     (sum, l) => sum + (l.contacts || []).filter((c) => c.source === 'hunter').length,
     0
   );
+  const leadEmails = filteredLeads.flatMap((lead) => lead.emails || []);
+  const totalDrafts = leadEmails.filter((email) => email.status === 'draft').length;
+  const totalSent = leadEmails.filter((email) => ['sent', 'delivered'].includes(email.status)).length;
+  const totalRisk = leadEmails.filter((email) => ['bounced', 'complained', 'failed'].includes(email.status)).length;
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50">
@@ -524,6 +688,27 @@ export default function OutreachPage() {
           </Card>
         </div>
 
+        <div className="grid gap-3 md:grid-cols-3">
+          <Card className="border-transparent bg-white shadow-md">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">Drafts outreach</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{totalDrafts}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-transparent bg-white shadow-md">
+            <CardContent className="p-4">
+              <p className="text-xs text-emerald-700">Enviados / entregados</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{totalSent}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-transparent bg-white shadow-md">
+            <CardContent className="p-4">
+              <p className="text-xs text-red-700">Fallos / bounces / complaints</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{totalRisk}</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Leads */}
         {filteredLeads.length === 0 ? (
           <Card className="border-transparent bg-white shadow-md">
@@ -545,7 +730,7 @@ export default function OutreachPage() {
         ) : (
           <div className="space-y-4">
             {filteredLeads.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
+              <LeadCard key={lead.id} lead={lead} onChanged={refreshLeads} />
             ))}
           </div>
         )}

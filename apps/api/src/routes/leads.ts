@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { findBrandPosition, type Top3Entry } from '@cleexs/shared';
 import { scrapeEmailsForDomain } from '../lib/firecrawl-emails';
+import { sendLeadEmail } from '../lib/lead-email-sender';
 
 const leadsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /leads?tenantId=...
@@ -209,6 +210,13 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
     leadContactId: z.string().uuid(),
   });
 
+  const sendEmailSchema = z.object({
+    mode: z.enum(['shadow', 'real']).default('shadow'),
+    shadowTo: z.string().email().optional(),
+    subject: z.string().trim().min(3).max(180).optional(),
+    body: z.string().trim().min(3).max(8000).optional(),
+  });
+
   fastify.post<{ Body: z.infer<typeof emailSchema> }>('/email', async (request, reply) => {
     const data = emailSchema.parse(request.body);
 
@@ -299,6 +307,33 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return email;
+  });
+
+  // POST /leads/email/:id/send
+  fastify.post<{ Params: { id: string }; Body: z.infer<typeof sendEmailSchema> }>('/email/:id/send', async (request, reply) => {
+    const parsed = sendEmailSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    try {
+      const result = await sendLeadEmail({
+        leadEmailId: request.params.id,
+        mode: parsed.data.mode,
+        shadowTo: parsed.data.shadowTo,
+        subject: parsed.data.subject,
+        body: parsed.data.body,
+      });
+      return { ok: true, ...result };
+    } catch (error) {
+      const statusCode =
+        error && typeof error === 'object' && 'statusCode' in error ? Number((error as { statusCode: unknown }).statusCode) || 500 : 500;
+      const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : undefined;
+      return reply.code(statusCode).send({
+        error: error instanceof Error ? error.message : String(error),
+        ...(code ? { code } : {}),
+      });
+    }
   });
 };
 
