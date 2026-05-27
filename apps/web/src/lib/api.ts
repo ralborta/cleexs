@@ -2,19 +2,33 @@ function resolveApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
   if (process.env.NODE_ENV === 'development') return '/proxy-api';
-  return 'http://localhost:3001';
+  return 'https://cleexsapi-production.up.railway.app';
 }
 
 const API_URL = resolveApiBaseUrl();
 
 export async function api<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), 20000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      signal: options?.signal ?? controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('La API tardó demasiado en responder. Refrescá o probá de nuevo.');
+    }
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
@@ -379,6 +393,153 @@ export interface OutreachStats {
     matchedToOutreach: number;
   };
 }
+
+// =========================
+// Reportes internos (admin)
+// =========================
+
+export type ReportWindowDays = 7 | 30 | 90;
+
+export interface AcquisitionReport {
+  windowDays: number;
+  asOf: string;
+  totals: {
+    diagnosticsInWindow: number;
+    diagnosticsAllTime: number;
+    completedInWindow: number;
+    withEmailInWindow: number;
+    goldInWindow: number;
+    completionRate: number;
+    emailCaptureRate: number;
+    goldUpgradeRate: number;
+  };
+  dailySeries: Array<{
+    date: string;
+    created: number;
+    completed: number;
+    withEmail: number;
+  }>;
+  channels: Array<{ channel: string; count: number; share: number }>;
+  topReferrers: Array<{
+    refCode: string;
+    visits: number;
+    completed: number;
+    capturedEmails: number;
+    completionRate: number;
+    latestAt: string;
+  }>;
+  topUtmSources: Array<{ source: string; count: number }>;
+  latestDiagnostics: Array<{
+    id: string;
+    createdAt: string;
+    brandName: string;
+    domain: string;
+    email: string | null;
+    status: string;
+    tier: string | null;
+    refCode: string | null;
+    utmSource: string | null;
+    sourceChannel: string | null;
+  }>;
+}
+
+export interface CleexsScoreReport {
+  windowDays: number;
+  asOf: string;
+  totals: {
+    reportsInWindow: number;
+    brandsAnalyzed: number;
+    averageScore: number;
+  };
+  distribution: {
+    poor: number;
+    low: number;
+    mid: number;
+    good: number;
+    excellent: number;
+  };
+  topBrands: Array<{
+    brandId: string;
+    brandName: string;
+    domain: string | null;
+    industry: string | null;
+    latestScore: number;
+    avgScore: number;
+    latestAt: string;
+    runs: number;
+  }>;
+  bottomBrands: Array<{
+    brandId: string;
+    brandName: string;
+    domain: string | null;
+    industry: string | null;
+    latestScore: number;
+    avgScore: number;
+    latestAt: string;
+    runs: number;
+  }>;
+  industries: Array<{ industry: string; runs: number; avgScore: number }>;
+  dailySeries: Array<{ date: string; runs: number; avgScore: number }>;
+}
+
+export interface EmailOutreachReport {
+  windowDays: number;
+  asOf: string;
+  weekly: {
+    campaignsConfigured: number;
+    totals: {
+      sent: number;
+      failed: number;
+      skipped: number;
+      pending: number;
+    };
+    eventsByType: Record<string, number>;
+    dailySeries: Array<{ date: string; sends: number }>;
+  };
+  outreach: {
+    contactsAllTime: number;
+    totals: {
+      sent: number;
+      delivered: number;
+      opened: number;
+      clicked: number;
+      bounced: number;
+      complained: number;
+      failed: number;
+      delivery_delayed: number;
+      shadow: number;
+      real: number;
+      drafts: number;
+    };
+    rates: {
+      deliveryRate: number;
+      openRate: number;
+      bounceRate: number;
+    };
+    topDomains: Array<{
+      domain: string;
+      sent: number;
+      opened: number;
+      clicked: number;
+      openRate: number;
+      clickRate: number;
+    }>;
+    dailySeries: Array<{ date: string; sends: number }>;
+  };
+  integrations: {
+    resendWebhookSecretConfigured: boolean;
+    outreachDomainVerified: boolean;
+  };
+}
+
+export const internalReportsApi = {
+  acquisition: (windowDays: ReportWindowDays = 30) =>
+    api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
+  cleexsScore: (windowDays: ReportWindowDays = 30) =>
+    api<CleexsScoreReport>(`/api/reports/internal/cleexs-score?windowDays=${windowDays}`),
+  emailOutreach: (windowDays: ReportWindowDays = 30) =>
+    api<EmailOutreachReport>(`/api/reports/internal/email-outreach?windowDays=${windowDays}`),
+};
 
 export interface OutreachEmailRow {
   id: string;

@@ -21,6 +21,7 @@ import adminEntitlementRoutes from './routes/admin-entitlements';
 import adminProvisionRoutes from './routes/admin-provision';
 import adminEmailRoutes from './routes/admin-email';
 import adminDashboardRoutes from './routes/admin-dashboard';
+import adminReportsRoutes from './routes/admin-reports';
 import webhooksResendRoutes from './routes/webhooks-resend';
 import webhooksMercadoPagoRoutes from './routes/webhooks-mercadopago';
 import authPortalRoutes from './routes/auth-portal';
@@ -108,6 +109,7 @@ async function bootstrap() {
   await server.register(promptRoutes, { prefix: '/api/prompts' });
   await server.register(runRoutes, { prefix: '/api/runs' });
   await server.register(reportRoutes, { prefix: '/api/reports' });
+  await server.register(adminReportsRoutes, { prefix: '/api/reports' });
   await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
   await server.register(cronRoutes, { prefix: '/api/cron' });
   await server.register(leadsRoutes, { prefix: '/api/leads' });
