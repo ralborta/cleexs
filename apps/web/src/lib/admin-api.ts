@@ -38,8 +38,25 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
   return jar?.get(COOKIE_NAME)?.value;
 }
 
+/**
+ * Bypass para demo: si en Vercel está seteado ADMIN_DEMO_BYPASS=true (o
+ * NEXT_PUBLIC_ADMIN_DEMO_BYPASS=true para casos en que la build inline el
+ * valor), `assertAdminUiSession` siempre devuelve true y todas las pantallas
+ * internas funcionan sin login. Quitar la env var en produccion real para
+ * restablecer el login.
+ */
+function adminAuthBypassEnabled(): boolean {
+  const a = process.env.ADMIN_DEMO_BYPASS?.toString().trim().toLowerCase();
+  if (a === 'true' || a === '1' || a === 'yes') return true;
+  const b = process.env.NEXT_PUBLIC_ADMIN_DEMO_BYPASS?.toString().trim().toLowerCase();
+  if (b === 'true' || b === '1' || b === 'yes') return true;
+  return false;
+}
+
 /** Valida sesión admin: NextRequest.cookies, cookie store de headers(), cabecera Cookie. */
 export function assertAdminUiSession(request?: Request): boolean {
+  if (adminAuthBypassEnabled()) return true;
+
   const fromReqCookie = cookieFromNextRequest(request);
   if (verifyAdminSessionToken(fromReqCookie)) return true;
 
