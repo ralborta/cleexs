@@ -673,7 +673,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         .count({ where: { receivedAt: { gte: since30 } } })
         .catch(() => 0),
       prisma.webhookEvent
-        .findFirst({ orderBy: { receivedAt: 'desc' }, select: { receivedAt: true, source: true } })
+        .findFirst({ orderBy: { receivedAt: 'desc' }, select: { receivedAt: true, provider: true } })
         .catch(() => null),
       prisma.cleexsResendWebhookEvent
         .count({ where: { occurredAt: { gte: since30 } } })
@@ -841,7 +841,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           url: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/mercadopago`,
           eventsLast30Days: mpEventsLast30,
           lastEventAt: mpLastEvent?.receivedAt?.toISOString() ?? null,
-          lastEventSource: mpLastEvent?.source ?? null,
+          lastEventSource: mpLastEvent?.provider ?? null,
           configured: envFlag('MP_ACCESS_TOKEN'),
         },
         resend: {
