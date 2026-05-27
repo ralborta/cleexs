@@ -68,7 +68,7 @@ type OverrideRow = {
 };
 
 const field =
-  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15';
+  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-600 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15';
 const labelCls = 'text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500';
 const panelOuter =
   'rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-slate-900/[0.05] backdrop-blur-sm md:p-9';
@@ -238,9 +238,9 @@ export default function AdminCuentasPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-300/90">Administración</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">Cuentas y cortesías</h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700">Administración</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">Cuentas y cortesías</h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
             Provisioná tenants y overrides sin terminal. Arriba ves un resumen que viene de la API interna (no es Resend:
             es métrica de producto + estado de integración).
           </p>
@@ -249,7 +249,7 @@ export default function AdminCuentasPage() {
           type="button"
           onClick={() => void loadDashboard()}
           disabled={dashBusy}
-          className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/15 disabled:opacity-50 sm:self-auto"
+          className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 backdrop-blur-sm transition hover:bg-slate-50 disabled:opacity-50 sm:self-auto"
         >
           {dashBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <RefreshCw className="h-4 w-4 opacity-90" aria-hidden />}
           Actualizar métricas
@@ -257,50 +257,50 @@ export default function AdminCuentasPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.07] p-5 backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/[0.07] p-5 backdrop-blur-md">
           <div className="flex items-start justify-between gap-2">
-            <p className={`${labelCls} text-violet-200/80`}>Tenants activos</p>
-            <Building2 className="h-5 w-5 text-violet-300/70" aria-hidden />
+            <p className={`${labelCls} text-violet-700/80`}>Tenants activos</p>
+            <Building2 className="h-5 w-5 text-violet-500" aria-hidden />
           </div>
-          <p className="mt-3 text-3xl font-bold tabular-nums text-white">
+          <p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">
             {dashBusy && !dash ? '—' : (dash?.tenantsOperational ?? '—')}
           </p>
-          <p className="mt-2 text-xs text-slate-400">Excluye código tenant de sistema.</p>
+          <p className="mt-2 text-xs text-slate-600">Excluye código tenant de sistema.</p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.07] p-5 backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/[0.07] p-5 backdrop-blur-md">
           <div className="flex items-start justify-between gap-2">
-            <p className={`${labelCls} text-violet-200/80`}>Usuarios</p>
-            <Users className="h-5 w-5 text-violet-300/70" aria-hidden />
+            <p className={`${labelCls} text-violet-700/80`}>Usuarios</p>
+            <Users className="h-5 w-5 text-violet-500" aria-hidden />
           </div>
-          <p className="mt-3 text-3xl font-bold tabular-nums text-white">
+          <p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">
             {dashBusy && !dash ? '—' : (dash?.usersTotal ?? '—')}
           </p>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-600">
             Con clave portal:{' '}
-            <span className="font-medium text-slate-300">{dash?.usersWithPortalPassword ?? '—'}</span>
+            <span className="font-medium text-slate-700">{dash?.usersWithPortalPassword ?? '—'}</span>
           </p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.07] p-5 backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/[0.07] p-5 backdrop-blur-md">
           <div className="flex items-start justify-between gap-2">
-            <p className={`${labelCls} text-violet-200/80`}>Corridas ({windowDays}d)</p>
+            <p className={`${labelCls} text-violet-700/80`}>Corridas ({windowDays}d)</p>
             <Activity className="h-5 w-5 text-emerald-300/70" aria-hidden />
           </div>
-          <p className="mt-3 text-3xl font-bold tabular-nums text-white">
+          <p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">
             {dashBusy && !dash ? '—' : (dash?.runsLast30Days ?? '—')}
           </p>
-          <p className="mt-2 text-xs text-slate-400">Actividad reciente en la plataforma.</p>
+          <p className="mt-2 text-xs text-slate-600">Actividad reciente en la plataforma.</p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.07] p-5 backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/[0.07] p-5 backdrop-blur-md">
           <div className="flex items-start justify-between gap-2">
-            <p className={`${labelCls} text-violet-200/80`}>Overrides activos</p>
+            <p className={`${labelCls} text-violet-700/80`}>Overrides activos</p>
             <Sparkles className="h-5 w-5 text-amber-300/70" aria-hidden />
           </div>
-          <p className="mt-3 text-3xl font-bold tabular-nums text-white">
+          <p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">
             {dashBusy && !dash ? '—' : (dash?.entitlementOverridesActive ?? '—')}
           </p>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-600">
             Referidos premiados:{' '}
-            <span className="font-medium text-slate-300">{dash?.referralRewardsGrantedTenants ?? '—'}</span>
+            <span className="font-medium text-slate-700">{dash?.referralRewardsGrantedTenants ?? '—'}</span>
           </p>
         </div>
       </div>
@@ -308,31 +308,31 @@ export default function AdminCuentasPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-white/12 bg-gradient-to-br from-slate-900/80 to-violet-950/40 p-5 backdrop-blur-md lg:col-span-2">
           <div className="flex flex-wrap items-center gap-3">
-            <Mail className="h-5 w-5 text-violet-300" aria-hidden />
+            <Mail className="h-5 w-5 text-violet-600" aria-hidden />
             <div>
-              <p className="text-sm font-semibold text-white">Email interno (secuencia)</p>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm font-semibold text-slate-900">Email interno (secuencia)</p>
+              <p className="text-xs text-slate-600">
                 Datos desde tablas de campañas y logs en la API — no sustituye la API de Resend.
               </p>
             </div>
           </div>
           {'unavailable' in (dash?.emailOps ?? {}) ? (
-            <p className="mt-4 rounded-xl bg-black/30 px-4 py-3 text-xs text-amber-200/90">
+            <p className="mt-4 rounded-xl bg-slate-100 px-4 py-3 text-xs text-amber-700">
               Métricas de email no disponibles: {(dash?.emailOps as { reason?: string }).reason ?? 'tablas o migración pendiente'}
             </p>
           ) : dash?.emailOps && !('unavailable' in dash.emailOps) ? (
             <div className="mt-5 grid gap-4 sm:grid-cols-3">
               <div>
                 <p className={labelCls}>Campañas</p>
-                <p className="mt-1 text-2xl font-bold text-white tabular-nums">{dash.emailOps.campaignsConfigured}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{dash.emailOps.campaignsConfigured}</p>
               </div>
               <div>
                 <p className={labelCls}>Envíos ({windowDays}d)</p>
-                <p className="mt-1 text-2xl font-bold text-white tabular-nums">{dash.emailOps.sendsLast30Days}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{dash.emailOps.sendsLast30Days}</p>
               </div>
               <div className="sm:col-span-1">
                 <p className={labelCls}>Por estado</p>
-                <pre className="mt-2 max-h-24 overflow-auto rounded-lg bg-black/25 p-2 font-mono text-[10px] leading-relaxed text-slate-300">
+                <pre className="mt-2 max-h-24 overflow-auto rounded-lg bg-slate-100 p-2 font-mono text-[10px] leading-relaxed text-slate-700">
                   {JSON.stringify(dash.emailOps.byStatusLast30Days, null, 2)}
                 </pre>
               </div>
@@ -344,11 +344,11 @@ export default function AdminCuentasPage() {
 
         <div className="flex flex-col justify-center rounded-2xl border border-white/12 bg-white/[0.06] p-5 backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-slate-300" aria-hidden />
-            <p className="text-sm font-semibold text-white">Canales de envío</p>
+            <ShieldCheck className="h-5 w-5 text-slate-700" aria-hidden />
+            <p className="text-sm font-semibold text-slate-900">Canales de envío</p>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-slate-400">
-            REST <code className="rounded bg-black/30 px-1 font-mono text-[10px]">RESEND_API_KEY</code>, relay SMTP Resend y SMTP
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            REST <code className="rounded bg-slate-100 px-1 font-mono text-[10px]">RESEND_API_KEY</code>, relay SMTP Resend y SMTP
             saliente genérico (mismo criterio que diagnósticos).
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -356,7 +356,7 @@ export default function AdminCuentasPage() {
               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                 dash?.integrations.resendApiKeyConfigured
                   ? 'bg-emerald-500/20 text-emerald-200 ring-emerald-400/30'
-                  : 'bg-slate-500/15 text-slate-300 ring-white/10'
+                  : 'bg-slate-500/15 text-slate-700 ring-slate-200'
               }`}
             >
               Resend API {dash?.integrations.resendApiKeyConfigured ? '· sí' : '· no'}
@@ -365,7 +365,7 @@ export default function AdminCuentasPage() {
               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                 dash?.integrations.resendSmtpRelayConfigured
                   ? 'bg-emerald-500/20 text-emerald-200 ring-emerald-400/30'
-                  : 'bg-slate-500/15 text-slate-300 ring-white/10'
+                  : 'bg-slate-500/15 text-slate-700 ring-slate-200'
               }`}
             >
               SMTP Resend {dash?.integrations.resendSmtpRelayConfigured ? '· sí' : '· no'}
@@ -374,7 +374,7 @@ export default function AdminCuentasPage() {
               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                 dash?.integrations.smtpOutboundConfigured
                   ? 'bg-sky-500/15 text-sky-100 ring-sky-400/25'
-                  : 'bg-slate-500/15 text-slate-300 ring-white/10'
+                  : 'bg-slate-500/15 text-slate-700 ring-slate-200'
               }`}
             >
               SMTP listo {dash?.integrations.smtpOutboundConfigured ? '· sí' : '· no'}
@@ -530,7 +530,7 @@ export default function AdminCuentasPage() {
                       Ver overrides de este cliente
                     </button>
                   </div>
-                  <details className="mt-3 text-[11px] text-slate-400">
+                  <details className="mt-3 text-[11px] text-slate-600">
                     <summary className="cursor-pointer select-none text-slate-500 hover:text-slate-700">
                       Datos técnicos (soporte)
                     </summary>

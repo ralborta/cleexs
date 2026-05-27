@@ -43,6 +43,7 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadsNotice, setLeadsNotice] = useState<string | null>(null);
   const [leadDomain, setLeadDomain] = useState('');
+  const [globalLeadsPage, setGlobalLeadsPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +66,10 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    setGlobalLeadsPage(1);
+  }, [leads.length]);
   const withRuns = data.dailyRuns.filter((row) => row.runs > 0);
   const peakDay = withRuns.reduce((acc, row) => (row.runs > acc.runs ? row : acc), {
     date: '-',
@@ -75,6 +80,12 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
     withRuns.length > 0
       ? withRuns.reduce((sum, row) => sum + row.runs, 0) / withRuns.length
       : 0;
+
+  const GLOBAL_LEADS_PAGE_SIZE = 10;
+  const globalLeadsTotalPages = Math.max(1, Math.ceil(leads.length / GLOBAL_LEADS_PAGE_SIZE));
+  const currentGlobalLeadsPage = Math.min(globalLeadsPage, globalLeadsTotalPages);
+  const globalLeadsStart = (currentGlobalLeadsPage - 1) * GLOBAL_LEADS_PAGE_SIZE;
+  const globalLeadsVisible = leads.slice(globalLeadsStart, globalLeadsStart + GLOBAL_LEADS_PAGE_SIZE);
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50">
@@ -397,7 +408,7 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  leads.map((lead) => (
+                  globalLeadsVisible.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium text-foreground">
                         {lead.brand?.name || '—'}
@@ -415,6 +426,37 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
                 )}
               </TableBody>
             </Table>
+            {leads.length > GLOBAL_LEADS_PAGE_SIZE ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <p className="text-muted-foreground">
+                  Mostrando {globalLeadsStart + 1}–{Math.min(globalLeadsStart + GLOBAL_LEADS_PAGE_SIZE, leads.length)} de{' '}
+                  {leads.length} registros
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-3"
+                    disabled={currentGlobalLeadsPage <= 1}
+                    onClick={() => setGlobalLeadsPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Página {currentGlobalLeadsPage} de {globalLeadsTotalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-3"
+                    disabled={currentGlobalLeadsPage >= globalLeadsTotalPages}
+                    onClick={() => setGlobalLeadsPage((p) => Math.min(globalLeadsTotalPages, p + 1))}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>

@@ -14,7 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
-import { Search, Tag, Globe, Loader2 } from 'lucide-react';
+import { Search, Globe, Loader2 } from 'lucide-react';
 
 /** Si parece dominio (tiene punto, sin espacios) → true */
 function looksLikeDomain(value: string): boolean {
@@ -279,30 +279,12 @@ export default function CrearDiagnosticoPage() {
           <CardHeader className="pb-2 text-center">
             <CardTitle className="text-2xl font-bold text-slate-900">Diagnóstico de recomendación</CardTitle>
             <CardDescription className="text-base leading-relaxed text-slate-600">
-              Ingresá la URL de tu sitio (obligatorio). Podés sumar la marca si querés que aparezca con otro nombre.
-              Luego confirmás correo y competidores antes de arrancar el análisis completo.
+              Ingresá la URL de tu sitio y te mostramos cómo aparecés recomendado en ChatGPT y otros motores de IA.
+              Confirmás correo y competidores antes de arrancar el análisis completo.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
-                  <Tag className="h-4 w-4 text-primary-600 shrink-0" aria-hidden />
-                  Marca <span className="text-muted-foreground font-normal">(opcional)</span>
-                </label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
-                  <input
-                    id="brand"
-                    type="text"
-                    placeholder="Ej: Argento's Italian Bistro"
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
               <div>
                 <label htmlFor="url" className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
                   <Globe className="h-4 w-4 text-primary-600 shrink-0" aria-hidden />

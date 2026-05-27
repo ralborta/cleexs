@@ -54,7 +54,7 @@ type ReferralDashboard = {
 };
 
 const field =
-  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15';
+  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-600 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15';
 const labelCls = 'text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500';
 const panelOuter =
   'rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-slate-900/[0.05] backdrop-blur-sm md:p-9';
@@ -519,7 +519,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 
 function NumberCell({ value, muted = false }: { value: number; muted?: boolean }) {
   return (
-    <td className={`px-3 py-3 text-right tabular-nums ${muted ? 'text-slate-400' : 'text-slate-700'}`}>
+    <td className={`px-3 py-3 text-right tabular-nums ${muted ? 'text-slate-600' : 'text-slate-700'}`}>
       {value}
     </td>
   );

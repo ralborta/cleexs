@@ -6,8 +6,19 @@ import { Upload, Bell, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
-/** Rutas con header mínimo: solo logo, sin menú completo */
-const MINIMAL_HEADER_PATHS = ['/diagnostico/crear', '/ver-resultado', '/prueba-gratuita', '/planes'];
+/** Rutas con header mínimo: solo logo, sin menú completo. */
+const MINIMAL_HEADER_PATHS = [
+  '/diagnostico/crear',
+  '/ver-resultado',
+  '/prueba-gratuita',
+  '/planes',
+  '/dashboard',
+  '/runs',
+  '/outreach',
+  '/settings',
+  '/facturas',
+  '/configuracion',
+];
 const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
 const WA_RESULT_PATH_PREFIX = '/r/wa';
 const TOOLS_PATH_PREFIX = '/tools';
@@ -24,6 +35,7 @@ function isWhatsAppResultPath(pathname: string | null): boolean {
 
 function isPublicDiagnosticPath(pathname: string | null): boolean {
   if (!pathname) return false;
+  if (pathname === '/' || pathname === '/diagnostico') return true;
   if (pathname.startsWith('/planes')) return true;
   if (pathname.startsWith('/score')) return true;
   if (MINIMAL_HEADER_PATHS.some((p) => pathMatchesPrefix(pathname, p))) return true;

@@ -26,7 +26,8 @@ export default function RunsPage() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname !== '/runs') return;
+    // Permitimos cargar desde la ruta canónica /runs y también desde /admin/runs (wrapper interno).
+    if (pathname !== '/runs' && !pathname?.startsWith('/admin/runs')) return;
     let cancelled = false;
     async function loadRuns() {
       try {
