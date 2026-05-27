@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,8 @@ import {
 } from '@/components/ui/table';
 import { brandsApi, reportsApi, runsApi, tenantsApi, Run, RankingEntry, Brand } from '@/lib/api';
 
+const PAGE_SIZE = 10;
+
 export default function RunsPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
@@ -23,6 +26,7 @@ export default function RunsPage() {
   const [tenantId, setTenantId] = useState('');
   const [executingRunId, setExecutingRunId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -72,6 +76,27 @@ export default function RunsPage() {
     }
   };
 
+  const totalRuns = runs.length;
+  const lastRun = runs[0];
+  const lastRunScore = lastRun?.priaReports?.[0]?.priaTotal ?? 0;
+  const lastRunDate = lastRun ? new Date(lastRun.periodEnd).toLocaleDateString('es-AR') : '-';
+  const runningCount = runs.filter((run) => run.status === 'running').length;
+  const failedCount = runs.filter((run) => run.status === 'failed').length;
+
+  const totalPages = Math.max(1, Math.ceil(totalRuns / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const paginatedRuns = useMemo(
+    () => runs.slice(startIndex, startIndex + PAGE_SIZE),
+    [runs, startIndex],
+  );
+  const rangeStart = totalRuns === 0 ? 0 : startIndex + 1;
+  const rangeEnd = Math.min(startIndex + PAGE_SIZE, totalRuns);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
@@ -79,13 +104,6 @@ export default function RunsPage() {
       </div>
     );
   }
-
-  const totalRuns = runs.length;
-  const lastRun = runs[0];
-  const lastRunScore = lastRun?.priaReports?.[0]?.priaTotal ?? 0;
-  const lastRunDate = lastRun ? new Date(lastRun.periodEnd).toLocaleDateString('es-AR') : '-';
-  const runningCount = runs.filter((run) => run.status === 'running').length;
-  const failedCount = runs.filter((run) => run.status === 'failed').length;
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
@@ -195,7 +213,7 @@ export default function RunsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                runs.map((run) => (
+                paginatedRuns.map((run) => (
                   <TableRow key={run.id} className="hover:bg-primary-50/60">
                     <TableCell className="font-medium text-foreground">{run.brand.name}</TableCell>
                     <TableCell>
@@ -250,6 +268,42 @@ export default function RunsPage() {
               )}
             </TableBody>
           </Table>
+          {totalRuns > 0 ? (
+            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                Mostrando <span className="font-semibold text-foreground">{rangeStart}–{rangeEnd}</span> de{' '}
+                <span className="font-semibold text-foreground">{totalRuns}</span> runs
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-border text-foreground hover:bg-primary-50 disabled:opacity-40"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Anterior
+                </Button>
+                <span className="text-xs font-medium text-muted-foreground">
+                  Página <span className="text-foreground">{safePage}</span> de{' '}
+                  <span className="text-foreground">{totalPages}</span>
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-border text-foreground hover:bg-primary-50 disabled:opacity-40"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
