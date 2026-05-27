@@ -6,25 +6,30 @@ import {
   Eye,
   Inbox,
   LayoutList,
+  Loader2,
+  Mail,
   MailCheck,
   Megaphone,
   MousePointerClick,
+  RefreshCw,
   ScrollText,
   Send,
   Activity,
   XCircle,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { AdminAuthExpiredCard, AdminCallout, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
-import { AdminPanelSection } from '@/components/admin/admin-panel-section';
+import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
-const panelOuter =
-  'rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-slate-900/[0.05] backdrop-blur-sm md:p-9';
-
 const field =
-  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-600 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15';
-const labelCls = 'text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500';
+  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-200';
+const labelCls = 'text-xs font-semibold uppercase tracking-wide text-slate-500';
+const primaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50';
+const secondaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50';
+const subtleBtn =
+  'inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50';
 
 type CampaignRow = {
   id: string;
@@ -176,7 +181,7 @@ export default function AdminEmailOpsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
       setSendActionHint(
-        'Envío aceptado por la API. Si no ves cambios, tocá «Refrescar datos». Las tarjetas de arriba y la tabla de auditoría son logs internos; «Resend · engagement» solo cambia cuando Resend puede llamar al webhook (RESEND_WEBHOOK_SECRET en Railway).',
+        'Envío aceptado por la API. Si no ves cambios, tocá «Refrescar». El bloque «Resend · engagement» solo se mueve cuando el webhook está configurado en Railway.',
       );
       await loadAll();
     } catch (e) {
@@ -233,7 +238,7 @@ export default function AdminEmailOpsPage() {
   async function sendCampaignPreview(c: CampaignRow) {
     const to = testEmail.trim().toLowerCase();
     if (!to) {
-      setError('Completá el email destino arriba (misma caja que la prueba genérica).');
+      setError('Completá el email destino arriba (mismo de la prueba genérica).');
       return;
     }
     setCampaignPreviewBusyId(c.id);
@@ -246,9 +251,7 @@ export default function AdminEmailOpsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || JSON.stringify(data));
-      setSendActionHint(
-        `Prueba «${c.slug}» aceptada. Revisá auditoría y tarjetas; «Resend · engagement» solo con webhook configurado.`,
-      );
+      setSendActionHint(`Prueba «${c.slug}» aceptada. Revisá la auditoría más abajo.`);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -337,581 +340,572 @@ export default function AdminEmailOpsPage() {
     }
   }
 
+  if (error && looksLikeAdminAuthError(error)) {
+    return <AdminAuthExpiredCard />;
+  }
+
   const sentLastWindow = stats != null ? Number(stats.byStatusLast30Days.sent) || 0 : 0;
-  const otherStatusSummary =
-    stats != null
-      ? Object.entries(stats.byStatusLast30Days)
-          .filter(([k, v]) => k !== 'sent' && typeof v === 'number' && v > 0)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join(' · ')
-      : '';
+  const failedLastWindow = stats != null ? Number(stats.byStatusLast30Days.failed) || 0 : 0;
+  const skippedLastWindow = stats != null ? Number(stats.byStatusLast30Days.skipped) || 0 : 0;
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700">Administración</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">Email · secuencia interna</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-            Campañas por semana y bucket de score, auditoría de envíos y estadísticas. El envío masivo contra Resend u otro
-            ESP se cablea en el worker; acá va la configuración y los logs.
-          </p>
-          <button
-            type="button"
-            onClick={() => void loadAll()}
-            disabled={busy}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50 disabled:opacity-50"
-          >
-            Refrescar datos
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+            <Mail className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Email · secuencia</h1>
+            <p className="text-sm text-slate-600">
+              Campañas por semana y bucket de score, broadcast manual y auditoría de envíos.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void loadAll()}
+          disabled={busy}
+          className={secondaryBtn}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Refrescar
+        </button>
+      </header>
+
+      {error ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{error}</p>
+        </div>
+      ) : null}
+      {sendActionHint ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {sendActionHint}
+        </div>
+      ) : null}
+
+      {stats ? (
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Kpi icon={<BarChart3 className="h-4 w-4 text-violet-600" />} label="Campañas configuradas" value={stats.campaignsConfigured} />
+          <Kpi
+            icon={<MailCheck className="h-4 w-4 text-emerald-600" />}
+            label={`Enviados (${stats.windowDays} días)`}
+            value={sentLastWindow}
+          />
+          <Kpi
+            icon={<XCircle className="h-4 w-4 text-rose-600" />}
+            label="Fallos / Saltados"
+            value={`${failedLastWindow} / ${skippedLastWindow}`}
+          />
+          <Kpi icon={<Inbox className="h-4 w-4 text-sky-600" />} label="Logs totales" value={stats.logsAllTime} />
+        </section>
+      ) : null}
+
+      <Card
+        icon={<Send className="h-4 w-4" />}
+        title="Enviar email de prueba"
+        description="Mandá un correo real a una dirección puntual para verificar que el envío esté funcionando. El sistema usa Resend si está configurado; si no, intenta por SMTP. El resultado queda registrado en la auditoría de más abajo."
+      >
+        <form onSubmit={sendTestEmail} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex-1">
+            <span className={labelCls}>Email destino</span>
+            <input
+              type="email"
+              required
+              value={testEmail}
+              onChange={(ev) => setTestEmail(ev.target.value)}
+              placeholder="ralborta@kiev-srl.com"
+              className={field}
+            />
+          </label>
+          <button type="submit" disabled={testBusy} className={primaryBtn}>
+            {testBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {testBusy ? 'Enviando…' : 'Enviar prueba'}
           </button>
-        </div>
-      </div>
+        </form>
+      </Card>
 
-      <div className={`${panelOuter}`}>
-        <div className="space-y-8">
-          {error ? (
-            looksLikeAdminAuthError(error) ? (
-              <AdminAuthExpiredCard />
-            ) : (
-              <AdminCallout variant="error">{error}</AdminCallout>
-            )
-          ) : null}
-
-          <AdminPanelSection
-            icon={Send}
-            accent="violet"
-            title="Enviar email de prueba"
-            description={
-              <>
-                Mandá un correo real a una dirección puntual para verificar que el envío esté funcionando. El sistema usa Resend si
-                está configurado; si no, intenta por SMTP. El resultado queda registrado en la auditoría de esta pantalla.
-              </>
-            }
-          >
-            <form onSubmit={sendTestEmail} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <label className="flex-1">
-                <span className={labelCls}>Email destino</span>
-                <input
-                  type="email"
-                  required
-                  value={testEmail}
-                  onChange={(ev) => setTestEmail(ev.target.value)}
-                  placeholder="ralborta@kiev-srl.com"
-                  className={field}
-                />
-              </label>
-              <button
-                type="submit"
-                disabled={testBusy}
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50"
+      <Card
+        icon={<Megaphone className="h-4 w-4" />}
+        title="Broadcast manual"
+        description={
+          <>
+            Enviá una oferta o aviso a registrados. Por seguridad arranca en{' '}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">dryRun</code>: primero muestra
+            destinatarios y muestra. Variables disponibles:{' '}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{brandName}}'}</code>,{' '}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{domain}}'}</code>,{' '}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{score}}'}</code>,{' '}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{tip1}}'}</code>.
+          </>
+        }
+      >
+        <form onSubmit={sendBroadcast} className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-[1fr_170px_150px]">
+            <label className="block">
+              <span className={labelCls}>Asunto</span>
+              <input
+                required
+                value={broadcastSubject}
+                onChange={(ev) => setBroadcastSubject(ev.target.value)}
+                placeholder="Hoy 50% off para activar Premium"
+                className={field}
+              />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Segmento</span>
+              <select
+                value={broadcastSegment}
+                onChange={(ev) => setBroadcastSegment(ev.target.value as typeof broadcastSegment)}
+                className={field}
               >
-                {testBusy ? 'Enviando…' : 'Enviar prueba'}
-              </button>
-            </form>
-            {sendActionHint ? (
-              <p className="mt-3 text-xs leading-relaxed text-slate-600" role="status">
-                {sendActionHint}
+                <option value="free">free</option>
+                <option value="all">all</option>
+                <option value="premium">premium</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Límite</span>
+              <input
+                type="number"
+                min={1}
+                max={1000}
+                value={broadcastLimit}
+                onChange={(ev) => setBroadcastLimit(Number(ev.target.value))}
+                className={field}
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className={labelCls}>Mensaje</span>
+            <textarea
+              required
+              rows={6}
+              value={broadcastBody}
+              onChange={(ev) => setBroadcastBody(ev.target.value)}
+              placeholder={'Hola {{brandName}}, hoy activamos 50% de descuento en Premium.\n\nTip para {{domain}}: {{tip1}}'}
+              className={`${field} resize-y`}
+            />
+          </label>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={broadcastDryRun}
+                onChange={(ev) => setBroadcastDryRun(ev.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              />
+              Solo prueba (no enviar todavía)
+            </label>
+            <button type="submit" disabled={broadcastBusy} className={primaryBtn}>
+              {broadcastBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
+              {broadcastBusy ? 'Procesando…' : broadcastDryRun ? 'Previsualizar destinatarios' : 'Enviar broadcast'}
+            </button>
+          </div>
+        </form>
+        {broadcastResult ? (
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-800">
+            <p className="font-semibold">
+              {broadcastResult.dryRun ? 'Prueba lista' : 'Broadcast ejecutado'} ·{' '}
+              {broadcastResult.totalRecipients} destinatarios ·{' '}
+              <span className="font-mono text-xs text-slate-600">{broadcastResult.campaignSlug}</span>
+            </p>
+            {!broadcastResult.dryRun ? (
+              <p className="mt-1 text-xs text-slate-600">
+                Enviados: <strong className="text-emerald-700">{broadcastResult.sent ?? 0}</strong> · Fallidos:{' '}
+                <strong className="text-rose-700">{broadcastResult.failed ?? 0}</strong>
               </p>
             ) : null}
-          </AdminPanelSection>
-
-          <AdminPanelSection
-            icon={Megaphone}
-            accent="amber"
-            title="Broadcast manual"
-            description={
-              <>
-                Enviá una oferta o aviso a registrados. Por seguridad arranca en{' '}
-                <code className="rounded bg-amber-50 px-1 font-mono text-[11px]">dryRun</code>: primero muestra destinatarios y
-                muestra. Variables disponibles: <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{brandName}}'}</code>,{' '}
-                <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{domain}}'}</code>,{' '}
-                <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{score}}'}</code>,{' '}
-                <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{'{{tip1}}'}</code>.
-              </>
-            }
-          >
-            <form onSubmit={sendBroadcast} className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-[1fr_170px_150px]">
-                <label className="block">
-                  <span className={labelCls}>Asunto</span>
-                  <input
-                    required
-                    value={broadcastSubject}
-                    onChange={(ev) => setBroadcastSubject(ev.target.value)}
-                    placeholder="Hoy 50% off para activar Premium"
-                    className={field}
-                  />
-                </label>
-                <label className="block">
-                  <span className={labelCls}>Segmento</span>
-                  <select
-                    value={broadcastSegment}
-                    onChange={(ev) => setBroadcastSegment(ev.target.value as typeof broadcastSegment)}
-                    className={field}
-                  >
-                    <option value="free">free</option>
-                    <option value="all">all</option>
-                    <option value="premium">premium</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className={labelCls}>Límite</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={1000}
-                    value={broadcastLimit}
-                    onChange={(ev) => setBroadcastLimit(Number(ev.target.value))}
-                    className={field}
-                  />
-                </label>
-              </div>
-              <label className="block">
-                <span className={labelCls}>Mensaje</span>
-                <textarea
-                  required
-                  rows={6}
-                  value={broadcastBody}
-                  onChange={(ev) => setBroadcastBody(ev.target.value)}
-                  placeholder={'Hola {{brandName}}, hoy activamos 50% de descuento en Premium.\\n\\nTip para {{domain}}: {{tip1}}'}
-                  className={`${field} resize-y`}
-                />
-              </label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={broadcastDryRun}
-                    onChange={(ev) => setBroadcastDryRun(ev.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                  />
-                  Solo prueba / no enviar todavía
-                </label>
-                <button
-                  type="submit"
-                  disabled={broadcastBusy}
-                  className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-600/20 transition hover:bg-amber-700 disabled:opacity-50"
-                >
-                  {broadcastBusy ? 'Procesando…' : broadcastDryRun ? 'Previsualizar destinatarios' : 'Enviar broadcast'}
-                </button>
-              </div>
-            </form>
-            {broadcastResult ? (
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 text-sm text-amber-950">
-                <p className="font-semibold">
-                  {broadcastResult.dryRun ? 'Prueba lista' : 'Broadcast ejecutado'} · {broadcastResult.totalRecipients} destinatarios ·{' '}
-                  <span className="font-mono text-xs">{broadcastResult.campaignSlug}</span>
-                </p>
-                {!broadcastResult.dryRun ? (
-                  <p className="mt-1 text-xs">
-                    Enviados: {broadcastResult.sent ?? 0} · Fallidos: {broadcastResult.failed ?? 0}
-                  </p>
-                ) : null}
-                {broadcastResult.sample?.length ? (
-                  <pre className="mt-3 max-h-56 overflow-auto rounded-xl bg-white/80 p-3 font-mono text-[11px] leading-relaxed text-slate-700">
-                    {JSON.stringify(broadcastResult.sample, null, 2)}
-                  </pre>
-                ) : null}
-                {broadcastResult.errors?.length ? (
-                  <pre className="mt-3 max-h-40 overflow-auto rounded-xl bg-red-50 p-3 font-mono text-[11px] text-red-900">
-                    {JSON.stringify(broadcastResult.errors, null, 2)}
-                  </pre>
-                ) : null}
-              </div>
+            {broadcastResult.sample?.length ? (
+              <pre className="mt-3 max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white p-3 font-mono text-[11px] leading-relaxed text-slate-700">
+                {JSON.stringify(broadcastResult.sample, null, 2)}
+              </pre>
             ) : null}
-          </AdminPanelSection>
+            {broadcastResult.errors?.length ? (
+              <pre className="mt-3 max-h-40 overflow-auto rounded-xl border border-rose-200 bg-rose-50 p-3 font-mono text-[11px] text-rose-900">
+                {JSON.stringify(broadcastResult.errors, null, 2)}
+              </pre>
+            ) : null}
+          </div>
+        ) : null}
+      </Card>
 
-          {stats ? (
-            <section className="grid gap-4 sm:grid-cols-3">
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm ring-1 ring-slate-900/[0.03]">
-                <BarChart3 className="absolute right-4 top-4 h-8 w-8 text-violet-700" aria-hidden />
-                <p className={`${labelCls} text-slate-500`}>Campañas configuradas</p>
-                <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{stats.campaignsConfigured}</p>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm ring-1 ring-slate-900/[0.03]">
-                <Inbox className="absolute right-4 top-4 h-8 w-8 text-sky-200" aria-hidden />
-                <p className={`${labelCls} text-slate-500`}>Logs totales</p>
-                <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{stats.logsAllTime}</p>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm ring-1 ring-slate-900/[0.03]">
-                <MailCheck className="absolute right-4 top-4 h-8 w-8 text-violet-700" aria-hidden />
-                <p className={`${labelCls} text-slate-500`}>Enviados ({stats.windowDays} días)</p>
-                <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{sentLastWindow}</p>
-                {otherStatusSummary ? (
-                  <p className="mt-2 text-[11px] leading-snug text-slate-500">{otherStatusSummary}</p>
-                ) : null}
-              </div>
-            </section>
+      {stats?.resendWebhook?.available ? (
+        <Card
+          icon={<Activity className="h-4 w-4" />}
+          title={`Resend · entregas y engagement (${stats.resendWebhook.windowDays} días)`}
+          description="Eventos que Resend envía por POST y que esta API guarda tras verificar la firma. Independiente del envío por API: podés mandar correos y seguir viendo ceros aquí si falta el webhook configurado en Railway."
+        >
+          {!stats.resendWebhook.secretConfigured ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+              <p>
+                <strong className="font-semibold">Sin métricas aquí:</strong> falta{' '}
+                <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-amber-200">
+                  RESEND_WEBHOOK_SECRET
+                </code>{' '}
+                en Railway (debe coincidir con el Signing secret de Resend).
+              </p>
+              <details className="mt-2">
+                <summary className="cursor-pointer select-none text-xs font-semibold text-amber-900 underline decoration-amber-400 underline-offset-2 hover:text-amber-950">
+                  Pasos detallados
+                </summary>
+                <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed">
+                  <li>
+                    Resend → Webhooks: copiá el <strong className="font-semibold">Signing secret</strong> (
+                    <code className="font-mono text-[11px]">whsec_…</code>).
+                  </li>
+                  <li>
+                    Railway (servicio API): variable{' '}
+                    <code className="rounded bg-white px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code> con ese
+                    valor → redeploy obligatorio.
+                  </li>
+                  <li>
+                    URL del webhook en Resend = base pública de la API +{' '}
+                    <code className="font-mono text-[11px]">{stats.resendWebhook.ingestUrl}</code>
+                    {stats.resendWebhook.ingestAbsoluteUrl ? (
+                      <code className="mt-1 block max-w-full select-all break-all rounded-md bg-white px-2 py-1 font-mono text-[11px] ring-1 ring-amber-200">
+                        {stats.resendWebhook.ingestAbsoluteUrl}
+                      </code>
+                    ) : null}
+                  </li>
+                </ol>
+              </details>
+            </div>
           ) : null}
 
-          {stats?.resendWebhook?.available ? (
-            <AdminPanelSection
-              icon={Activity}
-              accent="indigo"
-              title={`Resend · entregas y engagement (${stats.resendWebhook.windowDays} días)`}
-              description={
-                <span className="text-slate-600">
-                  Eventos que Resend envía por POST y esta API guarda tras verificar la firma. Independiente del envío por API:
-                  podés mandar correos y seguir viendo ceros aquí si falta <code className="font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code>{' '}
-                  o el webhook en Resend.
-                </span>
-              }
+          <div className={`flex flex-wrap items-center gap-2 ${!stats.resendWebhook.secretConfigured ? 'mt-4' : ''}`}>
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                stats.resendWebhook.secretConfigured
+                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                  : 'bg-amber-50 text-amber-700 ring-amber-200'
+              }`}
             >
-              {!stats.resendWebhook.secretConfigured ? (
-                <div className="rounded-xl border border-amber-200/90 bg-amber-50/40 px-4 py-3 text-sm leading-relaxed text-amber-950">
-                  <p>
-                    <strong className="font-semibold">Sin métricas aquí:</strong> falta{' '}
-                    <code className="rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-amber-200/70">
-                      RESEND_WEBHOOK_SECRET
-                    </code>{' '}
-                    en Railway (debe coincidir con el Signing secret de Resend). La API responde 503 al webhook y no se guardan
-                    eventos.
-                  </p>
-                  <details className="mt-2">
-                    <summary className="cursor-pointer select-none text-xs font-semibold text-amber-900 underline decoration-amber-400 underline-offset-2 hover:text-amber-950">
-                      Pasos detallados
-                    </summary>
-                    <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed">
-                      <li>
-                        Resend → Webhooks: copiá el <strong className="font-semibold">Signing secret</strong> (
-                        <code className="font-mono text-[11px]">whsec_…</code>).
-                      </li>
-                      <li>
-                        Railway (servicio que ejecuta esta API, no el front): variable{' '}
-                        <code className="rounded bg-white/90 px-1 font-mono text-[11px]">RESEND_WEBHOOK_SECRET</code> con ese valor →
-                        redeploy obligatorio (sin redeploy el proceso puede seguir sin verla).
-                      </li>
-                      <li>
-                        URL del webhook en Resend = tu API pública +{' '}
-                        <code className="font-mono text-[11px]">{stats.resendWebhook.ingestUrl}</code>
-                        {stats.resendWebhook.ingestAbsoluteUrl ? (
-                          <code className="mt-1 block max-w-full select-all break-all rounded-md bg-white/90 px-2 py-1 font-mono text-[11px] ring-1 ring-amber-200/70">
-                            {stats.resendWebhook.ingestAbsoluteUrl}
-                          </code>
-                        ) : (
-                          <>
-                            . Si falta la URL completa, definí{' '}
-                            <code className="font-mono text-[11px]">PUBLIC_WEBHOOK_BASE_URL</code> en la API.
-                          </>
-                        )}
-                      </li>
-                      <li>
-                        Comprobación: en la misma base URL de la API,{' '}
-                        <code className="font-mono text-[11px]">GET /health</code> debe devolver{' '}
-                        <code className="font-mono text-[11px]">integrations.resendWebhookSecretConfigured: true</code>. Si sigue en{' '}
-                        <code className="font-mono text-[11px]">false</code>, la variable no está en ese despliegue (servicio equivocado o sin redeploy).
-                      </li>
-                    </ol>
-                  </details>
-                </div>
-              ) : null}
+              {stats.resendWebhook.secretConfigured ? 'Webhook configurado' : 'Falta secret'}
+            </span>
+            {stats.resendWebhook.ingestAbsoluteUrl ? (
+              <code className="max-w-full select-all break-all rounded-lg bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-700">
+                POST {stats.resendWebhook.ingestAbsoluteUrl}
+              </code>
+            ) : (
+              <code className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-700">
+                POST …{stats.resendWebhook.ingestUrl}
+              </code>
+            )}
+            <span className="text-xs text-slate-500">
+              Eventos en ventana:{' '}
+              <strong className="text-slate-800">{stats.resendWebhook.eventsTotalLastWindow}</strong>
+            </span>
+          </div>
 
-              <div className={`flex flex-wrap items-center gap-2 ${!stats.resendWebhook.secretConfigured ? 'mt-4' : ''}`}>
-                <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                    stats.resendWebhook.secretConfigured
-                      ? 'bg-emerald-100 text-emerald-900 ring-emerald-200'
-                      : 'bg-amber-100 text-amber-900 ring-amber-200'
-                  }`}
-                >
-                  {stats.resendWebhook.secretConfigured ? 'Webhook configurado en API' : 'Falta RESEND_WEBHOOK_SECRET'}
-                </span>
-                {stats.resendWebhook.ingestAbsoluteUrl ? (
-                  <code className="max-w-full select-all break-all rounded-lg bg-slate-900/[0.06] px-2 py-1 font-mono text-[11px] text-slate-700">
-                    POST {stats.resendWebhook.ingestAbsoluteUrl}
-                  </code>
-                ) : (
-                  <code className="rounded-lg bg-slate-900/[0.06] px-2 py-1 font-mono text-[11px] text-slate-700">
-                    POST …{stats.resendWebhook.ingestUrl}
-                  </code>
-                )}
-                <span className="text-xs text-slate-500">
-                  Eventos guardados (ventana):{' '}
-                  <strong className="text-slate-800">{stats.resendWebhook.eventsTotalLastWindow}</strong>
-                </span>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {(
+              [
+                ['Enviados', Send, stats.resendWebhook.uniqueEmailsByStageLastWindow.sent],
+                ['Entregados', MailCheck, stats.resendWebhook.uniqueEmailsByStageLastWindow.delivered],
+                ['Abiertos', Eye, stats.resendWebhook.uniqueEmailsByStageLastWindow.opened],
+                ['Clics', MousePointerClick, stats.resendWebhook.uniqueEmailsByStageLastWindow.clicked],
+                ['Rebotes', AlertTriangle, stats.resendWebhook.uniqueEmailsByStageLastWindow.bounced],
+                ['Fallidos', XCircle, stats.resendWebhook.uniqueEmailsByStageLastWindow.failed],
+              ] as const
+            ).map(([label, Icon, v]) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <Icon className="h-4 w-4 text-violet-600" aria-hidden />
+                <p className={`mt-2 ${labelCls}`}>{label}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{v}</p>
               </div>
+            ))}
+          </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                {(
-                  [
-                    ['Enviados (email.sent)', Send, stats.resendWebhook.uniqueEmailsByStageLastWindow.sent],
-                    ['Entregados', MailCheck, stats.resendWebhook.uniqueEmailsByStageLastWindow.delivered],
-                    ['Abiertos (únicos)', Eye, stats.resendWebhook.uniqueEmailsByStageLastWindow.opened],
-                    ['Clics (únicos)', MousePointerClick, stats.resendWebhook.uniqueEmailsByStageLastWindow.clicked],
-                    ['Rebotes', AlertTriangle, stats.resendWebhook.uniqueEmailsByStageLastWindow.bounced],
-                    ['Fallidos envío', XCircle, stats.resendWebhook.uniqueEmailsByStageLastWindow.failed],
-                  ] as const
-                ).map(([label, Icon, v]) => (
-                  <div
-                    key={label}
-                    className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-indigo-50/25 p-4 shadow-sm ring-1 ring-slate-900/[0.03]"
-                  >
-                    <Icon className="h-4 w-4 text-indigo-700/90" aria-hidden />
-                    <p className={`mt-2 ${labelCls} leading-snug text-slate-500`}>{label}</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{v}</p>
-                    <p className="mt-1 text-[10px] leading-tight text-slate-600">Por email_id distinto en Cleexs</p>
-                  </div>
+          {Object.keys(stats.resendWebhook.eventsByTypeLastWindow).length > 0 ? (
+            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className={`${labelCls} mb-2`}>Conteo por tipo de evento</p>
+              <pre className="max-h-40 overflow-auto font-mono text-[10px] leading-relaxed text-slate-700">
+                {JSON.stringify(stats.resendWebhook.eventsByTypeLastWindow, null, 2)}
+              </pre>
+            </div>
+          ) : null}
+        </Card>
+      ) : stats?.resendWebhook && !stats.resendWebhook.available ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Métricas Resend (webhooks) no disponibles:{' '}
+          {(stats.resendWebhook as { reason: string }).reason}.
+        </div>
+      ) : null}
+
+      <Card
+        icon={<LayoutList className="h-4 w-4" />}
+        title="Campañas (sem × bucket)"
+        description="Sin ID en Resend igual hay HTML incluido por semana (botón Probar). Con plantilla en Resend, pegá el id y usá variables WEEK, TITLE, PREHEADER, SLUG."
+        rightSlot={
+          <button type="button" onClick={() => void runSeed()} className={secondaryBtn}>
+            Crear plantillas 1–8
+          </button>
+        }
+      >
+        {campaigns.length === 0 ? (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-14 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+              <Inbox className="h-7 w-7" aria-hidden />
+            </div>
+            <p className="mt-4 text-base font-semibold text-slate-900">Todavía no hay campañas</p>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+              Generá las filas base (semanas 1–8, bucket{' '}
+              <span className="font-mono text-xs">all</span>) para empezar a asociar templates del ESP.
+            </p>
+            <button type="button" onClick={() => void runSeed()} className={`${primaryBtn} mt-5`}>
+              Crear plantillas semana 1–8
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="min-w-full divide-y divide-slate-100 text-sm">
+              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Sem</th>
+                  <th className="px-3 py-3">Bucket</th>
+                  <th className="px-3 py-3">Slug</th>
+                  <th className="px-3 py-3">Título</th>
+                  <th className="px-3 py-3">ESP template id</th>
+                  <th className="px-3 py-3">Probar</th>
+                  <th className="px-3 py-3">Activa</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {campaigns.map((c) => (
+                  <CampaignEspRow
+                    key={c.id}
+                    c={c}
+                    previewBusy={campaignPreviewBusyId === c.id}
+                    onToggle={() => void toggleCampaign(c)}
+                    onSaveEsp={saveEspTemplate}
+                    onSendPreview={() => void sendCampaignPreview(c)}
+                  />
                 ))}
-              </div>
+              </tbody>
+            </table>
+          </div>
+        )}
 
-              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/90 p-4">
-                <p className={`${labelCls} mb-2 text-slate-500`}>Conteo por tipo de evento</p>
-                {Object.keys(stats.resendWebhook.eventsByTypeLastWindow).length === 0 ? (
-                  <p className="text-sm text-slate-500">Ningún evento en esta ventana.</p>
-                ) : (
-                  <pre className="max-h-40 overflow-auto font-mono text-[10px] leading-relaxed text-slate-700">
-                    {JSON.stringify(stats.resendWebhook.eventsByTypeLastWindow, null, 2)}
-                  </pre>
-                )}
-              </div>
-            </AdminPanelSection>
-          ) : stats?.resendWebhook && !stats.resendWebhook.available ? (
-            <AdminCallout variant="warning">
-              Métricas Resend (webhooks) no disponibles: {(stats.resendWebhook as { reason: string }).reason}. Si acabás de
-              desplegar, ejecutá migraciones para crear <code className="rounded bg-amber-100 px-1 text-[11px]">cleexs_resend_webhook_events</code>.
-            </AdminCallout>
-          ) : null}
-
-          <AdminPanelSection
-            icon={LayoutList}
-            accent="indigo"
-            title="Campañas (sem × bucket)"
-            description={
-              <>
-                Sin ID en Resend igual hay <strong className="font-semibold text-slate-800">HTML incluido por semana</strong> (botón
-                Probar). Con plantilla en Resend, pegá el id y usá variables{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">WEEK</code>,{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">TITLE</code>,{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">PREHEADER</code>,{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">SLUG</code>. Duplicá filas con slug propio para{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">low</code> /{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">mid</code> /{' '}
-                <code className="rounded bg-indigo-50 px-1 font-mono text-[11px]">high</code> cuando definan umbrales de score.
-              </>
-            }
-            headerRight={
-              <button
-                type="button"
-                onClick={() => void runSeed()}
-                className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-600/20 transition hover:bg-violet-700"
-              >
-                Crear plantillas 1–8
-              </button>
-            }
-          >
-            {campaigns.length === 0 ? (
-              <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-b from-slate-50 to-white px-6 py-14 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 shadow-inner">
-                  <Inbox className="h-8 w-8" aria-hidden />
-                </div>
-                <p className="mt-5 text-base font-semibold text-slate-900">Todavía no hay campañas</p>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-600">
-                  Generá las filas base (semanas 1–8, bucket <span className="font-mono text-xs">all</span>) para empezar a asociar templates del ESP.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void runSeed()}
-                  className="mt-6 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:bg-violet-700"
-                >
-                  Crear plantillas semana 1–8 (bucket all)
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/[0.03]">
-                <table className="w-full min-w-[720px] text-left text-xs">
-                  <thead className="bg-slate-100/95 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                    <tr>
-                      <th className="px-3 py-3 pr-2">Sem</th>
-                      <th className="py-3 pr-2">Bucket</th>
-                      <th className="py-3 pr-2">Slug</th>
-                      <th className="py-3 pr-2">Título</th>
-                      <th className="py-3 pr-2">ESP template id</th>
-                      <th className="py-3 pr-2">Prueba</th>
-                      <th className="py-3 pr-2">Activo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {campaigns.map((c) => (
-                      <CampaignEspRow
-                        key={c.id}
-                        c={c}
-                        previewBusy={campaignPreviewBusyId === c.id}
-                        onToggle={() => void toggleCampaign(c)}
-                        onSaveEsp={saveEspTemplate}
-                        onSendPreview={() => void sendCampaignPreview(c)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <form onSubmit={createCampaign} className="mt-8 grid gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 sm:grid-cols-2">
-              <h3 className="sm:col-span-2 text-sm font-bold text-slate-900">Nueva campaña manual</h3>
-              <label className="block">
-                <span className={labelCls}>Slug</span>
-                <input
-                  required
-                  value={nSlug}
-                  onChange={(ev) => setNSlug(ev.target.value)}
-                  placeholder="ej. weekly-seq-w3-low"
-                  className={`${field} font-mono text-xs`}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Semana (1–52)</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={52}
-                  value={nWeek}
-                  onChange={(ev) => setNWeek(Number(ev.target.value))}
-                  className={field}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Bucket</span>
-                <select
-                  value={nBucket}
-                  onChange={(ev) => setNBucket(ev.target.value as typeof nBucket)}
-                  className={field}
-                >
-                  <option value="low">low</option>
-                  <option value="mid">mid</option>
-                  <option value="high">high</option>
-                  <option value="all">all</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className={labelCls}>ESP template id (opcional)</span>
-                <input value={nEsp} onChange={(ev) => setNEsp(ev.target.value)} className={field} />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className={labelCls}>Título</span>
-                <input required value={nTitle} onChange={(ev) => setNTitle(ev.target.value)} className={field} />
-              </label>
-              <div className="sm:col-span-2">
-                <button
-                  type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800"
-                >
-                  Crear campaña
-                </button>
-              </div>
-            </form>
-          </AdminPanelSection>
-
-          <AdminPanelSection
-            icon={ScrollText}
-            accent="emerald"
-            title="Auditoría — últimos envíos"
-            description={
-              <>
-                Entradas por jobs o manualmente. Con el ESP conectado, el worker debería escribir{' '}
-                <code className="rounded bg-emerald-50 px-1 font-mono text-[11px]">sent</code> y{' '}
-                <code className="rounded bg-emerald-50 px-1 font-mono text-[11px]">externalId</code>.
-              </>
-            }
-          >
-            <form
-              onSubmit={addManualLog}
-              className="grid gap-4 rounded-2xl border border-dashed border-emerald-200/80 bg-emerald-50/40 p-5 sm:grid-cols-2"
+        <form
+          onSubmit={createCampaign}
+          className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 sm:grid-cols-2"
+        >
+          <h3 className="text-sm font-semibold text-slate-900 sm:col-span-2">Nueva campaña manual</h3>
+          <label className="block">
+            <span className={labelCls}>Slug</span>
+            <input
+              required
+              value={nSlug}
+              onChange={(ev) => setNSlug(ev.target.value)}
+              placeholder="ej. weekly-seq-w3-low"
+              className={`${field} font-mono text-xs`}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Semana (1–52)</span>
+            <input
+              type="number"
+              min={1}
+              max={52}
+              value={nWeek}
+              onChange={(ev) => setNWeek(Number(ev.target.value))}
+              className={field}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Bucket</span>
+            <select
+              value={nBucket}
+              onChange={(ev) => setNBucket(ev.target.value as typeof nBucket)}
+              className={field}
             >
-              <h3 className="sm:col-span-2 text-sm font-bold text-slate-900">Registrar envío manual (prueba)</h3>
-              <label className="block">
-                <span className={labelCls}>Email</span>
-                <input
-                  type="email"
-                  required
-                  value={logEmail}
-                  onChange={(ev) => setLogEmail(ev.target.value)}
-                  className={field}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>campaignSlug</span>
-                <input
-                  required
-                  value={logSlug}
-                  onChange={(ev) => setLogSlug(ev.target.value)}
-                  placeholder="weekly-seq-w1-all"
-                  className={`${field} font-mono text-xs`}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Cleexs score (opcional)</span>
-                <input value={logScore} onChange={(ev) => setLogScore(ev.target.value)} placeholder="42" className={field} />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Estado</span>
-                <select
-                  value={logStatus}
-                  onChange={(ev) => setLogStatus(ev.target.value as typeof logStatus)}
-                  className={field}
-                >
-                  <option value="pending">pending</option>
-                  <option value="sent">sent</option>
-                  <option value="failed">failed</option>
-                  <option value="skipped">skipped</option>
-                </select>
-              </label>
-              <div className="sm:col-span-2">
-                <button
-                  type="submit"
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
-                >
-                  Registrar log
-                </button>
-              </div>
-            </form>
+              <option value="low">low</option>
+              <option value="mid">mid</option>
+              <option value="high">high</option>
+              <option value="all">all</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelCls}>ESP template id (opcional)</span>
+            <input value={nEsp} onChange={(ev) => setNEsp(ev.target.value)} className={field} />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={labelCls}>Título</span>
+            <input required value={nTitle} onChange={(ev) => setNTitle(ev.target.value)} className={field} />
+          </label>
+          <div className="sm:col-span-2">
+            <button type="submit" className={primaryBtn}>
+              Crear campaña
+            </button>
+          </div>
+        </form>
+      </Card>
 
-            {logs.length === 0 ? (
-              <p className="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-10 text-center text-sm text-slate-600">
-                Sin registros en esta vista. Los envíos de prueba y el worker aparecerán aquí.
-              </p>
-            ) : (
-              <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/[0.03]">
-                <table className="w-full min-w-[640px] text-left text-xs">
-                  <thead className="bg-slate-100/95 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                    <tr>
-                      <th className="px-3 py-3 pr-2">Fecha</th>
-                      <th className="py-3 pr-2">Email</th>
-                      <th className="py-3 pr-2">Campaña</th>
-                      <th className="py-3 pr-2">Score</th>
-                      <th className="py-3 pr-2">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logs.map((r) => (
-                      <tr key={r.id} className="border-t border-slate-100 transition-colors hover:bg-violet-50/40">
-                        <td className="px-3 py-2.5 pr-2 whitespace-nowrap text-slate-600">
-                          {new Date(r.createdAt).toLocaleString('es-AR')}
-                        </td>
-                        <td className="py-2.5 pr-2">{r.recipientEmail}</td>
-                        <td className="py-2.5 pr-2 font-mono text-[10px]">{r.campaignSlug}</td>
-                        <td className="py-2.5 pr-2">{r.cleexsScore ?? '—'}</td>
-                        <td className="py-2.5 pr-2">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              r.status === 'sent'
-                                ? 'bg-emerald-100 text-emerald-900'
-                                : r.status === 'failed'
-                                  ? 'bg-red-100 text-red-900'
-                                  : 'bg-slate-100 text-slate-700'
-                            }`}
-                          >
-                            {r.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </AdminPanelSection>
+      <Card
+        icon={<ScrollText className="h-4 w-4" />}
+        title="Auditoría — últimos envíos"
+        description="Entradas por jobs o manualmente. Con el ESP conectado, el worker debería escribir sent y externalId."
+      >
+        <form
+          onSubmit={addManualLog}
+          className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 sm:grid-cols-2"
+        >
+          <h3 className="text-sm font-semibold text-slate-900 sm:col-span-2">Registrar envío manual (prueba)</h3>
+          <label className="block">
+            <span className={labelCls}>Email</span>
+            <input
+              type="email"
+              required
+              value={logEmail}
+              onChange={(ev) => setLogEmail(ev.target.value)}
+              className={field}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>campaignSlug</span>
+            <input
+              required
+              value={logSlug}
+              onChange={(ev) => setLogSlug(ev.target.value)}
+              placeholder="weekly-seq-w1-all"
+              className={`${field} font-mono text-xs`}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Cleexs score (opcional)</span>
+            <input
+              value={logScore}
+              onChange={(ev) => setLogScore(ev.target.value)}
+              placeholder="42"
+              className={field}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Estado</span>
+            <select
+              value={logStatus}
+              onChange={(ev) => setLogStatus(ev.target.value as typeof logStatus)}
+              className={field}
+            >
+              <option value="pending">pending</option>
+              <option value="sent">sent</option>
+              <option value="failed">failed</option>
+              <option value="skipped">skipped</option>
+            </select>
+          </label>
+          <div className="sm:col-span-2">
+            <button type="submit" className={secondaryBtn}>
+              Registrar log
+            </button>
+          </div>
+        </form>
+
+        {logs.length === 0 ? (
+          <p className="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+            Sin registros en esta vista. Los envíos de prueba y el worker aparecerán aquí.
+          </p>
+        ) : (
+          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200">
+            <table className="min-w-full divide-y divide-slate-100 text-sm">
+              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-3 py-3">Email</th>
+                  <th className="px-3 py-3">Campaña</th>
+                  <th className="px-3 py-3 text-right">Score</th>
+                  <th className="px-3 py-3">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {logs.map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-50/40">
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                      {new Date(r.createdAt).toLocaleString('es-AR', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-3 py-3 text-slate-800">{r.recipientEmail}</td>
+                    <td className="px-3 py-3 font-mono text-[11px] text-slate-600">{r.campaignSlug}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-slate-700">{r.cleexsScore ?? '—'}</td>
+                    <td className="px-3 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${
+                          r.status === 'sent'
+                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                            : r.status === 'failed'
+                              ? 'bg-rose-50 text-rose-700 ring-rose-200'
+                              : 'bg-slate-100 text-slate-600 ring-slate-200'
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function Card({
+  icon,
+  title,
+  description,
+  children,
+  rightSlot,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+            {icon}
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+            {description ? (
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{description}</p>
+            ) : null}
+          </div>
         </div>
+        {rightSlot ? <div className="flex shrink-0 flex-wrap gap-2">{rightSlot}</div> : null}
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function Kpi({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        {icon}
+        <span>{label}</span>
       </div>
+      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
     </div>
   );
 }
@@ -935,48 +929,51 @@ function CampaignEspRow({
   }, [c.espTemplateId]);
 
   return (
-    <tr className="border-t border-slate-100 transition-colors hover:bg-violet-50/50">
-      <td className="px-3 py-2.5 pr-2">{c.weekIndex}</td>
-      <td className="py-2.5 pr-2">
-        <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">{c.scoreBucket}</span>
+    <tr className="align-top hover:bg-slate-50/40">
+      <td className="px-4 py-3 font-medium text-slate-900">{c.weekIndex}</td>
+      <td className="px-3 py-3">
+        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{c.scoreBucket}</span>
       </td>
-      <td className="py-2.5 pr-2 font-mono text-[10px] text-slate-800">{c.slug}</td>
-      <td className="max-w-[220px] truncate py-2.5 pr-2 text-slate-700" title={c.title}>
+      <td className="px-3 py-3 font-mono text-xs text-slate-700">{c.slug}</td>
+      <td className="max-w-[220px] truncate px-3 py-3 text-slate-700" title={c.title}>
         {c.title}
       </td>
-      <td className="py-2.5 pr-2">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <td className="px-3 py-3">
+        <div className="flex items-center gap-1.5">
           <input
             value={localEsp}
             onChange={(ev) => setLocalEsp(ev.target.value)}
-            className="min-w-[120px] flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 font-mono text-[10px] shadow-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15"
+            className="min-w-[120px] flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
             placeholder="template_id"
           />
           <button
             type="button"
             onClick={() => void onSaveEsp(c, localEsp)}
-            className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-semibold text-slate-800 transition hover:bg-slate-200"
+            className={`${subtleBtn} text-[11px]`}
           >
             Guardar
           </button>
         </div>
       </td>
-      <td className="py-2.5 pr-2">
+      <td className="px-3 py-3">
         <button
           type="button"
           disabled={previewBusy}
           onClick={onSendPreview}
-          className="rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-semibold text-violet-900 transition hover:bg-violet-100 disabled:opacity-50"
+          className={`${subtleBtn} text-[11px]`}
         >
+          {previewBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
           {previewBusy ? 'Enviando…' : 'Probar'}
         </button>
       </td>
-      <td className="py-2.5 pr-2">
+      <td className="px-3 py-3">
         <button
           type="button"
           onClick={onToggle}
-          className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
-            c.active ? 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80' : 'bg-slate-200 text-slate-700 ring-1 ring-slate-300/80'
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+            c.active
+              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+              : 'bg-slate-100 text-slate-600 ring-slate-200'
           }`}
         >
           {c.active ? 'sí' : 'no'}
