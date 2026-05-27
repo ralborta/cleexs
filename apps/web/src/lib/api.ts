@@ -673,6 +673,53 @@ export interface SystemConfigReport {
   };
 }
 
+export interface AdminPaymentItem {
+  id: string;
+  status: string;
+  currency: string;
+  amountArs: number | null;
+  amountUsd: number | null;
+  netReceivedAmountArs: number | null;
+  mpPaymentId: string | null;
+  mpMerchantOrderId: string | null;
+  mpPreapprovalId: string | null;
+  paymentMethodId: string | null;
+  paymentTypeId: string | null;
+  statusDetail: string | null;
+  payerEmail: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  tenant: { id: string; tenantCode: string; planName: string | null } | null;
+  subscription:
+    | { id: string; billingInterval: string; status: string; planName: string | null }
+    | null;
+}
+
+export interface AdminPaymentsReport {
+  items: AdminPaymentItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    byStatus: Record<string, number>;
+    approvedAllTime: {
+      count: number;
+      totalArs: number;
+      totalUsd: number;
+      netReceivedArs: number;
+    };
+    approvedThisMonth: {
+      count: number;
+      totalArs: number;
+      totalUsd: number;
+      netReceivedArs: number;
+    };
+  };
+}
+
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
@@ -688,6 +735,17 @@ export const internalReportsApi = {
     return api<BrandsOverviewReport>(`/api/reports/internal/brands${tail ? `?${tail}` : ''}`);
   },
   systemConfig: () => api<SystemConfigReport>('/api/reports/internal/system-config'),
+  payments: (
+    params: { status?: string; search?: string; page?: number; pageSize?: number } = {}
+  ) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.search) qs.set('search', params.search);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    const tail = qs.toString();
+    return api<AdminPaymentsReport>(`/api/reports/internal/payments${tail ? `?${tail}` : ''}`);
+  },
 };
 
 export interface OutreachEmailRow {

@@ -306,13 +306,13 @@ export default function AdminCuentasPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-white/12 bg-gradient-to-br from-slate-900/80 to-violet-950/40 p-5 backdrop-blur-md lg:col-span-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
           <div className="flex flex-wrap items-center gap-3">
             <Mail className="h-5 w-5 text-violet-600" aria-hidden />
             <div>
-              <p className="text-sm font-semibold text-slate-900">Email interno (secuencia)</p>
+              <p className="text-sm font-semibold text-slate-900">Emails de campañas</p>
               <p className="text-xs text-slate-600">
-                Datos desde tablas de campañas y logs en la API — no sustituye la API de Resend.
+                Resumen de campañas configuradas, envíos recientes y estados registrados por Cleexs.
               </p>
             </div>
           </div>
@@ -342,42 +342,41 @@ export default function AdminCuentasPage() {
           )}
         </div>
 
-        <div className="flex flex-col justify-center rounded-2xl border border-white/12 bg-white/[0.06] p-5 backdrop-blur-md">
+        <div className="flex flex-col justify-center rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-slate-700" aria-hidden />
             <p className="text-sm font-semibold text-slate-900">Canales de envío</p>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-slate-600">
-            REST <code className="rounded bg-slate-100 px-1 font-mono text-[10px]">RESEND_API_KEY</code>, relay SMTP Resend y SMTP
-            saliente genérico (mismo criterio que diagnósticos).
+            Estado de las conexiones disponibles para mandar emails desde la plataforma.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <span
               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                 dash?.integrations.resendApiKeyConfigured
-                  ? 'bg-emerald-500/20 text-emerald-200 ring-emerald-400/30'
-                  : 'bg-slate-500/15 text-slate-700 ring-slate-200'
+                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                  : 'bg-slate-100 text-slate-600 ring-slate-200'
               }`}
             >
-              Resend API {dash?.integrations.resendApiKeyConfigured ? '· sí' : '· no'}
+              Resend {dash?.integrations.resendApiKeyConfigured ? 'configurado' : 'no configurado'}
             </span>
             <span
               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                 dash?.integrations.resendSmtpRelayConfigured
-                  ? 'bg-emerald-500/20 text-emerald-200 ring-emerald-400/30'
-                  : 'bg-slate-500/15 text-slate-700 ring-slate-200'
+                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                  : 'bg-slate-100 text-slate-600 ring-slate-200'
               }`}
             >
-              SMTP Resend {dash?.integrations.resendSmtpRelayConfigured ? '· sí' : '· no'}
+              Relay Resend {dash?.integrations.resendSmtpRelayConfigured ? 'configurado' : 'no configurado'}
             </span>
             <span
               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
                 dash?.integrations.smtpOutboundConfigured
-                  ? 'bg-sky-500/15 text-sky-100 ring-sky-400/25'
-                  : 'bg-slate-500/15 text-slate-700 ring-slate-200'
+                  ? 'bg-sky-50 text-sky-700 ring-sky-200'
+                  : 'bg-slate-100 text-slate-600 ring-slate-200'
               }`}
             >
-              SMTP listo {dash?.integrations.smtpOutboundConfigured ? '· sí' : '· no'}
+              SMTP alternativo {dash?.integrations.smtpOutboundConfigured ? 'configurado' : 'no configurado'}
             </span>
           </div>
           {dash?.generatedAt ? (

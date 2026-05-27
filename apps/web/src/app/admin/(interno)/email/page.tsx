@@ -380,14 +380,11 @@ export default function AdminEmailOpsPage() {
           <AdminPanelSection
             icon={Send}
             accent="violet"
-            title="Prueba de envío (API)"
+            title="Enviar email de prueba"
             description={
               <>
-                Usa <strong className="font-semibold text-slate-800">Resend REST</strong> si hay{' '}
-                <code className="rounded-md bg-violet-100 px-1.5 py-0.5 font-mono text-[11px]">RESEND_API_KEY</code>; si no,{' '}
-                <strong className="font-semibold text-slate-800">SMTP</strong>. El envío queda en logs con slug{' '}
-                <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px]">admin-send-test</code>: actualiza las
-                tarjetas y la auditoría de abajo. La zona «Resend · engagement» es otro canal (webhooks) y puede seguir en cero.
+                Mandá un correo real a una dirección puntual para verificar que el envío esté funcionando. El sistema usa Resend si
+                está configurado; si no, intenta por SMTP. El resultado queda registrado en la auditoría de esta pantalla.
               </>
             }
           >
@@ -399,7 +396,7 @@ export default function AdminEmailOpsPage() {
                   required
                   value={testEmail}
                   onChange={(ev) => setTestEmail(ev.target.value)}
-                  placeholder="vos@ejemplo.com"
+                  placeholder="ralborta@kiev-srl.com"
                   className={field}
                 />
               </label>

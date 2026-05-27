@@ -872,6 +872,164 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       database: dbCounts,
     };
   });
+
+  // 6) Listado de Facturas / Pagos emitidos a clientes
+  // ----------------------------------------------------------------
+  fastify.get('/internal/payments', async (request) => {
+    const querySchema = z.object({
+      status: z.string().optional(),
+      search: z.string().optional(),
+      page: z.string().optional(),
+      pageSize: z.string().optional(),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    const status = parsed.success ? parsed.data.status?.trim() : undefined;
+    const search = parsed.success ? parsed.data.search?.trim() : undefined;
+    const page = Math.max(1, Number(parsed.success ? parsed.data.page : '1') || 1);
+    const pageSizeRaw = Number(parsed.success ? parsed.data.pageSize : '20') || 20;
+    const pageSize = Math.min(100, Math.max(5, pageSizeRaw));
+
+    const where: Record<string, unknown> = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { payerEmail: { contains: search, mode: 'insensitive' } },
+        { mpPaymentId: { contains: search, mode: 'insensitive' } },
+        { mpMerchantOrderId: { contains: search, mode: 'insensitive' } },
+        { tenant: { is: { tenantCode: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [items, total, byStatusRaw, allTime, approvedThisMonth] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          status: true,
+          currency: true,
+          amountArs: true,
+          amountUsd: true,
+          netReceivedAmountArs: true,
+          mpPaymentId: true,
+          mpMerchantOrderId: true,
+          mpPreapprovalId: true,
+          paymentMethodId: true,
+          paymentTypeId: true,
+          statusDetail: true,
+          payerEmail: true,
+          paidAt: true,
+          createdAt: true,
+          tenant: {
+            select: {
+              id: true,
+              tenantCode: true,
+              plan: { select: { id: true, name: true } },
+            },
+          },
+          subscription: {
+            select: {
+              id: true,
+              billingInterval: true,
+              status: true,
+              plan: { select: { id: true, name: true } },
+            },
+          },
+        },
+      }),
+      prisma.payment.count({ where }),
+      prisma.payment.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      prisma.payment.aggregate({
+        where: { status: 'approved' },
+        _sum: { amountArs: true, amountUsd: true, netReceivedAmountArs: true },
+        _count: { _all: true },
+      }),
+      prisma.payment.aggregate({
+        where: { status: 'approved', paidAt: { gte: startOfMonth } },
+        _sum: { amountArs: true, amountUsd: true, netReceivedAmountArs: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const byStatus: Record<string, number> = {};
+    for (const row of byStatusRaw) {
+      byStatus[String(row.status)] = row._count?._all ?? 0;
+    }
+
+    return {
+      items: items.map((p) => ({
+        id: p.id,
+        status: p.status,
+        currency: p.currency,
+        amountArs: p.amountArs ? Number(p.amountArs) : null,
+        amountUsd: p.amountUsd ? Number(p.amountUsd) : null,
+        netReceivedAmountArs: p.netReceivedAmountArs ? Number(p.netReceivedAmountArs) : null,
+        mpPaymentId: p.mpPaymentId,
+        mpMerchantOrderId: p.mpMerchantOrderId,
+        mpPreapprovalId: p.mpPreapprovalId,
+        paymentMethodId: p.paymentMethodId,
+        paymentTypeId: p.paymentTypeId,
+        statusDetail: p.statusDetail,
+        payerEmail: p.payerEmail,
+        paidAt: p.paidAt?.toISOString() ?? null,
+        createdAt: p.createdAt.toISOString(),
+        tenant: p.tenant
+          ? {
+              id: p.tenant.id,
+              tenantCode: p.tenant.tenantCode,
+              planName: p.tenant.plan?.name ?? null,
+            }
+          : null,
+        subscription: p.subscription
+          ? {
+              id: p.subscription.id,
+              billingInterval: p.subscription.billingInterval,
+              status: p.subscription.status,
+              planName: p.subscription.plan?.name ?? null,
+            }
+          : null,
+      })),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+      summary: {
+        byStatus,
+        approvedAllTime: {
+          count: allTime._count?._all ?? 0,
+          totalArs: allTime._sum?.amountArs ? Number(allTime._sum.amountArs) : 0,
+          totalUsd: allTime._sum?.amountUsd ? Number(allTime._sum.amountUsd) : 0,
+          netReceivedArs: allTime._sum?.netReceivedAmountArs
+            ? Number(allTime._sum.netReceivedAmountArs)
+            : 0,
+        },
+        approvedThisMonth: {
+          count: approvedThisMonth._count?._all ?? 0,
+          totalArs: approvedThisMonth._sum?.amountArs
+            ? Number(approvedThisMonth._sum.amountArs)
+            : 0,
+          totalUsd: approvedThisMonth._sum?.amountUsd
+            ? Number(approvedThisMonth._sum.amountUsd)
+            : 0,
+          netReceivedArs: approvedThisMonth._sum?.netReceivedAmountArs
+            ? Number(approvedThisMonth._sum.netReceivedAmountArs)
+            : 0,
+        },
+      },
+    };
+  });
 };
 
 export default adminReportsRoutes;
