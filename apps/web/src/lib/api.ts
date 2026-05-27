@@ -748,6 +748,52 @@ export const internalReportsApi = {
   },
 };
 
+export interface AdminPlanItem {
+  id: string;
+  name: string;
+  tier: string | null;
+  description: string | null;
+  ctaLabel: string | null;
+  badge: string | null;
+  isRecommended: boolean;
+  isPublic: boolean;
+  displayOrder: number;
+  priceMonthly: number | null;
+  runsPerMonth: number;
+  promptsActiveLimit: number;
+  brandsLimit: number;
+  competitorsLimit: number;
+  retentionMonths: number;
+  automationEnabled: boolean;
+  features: string[];
+  engines: string[];
+  tenantsCount?: number;
+  subscriptionsCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminPlansResponse {
+  items: AdminPlanItem[];
+}
+
+export type AdminPlanUpdate = Partial<
+  Omit<
+    AdminPlanItem,
+    'id' | 'tenantsCount' | 'subscriptionsCount' | 'createdAt' | 'updatedAt'
+  >
+>;
+
+export const adminPlansApi = {
+  list: () => api<AdminPlansResponse>('/api/reports/internal/plans'),
+  update: (id: string, patch: AdminPlanUpdate) =>
+    api<AdminPlanItem>(`/api/reports/internal/plans/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+};
+
 export interface OutreachEmailRow {
   id: string;
   createdAt: string;

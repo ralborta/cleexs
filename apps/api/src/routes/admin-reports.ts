@@ -1030,6 +1030,126 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     };
   });
+
+  // 7) Planes (lectura y edicion desde /admin/planes)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/plans', async () => {
+    const plans = await prisma.plan.findMany({
+      orderBy: [{ displayOrder: 'asc' }, { priceMonthly: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: { select: { tenants: true, subscriptions: true } },
+      },
+    });
+
+    return {
+      items: plans.map((p) => ({
+        id: p.id,
+        name: p.name,
+        tier: p.tier ?? null,
+        description: p.description ?? null,
+        ctaLabel: p.ctaLabel ?? null,
+        badge: p.badge ?? null,
+        isRecommended: p.isRecommended,
+        isPublic: p.isPublic,
+        displayOrder: p.displayOrder,
+        priceMonthly: p.priceMonthly == null ? null : Number(p.priceMonthly),
+        runsPerMonth: p.runsPerMonth,
+        promptsActiveLimit: p.promptsActiveLimit,
+        brandsLimit: p.brandsLimit,
+        competitorsLimit: p.competitorsLimit,
+        retentionMonths: p.retentionMonths,
+        automationEnabled: p.automationEnabled,
+        features: Array.isArray(p.features) ? (p.features as unknown as string[]) : [],
+        engines: Array.isArray(p.engines) ? (p.engines as unknown as string[]) : [],
+        tenantsCount: p._count.tenants,
+        subscriptionsCount: p._count.subscriptions,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+      })),
+    };
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/internal/plans/:id', async (request, reply) => {
+    const bodySchema = z
+      .object({
+        name: z.string().min(1).max(120).optional(),
+        tier: z
+          .string()
+          .max(30)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        description: z
+          .string()
+          .max(2000)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        ctaLabel: z
+          .string()
+          .max(60)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        badge: z
+          .string()
+          .max(40)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        isRecommended: z.boolean().optional(),
+        isPublic: z.boolean().optional(),
+        displayOrder: z.number().int().min(0).max(999).optional(),
+        priceMonthly: z.number().min(0).max(1_000_000).nullable().optional(),
+        runsPerMonth: z.number().int().min(0).max(1_000_000).optional(),
+        promptsActiveLimit: z.number().int().min(0).max(1_000_000).optional(),
+        brandsLimit: z.number().int().min(0).max(1_000_000).optional(),
+        competitorsLimit: z.number().int().min(0).max(1_000_000).optional(),
+        retentionMonths: z.number().int().min(0).max(120).optional(),
+        automationEnabled: z.boolean().optional(),
+        features: z.array(z.string().min(1).max(200)).max(20).optional(),
+        engines: z.array(z.string().min(1).max(40)).max(10).optional(),
+      })
+      .strict();
+
+    const parsed = bodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
+    }
+
+    const { id } = request.params;
+    const existing = await prisma.plan.findUnique({ where: { id } });
+    if (!existing) {
+      return reply.status(404).send({ error: 'plan_not_found' });
+    }
+
+    const data: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.features !== undefined) data.features = parsed.data.features;
+    if (parsed.data.engines !== undefined) data.engines = parsed.data.engines;
+
+    const updated = await prisma.plan.update({ where: { id }, data });
+    return {
+      id: updated.id,
+      name: updated.name,
+      tier: updated.tier ?? null,
+      description: updated.description ?? null,
+      ctaLabel: updated.ctaLabel ?? null,
+      badge: updated.badge ?? null,
+      isRecommended: updated.isRecommended,
+      isPublic: updated.isPublic,
+      displayOrder: updated.displayOrder,
+      priceMonthly: updated.priceMonthly == null ? null : Number(updated.priceMonthly),
+      runsPerMonth: updated.runsPerMonth,
+      promptsActiveLimit: updated.promptsActiveLimit,
+      brandsLimit: updated.brandsLimit,
+      competitorsLimit: updated.competitorsLimit,
+      retentionMonths: updated.retentionMonths,
+      automationEnabled: updated.automationEnabled,
+      features: Array.isArray(updated.features) ? (updated.features as unknown as string[]) : [],
+      engines: Array.isArray(updated.engines) ? (updated.engines as unknown as string[]) : [],
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  });
 };
 
 export default adminReportsRoutes;

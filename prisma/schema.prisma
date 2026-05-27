@@ -110,6 +110,18 @@ model Plan {
   retentionMonths    Int      @default(12) @map("retention_months")
   automationEnabled  Boolean  @default(false) @map("automation_enabled")
   priceMonthly       Float?   @map("price_monthly")
+
+  // Campos visibles en la pagina publica de planes (editables desde /admin/planes)
+  tier            String?  @map("tier") // free | premium | enterprise (clasificacion comercial)
+  description     String?  @db.Text
+  ctaLabel        String?  @map("cta_label")
+  badge           String?  // Ej. "Recomendado", "Beta", "Ahorra 20%"
+  isRecommended   Boolean  @default(false) @map("is_recommended")
+  isPublic        Boolean  @default(true)  @map("is_public")
+  displayOrder    Int      @default(0)     @map("display_order")
+  features        Json     @default("[]")  // array de strings con los checks visibles
+  engines         Json     @default("[]")  // array de strings: ChatGPT, Gemini, Perplexity, Claude
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
