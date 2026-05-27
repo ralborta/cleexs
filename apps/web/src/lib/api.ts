@@ -318,7 +318,78 @@ export const leadsApi = {
       `/api/leads/email/${id}/send`,
       { method: 'POST', body: JSON.stringify(data) }
     ),
+  emailStats: (windowDays = 30) => api<OutreachStats>(`/api/leads/email/stats?windowDays=${windowDays}`),
+  listEmails: (params: { limit?: number; windowDays?: number; status?: string; mode?: 'shadow' | 'real' } = {}) => {
+    const search = new URLSearchParams();
+    if (params.limit) search.set('limit', String(params.limit));
+    if (params.windowDays) search.set('windowDays', String(params.windowDays));
+    if (params.status) search.set('status', params.status);
+    if (params.mode) search.set('mode', params.mode);
+    const qs = search.toString();
+    return api<OutreachEmailRow[]>(`/api/leads/email/list${qs ? `?${qs}` : ''}`);
+  },
 };
+
+export interface OutreachStats {
+  windowDays: number;
+  asOf: string;
+  totals: {
+    contacts: number;
+    drafts: number;
+    queued: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    bounced: number;
+    complained: number;
+    failed: number;
+    deliveryDelayed: number;
+  };
+  byMode: { shadow: number; real: number; unknown: number };
+  rates: {
+    deliveryRate: number;
+    openRate: number;
+    clickRate: number;
+    bounceRate: number;
+  };
+  todayRealSent: number;
+  dailyLimit: number;
+  domainVerified: boolean;
+  resendWebhook: {
+    secretConfigured: boolean;
+    eventsTotalLastWindow: number;
+    eventsByTypeLastWindow: Record<string, number>;
+    uniqueEmailsByStageLastWindow: {
+      sent: number;
+      delivered: number;
+      opened: number;
+      clicked: number;
+      bounced: number;
+      complained: number;
+      failed: number;
+    };
+    matchedToOutreach: number;
+  };
+}
+
+export interface OutreachEmailRow {
+  id: string;
+  createdAt: string;
+  sentAt: string | null;
+  updatedAt: string;
+  status: string;
+  provider: string | null;
+  subject: string;
+  mode: 'shadow' | 'real' | null;
+  effectiveTo: string | null;
+  originalTo: string | null;
+  externalId: string | null;
+  lastResendEvent: string | null;
+  competitor: string;
+  competitorDomain: string | null;
+  contactEmail: string;
+}
 
 export interface BrandDashboardComparisonRow {
   name: string;

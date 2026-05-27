@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Globe, Mail, Search, Sparkles, Users } from 'lucide-react';
+import { OutreachDashboard } from './OutreachDashboard';
 
 function contactsBySource(contacts: LeadContact[]): Record<string, LeadContact[]> {
   const map: Record<string, LeadContact[]> = {};
@@ -538,10 +539,6 @@ export default function OutreachPage() {
     (sum, l) => sum + (l.contacts || []).filter((c) => c.source === 'hunter').length,
     0
   );
-  const leadEmails = filteredLeads.flatMap((lead) => lead.emails || []);
-  const totalDrafts = leadEmails.filter((email) => email.status === 'draft').length;
-  const totalSent = leadEmails.filter((email) => ['sent', 'delivered'].includes(email.status)).length;
-  const totalRisk = leadEmails.filter((email) => ['bounced', 'complained', 'failed'].includes(email.status)).length;
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50">
@@ -688,26 +685,7 @@ export default function OutreachPage() {
           </Card>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <Card className="border-transparent bg-white shadow-md">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Drafts outreach</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">{totalDrafts}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-transparent bg-white shadow-md">
-            <CardContent className="p-4">
-              <p className="text-xs text-emerald-700">Enviados / entregados</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">{totalSent}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-transparent bg-white shadow-md">
-            <CardContent className="p-4">
-              <p className="text-xs text-red-700">Fallos / bounces / complaints</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">{totalRisk}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <OutreachDashboard />
 
         {/* Leads */}
         {filteredLeads.length === 0 ? (

@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { findBrandPosition, type Top3Entry } from '@cleexs/shared';
 import { scrapeEmailsForDomain } from '../lib/firecrawl-emails';
 import { sendLeadEmail } from '../lib/lead-email-sender';
+import { buildOutreachStats, listOutreachEmails } from '../lib/outreach-stats';
 
 const leadsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /leads?tenantId=...
@@ -308,6 +309,29 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
 
     return email;
   });
+
+  // GET /leads/email/stats?windowDays=30
+  fastify.get<{ Querystring: { windowDays?: string } }>('/email/stats', async (request) => {
+    const parsed = Number(request.query.windowDays);
+    const windowDays = Number.isFinite(parsed) && parsed > 0 ? Math.min(180, Math.floor(parsed)) : 30;
+    return buildOutreachStats(windowDays);
+  });
+
+  // GET /leads/email/list?limit=50&windowDays=30&status=&mode=
+  fastify.get<{ Querystring: { limit?: string; windowDays?: string; status?: string; mode?: string } }>(
+    '/email/list',
+    async (request) => {
+      const limit = Number(request.query.limit);
+      const windowDays = Number(request.query.windowDays);
+      const mode = request.query.mode === 'shadow' || request.query.mode === 'real' ? request.query.mode : null;
+      return listOutreachEmails({
+        limit: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 50,
+        windowDays: Number.isFinite(windowDays) && windowDays > 0 ? Math.min(180, Math.floor(windowDays)) : 30,
+        status: request.query.status?.trim() || null,
+        mode,
+      });
+    },
+  );
 
   // POST /leads/email/:id/send
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof sendEmailSchema> }>('/email/:id/send', async (request, reply) => {
