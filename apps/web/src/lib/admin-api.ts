@@ -45,23 +45,12 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
  * internas funcionan sin login. Quitar la env var en produccion real para
  * restablecer el login.
  */
-function normalizeFlag(value: string | undefined): string {
-  if (!value) return '';
-  return value
-    .toString()
-    .trim()
-    .replace(/^['"]+/, '')
-    .replace(/['"]+$/, '')
-    .trim()
-    .toLowerCase();
-}
+// DEMO MODE: el panel interno corre sin login mientras dura la demo.
+// Para volver a exigir login, cambiar este flag a false y redesplegar.
+const ADMIN_DEMO_BYPASS = true;
 
 function adminAuthBypassEnabled(): boolean {
-  const a = normalizeFlag(process.env.ADMIN_DEMO_BYPASS);
-  if (a === 'true' || a === '1' || a === 'yes' || a === 'on') return true;
-  const b = normalizeFlag(process.env.NEXT_PUBLIC_ADMIN_DEMO_BYPASS);
-  if (b === 'true' || b === '1' || b === 'yes' || b === 'on') return true;
-  return false;
+  return ADMIN_DEMO_BYPASS;
 }
 
 /** Valida sesión admin: NextRequest.cookies, cookie store de headers(), cabecera Cookie. */
