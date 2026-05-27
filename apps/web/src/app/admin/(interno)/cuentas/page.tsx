@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AdminAuthExpiredCard, AdminCallout, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { AdminPanelSection } from '@/components/admin/admin-panel-section';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import { internalReportsApi, type SystemConfigReport } from '@/lib/api';
 
 type EmailOps =
   | {
@@ -79,6 +80,7 @@ export default function AdminCuentasPage() {
 
   const [dash, setDash] = useState<DashboardSummary | null>(null);
   const [dashBusy, setDashBusy] = useState(false);
+  const [systemCfg, setSystemCfg] = useState<SystemConfigReport | null>(null);
 
   const [pEmail, setPEmail] = useState('');
   const [pDomain, setPDomain] = useState('');
@@ -123,6 +125,21 @@ export default function AdminCuentasPage() {
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    let cancelled = false;
+    internalReportsApi
+      .systemConfig()
+      .then((cfg) => {
+        if (!cancelled) setSystemCfg(cfg);
+      })
+      .catch(() => {
+        if (!cancelled) setSystemCfg(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function runProvision(e: React.FormEvent) {
     e.preventDefault();
@@ -350,35 +367,63 @@ export default function AdminCuentasPage() {
           <p className="mt-2 text-xs leading-relaxed text-slate-600">
             Estado de las conexiones disponibles para mandar emails desde la plataforma.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                dash?.integrations.resendApiKeyConfigured
-                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                  : 'bg-slate-100 text-slate-600 ring-slate-200'
-              }`}
-            >
-              Resend {dash?.integrations.resendApiKeyConfigured ? 'configurado' : 'no configurado'}
-            </span>
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                dash?.integrations.resendSmtpRelayConfigured
-                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                  : 'bg-slate-100 text-slate-600 ring-slate-200'
-              }`}
-            >
-              Relay Resend {dash?.integrations.resendSmtpRelayConfigured ? 'configurado' : 'no configurado'}
-            </span>
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                dash?.integrations.smtpOutboundConfigured
-                  ? 'bg-sky-50 text-sky-700 ring-sky-200'
-                  : 'bg-slate-100 text-slate-600 ring-slate-200'
-              }`}
-            >
-              SMTP alternativo {dash?.integrations.smtpOutboundConfigured ? 'configurado' : 'no configurado'}
-            </span>
-          </div>
+          {(() => {
+            const resendApi =
+              systemCfg?.integrations.resend.apiKeyConfigured ??
+              dash?.integrations.resendApiKeyConfigured ??
+              false;
+            const smtpHost = systemCfg?.integrations.smtp.host?.toLowerCase() ?? '';
+            const smtpConfigured =
+              systemCfg?.integrations.smtp.configured ??
+              dash?.integrations.smtpOutboundConfigured ??
+              false;
+            const relayResend =
+              smtpConfigured && smtpHost.includes('resend')
+                ? true
+                : (dash?.integrations.resendSmtpRelayConfigured ?? false);
+            const smtpAlternativo = smtpConfigured && !smtpHost.includes('resend');
+            const webhook = systemCfg?.integrations.resend.webhookSecretConfigured ?? false;
+            return (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    resendApi
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                      : 'bg-slate-100 text-slate-600 ring-slate-200'
+                  }`}
+                >
+                  Resend API {resendApi ? 'configurado' : 'no configurado'}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    relayResend
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                      : 'bg-slate-100 text-slate-600 ring-slate-200'
+                  }`}
+                >
+                  Relay Resend {relayResend ? 'configurado' : 'no configurado'}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    smtpAlternativo
+                      ? 'bg-sky-50 text-sky-700 ring-sky-200'
+                      : 'bg-slate-100 text-slate-600 ring-slate-200'
+                  }`}
+                >
+                  SMTP alternativo {smtpAlternativo ? 'configurado' : 'no configurado'}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    webhook
+                      ? 'bg-violet-50 text-violet-700 ring-violet-200'
+                      : 'bg-slate-100 text-slate-600 ring-slate-200'
+                  }`}
+                >
+                  Webhook Resend {webhook ? 'configurado' : 'no configurado'}
+                </span>
+              </div>
+            );
+          })()}
           {dash?.generatedAt ? (
             <p className="mt-4 text-[10px] text-slate-500">Snapshot: {new Date(dash.generatedAt).toLocaleString('es')}</p>
           ) : null}
