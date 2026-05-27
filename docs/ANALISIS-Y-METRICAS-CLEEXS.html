@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análisis y métricas Cleexs</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      line-height: 1.6;
+      color: #334155;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      background: #fafafa;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 0.95rem;
+      color: #64748b;
+      margin-bottom: 2.5rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin: 0 0 0.75rem;
+      font-size: 0.95rem;
+    }
+    ul, ol {
+      margin: 0 0 0.75rem;
+      padding-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 0.35rem;
+    }
+    .block {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+    }
+    .block p:last-child { margin-bottom: 0; }
+    .label {
+      font-weight: 600;
+      color: #475569;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 1rem 0;
+    }
+    th, td {
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      font-weight: 600;
+      color: #475569;
+      background: #f8fafc;
+    }
+    tr:hover td { background: #f8fafc; }
+    .num { font-variant-numeric: tabular-nums; }
+    code {
+      font-size: 0.85em;
+      background: #f1f5f9;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      color: #475569;
+    }
+    hr {
+      border: none;
+      height: 1px;
+      background: #e2e8f0;
+      margin: 2rem 0;
+    }
+    .flow {
+      counter-reset: step;
+    }
+    .flow li {
+      list-style: none;
+      padding-left: 2rem;
+      position: relative;
+      margin-bottom: 0.5rem;
+    }
+    .flow li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      width: 1.4rem;
+      height: 1.4rem;
+      background: #3b82f6;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.4rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Análisis y métricas Cleexs</h1>
+  <p class="subtitle">Documento de referencia sobre el flujo de análisis, generación de prompts, métricas y reportes del diagnóstico público.</p>
+
+  <h2>1. Entrada del usuario</h2>
+  <div class="block">
+    <p class="label">Qué recibe el sistema</p>
+    <p>Marca (opcional) y/o URL (opcional). Al menos uno es obligatorio.</p>
+    <p class="label">Normalización de marca</p>
+    <p>Si el usuario ingresa solo URL, la marca se deriva del dominio (ej. cleexs.com → Cleexs). Si ingresa ambos y el campo "marca" parece URL (contiene punto, www), se usa la marca derivada del dominio. Si ingresa solo marca y parece URL, se deriva del dominio; si no, se usa tal cual.</p>
+    <p class="label">Dominio</p>
+    <p>Se normaliza quitando www y usando el host principal (ej. www.tigo.com.bo → tigo.com.bo).</p>
+  </div>
+
+  <h2>2. Determinación de país y mercado</h2>
+  <div class="block">
+    <p class="label">Objetivo</p>
+    <p>Ubicar la marca en un mercado concreto para elegir competidores reales y contextualizar los prompts.</p>
+    <p class="label">Método 1 – TLD del dominio</p>
+    <p>Si la URL tiene TLD de país (ej. nike.com.co, tigo.com.bo), se usa un mapa TLD→país. Cubre Américas, Europa y principales países del mundo. Si el TLD es genérico (.com, .net, .org, .io, etc.), este método no aplica.</p>
+    <p class="label">Método 2 – Búsqueda web (Serper)</p>
+    <p>Solo cuando el dominio es genérico. Búsqueda: "marca" país origen sede marca. Se toman hasta 8 resultados (título + snippet) y se envían como evidencia a la IA.</p>
+    <p class="label">Método 3 – Inferencia por IA</p>
+    <p>Se llama a determineMarketProfileForBrand con evidencia del sitio (title, meta description, h1, h2), evidencia de búsqueda (si existe) y país conocido por TLD (si existe). La IA devuelve country, industry y confidence (0–100). Si el país ya viene por TLD, la IA solo infiere industria. Si hay evidencia de búsqueda, se prioriza para inferir país en dominios genéricos.</p>
+    <p class="label">Fallback</p>
+    <p>Variable de entorno PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY (por defecto: Argentina).</p>
+  </div>
+
+  <h2>3. Determinación de industria</h2>
+  <div class="block">
+    <p class="label">Objetivo</p>
+    <p>Definir el sector principal para elegir competidores y adaptar las intenciones de los prompts.</p>
+    <p class="label">Fuentes</p>
+    <p>Contenido del sitio (title, meta description, h1, h2), evidencia de búsqueda (si existe) y país ya determinado (si existe).</p>
+    <p class="label">Reglas de la IA</p>
+    <p>Industria = sector principal de negocio, 2–5 palabras en español. Nivel donde se comparan competidores directos. Ejemplos válidos: "Telecomunicaciones móviles", "Supermercados", "Bancos", "Cafeterías". Evitar rubros de producto/servicio específico (ej. no "billeteras móviles" si la marca es operadora).</p>
+    <p class="label">Fallback</p>
+    <p>"General" si no se puede inferir.</p>
+  </div>
+
+  <h2>4. Determinación de competidores</h2>
+  <div class="block">
+    <p class="label">Objetivo</p>
+    <p>Obtener hasta 5 competidores directos reales para el mercado e industria.</p>
+    <p class="label">Reglas estrictas de la IA</p>
+    <ol>
+      <li>Solo marcas/empresas competidores directos (misma industria, mismo mercado).</li>
+      <li>No incluir productos, servicios o submarcas de la misma empresa (ej. si la marca es operadora, no incluir su billetera móvil).</li>
+      <li>No inventar marcas; solo empresas que existan en ese país.</li>
+      <li>Solo nombres de marcas, nunca URLs ni dominios.</li>
+    </ol>
+    <p>Salida: array de hasta 5 nombres. Si la IA devuelve menos, se rellenan con "Competidor 1", etc.</p>
+  </div>
+
+  <h2>5. Generación dinámica de prompts</h2>
+  <div class="block">
+    <p class="label">Objetivo</p>
+    <p>Generar 9 prompts adaptados a marca, industria, competidores y país.</p>
+    <p class="label">Estructura</p>
+    <p>3 intenciones × 3 tipos = 9 prompts.</p>
+    <p class="label">Selección de intención principal</p>
+    <p>Industrias de decisión con tiempo (educación, bancos, seguros, consultoría, salud, etc.) → Consideración. Resto → Urgencia.</p>
+    <p class="label">Intenciones y pesos (por defecto)</p>
+    <p>Urgencia o Consideración: 30%. Calidad: 40%. Precio: 30%.</p>
+    <p class="label">Tipos de prompt</p>
+    <p><strong>Comparativo:</strong> "Compará y rankeá Top 3 en esta categoría. Marca medida: X. Competidores: A, B, C. Respondé 1., 2., 3. con motivo breve."</p>
+    <p><strong>Recomendación:</strong> "Si tuvieras que recomendar para alguien con esta necesidad, ¿cuál es el Top 3? Incluí X y competidores. Respondé 1., 2., 3. con motivo breve por cada uno."</p>
+    <p><strong>Defensibilidad:</strong> "Estoy considerando X. ¿Hay alternativas mejores? Respondé con Top 3 e incluí competidores. Indicá 1., 2., 3. con motivo breve."</p>
+    <p class="label">Cada prompt incluye</p>
+    <p>Intención y peso, contexto de la intención, mercado objetivo (país), marca medida y lista de competidores.</p>
+    <p class="label">Persistencia</p>
+    <p>Se crea una versión de prompts específica para el diagnóstico, con los 9 prompts guardados. No hay autoprompting ni feedback loops; la generación es estática por corrida.</p>
+  </div>
+
+  <h2>6. Ejecución del análisis</h2>
+  <div class="block">
+    <p class="label">Modelos</p>
+    <p>OpenAI (gpt-4o-mini) y, si está configurado, Gemini.</p>
+    <p class="label">Flujo</p>
+    <p>Se crea un Run por modelo. Cada prompt se envía secuencialmente. Temperatura: 0.2, max_tokens: 800. Timeout por prompt: 90 segundos.</p>
+    <p class="label">Parseo de respuestas</p>
+    <p>Se extrae el Top 3 de cada respuesta. Prioridad: lista numerada (1., 2., 3.) > bullets (•, -, *) > párrafos por marca > texto corrido. Se extrae el motivo/justificación de cada entrada (texto después del nombre de la marca). Si el ranking no es claro: flags ambiguous_ranking o no_ranking.</p>
+    <p class="label">Score por prompt</p>
+    <p>Posición 1: 1.0. Posición 2: 0.7. Posición 3: 0.4. No aparece: 0.</p>
+    <p class="label">Cleexs Score global</p>
+    <p>Promedio ponderado por intención. Cada intención tiene un peso; el score final combina los scores de cada intención según esos pesos. Si no hay intenciones definidas, es el promedio simple de todos los prompts.</p>
+  </div>
+
+  <h2>7. Métricas del reporte</h2>
+  <div class="block">
+    <table>
+      <thead>
+        <tr>
+          <th>Métrica</th>
+          <th>Descripción</th>
+          <th>Cálculo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Confianza de formato</td>
+          <td>% de respuestas parseables</td>
+          <td>(prompts con Top 3 extraído) / total prompts × 100</td>
+        </tr>
+        <tr>
+          <td>Mención de marca</td>
+          <td>% de respuestas donde se menciona la marca</td>
+          <td>(prompts donde aparece la marca) / total × 100</td>
+        </tr>
+        <tr>
+          <td>Aparición en Top 3</td>
+          <td>% de prompts donde la marca está en el Top 3</td>
+          <td>(prompts con marca en Top 3) / total × 100</td>
+        </tr>
+        <tr>
+          <td>Posición #1</td>
+          <td>% de prompts donde la marca está en primer lugar</td>
+          <td>(prompts con marca en #1) / total × 100</td>
+        </tr>
+        <tr>
+          <td>Profundidad de respuesta</td>
+          <td>% de entradas Top 3 con motivo/justificación</td>
+          <td>(entradas con reason ≥ 3 caracteres) / total entradas × 100</td>
+        </tr>
+        <tr>
+          <td>Consistencia ChatGPT↔Gemini</td>
+          <td>% de prompts donde ambos modelos coinciden en #1</td>
+          <td>Solo cuando hay ambos; (coincidencias) / (prompts con #1 en ambos) × 100</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>8. Visualizaciones y gráficos</h2>
+  <div class="block">
+    <p><strong>Ranking de marcas:</strong> tabla con posición, nombre, score promedio y % Top 3. Ordenado por share.</p>
+    <p><strong>Cleexs Score:</strong> gauge semicircular 0–100 con zonas de color (rojo &lt; 45, amarillo 45–70, verde &gt; 70). Incluye tendencia si hay datos históricos.</p>
+    <p><strong>Por intención:</strong> barras de progreso por intención (Urgencia/Consideración, Calidad, Precio) con score promedio. Gráfico de barras comparativo.</p>
+    <p><strong>Métricas del análisis:</strong> lista de las 6 métricas con barras de progreso y detalle (ej. "7/9 parseable").</p>
+    <p><strong>Comparaciones:</strong> tabla de marcas con tipo (marca/competidor), apariciones y % Top 3.</p>
+    <p><strong>Comparativo directo:</strong> barras horizontales con % Top 3 de tu marca vs competidores (hasta 6).</p>
+    <p><strong>Matriz por intención:</strong> tabla Intención × Marca con % de presencia.</p>
+    <p><strong>Funnel de presencia:</strong> tres barras (Menciones → Top 3 → Posición #1) con gradientes.</p>
+    <p><strong>Radar:</strong> tu marca vs líder por intención (porcentaje en cada eje).</p>
+    <p><strong>Posicionamiento (bubble):</strong> eje X = % Top 3, eje Y = % #1, tamaño = apariciones. Hasta 6 marcas.</p>
+    <p><strong>Cuota de voz:</strong> barras proporcionales por marca (tu marca vs competidores).</p>
+    <p><strong>Comparativo por intención:</strong> barras agrupadas (tu marca vs líder) por tipo de consulta.</p>
+    <p><strong>Consistencia ChatGPT↔Gemini:</strong> card con % y barras (Coinciden vs Difieren). Solo cuando hay ambos modelos.</p>
+    <p><strong>Profundidad de respuesta:</strong> card con % y barra de progreso. Solo cuando hay entradas Top 3.</p>
+  </div>
+
+  <h2>9. Resumen ejecutivo y acciones</h2>
+  <div class="block">
+    <p class="label">Resumen ejecutivo</p>
+    <p>Texto generado a partir de los datos: presencia en Top 3, líder, Cleexs Score, mejor y peor intención.</p>
+    <p class="label">Tres acciones prioritarias</p>
+    <p>Derivadas automáticamente: (1) Mejorar la métrica más baja si está por debajo de 70%. (2) Reforzar la intención más débil si su score &lt; 50%. (3) Reducir brecha con el líder si hay competidor por encima. (4) Si no hay prioridades claras: mantener nivel, considerar aumentar #1.</p>
+  </div>
+
+  <h2>10. Explicaciones (popups "Ver más")</h2>
+  <div class="block">
+    <p>Cada sección tiene un botón que abre un popup con explicaciones detalladas:</p>
+    <p><strong>Ranking de marcas:</strong> cómo se construye, qué significan Score y % Top 3.</p>
+    <p><strong>Cleexs Score:</strong> cómo se calcula (posiciones, pesos por intención), cómo interpretarlo.</p>
+    <p><strong>Por intención:</strong> qué son las intenciones, cómo se obtienen los scores, relación con el Cleexs Score global.</p>
+    <p><strong>Métricas:</strong> explicación de cada métrica (confianza, mención, Top 3, #1, profundidad, consistencia).</p>
+    <p><strong>Comparaciones:</strong> cómo se arma la tabla, significado de Apar. y % Top 3, cómo usarla.</p>
+    <p>Se incluye un ejemplo de prompt cuando hay datos, para que el usuario entienda qué preguntas se envían a la IA.</p>
+  </div>
+
+  <h2>11. Variables de entorno relevantes</h2>
+  <div class="block">
+    <table>
+      <thead>
+        <tr>
+          <th>Variable</th>
+          <th>Uso</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>OPENAI_API_KEY</td><td>Llamadas a OpenAI</td></tr>
+        <tr><td>SERPER_API_KEY</td><td>Búsqueda web para inferir país en dominios genéricos</td></tr>
+        <tr><td>PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY</td><td>País por defecto (ej. Argentina)</td></tr>
+        <tr><td>PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN</td><td>Confianza mínima para usar país inferido por IA (default 70)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>12. Resumen del flujo completo</h2>
+  <div class="block">
+    <ol class="flow">
+      <li>Usuario ingresa marca y/o URL.</li>
+      <li>Se normaliza marca y dominio; se determina país (TLD o búsqueda+IA).</li>
+      <li>Se infiere industria con IA (sitio + búsqueda + país).</li>
+      <li>Se obtienen 5 competidores con IA.</li>
+      <li>Se elige intención principal (Urgencia/Consideración) según industria.</li>
+      <li>Se generan 9 prompts (3 intenciones × 3 tipos).</li>
+      <li>Se ejecutan contra ChatGPT y, si aplica, Gemini.</li>
+      <li>Se parsea el Top 3 y los motivos de cada respuesta.</li>
+      <li>Se calculan scores, Cleexs Score y métricas.</li>
+      <li>Se construye el reporte con gráficos, resumen y acciones.</li>
+      <li>Se muestran explicaciones detalladas en popups.</li>
+    </ol>
+  </div>
+
+</body>
+</html>
