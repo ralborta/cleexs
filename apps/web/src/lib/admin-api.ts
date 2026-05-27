@@ -45,12 +45,16 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
  * internas funcionan sin login. Quitar la env var en produccion real para
  * restablecer el login.
  */
-// DEMO MODE: el panel interno corre sin login mientras dura la demo.
-// Para volver a exigir login, cambiar este flag a false y redesplegar.
-const ADMIN_DEMO_BYPASS = true;
+// El panel interno corre como portal abierto del equipo Cleexs: sin login.
+// Las rutas /admin/* solo se exponen al equipo via URL conocida; las API
+// /api/admin-ui/* siguen forwardeando con x-admin-secret hacia la API en
+// Railway, asi que la proteccion real esta a nivel del backend y de la red.
+// Si en el futuro quisieramos exigir login con cookie de sesion, basta con
+// poner ADMIN_OPEN_ACCESS = false y redesplegar.
+const ADMIN_OPEN_ACCESS = true;
 
 function adminAuthBypassEnabled(): boolean {
-  return ADMIN_DEMO_BYPASS;
+  return ADMIN_OPEN_ACCESS;
 }
 
 /** Valida sesión admin: NextRequest.cookies, cookie store de headers(), cabecera Cookie. */
