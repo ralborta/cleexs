@@ -45,11 +45,22 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
  * internas funcionan sin login. Quitar la env var en produccion real para
  * restablecer el login.
  */
+function normalizeFlag(value: string | undefined): string {
+  if (!value) return '';
+  return value
+    .toString()
+    .trim()
+    .replace(/^['"]+/, '')
+    .replace(/['"]+$/, '')
+    .trim()
+    .toLowerCase();
+}
+
 function adminAuthBypassEnabled(): boolean {
-  const a = process.env.ADMIN_DEMO_BYPASS?.toString().trim().toLowerCase();
-  if (a === 'true' || a === '1' || a === 'yes') return true;
-  const b = process.env.NEXT_PUBLIC_ADMIN_DEMO_BYPASS?.toString().trim().toLowerCase();
-  if (b === 'true' || b === '1' || b === 'yes') return true;
+  const a = normalizeFlag(process.env.ADMIN_DEMO_BYPASS);
+  if (a === 'true' || a === '1' || a === 'yes' || a === 'on') return true;
+  const b = normalizeFlag(process.env.NEXT_PUBLIC_ADMIN_DEMO_BYPASS);
+  if (b === 'true' || b === '1' || b === 'yes' || b === 'on') return true;
   return false;
 }
 
