@@ -532,6 +532,41 @@ export interface EmailOutreachReport {
   };
 }
 
+export interface BrandsOverviewItem {
+  id: string;
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  country: string | null;
+  category: string | null;
+  runSchedule: string | null;
+  createdAt: string;
+  updatedAt: string;
+  runsTotal: number;
+  lastRun: { id: string; status: string; createdAt: string } | null;
+  lastScore: number | null;
+  lastScoreAt: string | null;
+  tenant: {
+    id: string;
+    code: string;
+    type: string;
+    status: string;
+    plan: string | null;
+  } | null;
+}
+
+export interface BrandsOverviewReport {
+  asOf: string;
+  summary: {
+    total: number;
+    withScore: number;
+    scoredAvg: number;
+    premium: number;
+    withRuns: number;
+  };
+  items: BrandsOverviewItem[];
+}
+
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
@@ -539,6 +574,13 @@ export const internalReportsApi = {
     api<CleexsScoreReport>(`/api/reports/internal/cleexs-score?windowDays=${windowDays}`),
   emailOutreach: (windowDays: ReportWindowDays = 30) =>
     api<EmailOutreachReport>(`/api/reports/internal/email-outreach?windowDays=${windowDays}`),
+  brands: (params: { search?: string; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set('search', params.search);
+    if (params.limit) qs.set('limit', String(params.limit));
+    const tail = qs.toString();
+    return api<BrandsOverviewReport>(`/api/reports/internal/brands${tail ? `?${tail}` : ''}`);
+  },
 };
 
 export interface OutreachEmailRow {

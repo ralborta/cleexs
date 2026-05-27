@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart3,
+  Building2,
   CreditCard,
   FileSpreadsheet,
-  FolderKanban,
   Layers,
   Link2,
   Mail,
@@ -55,10 +55,15 @@ const sections: NavSection[] = [
     ],
   },
   {
+    title: 'Análisis',
+    links: [
+      { href: '/admin/marcas', label: 'Marcas analizadas', icon: Building2 },
+      { href: '/admin/reportes', label: 'Reportes', icon: FileSpreadsheet },
+    ],
+  },
+  {
     title: 'Configuración',
     links: [
-      { href: '/admin/proyectos', label: 'Proyectos', icon: FolderKanban },
-      { href: '/admin/reportes', label: 'Reportes', icon: FileSpreadsheet },
       { href: '/admin/settings', label: 'Configuración general', icon: Settings, extraPrefixes: ['/settings'] },
     ],
   },

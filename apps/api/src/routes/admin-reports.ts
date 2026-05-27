@@ -315,6 +315,134 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // 2.5) Marcas analizadas (vista completa por marca con owner y plan)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/brands', async (request) => {
+    const querySchema = z.object({
+      search: z.string().optional(),
+      limit: z
+        .string()
+        .optional()
+        .transform((v) => {
+          const n = Number(v);
+          if (!Number.isFinite(n) || n <= 0) return 200;
+          return Math.min(n, 500);
+        }),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    const limit = parsed.success ? parsed.data.limit : 200;
+    const search = parsed.success ? parsed.data.search?.trim().toLowerCase() : undefined;
+
+    const brands = await prisma.brand.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        domain: true,
+        industry: true,
+        country: true,
+        category: true,
+        runSchedule: true,
+        createdAt: true,
+        updatedAt: true,
+        tenant: {
+          select: {
+            id: true,
+            tenantCode: true,
+            tenantType: true,
+            status: true,
+            plan: { select: { name: true } },
+          },
+        },
+        runs: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            priaReports: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { priaTotal: true, createdAt: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
+        _count: { select: { runs: true } },
+      },
+    });
+
+    const items = brands.map((brand) => {
+      const lastRun = brand.runs[0];
+      let lastScore: number | null = null;
+      let lastScoreAt: string | null = null;
+      for (const run of brand.runs) {
+        if (run.priaReports[0]) {
+          lastScore = run.priaReports[0].priaTotal;
+          lastScoreAt = run.priaReports[0].createdAt.toISOString();
+          break;
+        }
+      }
+      return {
+        id: brand.id,
+        name: brand.name,
+        domain: brand.domain,
+        industry: brand.industry,
+        country: brand.country,
+        category: brand.category,
+        runSchedule: brand.runSchedule,
+        createdAt: brand.createdAt.toISOString(),
+        updatedAt: brand.updatedAt.toISOString(),
+        runsTotal: brand._count.runs,
+        lastRun: lastRun
+          ? {
+              id: lastRun.id,
+              status: lastRun.status,
+              createdAt: lastRun.createdAt.toISOString(),
+            }
+          : null,
+        lastScore,
+        lastScoreAt,
+        tenant: brand.tenant
+          ? {
+              id: brand.tenant.id,
+              code: brand.tenant.tenantCode,
+              type: brand.tenant.tenantType,
+              status: brand.tenant.status,
+              plan: brand.tenant.plan?.name ?? null,
+            }
+          : null,
+      };
+    });
+
+    const filtered = search
+      ? items.filter((b) => {
+          const hay = `${b.name} ${b.domain || ''} ${b.industry || ''} ${b.tenant?.code || ''} ${b.tenant?.plan || ''}`.toLowerCase();
+          return hay.includes(search);
+        })
+      : items;
+
+    const summary = {
+      total: filtered.length,
+      withScore: filtered.filter((b) => b.lastScore != null).length,
+      scoredAvg:
+        filtered.filter((b) => b.lastScore != null).reduce((acc, b) => acc + (b.lastScore || 0), 0) /
+          Math.max(1, filtered.filter((b) => b.lastScore != null).length),
+      premium: filtered.filter((b) => (b.tenant?.plan || '').toLowerCase().includes('premium')).length,
+      withRuns: filtered.filter((b) => b.runsTotal > 0).length,
+    };
+
+    return {
+      asOf: new Date().toISOString(),
+      summary: {
+        ...summary,
+        scoredAvg: Math.round(summary.scoredAvg * 10) / 10,
+      },
+      items: filtered,
+    };
+  });
+
   // 3) Reporte de Email y Outreach
   // ----------------------------------------------------------------
   fastify.get('/internal/email-outreach', async (request) => {
