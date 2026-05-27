@@ -4,7 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BarChart3, Mail, Trophy, FileSpreadsheet } from 'lucide-react';
 
-const SUB_LINKS = [
+type SubLink = {
+  href: string;
+  label: string;
+  icon: typeof FileSpreadsheet;
+  description: string;
+  matchExact?: boolean;
+};
+
+const SUB_LINKS: readonly SubLink[] = [
   {
     href: '/admin/reportes',
     label: 'Inicio',
@@ -30,7 +38,7 @@ const SUB_LINKS = [
     icon: Mail,
     description: 'Weekly + cold outreach',
   },
-] as const;
+];
 
 function isActive(pathname: string | null, href: string, exact?: boolean): boolean {
   if (!pathname) return false;

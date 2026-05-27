@@ -3,7 +3,7 @@ import {
   buildWaMeUrl,
   normalizeSponsorTrackingCode,
   slugifySponsorDisplayName,
-} from '@cleexs/shared';
+} from '@/lib/sponsor-whatsapp';
 import { CLEEXS_APP_URL, CLEEXS_MARKETING_URL, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
 
 export {
@@ -11,7 +11,7 @@ export {
   buildSponsorWhatsAppPrefillMessage,
   buildSponsorWhatsAppPublicMessage,
   buildWaMeUrl,
-} from '@cleexs/shared';
+} from '@/lib/sponsor-whatsapp';
 
 /** Misma normalización que `/diagnostico/crear` al persistir ref y UTM. */
 export function normalizeTrackingValue(input: string): string | undefined {
