@@ -1150,6 +1150,229 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       updatedAt: updated.updatedAt.toISOString(),
     };
   });
+
+  // 7) Estadisticas de emails semanales (campaignSlug que arranca con "weekly-")
+  // ----------------------------------------------------------------
+  fastify.get('/internal/weekly-emails-stats', async (request) => {
+    const querySchema = z.object({
+      windowDays: z.string().optional(),
+      campaignLimit: z.string().optional(),
+      recipientsLimit: z.string().optional(),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    const windowDays = (() => {
+      const n = Number(parsed.success ? parsed.data.windowDays : '90');
+      if (!Number.isFinite(n) || n <= 7) return 7;
+      if (n <= 30) return 30;
+      if (n <= 90) return 90;
+      return 180;
+    })();
+    const campaignLimit = Math.min(
+      30,
+      Math.max(5, Number(parsed.success ? parsed.data.campaignLimit : '12') || 12)
+    );
+    const recipientsLimit = Math.min(
+      200,
+      Math.max(10, Number(parsed.success ? parsed.data.recipientsLimit : '50') || 50)
+    );
+
+    const since = new Date();
+    since.setDate(since.getDate() - windowDays);
+
+    const weeklyWhere = {
+      campaignSlug: { startsWith: 'weekly-' },
+    } as const;
+
+    const [logsInWindow, totalAllTime, byStatusAllTime, lastLog, firstLog, recentRecipients] =
+      await Promise.all([
+        prisma.cleexsInternalEmailSendLog.findMany({
+          where: { ...weeklyWhere, createdAt: { gte: since } },
+          select: {
+            id: true,
+            campaignSlug: true,
+            status: true,
+            createdAt: true,
+            mergeSummary: true,
+            recipientEmail: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.cleexsInternalEmailSendLog.count({ where: weeklyWhere }),
+        prisma.cleexsInternalEmailSendLog.groupBy({
+          by: ['status'],
+          where: weeklyWhere,
+          _count: { _all: true },
+        }),
+        prisma.cleexsInternalEmailSendLog.findFirst({
+          where: weeklyWhere,
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true, campaignSlug: true, status: true },
+        }),
+        prisma.cleexsInternalEmailSendLog.findFirst({
+          where: weeklyWhere,
+          orderBy: { createdAt: 'asc' },
+          select: { createdAt: true },
+        }),
+        prisma.cleexsInternalEmailSendLog.findMany({
+          where: weeklyWhere,
+          orderBy: { createdAt: 'desc' },
+          take: recipientsLimit,
+          select: {
+            id: true,
+            recipientEmail: true,
+            campaignSlug: true,
+            status: true,
+            errorMessage: true,
+            externalId: true,
+            scoreBucket: true,
+            cleexsScore: true,
+            mergeSummary: true,
+            createdAt: true,
+            tenant: { select: { id: true, tenantCode: true } },
+          },
+        }),
+      ]);
+
+    const statusCounts: Record<string, number> = { sent: 0, failed: 0, skipped: 0, pending: 0 };
+    for (const row of byStatusAllTime) {
+      statusCounts[row.status] = row._count._all;
+    }
+
+    const inWindowStatusCounts: Record<string, number> = {
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+    };
+    for (const row of logsInWindow) {
+      inWindowStatusCounts[row.status] = (inWindowStatusCounts[row.status] ?? 0) + 1;
+    }
+
+    type CampaignAcc = {
+      slug: string;
+      firstAt: Date;
+      lastAt: Date;
+      sent: number;
+      failed: number;
+      skipped: number;
+      pending: number;
+      segment: string | null;
+      weekSlot: number | null;
+      mode: string | null;
+      recipients: number;
+    };
+
+    const campaignMap = new Map<string, CampaignAcc>();
+    for (const log of logsInWindow) {
+      const slug = log.campaignSlug;
+      const acc = campaignMap.get(slug) ?? {
+        slug,
+        firstAt: log.createdAt,
+        lastAt: log.createdAt,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        pending: 0,
+        segment: null,
+        weekSlot: null,
+        mode: null,
+        recipients: 0,
+      };
+      if (log.createdAt < acc.firstAt) acc.firstAt = log.createdAt;
+      if (log.createdAt > acc.lastAt) acc.lastAt = log.createdAt;
+      if (log.status === 'sent') acc.sent += 1;
+      else if (log.status === 'failed') acc.failed += 1;
+      else if (log.status === 'skipped') acc.skipped += 1;
+      else if (log.status === 'pending') acc.pending += 1;
+      acc.recipients += 1;
+      if (log.mergeSummary && typeof log.mergeSummary === 'object') {
+        const summary = log.mergeSummary as Record<string, unknown>;
+        if (acc.segment == null && typeof summary.segment === 'string') {
+          acc.segment = summary.segment;
+        }
+        if (acc.weekSlot == null && typeof summary.weekSlot === 'number') {
+          acc.weekSlot = summary.weekSlot;
+        }
+        if (acc.mode == null && typeof summary.mode === 'string') {
+          acc.mode = summary.mode;
+        }
+      }
+      campaignMap.set(slug, acc);
+    }
+
+    const campaigns = Array.from(campaignMap.values())
+      .sort((a, b) => b.lastAt.getTime() - a.lastAt.getTime())
+      .slice(0, campaignLimit)
+      .map((c) => ({
+        campaignSlug: c.slug,
+        firstSendAt: c.firstAt.toISOString(),
+        lastSendAt: c.lastAt.toISOString(),
+        recipients: c.recipients,
+        sent: c.sent,
+        failed: c.failed,
+        skipped: c.skipped,
+        pending: c.pending,
+        successRate: c.recipients > 0 ? (c.sent / c.recipients) * 100 : 0,
+        segment: c.segment,
+        weekSlot: c.weekSlot,
+        mode: c.mode,
+      }));
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const sentToday = logsInWindow.filter(
+      (r) => r.status === 'sent' && r.createdAt.toISOString().slice(0, 10) === todayKey
+    ).length;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sentLast7 = logsInWindow.filter(
+      (r) => r.status === 'sent' && r.createdAt >= sevenDaysAgo
+    ).length;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays,
+      campaignsTracked: campaignMap.size,
+      allTime: {
+        total: totalAllTime,
+        ...statusCounts,
+        firstSendAt: firstLog?.createdAt?.toISOString() ?? null,
+        lastSendAt: lastLog?.createdAt?.toISOString() ?? null,
+        lastCampaignSlug: lastLog?.campaignSlug ?? null,
+        lastStatus: lastLog?.status ?? null,
+      },
+      window: {
+        total: logsInWindow.length,
+        ...inWindowStatusCounts,
+        sentToday,
+        sentLast7,
+      },
+      campaigns,
+      recentRecipients: recentRecipients.map((r) => ({
+        id: r.id,
+        recipientEmail: r.recipientEmail,
+        campaignSlug: r.campaignSlug,
+        status: r.status,
+        errorMessage: r.errorMessage,
+        externalId: r.externalId,
+        scoreBucket: r.scoreBucket,
+        cleexsScore: r.cleexsScore,
+        segment:
+          r.mergeSummary && typeof r.mergeSummary === 'object'
+            ? ((r.mergeSummary as Record<string, unknown>).segment as string | undefined) ?? null
+            : null,
+        weekSlot:
+          r.mergeSummary && typeof r.mergeSummary === 'object'
+            ? ((r.mergeSummary as Record<string, unknown>).weekSlot as number | undefined) ?? null
+            : null,
+        tenantCode: r.tenant?.tenantCode ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      cron: {
+        cronSecretConfigured: envFlag('CRON_SECRET'),
+        scheduleHint: 'martes 13:00 UTC (10:00 AR)',
+      },
+    };
+  });
 };
 
 export default adminReportsRoutes;

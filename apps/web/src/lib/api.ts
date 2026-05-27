@@ -746,7 +746,83 @@ export const internalReportsApi = {
     const tail = qs.toString();
     return api<AdminPaymentsReport>(`/api/reports/internal/payments${tail ? `?${tail}` : ''}`);
   },
+  weeklyEmailsStats: (
+    params: { windowDays?: number; campaignLimit?: number; recipientsLimit?: number } = {}
+  ) => {
+    const qs = new URLSearchParams();
+    if (params.windowDays) qs.set('windowDays', String(params.windowDays));
+    if (params.campaignLimit) qs.set('campaignLimit', String(params.campaignLimit));
+    if (params.recipientsLimit) qs.set('recipientsLimit', String(params.recipientsLimit));
+    const tail = qs.toString();
+    return api<WeeklyEmailsStatsReport>(
+      `/api/reports/internal/weekly-emails-stats${tail ? `?${tail}` : ''}`
+    );
+  },
 };
+
+export type WeeklyEmailLogStatus = 'sent' | 'failed' | 'skipped' | 'pending';
+
+export interface WeeklyEmailCampaignSummary {
+  campaignSlug: string;
+  firstSendAt: string;
+  lastSendAt: string;
+  recipients: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  pending: number;
+  successRate: number;
+  segment: string | null;
+  weekSlot: number | null;
+  mode: string | null;
+}
+
+export interface WeeklyEmailRecipient {
+  id: string;
+  recipientEmail: string;
+  campaignSlug: string;
+  status: WeeklyEmailLogStatus;
+  errorMessage: string | null;
+  externalId: string | null;
+  scoreBucket: string | null;
+  cleexsScore: number | null;
+  segment: string | null;
+  weekSlot: number | null;
+  tenantCode: string | null;
+  createdAt: string;
+}
+
+export interface WeeklyEmailsStatsReport {
+  generatedAt: string;
+  windowDays: number;
+  campaignsTracked: number;
+  allTime: {
+    total: number;
+    sent: number;
+    failed: number;
+    skipped: number;
+    pending: number;
+    firstSendAt: string | null;
+    lastSendAt: string | null;
+    lastCampaignSlug: string | null;
+    lastStatus: WeeklyEmailLogStatus | null;
+  };
+  window: {
+    total: number;
+    sent: number;
+    failed: number;
+    skipped: number;
+    pending: number;
+    sentToday: number;
+    sentLast7: number;
+  };
+  campaigns: WeeklyEmailCampaignSummary[];
+  recentRecipients: WeeklyEmailRecipient[];
+  cron: {
+    cronSecretConfigured: boolean;
+    scheduleHint: string;
+  };
+}
 
 export interface AdminPlanItem {
   id: string;

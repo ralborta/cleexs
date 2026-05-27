@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   Building2,
+  CalendarClock,
   CreditCard,
   FileSpreadsheet,
   Layers,
@@ -22,6 +23,7 @@ type NavLink = {
   label: string;
   icon: typeof Mail;
   extraPrefixes?: string[];
+  excludePrefixes?: string[];
 };
 
 type NavSection = {
@@ -41,7 +43,8 @@ const sections: NavSection[] = [
   {
     title: 'Marketing',
     links: [
-      { href: '/admin/email', label: 'Email · secuencia', icon: Mail },
+      { href: '/admin/email', label: 'Email · secuencia', icon: Mail, excludePrefixes: ['/admin/email/weekly'] },
+      { href: '/admin/email/weekly', label: 'Emails semanales', icon: CalendarClock },
       { href: '/admin/referidores', label: 'Referidores', icon: MousePointerClick },
       { href: '/tools/auspiciadores', label: 'Links auspiciador', icon: Link2 },
     ],
@@ -71,6 +74,9 @@ const sections: NavSection[] = [
 
 function isLinkActive(pathname: string | null, link: NavLink): boolean {
   if (!pathname) return false;
+  if (link.excludePrefixes?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return false;
+  }
   const allPrefixes = [link.href, ...(link.extraPrefixes ?? [])];
   return allPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
@@ -87,8 +93,8 @@ export function AdminInternoNav() {
               <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 {section.title}
               </p>
-              {section.links.map(({ href, label, icon: Icon, extraPrefixes }) => {
-                const active = isLinkActive(pathname, { href, label, icon: Icon, extraPrefixes });
+              {section.links.map(({ href, label, icon: Icon, extraPrefixes, excludePrefixes }) => {
+                const active = isLinkActive(pathname, { href, label, icon: Icon, extraPrefixes, excludePrefixes });
                 return (
                   <Link
                     key={href}
@@ -111,8 +117,8 @@ export function AdminInternoNav() {
 
       <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4 py-3 md:hidden">
         {sections.flatMap((section) =>
-          section.links.map(({ href, label, icon: Icon, extraPrefixes }) => {
-            const active = isLinkActive(pathname, { href, label, icon: Icon, extraPrefixes });
+          section.links.map(({ href, label, icon: Icon, extraPrefixes, excludePrefixes }) => {
+            const active = isLinkActive(pathname, { href, label, icon: Icon, extraPrefixes, excludePrefixes });
             return (
               <Link
                 key={href}
