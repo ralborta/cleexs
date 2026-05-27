@@ -567,6 +567,112 @@ export interface BrandsOverviewReport {
   items: BrandsOverviewItem[];
 }
 
+export interface SystemConfigReport {
+  asOf: string;
+  environment: {
+    nodeVersion: string;
+    uptimeSec: number;
+    hostname: string | null;
+    railwayCommit: string | null;
+    railwayBranch: string | null;
+    railwayDomain: string | null;
+    nodeEnv: string;
+  };
+  integrations: {
+    openai: { configured: boolean; model: string; competitorsModel: string };
+    gemini: { configured: boolean };
+    resend: { apiKeyConfigured: boolean; webhookSecretConfigured: boolean };
+    smtp: { configured: boolean; host: string | null; port: number; fromEmail: string | null; fromName: string | null };
+    mercadopago: { accessTokenConfigured: boolean; webhookSecretConfigured: boolean; webhookUrl: string };
+    firecrawl: { configured: boolean };
+    hunter: { configured: boolean };
+    serper: { configured: boolean };
+    builderbot: { configured: boolean; baseUrl: string };
+    whatsapp: { apiKeyConfigured: boolean; dailyLimit: number };
+    satellite: { enabled: boolean; baseUrl: string | null };
+    database: { configured: boolean };
+  };
+  variables: {
+    outreach: {
+      fromEmail: string | null;
+      fromName: string | null;
+      replyTo: string | null;
+      shadowTo: string | null;
+      dailyLimit: number;
+      domainVerified: boolean;
+    };
+    admin: {
+      apiSecretConfigured: boolean;
+      requireAuth: boolean;
+      fullAccessEmails: number;
+      allowActorQuery: boolean;
+    };
+    auth: {
+      portalJwtSecretConfigured: boolean;
+      cronSecretConfigured: boolean;
+    };
+    urls: {
+      frontend: string | null;
+      frontendList: string | null;
+      appUrl: string | null;
+      marketingUrl: string;
+      apiBase: string;
+    };
+    billing: {
+      usdToArsRate: number | null;
+      currency: string | null;
+    };
+    publicDiagnostic: {
+      defaultCountry: string;
+      marketConfidenceMin: number;
+    };
+  };
+  webhooks: {
+    mercadopago: {
+      url: string;
+      eventsLast30Days: number;
+      lastEventAt: string | null;
+      lastEventSource: string | null;
+      configured: boolean;
+    };
+    resend: {
+      url: string;
+      eventsLast30Days: number;
+      lastEventAt: string | null;
+      lastEventType: string | null;
+      eventsByType: Record<string, number>;
+      configured: boolean;
+    };
+  };
+  cron: {
+    weeklyEmails: {
+      lastSendAt: string | null;
+      lastSendStatus: string | null;
+      sendsLast30Days: number;
+      sendsLast7Days: number;
+      campaignsActive: number;
+      cronSecretConfigured: boolean;
+    };
+    outreach: {
+      dailyLimit: number;
+      todayRealSent: number;
+      last7DaysSent: number;
+      domainVerified: boolean;
+    };
+  };
+  database: {
+    tenants: number;
+    users: number;
+    brands: number;
+    runs: number;
+    payments: number;
+    subscriptions: number;
+    leadContacts: number;
+    leadEmails: number;
+    publicDiagnostics: number;
+  };
+}
+
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
@@ -581,6 +687,7 @@ export const internalReportsApi = {
     const tail = qs.toString();
     return api<BrandsOverviewReport>(`/api/reports/internal/brands${tail ? `?${tail}` : ''}`);
   },
+  systemConfig: () => api<SystemConfigReport>('/api/reports/internal/system-config'),
 };
 
 export interface OutreachEmailRow {

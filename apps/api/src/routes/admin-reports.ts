@@ -48,6 +48,18 @@ function buildDailySeries<T extends { createdAt: Date }>(
   return series;
 }
 
+function envFlag(name: string): boolean {
+  return Boolean(process.env[name]?.toString().trim());
+}
+
+function envValue(name: string, fallback = ''): string {
+  return process.env[name]?.toString().trim() || fallback;
+}
+
+function envBool(name: string): boolean {
+  return process.env[name]?.toString().trim().toLowerCase() === 'true';
+}
+
 const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   // 1) Reporte de Adquisicion y Funnel
   // ----------------------------------------------------------------
@@ -623,6 +635,241 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         resendWebhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
         outreachDomainVerified: process.env.OUTREACH_DOMAIN_VERIFIED === 'true',
       },
+    };
+  });
+
+  // 4) Configuracion del sistema (integraciones + variables + webhooks + cron + DB)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/system-config', async () => {
+    const now = new Date();
+    const since30 = new Date(now);
+    since30.setDate(since30.getDate() - 30);
+    const since7 = new Date(now);
+    since7.setDate(since7.getDate() - 7);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const apiBase =
+      envValue('PUBLIC_WEBHOOK_BASE_URL') ||
+      envValue('RAILWAY_PUBLIC_DOMAIN') ||
+      envValue('API_URL') ||
+      'https://cleexsapi-production.up.railway.app';
+    const apiBaseHttp = apiBase.startsWith('http') ? apiBase : `https://${apiBase}`;
+
+    const [
+      mpEventsLast30,
+      mpLastEvent,
+      resendEventsLast30,
+      resendLastEvent,
+      resendEventsByType,
+      weeklyLastSend,
+      weeklySendsLast30,
+      weeklySendsLast7,
+      weeklyCampaignsActive,
+      outreachTodayReal,
+      outreachLast7,
+      dbCounts,
+    ] = await Promise.all([
+      prisma.webhookEvent
+        .count({ where: { receivedAt: { gte: since30 } } })
+        .catch(() => 0),
+      prisma.webhookEvent
+        .findFirst({ orderBy: { receivedAt: 'desc' }, select: { receivedAt: true, source: true } })
+        .catch(() => null),
+      prisma.cleexsResendWebhookEvent
+        .count({ where: { occurredAt: { gte: since30 } } })
+        .catch(() => 0),
+      prisma.cleexsResendWebhookEvent
+        .findFirst({ orderBy: { occurredAt: 'desc' }, select: { occurredAt: true, eventType: true } })
+        .catch(() => null),
+      prisma.cleexsResendWebhookEvent
+        .groupBy({
+          by: ['eventType'],
+          where: { occurredAt: { gte: since30 } },
+          _count: { _all: true },
+        })
+        .catch(() => [] as Array<{ eventType: string; _count: { _all: number } }>),
+      prisma.cleexsInternalEmailSendLog
+        .findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true, status: true } })
+        .catch(() => null),
+      prisma.cleexsInternalEmailSendLog
+        .count({ where: { createdAt: { gte: since30 } } })
+        .catch(() => 0),
+      prisma.cleexsInternalEmailSendLog
+        .count({ where: { createdAt: { gte: since7 } } })
+        .catch(() => 0),
+      prisma.cleexsInternalEmailCampaign
+        .count({ where: { active: true } })
+        .catch(() => 0),
+      prisma.leadEmail
+        .count({
+          where: {
+            sentAt: { gte: startOfToday },
+            metaJson: { path: ['mode'], equals: 'real' },
+          },
+        })
+        .catch(() => 0),
+      prisma.leadEmail.count({ where: { sentAt: { gte: since7 } } }).catch(() => 0),
+      Promise.all([
+        prisma.tenant.count(),
+        prisma.user.count(),
+        prisma.brand.count(),
+        prisma.run.count(),
+        prisma.payment.count(),
+        prisma.subscription.count(),
+        prisma.leadContact.count(),
+        prisma.leadEmail.count(),
+        prisma.publicDiagnostic.count(),
+      ]).then(([tenants, users, brands, runs, payments, subscriptions, leadContacts, leadEmails, publicDiagnostics]) => ({
+        tenants,
+        users,
+        brands,
+        runs,
+        payments,
+        subscriptions,
+        leadContacts,
+        leadEmails,
+        publicDiagnostics,
+      })),
+    ]);
+
+    const resendEventsByTypeMap: Record<string, number> = {};
+    for (const g of resendEventsByType) {
+      resendEventsByTypeMap[g.eventType] = g._count._all;
+    }
+
+    return {
+      asOf: now.toISOString(),
+      environment: {
+        nodeVersion: process.version,
+        uptimeSec: Math.floor(process.uptime()),
+        hostname: process.env.HOSTNAME || null,
+        railwayCommit: envValue('RAILWAY_GIT_COMMIT_SHA') || null,
+        railwayBranch: envValue('RAILWAY_GIT_BRANCH') || null,
+        railwayDomain: envValue('RAILWAY_PUBLIC_DOMAIN') || null,
+        nodeEnv: envValue('NODE_ENV', 'development'),
+      },
+      integrations: {
+        openai: {
+          configured: envFlag('OPENAI_API_KEY'),
+          model: envValue('DIAGNOSTIC_AI_OPENAI_MODEL', 'gpt-4o-mini'),
+          competitorsModel: envValue('DIAGNOSTIC_COMPETITORS_OPENAI_MODEL', 'gpt-4o'),
+        },
+        gemini: {
+          configured:
+            envFlag('GEMINI_API_KEY') || envFlag('GOOGLE_API_KEY') || envFlag('GOOGLE_AI_API_KEY'),
+        },
+        resend: {
+          apiKeyConfigured: envFlag('RESEND_API_KEY'),
+          webhookSecretConfigured: envFlag('RESEND_WEBHOOK_SECRET'),
+        },
+        smtp: {
+          configured:
+            envFlag('SMTP_HOST') &&
+            envValue('SMTP_HOST') !== 'localhost' &&
+            envFlag('SMTP_USER') &&
+            envFlag('SMTP_PASS'),
+          host: envValue('SMTP_HOST') || null,
+          port: Number(envValue('SMTP_PORT', '587')),
+          fromEmail: envValue('SMTP_FROM_EMAIL') || envValue('SMTP_FROM') || null,
+          fromName: envValue('SMTP_FROM_NAME') || null,
+        },
+        mercadopago: {
+          accessTokenConfigured: envFlag('MP_ACCESS_TOKEN'),
+          webhookSecretConfigured: envFlag('MP_WEBHOOK_SECRET'),
+          webhookUrl: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/mercadopago`,
+        },
+        firecrawl: { configured: envFlag('FIRECRAWL_API_KEY') },
+        hunter: { configured: envFlag('HUNTER_API_KEY') },
+        serper: { configured: envFlag('SERPER_API_KEY') },
+        builderbot: {
+          configured: envFlag('BUILDERBOT_BOT_ID') && envFlag('BUILDERBOT_API_KEY'),
+          baseUrl: envValue('BUILDERBOT_BASE_URL', 'https://app.builderbot.cloud'),
+        },
+        whatsapp: {
+          apiKeyConfigured: envFlag('WHATSAPP_CHANNEL_API_KEY'),
+          dailyLimit: Number(envValue('WA_CHANNEL_DAILY_LIMIT', '5')),
+        },
+        satellite: {
+          enabled: envValue('SATELLITE_ENABLED', 'true').toLowerCase() !== 'false',
+          baseUrl: envValue('SATELLITE_BASE_URL') || null,
+        },
+        database: {
+          configured: envFlag('DATABASE_URL'),
+        },
+      },
+      variables: {
+        outreach: {
+          fromEmail: envValue('OUTREACH_FROM_EMAIL') || null,
+          fromName: envValue('OUTREACH_FROM_NAME') || null,
+          replyTo: envValue('OUTREACH_REPLY_TO') || null,
+          shadowTo: envValue('OUTREACH_SHADOW_TO') || null,
+          dailyLimit: Number(envValue('OUTREACH_DAILY_LIMIT', '20')),
+          domainVerified: envBool('OUTREACH_DOMAIN_VERIFIED'),
+        },
+        admin: {
+          apiSecretConfigured: envFlag('ADMIN_API_SECRET'),
+          requireAuth: envBool('ADMIN_REQUIRE_AUTH'),
+          fullAccessEmails:
+            envValue('ADMIN_FULL_ACCESS_EMAILS')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean).length,
+          allowActorQuery: envBool('ALLOW_USAGE_ACTOR_QUERY'),
+        },
+        auth: {
+          portalJwtSecretConfigured: envFlag('PORTAL_JWT_SECRET'),
+          cronSecretConfigured: envFlag('CRON_SECRET'),
+        },
+        urls: {
+          frontend: envValue('FRONTEND_URL') || null,
+          frontendList: envValue('FRONTEND_URLS') || null,
+          appUrl: envValue('CLEEXS_APP_URL') || envValue('NEXT_PUBLIC_APP_URL') || null,
+          marketingUrl: envValue('CLEEXS_MARKETING_URL', 'https://cleexs.net'),
+          apiBase: apiBaseHttp,
+        },
+        billing: {
+          usdToArsRate: Number(envValue('BILLING_USD_TO_ARS_RATE', '0')) || null,
+          currency: envValue('BILLING_CURRENCY') || null,
+        },
+        publicDiagnostic: {
+          defaultCountry: envValue('PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY', 'Argentina'),
+          marketConfidenceMin: Number(envValue('PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN', '70')),
+        },
+      },
+      webhooks: {
+        mercadopago: {
+          url: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/mercadopago`,
+          eventsLast30Days: mpEventsLast30,
+          lastEventAt: mpLastEvent?.receivedAt?.toISOString() ?? null,
+          lastEventSource: mpLastEvent?.source ?? null,
+          configured: envFlag('MP_ACCESS_TOKEN'),
+        },
+        resend: {
+          url: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/resend`,
+          eventsLast30Days: resendEventsLast30,
+          lastEventAt: resendLastEvent?.occurredAt?.toISOString() ?? null,
+          lastEventType: resendLastEvent?.eventType ?? null,
+          eventsByType: resendEventsByTypeMap,
+          configured: envFlag('RESEND_WEBHOOK_SECRET'),
+        },
+      },
+      cron: {
+        weeklyEmails: {
+          lastSendAt: weeklyLastSend?.createdAt?.toISOString() ?? null,
+          lastSendStatus: weeklyLastSend?.status ?? null,
+          sendsLast30Days: weeklySendsLast30,
+          sendsLast7Days: weeklySendsLast7,
+          campaignsActive: weeklyCampaignsActive,
+          cronSecretConfigured: envFlag('CRON_SECRET'),
+        },
+        outreach: {
+          dailyLimit: Number(envValue('OUTREACH_DAILY_LIMIT', '20')),
+          todayRealSent: outreachTodayReal,
+          last7DaysSent: outreachLast7,
+          domainVerified: envBool('OUTREACH_DOMAIN_VERIFIED'),
+        },
+      },
+      database: dbCounts,
     };
   });
 };
