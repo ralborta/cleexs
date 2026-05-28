@@ -40,7 +40,7 @@ jobs:
           CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
           API_URL: https://cleexsapi-production.up.railway.app
           DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
-          SEGMENT: ${{ github.event_name == 'schedule' && 'free' || inputs.segment }}
+          SEGMENT: ${{ github.event_name == 'schedule' && '' || inputs.segment }}
           LIMIT: ${{ github.event_name == 'schedule' && '50' || inputs.limit }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
@@ -52,7 +52,7 @@ jobs:
             --arg segment "$SEGMENT" \
             --argjson limit "$LIMIT" \
             --argjson dryRun "$DRY_RUN" \
-            '{segment:$segment, limit:$limit, dryRun:$dryRun}')
+            '{limit:$limit, dryRun:$dryRun} + (if $segment == "" then {} else {segment:$segment} end)')
 
           curl --fail-with-body -sS \
             -X POST "$API_URL/api/cron/weekly-emails" \

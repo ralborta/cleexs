@@ -17,15 +17,16 @@ function headerString(value: string | string[] | undefined): string | undefined 
  * Devuelve marcas con runSchedule = frequency y el periodo sugerido (periodStart, periodEnd).
  */
 function checkCronSecret(request: { headers: { [k: string]: string | string[] | undefined } }, reply: any): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    reply.code(500).send({ error: 'CRON_SECRET no configurado' });
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  const adminSecret = process.env.ADMIN_API_SECRET?.trim();
+  if (!cronSecret && !adminSecret) {
+    reply.code(500).send({ error: 'CRON_SECRET o ADMIN_API_SECRET no configurado' });
     return false;
   }
-  const raw = request.headers['x-cron-secret'] ?? request.headers.authorization;
+  const raw = request.headers['x-cron-secret'] ?? request.headers['x-admin-secret'] ?? request.headers.authorization;
   const auth = headerString(raw);
   const token = typeof auth === 'string' ? auth.replace(/^Bearer\s+/i, '').trim() : undefined;
-  if (token !== secret) {
+  if (!token || (token !== cronSecret && token !== adminSecret)) {
     reply.code(401).send({ error: 'No autorizado' });
     return false;
   }
@@ -130,7 +131,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     if (!checkCronSecret(request, reply)) return;
 
     const schema = z.object({
-      segment: z.enum(['all', 'free', 'premium']).default('free'),
+      segment: z.enum(['all', 'free', 'premium']).optional(),
       limit: z.number().int().min(1).max(1000).default(250),
       dryRun: z.boolean().default(false),
       weekSlot: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),

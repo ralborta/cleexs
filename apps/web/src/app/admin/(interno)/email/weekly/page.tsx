@@ -74,6 +74,28 @@ type WeeklySchedule = {
   updatedAt: string;
 };
 
+type TriggerResult = {
+  ok: boolean;
+  dryRun: boolean;
+  campaignSlug: string;
+  weekSlot: number;
+  segment: string;
+  totalRecipients: number;
+  sent?: number;
+  skipped?: number;
+  failed?: number;
+  errors?: Array<{ email: string; error: string }>;
+  sample?: Array<{
+    email: string;
+    subject: string;
+    brandName?: string;
+    domain?: string;
+    cleexsScore?: number;
+    scoreBucket?: string;
+  }>;
+  error?: string;
+};
+
 // El offset de Argentina es UTC-3 todo el ano (no observa DST).
 const AR_OFFSET_HOURS = -3;
 
@@ -135,6 +157,10 @@ export default function AdminWeeklyEmailsPage() {
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleSavedAt, setScheduleSavedAt] = useState<number | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  const [triggerBusy, setTriggerBusy] = useState(false);
+  const [triggerResult, setTriggerResult] = useState<TriggerResult | null>(null);
+  const [triggerError, setTriggerError] = useState<string | null>(null);
 
   const [weeklyCampaigns, setWeeklyCampaigns] = useState<CampaignRow[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
@@ -236,6 +262,34 @@ export default function AdminWeeklyEmailsPage() {
       throw new Error((json as { error?: string }).error || 'No se pudo guardar el contenido');
     }
     await loadCampaigns();
+  }
+
+  async function triggerNow(input: {
+    dryRun: boolean;
+    segment: 'all' | 'free' | 'premium';
+    limit: number;
+    weekSlot?: 1 | 2 | 3 | 4;
+  }) {
+    setTriggerBusy(true);
+    setTriggerError(null);
+    setTriggerResult(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/weekly-emails/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const json = (await res.json().catch(() => ({}))) as TriggerResult;
+      if (!res.ok) throw new Error(json.error || 'No se pudo disparar la corrida');
+      setTriggerResult(json);
+      if (!json.dryRun) {
+        await load();
+      }
+    } catch (e) {
+      setTriggerError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setTriggerBusy(false);
+    }
   }
 
   const allTime = data?.allTime;
@@ -510,6 +564,14 @@ export default function AdminWeeklyEmailsPage() {
         onSave={saveSchedule}
       />
 
+      <TriggerNowCard
+        schedule={schedule}
+        busy={triggerBusy}
+        result={triggerResult}
+        error={triggerError}
+        onTrigger={triggerNow}
+      />
+
       <WeeklyTemplatesCard
         campaigns={weeklyCampaigns}
         loading={campaignsLoading}
@@ -710,6 +772,223 @@ function ScheduleCard({
             </div>
           </div>
         )}
+      </div>
+    </section>
+  );
+}
+
+function TriggerNowCard({
+  schedule,
+  busy,
+  result,
+  error,
+  onTrigger,
+}: {
+  schedule: WeeklySchedule | null;
+  busy: boolean;
+  result: TriggerResult | null;
+  error: string | null;
+  onTrigger: (input: {
+    dryRun: boolean;
+    segment: 'all' | 'free' | 'premium';
+    limit: number;
+    weekSlot?: 1 | 2 | 3 | 4;
+  }) => Promise<void>;
+}) {
+  const [dryRun, setDryRun] = useState(true);
+  const [segment, setSegment] = useState<'all' | 'free' | 'premium'>('free');
+  const [limit, setLimit] = useState(50);
+  const [weekSlot, setWeekSlot] = useState<'auto' | '1' | '2' | '3' | '4'>('auto');
+
+  useEffect(() => {
+    if (schedule?.segment) setSegment(schedule.segment);
+    if (schedule?.dryRun) setDryRun(true);
+  }, [schedule]);
+
+  const selectedWeekSlot =
+    weekSlot === 'auto' ? undefined : (Number(weekSlot) as 1 | 2 | 3 | 4);
+
+  async function handleTrigger() {
+    await onTrigger({
+      dryRun,
+      segment,
+      limit,
+      weekSlot: selectedWeekSlot,
+    });
+  }
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+          <Send className="h-4 w-4" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Disparar una corrida ahora</h2>
+          <p className="text-xs text-slate-500">
+            Para probar o enviar sin esperar al día/hora programados. Por seguridad arranca en simulación.
+          </p>
+        </div>
+      </header>
+      <div className="space-y-5 p-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Modo</span>
+            <select
+              value={dryRun ? 'dry' : 'real'}
+              onChange={(ev) => setDryRun(ev.target.value === 'dry')}
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+            >
+              <option value="dry">Simular: no enviar mails</option>
+              <option value="real">Enviar real ahora</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Segmento</span>
+            <select
+              value={segment}
+              onChange={(ev) => setSegment(ev.target.value as typeof segment)}
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+            >
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+              <option value="all">Todos</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Semana / mensaje</span>
+            <select
+              value={weekSlot}
+              onChange={(ev) => setWeekSlot(ev.target.value as typeof weekSlot)}
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+            >
+              <option value="auto">Automática según fecha</option>
+              <option value="1">Semana 1</option>
+              <option value="2">Semana 2</option>
+              <option value="3">Semana 3</option>
+              <option value="4">Semana 4</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Límite</span>
+            <input
+              type="number"
+              min={1}
+              max={1000}
+              value={limit}
+              onChange={(ev) => setLimit(Number(ev.target.value))}
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+            />
+          </label>
+        </div>
+
+        <div
+          className={`rounded-xl border px-4 py-3 text-xs leading-relaxed ${
+            dryRun
+              ? 'border-sky-200 bg-sky-50 text-sky-800'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          {dryRun ? (
+            <p>
+              <strong className="font-semibold">Simulación:</strong> muestra destinatarios y asunto, pero no manda
+              correos. Es ideal para validar contenido y audiencia.
+            </p>
+          ) : (
+            <p>
+              <strong className="font-semibold">Envío real:</strong> se enviará ahora mismo, sin esperar el horario
+              programado. Usá un límite bajo si querés probar con cuidado.
+            </p>
+          )}
+        </div>
+
+        {error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-500">
+            Esto usa el mismo contenido editable de las plantillas semanales y guarda logs cuando el envío es real.
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleTrigger()}
+            disabled={busy || limit < 1}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm disabled:opacity-50 ${
+              dryRun
+                ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500'
+            }`}
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {busy ? 'Procesando…' : dryRun ? 'Simular ahora' : 'Enviar real ahora'}
+          </button>
+        </div>
+
+        {result ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-800">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="font-semibold">
+                  {result.dryRun ? 'Simulación lista' : result.ok ? 'Corrida ejecutada' : 'Corrida con errores'}
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Campaña <code className="font-mono">{result.campaignSlug}</code> · Semana {result.weekSlot} ·{' '}
+                  {SEGMENT_LABEL[result.segment] ?? result.segment} · {formatNumber(result.totalRecipients)} destinatarios
+                </p>
+              </div>
+              {!result.dryRun ? (
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+                    <p className="font-bold text-emerald-700">{formatNumber(result.sent ?? 0)}</p>
+                    <p className="text-slate-500">Enviados</p>
+                  </div>
+                  <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+                    <p className="font-bold text-rose-700">{formatNumber(result.failed ?? 0)}</p>
+                    <p className="text-slate-500">Fallos</p>
+                  </div>
+                  <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+                    <p className="font-bold text-slate-700">{formatNumber(result.skipped ?? 0)}</p>
+                    <p className="text-slate-500">Saltados</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            {result.sample?.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                <table className="min-w-full divide-y divide-slate-100 text-xs">
+                  <thead className="bg-slate-50 text-left font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">Destinatario</th>
+                      <th className="px-3 py-2">Asunto</th>
+                      <th className="px-3 py-2">Marca</th>
+                      <th className="px-3 py-2 text-right">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {result.sample.map((r) => (
+                      <tr key={r.email}>
+                        <td className="px-3 py-2 font-medium text-slate-800">{r.email}</td>
+                        <td className="px-3 py-2 text-slate-600">{r.subject}</td>
+                        <td className="px-3 py-2 text-slate-600">{r.brandName || r.domain || '—'}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-slate-600">
+                          {r.cleexsScore ?? '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            {result.errors?.length ? (
+              <pre className="mt-4 max-h-40 overflow-auto rounded-xl border border-rose-200 bg-rose-50 p-3 font-mono text-[11px] text-rose-900">
+                {JSON.stringify(result.errors, null, 2)}
+              </pre>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </section>
   );
