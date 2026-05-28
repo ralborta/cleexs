@@ -1,13 +1,16 @@
 /**
  * Genera análisis detallado con IA para el resultado del diagnóstico público.
- * Freemium: solo OpenAI (ChatGPT). Gold: OpenAI + Gemini + perspectiva combinada.
+ * Freemium: solo OpenAI (ChatGPT). Gold: OpenAI + Gemini + Perplexity + Claude + síntesis combinada.
  */
 
 import type { Run, PromptResult, PRIAReport } from '@prisma/client';
 import {
   generateWithOpenAI,
   generateWithGemini,
+  generateWithPerplexity,
+  generateWithClaude,
   generatePerspectivaAmbos,
+  generatePerspectivaTodas,
   type DiagnosticAnalysisSingle,
 } from './diagnostic-analysis-providers';
 
@@ -151,7 +154,7 @@ export interface DiagnosticAnalysis {
   goldFallback?: true;
 }
 
-/** Formato Gold: OpenAI + Gemini + síntesis. Incluye métricas para contexto. */
+/** Formato Gold: OpenAI + Gemini (+ opcional Perplexity + Claude) + sintesis. Incluye metricas para contexto. */
 export interface DiagnosticAnalysisGold {
   tier: 'gold';
   metrics: {
@@ -161,7 +164,14 @@ export interface DiagnosticAnalysisGold {
   };
   analisisOpenAI: DiagnosticAnalysisSingle;
   analisisGemini: DiagnosticAnalysisSingle;
+  /** Solo presente si OpenRouter respondio (gold + OPENROUTER_API_KEY configurada). */
+  analisisPerplexity?: DiagnosticAnalysisSingle;
+  /** Solo presente si OpenRouter respondio (gold + OPENROUTER_API_KEY configurada). */
+  analisisClaude?: DiagnosticAnalysisSingle;
+  /** Sintesis OpenAI + Gemini (legado, siempre presente). */
   perspectivaAmbos: string;
+  /** Sintesis combinando los 4 LLMs cuando Perplexity y/o Claude estan disponibles. */
+  perspectivaTodas?: string;
 }
 
 export type DiagnosticAnalysisOutput = DiagnosticAnalysis | DiagnosticAnalysisGold;
@@ -208,10 +218,13 @@ export async function generateDiagnosticAnalysis(
     return analysis;
   }
 
-  // Gold: OpenAI + Gemini + perspectiva combinada
-  const [openaiAnalysis, geminiAnalysis] = await Promise.all([
+  // Gold: 4 LLMs en paralelo. OpenAI + Gemini son obligatorios (legacy).
+  // Perplexity + Claude (via OpenRouter) son aditivos: si no responden, no rompen el gold.
+  const [openaiAnalysis, geminiAnalysis, perplexityAnalysis, claudeAnalysis] = await Promise.all([
     generateWithOpenAI(contextText),
     generateWithGemini(contextText),
+    generateWithPerplexity(contextText),
+    generateWithClaude(contextText),
   ]);
 
   if (!openaiAnalysis) return null;
@@ -224,6 +237,17 @@ export async function generateDiagnosticAnalysis(
     openaiAnalysis,
     geminiAnalysis
   );
+
+  // Si tenemos al menos uno de los dos LLMs adicionales, generamos la sintesis combinada.
+  let perspectivaTodas: string | null = null;
+  if (perplexityAnalysis || claudeAnalysis) {
+    perspectivaTodas = await generatePerspectivaTodas(contextText, {
+      openai: openaiAnalysis,
+      gemini: geminiAnalysis,
+      perplexity: perplexityAnalysis,
+      claude: claudeAnalysis,
+    });
+  }
 
   const goldOutput: DiagnosticAnalysisGold = {
     tier: 'gold',
@@ -243,7 +267,10 @@ export async function generateDiagnosticAnalysis(
     },
     analisisOpenAI: openaiAnalysis,
     analisisGemini: geminiAnalysis,
+    ...(perplexityAnalysis ? { analisisPerplexity: perplexityAnalysis } : {}),
+    ...(claudeAnalysis ? { analisisClaude: claudeAnalysis } : {}),
     perspectivaAmbos: perspectivaAmbos || 'Ambas perspectivas coinciden en la relevancia del Cleexs Score para evaluar el posicionamiento en IA.',
+    ...(perspectivaTodas ? { perspectivaTodas } : {}),
   };
 
   return goldOutput;

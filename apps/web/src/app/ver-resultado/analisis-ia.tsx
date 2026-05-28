@@ -120,13 +120,46 @@ export function AnalisisIA(props: { analysisJson: DiagnosticAnalysisJson }) {
             <BlockAnalisisUnico a={g.analisisGemini} />
           </CardContent>
         </Card>
+        {g.analisisPerplexity ? (
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Así te ven en Perplexity</CardTitle>
+              <CardDescription>Motor de búsqueda con IA basado en resultados web recientes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BlockAnalisisUnico a={g.analisisPerplexity} />
+            </CardContent>
+          </Card>
+        ) : null}
+        {g.analisisClaude ? (
+          <Card className="border-transparent bg-white shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Así te ven en Claude</CardTitle>
+              <CardDescription>Modelo de Anthropic, conocido por su razonamiento estructurado.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BlockAnalisisUnico a={g.analisisClaude} />
+            </CardContent>
+          </Card>
+        ) : null}
         <Card className="border-transparent bg-white shadow-md border-primary-200 bg-primary-50/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Así te ven en ambos</CardTitle>
-            <CardDescription>Perspectiva combinada de ambas IAs</CardDescription>
+            <CardTitle className="text-base">
+              {g.perspectivaTodas ? 'Síntesis combinada de las IAs' : 'Así te ven en ambos'}
+            </CardTitle>
+            <CardDescription>
+              {g.perspectivaTodas
+                ? 'Perspectiva unificada considerando OpenAI, Gemini' +
+                  (g.analisisPerplexity ? ', Perplexity' : '') +
+                  (g.analisisClaude ? ' y Claude' : '') +
+                  '.'
+                : 'Perspectiva combinada de ambas IAs'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{g.perspectivaAmbos}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">
+              {g.perspectivaTodas || g.perspectivaAmbos}
+            </p>
           </CardContent>
         </Card>
       </div>

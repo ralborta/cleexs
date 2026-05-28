@@ -1,9 +1,16 @@
 /**
  * Proveedores de IA para el análisis del diagnóstico.
- * Freemium: solo OpenAI. Gold: OpenAI + Gemini (+ futuros).
+ * Freemium: solo OpenAI. Gold: OpenAI + Gemini + Perplexity + Claude (via OpenRouter).
  */
 
-export type AIProvider = 'openai' | 'gemini';
+import {
+  callOpenRouterChat,
+  getClaudeModelId,
+  getPerplexityModelId,
+  isOpenRouterConfigured,
+} from './openrouter-runner';
+
+export type AIProvider = 'openai' | 'gemini' | 'perplexity' | 'claude';
 
 export interface DiagnosticAnalysisSingle {
   resumenEjecutivo: string;
@@ -214,6 +221,51 @@ export async function generateWithGemini(
   return null;
 }
 
+/**
+ * Genera el analisis con Perplexity Sonar via OpenRouter.
+ * Sonar es ideal para Cleexs porque su respuesta esta "grounded" en busqueda web reciente,
+ * con citations. Reusamos el mismo SYSTEM_PROMPT (JSON estricto) que los otros providers.
+ */
+export async function generateWithPerplexity(
+  contextText: string
+): Promise<DiagnosticAnalysisSingle | null> {
+  if (!isOpenRouterConfigured()) return null;
+
+  const userPrompt = `Analizá este diagnóstico y generá el informe JSON:\n\n${contextText}`;
+  const content = await callOpenRouterChat({
+    model: getPerplexityModelId(),
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    temperature: 0.3,
+    maxTokens: 4500,
+  });
+
+  if (!content) return null;
+  return parseAnalysisResponse(content);
+}
+
+/**
+ * Genera el analisis con Anthropic Claude Sonnet via OpenRouter.
+ * Claude tiene buen razonamiento estructurado; mismo prompt JSON estricto.
+ */
+export async function generateWithClaude(
+  contextText: string
+): Promise<DiagnosticAnalysisSingle | null> {
+  if (!isOpenRouterConfigured()) return null;
+
+  const userPrompt = `Analizá este diagnóstico y generá el informe JSON:\n\n${contextText}`;
+  const content = await callOpenRouterChat({
+    model: getClaudeModelId(),
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    temperature: 0.3,
+    maxTokens: 4500,
+  });
+
+  if (!content) return null;
+  return parseAnalysisResponse(content);
+}
+
 export async function generatePerspectivaAmbos(
   contextText: string,
   openaiAnalysis: DiagnosticAnalysisSingle,
@@ -247,6 +299,65 @@ Generá UN solo párrafo de síntesis (4-6 oraciones) que unifique ambas perspec
         model: 'gpt-4o-mini',
         temperature: 0.3,
         max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const json = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const content = json?.choices?.[0]?.message?.content?.trim();
+    return content || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sintesis combinada de los 4 LLMs cuando estan todos disponibles.
+ * Se usa solo en gold y solo si Perplexity y/o Claude respondieron ademas de OpenAI/Gemini.
+ */
+export async function generatePerspectivaTodas(
+  contextText: string,
+  providers: {
+    openai: DiagnosticAnalysisSingle;
+    gemini: DiagnosticAnalysisSingle;
+    perplexity?: DiagnosticAnalysisSingle | null;
+    claude?: DiagnosticAnalysisSingle | null;
+  }
+): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const blocks: string[] = [
+    `--- ANÁLISIS OPENAI (ChatGPT) ---\nResumen: ${providers.openai.resumenEjecutivo.slice(0, 400)}...\nFortalezas: ${providers.openai.fortalezas.join('; ')}\nDebilidades: ${providers.openai.debilidades.join('; ')}`,
+    `--- ANÁLISIS GEMINI ---\nResumen: ${providers.gemini.resumenEjecutivo.slice(0, 400)}...\nFortalezas: ${providers.gemini.fortalezas.join('; ')}\nDebilidades: ${providers.gemini.debilidades.join('; ')}`,
+  ];
+  if (providers.perplexity) {
+    blocks.push(
+      `--- ANÁLISIS PERPLEXITY (Sonar) ---\nResumen: ${providers.perplexity.resumenEjecutivo.slice(0, 400)}...\nFortalezas: ${providers.perplexity.fortalezas.join('; ')}\nDebilidades: ${providers.perplexity.debilidades.join('; ')}`
+    );
+  }
+  if (providers.claude) {
+    blocks.push(
+      `--- ANÁLISIS CLAUDE (Sonnet) ---\nResumen: ${providers.claude.resumenEjecutivo.slice(0, 400)}...\nFortalezas: ${providers.claude.fortalezas.join('; ')}\nDebilidades: ${providers.claude.debilidades.join('; ')}`
+    );
+  }
+
+  const prompt = `Dados estos análisis del mismo diagnóstico de marca generados por distintas IAs:
+
+${blocks.join('\n\n')}
+
+Generá UN solo párrafo de síntesis (5-7 oraciones) que combine las perspectivas: dónde coinciden las IAs (mayor consenso), dónde difieren (matices propios de cada una) y cuál es la conclusión principal combinando todas las visiones. En español, tono profesional, sin JSON ni listas.`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        max_tokens: 700,
         messages: [{ role: 'user', content: prompt }],
       }),
     });

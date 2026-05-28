@@ -1035,7 +1035,7 @@ export interface DiagnosticAnalysisSingle {
   proximosPasos?: string[];
 }
 
-/** Análisis Gold: OpenAI + Gemini + perspectiva combinada */
+/** Análisis Gold: OpenAI + Gemini (+ opcional Perplexity y Claude via OpenRouter) + perspectiva combinada */
 export interface DiagnosticAnalysisGold {
   tier: 'gold';
   metrics: {
@@ -1045,7 +1045,14 @@ export interface DiagnosticAnalysisGold {
   };
   analisisOpenAI: DiagnosticAnalysisSingle;
   analisisGemini: DiagnosticAnalysisSingle;
+  /** Presente solo si OPENROUTER_API_KEY esta configurada y Perplexity respondio. */
+  analisisPerplexity?: DiagnosticAnalysisSingle;
+  /** Presente solo si OPENROUTER_API_KEY esta configurada y Claude respondio. */
+  analisisClaude?: DiagnosticAnalysisSingle;
+  /** Sintesis OpenAI + Gemini (legado). */
   perspectivaAmbos: string;
+  /** Sintesis combinada de los 4 LLMs cuando Perplexity o Claude estan disponibles. */
+  perspectivaTodas?: string;
 }
 
 export type DiagnosticAnalysisJson = DiagnosticAnalysisSingle | DiagnosticAnalysisGold;
