@@ -901,3 +901,20 @@ model CleexsResendWebhookEvent {
   @@index([occurredAt])
   @@map("cleexs_resend_webhook_events")
 }
+
+// Plantilla editable de cold outreach (singleton: row con key='default').
+// El asunto y el cuerpo aceptan variables {{brandName}}, {{competitorName}},
+// {{top3}} (los top 3 separados por salto de linea). Si useAi=true, el
+// contenido se pasa como prompt base a OpenAI para mejorarlo.
+model OutreachTemplate {
+  id        String   @id @default(uuid())
+  key       String   @unique @default("default")
+  subject   String   @db.Text
+  body      String   @db.Text
+  useAi     Boolean  @default(false) @map("use_ai")
+  updatedBy String?  @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("outreach_templates")
+}

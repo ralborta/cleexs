@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Globe, Mail, Search, Sparkles, Users } from 'lucide-react';
 import { OutreachDashboard } from './OutreachDashboard';
+import { OutreachTemplateEditor } from '@/components/outreach/OutreachTemplateEditor';
 
 function contactsBySource(contacts: LeadContact[]): Record<string, LeadContact[]> {
   const map: Record<string, LeadContact[]> = {};
@@ -684,6 +685,8 @@ export default function OutreachPage() {
             </CardContent>
           </Card>
         </div>
+
+        <OutreachTemplateEditor />
 
         <OutreachDashboard />
 

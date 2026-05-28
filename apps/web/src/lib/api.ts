@@ -349,7 +349,25 @@ export const leadsApi = {
     const qs = search.toString();
     return api<OutreachEmailRow[]>(`/api/leads/email/list${qs ? `?${qs}` : ''}`);
   },
+  getTemplate: () => api<OutreachTemplate>(`/api/leads/template`),
+  saveTemplate: (data: { subject: string; body: string; useAi?: boolean; updatedBy?: string }) =>
+    api<OutreachTemplate & { ok: true }>(`/api/leads/template`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
+
+export interface OutreachTemplate {
+  key: string;
+  subject: string;
+  body: string;
+  useAi: boolean;
+  openAiConfigured?: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  variables?: string[];
+  example?: { brandName: string; competitorName: string; top3: string };
+}
 
 export interface OutreachStats {
   windowDays: number;

@@ -240,23 +240,43 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
     const evidence = lead.evidenceJson as any;
     const brandName = lead.brand?.name || 'una marca';
     const competitorName = lead.competitorName;
+    const top3Lines = (evidence?.top3 || [])
+      .map((entry: any) => `${entry.position}. ${entry.name}`)
+      .join('\n');
+    const top3Inline = (evidence?.top3 || [])
+      .map((entry: any) => `${entry.position}. ${entry.name}`)
+      .join(', ');
 
-    const defaultSubject = `${competitorName} rankea mejor que ${brandName} en ChatGPT`;
-    const defaultBody =
+    const fallbackSubject = `${competitorName} rankea mejor que ${brandName} en ChatGPT`;
+    const fallbackBody =
       `Hola,\n\n` +
       `Detectamos que ${competitorName} aparece recomendado por encima de ${brandName} en ChatGPT.\n` +
       `En uno de los prompts relevantes, el Top 3 fue:\n` +
-      `${(evidence?.top3 || [])
-        .map((entry: any) => `${entry.position}. ${entry.name}`)
-        .join('\n')}\n\n` +
+      `${top3Lines}\n\n` +
       `Podemos compartirte un reporte gratuito (código CLEEXS) con evidencia completa y acciones para mejorar.\n\n` +
       `¿Te interesa que te lo enviemos?\n\n` +
       `– Cleexs`;
 
-    let subject = defaultSubject;
-    let body = defaultBody;
+    const template = await prisma.outreachTemplate
+      .findUnique({ where: { key: 'default' } })
+      .catch(() => null);
 
-    if (process.env.OPENAI_API_KEY) {
+    const subjectTemplate = template?.subject || fallbackSubject;
+    const bodyTemplate = template?.body || fallbackBody;
+    const renderVars = (input: string): string =>
+      input
+        .replace(/\{\{\s*brandName\s*\}\}/g, brandName)
+        .replace(/\{\{\s*competitorName\s*\}\}/g, competitorName)
+        .replace(/\{\{\s*top3\s*\}\}/g, top3Lines)
+        .replace(/\{\{\s*top3Inline\s*\}\}/g, top3Inline);
+
+    let subject = renderVars(subjectTemplate);
+    let body = renderVars(bodyTemplate);
+
+    // Solo usar IA si la plantilla lo pide explicitamente. Si no hay plantilla
+    // todavia (despliegue previo a la migracion), respetamos el flujo viejo.
+    const shouldUseAi = template ? template.useAi === true : true;
+    if (shouldUseAi && process.env.OPENAI_API_KEY) {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -292,7 +312,7 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
           subject = subjectLine.replace(/subject:/i, '').trim();
           body = bodyLines.join('\n').trim();
         } else {
-          body = content.trim() || defaultBody;
+          body = content.trim() || renderVars(bodyTemplate);
         }
       }
     }
@@ -332,6 +352,80 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
       });
     },
   );
+
+  // GET /leads/template  -> devuelve la plantilla editable + ejemplo renderizado
+  fastify.get('/template', async () => {
+    const template = await prisma.outreachTemplate
+      .findUnique({ where: { key: 'default' } })
+      .catch(() => null);
+
+    const fallbackSubject = '{{competitorName}} rankea mejor que {{brandName}} en ChatGPT';
+    const fallbackBody =
+      'Hola,\n\n' +
+      'Detectamos que {{competitorName}} aparece recomendado por encima de {{brandName}} en ChatGPT.\n' +
+      'En uno de los prompts relevantes, el Top 3 fue:\n' +
+      '{{top3}}\n\n' +
+      'Podemos compartirte un reporte gratuito (código CLEEXS) con evidencia completa y acciones para mejorar.\n\n' +
+      '¿Te interesa que te lo enviemos?\n\n' +
+      '– Cleexs';
+
+    return {
+      key: 'default',
+      subject: template?.subject ?? fallbackSubject,
+      body: template?.body ?? fallbackBody,
+      useAi: template?.useAi ?? false,
+      openAiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      updatedAt: template?.updatedAt?.toISOString() ?? null,
+      updatedBy: template?.updatedBy ?? null,
+      variables: ['brandName', 'competitorName', 'top3', 'top3Inline'],
+      example: {
+        brandName: 'Marca Ejemplo',
+        competitorName: 'Competidor X',
+        top3: '1. Competidor X\n2. Marca Ejemplo\n3. Otro Competidor',
+      },
+    };
+  });
+
+  // PUT /leads/template  -> actualizar la plantilla
+  const templateUpdateSchema = z.object({
+    subject: z.string().trim().min(3).max(300),
+    body: z.string().trim().min(10).max(8000),
+    useAi: z.boolean().optional(),
+    updatedBy: z.string().trim().max(200).optional(),
+  });
+
+  fastify.put('/template', async (request, reply) => {
+    const parsed = templateUpdateSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+    const data = parsed.data;
+    const saved = await prisma.outreachTemplate.upsert({
+      where: { key: 'default' },
+      update: {
+        subject: data.subject,
+        body: data.body,
+        useAi: data.useAi ?? false,
+        updatedBy: data.updatedBy ?? null,
+      },
+      create: {
+        key: 'default',
+        subject: data.subject,
+        body: data.body,
+        useAi: data.useAi ?? false,
+        updatedBy: data.updatedBy ?? null,
+      },
+    });
+    return {
+      ok: true,
+      key: saved.key,
+      subject: saved.subject,
+      body: saved.body,
+      useAi: saved.useAi,
+      updatedAt: saved.updatedAt.toISOString(),
+      updatedBy: saved.updatedBy,
+    };
+  });
 
   // POST /leads/email/:id/send
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof sendEmailSchema> }>('/email/:id/send', async (request, reply) => {
