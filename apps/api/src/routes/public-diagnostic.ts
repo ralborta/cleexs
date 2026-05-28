@@ -19,6 +19,7 @@ import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModule
 import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
 import { extractSponsorRefFromWhatsAppMessage } from '@cleexs/shared';
 import { notifyWhatsAppDiagnosticCompleted } from '../lib/whatsapp-notify';
+import { logIncomingWhatsApp, logOutgoingWhatsApp } from '../lib/whatsapp-message-log';
 import {
   buildWaResultUrl,
   buildWhatsAppAskUrlReply,
@@ -2299,6 +2300,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const messageText = waMessageFromFlowBody(request.body);
 
     const recipient = waRecipientFromFlowBody(request.body) || phoneFromPathOrBody;
+
+    // Log del mensaje entrante (lo que escribe el cliente por WhatsApp).
+    void logIncomingWhatsApp(fastify.log, {
+      chatId: recipient || phoneFromPathOrBody,
+      message: messageText,
+      source: 'flow',
+    });
+
     const result = await processWhatsAppUrlHttpRequest({
       log: fastify.log,
       phone: phoneFromPathOrBody,
@@ -2311,6 +2320,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (result.code !== 'started' && result.code !== 'already_started') {
       void deliverWaReplyToUser(fastify.log, recipient, result.reply);
+    } else if (result.reply) {
+      // El reply de 'started' / 'already_started' lo entrega el flow del bot,
+      // no pasa por sendWhatsAppMessage; lo logueamos manualmente.
+      void logOutgoingWhatsApp(fastify.log, {
+        chatId: recipient || phoneFromPathOrBody,
+        message: result.reply,
+        source: 'flow_reply',
+        status: 'sent',
+      });
     }
     return reply.send(result);
   }
@@ -2447,6 +2465,13 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const phone = String(data.from);
       const recipient = waRecipientFromFlowBody(data) || phone;
       const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
+
+      // Log de cada mensaje entrante por el webhook generico (saludos, FAQ, etc.).
+      void logIncomingWhatsApp(fastify.log, {
+        chatId: recipient,
+        message: bodyText,
+        source: 'builderbot_inbound',
+      });
 
       if (trimmedUrl) {
         return reply.send({ ok: true, skipped: 'url_handled_by_flow' });

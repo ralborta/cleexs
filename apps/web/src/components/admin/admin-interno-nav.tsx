@@ -11,6 +11,7 @@ import {
   Layers,
   Link2,
   Mail,
+  MessageCircle,
   MousePointerClick,
   Receipt,
   Settings,
@@ -45,6 +46,7 @@ const sections: NavSection[] = [
     links: [
       { href: '/admin/email', label: 'Email · secuencia', icon: Mail, excludePrefixes: ['/admin/email/weekly'] },
       { href: '/admin/email/weekly', label: 'Emails semanales', icon: CalendarClock },
+      { href: '/admin/whatsapp', label: 'Mensajes WhatsApp', icon: MessageCircle },
       { href: '/admin/referidores', label: 'Referidores', icon: MousePointerClick },
       { href: '/tools/auspiciadores', label: 'Links auspiciador', icon: Link2 },
     ],

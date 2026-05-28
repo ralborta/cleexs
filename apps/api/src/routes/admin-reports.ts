@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 
 const windowDaysSchema = z.object({
@@ -1451,6 +1452,138 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       updatedBy: row.updatedBy,
     };
   });
+
+  // ============================================
+  // WhatsApp · Mensajes (admin)
+  // ============================================
+
+  fastify.get<{ Querystring: { search?: string; limit?: string } }>(
+    '/internal/whatsapp/conversations',
+    async (request) => {
+      const search = (request.query.search || '').trim();
+      const limit = Math.min(200, Math.max(1, Number(request.query.limit) || 80));
+
+      // Filtro de busqueda por phone (digitos), chatId o contenido del ultimo mensaje.
+      const where: Prisma.WhatsAppMessageWhereInput = search
+        ? {
+            OR: [
+              { chatId: { contains: search, mode: 'insensitive' } },
+              { phoneDigits: { contains: search.replace(/\D/g, '') || search } },
+              { message: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {};
+
+      // Agrupar por chatId con count y ultimo mensaje (se hace en JS para portabilidad).
+      const rows = await prisma.whatsAppMessage.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 2000,
+      });
+
+      type ConvBucket = {
+        chatId: string;
+        phoneDigits: string | null;
+        total: number;
+        inbound: number;
+        outbound: number;
+        failed: number;
+        lastMessage: string;
+        lastDirection: string;
+        lastStatus: string;
+        lastAt: string;
+        firstAt: string;
+      };
+
+      const map = new Map<string, ConvBucket>();
+      for (const r of rows) {
+        const key = r.chatId;
+        const existing = map.get(key);
+        if (!existing) {
+          map.set(key, {
+            chatId: r.chatId,
+            phoneDigits: r.phoneDigits,
+            total: 1,
+            inbound: r.direction === 'inbound' ? 1 : 0,
+            outbound: r.direction === 'outbound' ? 1 : 0,
+            failed: r.status === 'failed' ? 1 : 0,
+            lastMessage: r.message,
+            lastDirection: r.direction,
+            lastStatus: r.status,
+            lastAt: r.createdAt.toISOString(),
+            firstAt: r.createdAt.toISOString(),
+          });
+        } else {
+          existing.total += 1;
+          if (r.direction === 'inbound') existing.inbound += 1;
+          else existing.outbound += 1;
+          if (r.status === 'failed') existing.failed += 1;
+          if (r.createdAt < new Date(existing.firstAt)) {
+            existing.firstAt = r.createdAt.toISOString();
+          }
+        }
+      }
+
+      const conversations = Array.from(map.values())
+        .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
+        .slice(0, limit);
+
+      const totalMessages = await prisma.whatsAppMessage.count();
+      const totalInbound = await prisma.whatsAppMessage.count({ where: { direction: 'inbound' } });
+      const totalOutbound = await prisma.whatsAppMessage.count({ where: { direction: 'outbound' } });
+      const totalFailed = await prisma.whatsAppMessage.count({ where: { status: 'failed' } });
+
+      const since7 = new Date();
+      since7.setDate(since7.getDate() - 7);
+      const last7Days = await prisma.whatsAppMessage.count({ where: { createdAt: { gte: since7 } } });
+
+      return {
+        ok: true,
+        kpis: {
+          totalMessages,
+          totalInbound,
+          totalOutbound,
+          totalFailed,
+          last7Days,
+          uniqueChats: map.size,
+        },
+        conversations,
+      };
+    }
+  );
+
+  fastify.get<{ Params: { chatId: string }; Querystring: { limit?: string } }>(
+    '/internal/whatsapp/conversations/:chatId/messages',
+    async (request, reply) => {
+      const chatId = decodeURIComponent(request.params.chatId || '').trim();
+      if (!chatId) return reply.code(400).send({ error: 'chatId requerido' });
+      const limit = Math.min(500, Math.max(1, Number(request.query.limit) || 200));
+
+      const messages = await prisma.whatsAppMessage.findMany({
+        where: { chatId },
+        orderBy: { createdAt: 'asc' },
+        take: limit,
+      });
+
+      return {
+        ok: true,
+        chatId,
+        count: messages.length,
+        messages: messages.map((m) => ({
+          id: m.id,
+          direction: m.direction,
+          message: m.message,
+          mediaUrl: m.mediaUrl,
+          status: m.status,
+          source: m.source,
+          externalId: m.externalId,
+          errorMessage: m.errorMessage,
+          diagnosticId: m.diagnosticId,
+          createdAt: m.createdAt.toISOString(),
+        })),
+      };
+    }
+  );
 };
 
 export default adminReportsRoutes;

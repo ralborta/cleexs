@@ -845,6 +845,26 @@ enum CleexsEmailSendStatus {
   skipped
 }
 
+model WhatsAppMessage {
+  id             String   @id @default(uuid())
+  chatId         String   @map("chat_id") // E.164 normalizado o JID/LID tal como llega de BuilderBot
+  phoneDigits    String?  @map("phone_digits") // solo digitos, para agrupar facil por contacto
+  direction      String // 'inbound' | 'outbound'
+  message        String   @db.Text
+  mediaUrl       String?  @map("media_url")
+  status         String   @default("received") // received | sent | failed
+  source         String?  // flow | builderbot_inbound | api_send | webhook_score
+  externalId     String?  @map("external_id") // id de BuilderBot/Resend equivalente cuando aplica
+  errorMessage   String?  @map("error_message") @db.Text
+  diagnosticId   String?  @map("diagnostic_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([chatId, createdAt])
+  @@index([phoneDigits])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}
+
 model WeeklyEmailSchedule {
   // Singleton: filas con key = 'default'.
   id            String   @id @default(uuid())

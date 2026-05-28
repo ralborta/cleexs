@@ -2,6 +2,8 @@
  * Envío de mensajes WhatsApp vía BuilderBot Cloud API v2 (mismo patrón que Mis Reclamos).
  */
 
+import { logOutgoingWhatsApp } from './whatsapp-message-log';
+
 const BUILDERBOT_BASE_URL =
   (process.env.BUILDERBOT_BASE_URL || 'https://app.builderbot.cloud').replace(/\/$/, '');
 
@@ -10,6 +12,10 @@ export interface SendWhatsAppOptions {
   message: string;
   mediaUrl?: string;
   checkIfExists?: boolean;
+  /** Origen para el log de auditoria en whatsapp_messages. */
+  logSource?: 'api_send' | 'webhook_score' | 'flow_reply' | 'api_error';
+  /** ID del diagnostico publico relacionado (si aplica). */
+  diagnosticId?: string | null;
 }
 
 export function isBuilderBotSendConfigured(): boolean {
@@ -28,7 +34,7 @@ export function formatBuilderBotRecipient(raw: string): string {
 }
 
 export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise<unknown> {
-  const { number, message, mediaUrl, checkIfExists = false } = options;
+  const { number, message, mediaUrl, checkIfExists = false, logSource = 'api_send', diagnosticId = null } = options;
   const BOT_ID = (process.env.BUILDERBOT_BOT_ID || '').trim();
   const API_KEY = (process.env.BUILDERBOT_API_KEY || '').trim();
 
@@ -48,19 +54,63 @@ export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise
     checkIfExists,
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-builderbot': API_KEY,
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
-  });
+  const logger = { error: (obj: unknown, _msg?: string) => console.error('WA log', obj) };
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`BuilderBot send failed (${res.status}): ${detail.slice(0, 200)}`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-builderbot': API_KEY,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      const errMsg = `BuilderBot send failed (${res.status}): ${detail.slice(0, 200)}`;
+      // Persistimos el saliente como fallido para que quede en el log de admin.
+      void logOutgoingWhatsApp(logger, {
+        chatId: recipient,
+        message,
+        source: logSource,
+        mediaUrl: mediaUrl ?? null,
+        status: 'failed',
+        errorMessage: errMsg,
+        diagnosticId,
+      });
+      throw new Error(errMsg);
+    }
+
+    const json = (await res.json().catch(() => ({}))) as { id?: string; messageId?: string };
+    const externalId = json.id || json.messageId || null;
+
+    void logOutgoingWhatsApp(logger, {
+      chatId: recipient,
+      message,
+      source: logSource,
+      mediaUrl: mediaUrl ?? null,
+      status: 'sent',
+      externalId,
+      diagnosticId,
+    });
+
+    return json;
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('BuilderBot send failed')) {
+      throw err;
+    }
+    const message2 = err instanceof Error ? err.message : String(err);
+    void logOutgoingWhatsApp(logger, {
+      chatId: recipient,
+      message,
+      source: logSource,
+      mediaUrl: mediaUrl ?? null,
+      status: 'failed',
+      errorMessage: message2,
+      diagnosticId,
+    });
+    throw err;
   }
-  return res.json().catch(() => ({}));
 }
