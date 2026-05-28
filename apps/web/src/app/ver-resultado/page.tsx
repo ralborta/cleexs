@@ -16,12 +16,14 @@ import {
 } from '@/components/ui/table';
 import {
   publicDiagnosticApi,
+  isDiagnosticAnalysisGold,
   type PublicDiagnostic,
   type PublicDiagnosticSatelliteModule,
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
 import { CLEEXS_MARKETING_URL, CLEEXS_TOOLS_PUBLIC_URL } from '@/lib/site';
+import { BlockAnalisisUnico } from './analisis-ia';
 import type { LucideIcon } from 'lucide-react';
 import {
   Loader2,
@@ -523,7 +525,7 @@ function VerResultadoContent() {
   const [diagnostic, setDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini'>('chatgpt');
+  const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini' | 'perplexity' | 'claude'>('chatgpt');
 
   useEffect(() => {
     const id = diagnosticId;
@@ -633,12 +635,23 @@ function VerResultadoContent() {
     };
   }, [diagnosticId, diagnostic, tierFromQuery]);
 
+  const analisisGold =
+    diagnostic?.analysisJson && isDiagnosticAnalysisGold(diagnostic.analysisJson)
+      ? diagnostic.analysisJson
+      : null;
+  const tienePerplexity = !!analisisGold?.analisisPerplexity;
+  const tieneClaude = !!analisisGold?.analisisClaude;
   const runResultGeminiEarly = diagnostic?.runResultGemini;
   useEffect(() => {
     if (!runResultGeminiEarly && diagnostic?.showFullReport) {
       setVistaModelo((v) => (v === 'gemini' || v === 'consolidado' ? 'chatgpt' : v));
     }
   }, [runResultGeminiEarly, diagnostic?.showFullReport]);
+
+  useEffect(() => {
+    if (vistaModelo === 'perplexity' && !tienePerplexity) setVistaModelo('chatgpt');
+    if (vistaModelo === 'claude' && !tieneClaude) setVistaModelo('chatgpt');
+  }, [vistaModelo, tienePerplexity, tieneClaude]);
 
   if (loading) {
     return (
@@ -699,9 +712,10 @@ function VerResultadoContent() {
         (!diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '')
       : '';
   const tieneGemini = !!runResultGemini;
-  /** Hubo segundo run (Gemini) o ya hay resultado: mostramos las 3 pestañas desde el principio. */
+  /** Hubo segundo run (Gemini) o ya hay análisis adicional: mostramos el selector de modelo. */
   const mostrarTabsPorModelo =
-    diagnostic.showFullReport && (Boolean(diagnostic.runGeminiId) || tieneGemini);
+    diagnostic.showFullReport &&
+    (Boolean(diagnostic.runGeminiId) || tieneGemini || tienePerplexity || tieneClaude);
   const geminiFallo = diagnostic.geminiRunStatus === 'failed';
   const geminiEnCola = Boolean(diagnostic.runGeminiId) && !runResultGemini && !geminiFallo;
   /**
@@ -833,6 +847,42 @@ function VerResultadoContent() {
                                 )}
                                 Consolidado
                               </button>
+                              <button
+                                type="button"
+                                disabled={!tienePerplexity}
+                                title={
+                                  tienePerplexity
+                                    ? 'Cómo te ve Perplexity (motor de búsqueda con IA).'
+                                    : 'Disponible solo en planes Premium con análisis de Perplexity.'
+                                }
+                                onClick={() => tienePerplexity && setVistaModelo('perplexity')}
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
+                                  vistaModelo === 'perplexity' && tienePerplexity
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
+                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                }`}
+                              >
+                                <Sparkles className="h-[18px] w-[18px] shrink-0" />
+                                Perplexity
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!tieneClaude}
+                                title={
+                                  tieneClaude
+                                    ? 'Cómo te ve Claude (Anthropic).'
+                                    : 'Disponible solo en planes Premium con análisis de Claude.'
+                                }
+                                onClick={() => tieneClaude && setVistaModelo('claude')}
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
+                                  vistaModelo === 'claude' && tieneClaude
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
+                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                }`}
+                              >
+                                <Sparkles className="h-[18px] w-[18px] shrink-0" />
+                                Claude
+                              </button>
                             </div>
                           </div>
                           {geminiEnCola && (
@@ -848,7 +898,20 @@ function VerResultadoContent() {
                           )}
                         </div>
                       )}
+                      {(vistaModelo === 'perplexity' || vistaModelo === 'claude') && analisisGold ? (
+                        <AnalisisLLMTextual
+                          modelo={vistaModelo}
+                          analisis={
+                            vistaModelo === 'perplexity'
+                              ? analisisGold.analisisPerplexity!
+                              : analisisGold.analisisClaude!
+                          }
+                          brandName={diagnostic.brandName}
+                        />
+                      ) : null}
                       {runResultToShow &&
+                        vistaModelo !== 'perplexity' &&
+                        vistaModelo !== 'claude' &&
                         (legacyView ? (
                           <ReporteModerno
                             runResult={runResultToShow}
@@ -856,7 +919,6 @@ function VerResultadoContent() {
                             trendData={diagnostic.trendData}
                             runResultChatGPT={tieneGemini ? runResult : undefined}
                             runResultGemini={tieneGemini ? runResultGemini : undefined}
-                            analysisJson={diagnostic.analysisJson ?? null}
                             satelliteBlock={
                               <>
                                 {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
@@ -1996,6 +2058,64 @@ function SatelliteModuleCard({
         {!degraded && <SatelliteActionsExecuteBlock module={module} />}
         {degraded && (module.actions?.length ?? 0) > 0 ? <SatelliteActionsExecuteBlock module={module} /> : null}
       </div>
+    </div>
+  );
+}
+
+function AnalisisLLMTextual({
+  modelo,
+  analisis,
+  brandName,
+}: {
+  modelo: 'perplexity' | 'claude';
+  analisis: import('@/lib/api').DiagnosticAnalysisSingle;
+  brandName: string;
+}) {
+  const meta = modelo === 'perplexity'
+    ? {
+        nombre: 'Perplexity',
+        descripcion: 'Motor de búsqueda con IA basado en resultados web recientes.',
+        color: 'from-violet-500 to-fuchsia-600',
+        chip: 'Premium · Perplexity',
+      }
+    : {
+        nombre: 'Claude',
+        descripcion: 'Modelo de Anthropic, conocido por su razonamiento estructurado.',
+        color: 'from-amber-500 to-orange-600',
+        chip: 'Premium · Claude (Anthropic)',
+      };
+
+  return (
+    <div className="space-y-5">
+      <div className={`overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
+        <div className="flex flex-wrap items-start gap-3">
+          <span
+            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${meta.color} text-white shadow-md`}
+          >
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-slate-900">
+              Así te ven en {meta.nombre}
+            </p>
+            <p className="text-xs text-slate-600 mt-0.5">{meta.descripcion}</p>
+            <p className="text-[11px] mt-1 inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 font-medium text-primary-700 ring-1 ring-primary-200">
+              {meta.chip}
+            </p>
+          </div>
+        </div>
+        <p className="mt-4 text-xs text-slate-500">
+          Este análisis es cualitativo (resumen, fortalezas, debilidades y sugerencias específicas de {meta.nombre} para
+          {' '}{brandName}). Los rankings cuantitativos (Top 3, Cleexs Score, gráficos) se calculan a partir de las
+          corridas de ChatGPT y Gemini, disponibles en las otras pestañas.
+        </p>
+      </div>
+
+      <Card className="border-transparent bg-white shadow-md">
+        <CardContent className="p-5 sm:p-6">
+          <BlockAnalisisUnico a={analisis} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
