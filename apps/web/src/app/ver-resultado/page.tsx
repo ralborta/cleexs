@@ -16,14 +16,12 @@ import {
 } from '@/components/ui/table';
 import {
   publicDiagnosticApi,
-  isDiagnosticAnalysisGold,
   type PublicDiagnostic,
   type PublicDiagnosticSatelliteModule,
   type PublicDiagnosticRunResult,
   type PublicDiagnosticPromptResult,
 } from '@/lib/api';
 import { CLEEXS_MARKETING_URL, CLEEXS_TOOLS_PUBLIC_URL } from '@/lib/site';
-import { BlockAnalisisUnico } from './analisis-ia';
 import type { LucideIcon } from 'lucide-react';
 import {
   Loader2,
@@ -272,25 +270,34 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
   );
 }
 
-/** Construye un runResult sintético "Ambos" promediando scores de ChatGPT y Gemini */
-function buildRunResultAmbos(
-  a: PublicDiagnosticRunResult,
-  b: PublicDiagnosticRunResult
+/**
+ * Construye un runResult sintético "Consolidado" promediando los scores de los modelos
+ * disponibles (ChatGPT + Gemini + Perplexity + Claude). Si hay 1 solo run, lo devuelve igual.
+ */
+function buildRunResultConsolidado(
+  runs: PublicDiagnosticRunResult[]
 ): PublicDiagnosticRunResult {
-  const prA = a.promptResults || [];
-  const prB = b.promptResults || [];
-  const promptResults = prA.map((pr, i) => ({
-    ...pr,
-    score: (pr.score + (prB[i]?.score ?? pr.score)) / 2,
-  }));
-  const cleexsScore = ((a.cleexsScore ?? 0) + (b.cleexsScore ?? 0)) / 2;
+  const base = runs[0];
+  if (runs.length === 1) return base;
+  const baseResults = base.promptResults || [];
+  const promptResults = baseResults.map((pr, i) => {
+    const scores = runs
+      .map((r) => r.promptResults?.[i]?.score)
+      .filter((s): s is number => typeof s === 'number');
+    const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : pr.score;
+    return { ...pr, score: avg };
+  });
+  const cleexsScore =
+    runs.reduce((s, r) => s + (r.cleexsScore ?? 0), 0) / runs.length;
+  const competitorDetails =
+    base.competitorDetails ?? runs.find((r) => r.competitorDetails)?.competitorDetails ?? [];
   return {
-    brandId: a.brandId,
-    brandName: a.brandName,
+    brandId: base.brandId,
+    brandName: base.brandName,
     cleexsScore,
-    competitors: a.competitors ?? [],
-    competitorDetails: a.competitorDetails ?? b.competitorDetails ?? [],
-    brandAliases: a.brandAliases ?? [],
+    competitors: base.competitors ?? [],
+    competitorDetails,
+    brandAliases: base.brandAliases ?? [],
     promptResults,
   };
 }
@@ -593,19 +600,17 @@ function VerResultadoContent() {
     };
   }, [diagnosticId, diagnostic, tierFromQuery]);
 
-  // Si Gemini fue iniciado pero aún no terminó, seguir refrescando para mostrarlo al completar.
+  // Si Gemini/Perplexity/Claude fueron iniciados pero aún no terminaron, seguir refrescando
+  // hasta que aparezcan sus runResult o el diagnóstico falle.
   useEffect(() => {
     const id = diagnosticId;
-    if (
-      !id ||
-      !diagnostic ||
-      diagnostic.status !== 'completed' ||
-      !diagnostic.showFullReport ||
-      !diagnostic.runGeminiId ||
-      diagnostic.runResultGemini
-    ) {
-      return;
-    }
+    if (!id || !diagnostic) return;
+    if (diagnostic.status !== 'completed' || !diagnostic.showFullReport) return;
+    const pendingGemini = !!diagnostic.runGeminiId && !diagnostic.runResultGemini;
+    const pendingPerplexity = !!diagnostic.runPerplexityId && !diagnostic.runResultPerplexity;
+    const pendingClaude = !!diagnostic.runClaudeId && !diagnostic.runResultClaude;
+    if (!pendingGemini && !pendingPerplexity && !pendingClaude) return;
+
     const pollIntervalMs = 5000;
     const maxWaitMs = 12 * 60 * 1000;
     const startedAt = Date.now();
@@ -619,7 +624,13 @@ function VerResultadoContent() {
         const data = await publicDiagnosticApi.get(id, tierFromQuery);
         if (cancelled) return;
         setDiagnostic(data);
-        if (data.status === 'failed' || data.runResultGemini) {
+        const stillPendingGemini = !!data.runGeminiId && !data.runResultGemini;
+        const stillPendingPerplexity = !!data.runPerplexityId && !data.runResultPerplexity;
+        const stillPendingClaude = !!data.runClaudeId && !data.runResultClaude;
+        if (
+          data.status === 'failed' ||
+          (!stillPendingGemini && !stillPendingPerplexity && !stillPendingClaude)
+        ) {
           return;
         }
       } catch {
@@ -635,16 +646,14 @@ function VerResultadoContent() {
     };
   }, [diagnosticId, diagnostic, tierFromQuery]);
 
-  const analisisGold =
-    diagnostic?.analysisJson && isDiagnosticAnalysisGold(diagnostic.analysisJson)
-      ? diagnostic.analysisJson
-      : null;
-  const tienePerplexity = !!analisisGold?.analisisPerplexity;
-  const tieneClaude = !!analisisGold?.analisisClaude;
+  const runResultPerplexityEarly = diagnostic?.runResultPerplexity;
+  const runResultClaudeEarly = diagnostic?.runResultClaude;
+  const tienePerplexity = !!runResultPerplexityEarly;
+  const tieneClaude = !!runResultClaudeEarly;
   const runResultGeminiEarly = diagnostic?.runResultGemini;
   useEffect(() => {
     if (!runResultGeminiEarly && diagnostic?.showFullReport) {
-      setVistaModelo((v) => (v === 'gemini' || v === 'consolidado' ? 'chatgpt' : v));
+      setVistaModelo((v) => (v === 'gemini' ? 'chatgpt' : v));
     }
   }, [runResultGeminiEarly, diagnostic?.showFullReport]);
 
@@ -712,12 +721,30 @@ function VerResultadoContent() {
         (!diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '')
       : '';
   const tieneGemini = !!runResultGemini;
-  /** Hubo segundo run (Gemini) o ya hay análisis adicional: mostramos el selector de modelo. */
+  const runResultPerplexity = diagnostic.runResultPerplexity;
+  const runResultClaude = diagnostic.runResultClaude;
+  const runsParaConsolidado: PublicDiagnosticRunResult[] = [];
+  if (runResult) runsParaConsolidado.push(runResult);
+  if (runResultGemini) runsParaConsolidado.push(runResultGemini);
+  if (runResultPerplexity) runsParaConsolidado.push(runResultPerplexity);
+  if (runResultClaude) runsParaConsolidado.push(runResultClaude);
+
+  /** Hubo segundo run (Gemini/Perplexity/Claude) o ya hay datos: mostramos el selector de modelo. */
   const mostrarTabsPorModelo =
     diagnostic.showFullReport &&
-    (Boolean(diagnostic.runGeminiId) || tieneGemini || tienePerplexity || tieneClaude);
+    (Boolean(diagnostic.runGeminiId) ||
+      Boolean(diagnostic.runPerplexityId) ||
+      Boolean(diagnostic.runClaudeId) ||
+      tieneGemini ||
+      tienePerplexity ||
+      tieneClaude);
   const geminiFallo = diagnostic.geminiRunStatus === 'failed';
   const geminiEnCola = Boolean(diagnostic.runGeminiId) && !runResultGemini && !geminiFallo;
+  const perplexityFallo = diagnostic.perplexityRunStatus === 'failed';
+  const perplexityEnCola =
+    Boolean(diagnostic.runPerplexityId) && !runResultPerplexity && !perplexityFallo;
+  const claudeFallo = diagnostic.claudeRunStatus === 'failed';
+  const claudeEnCola = Boolean(diagnostic.runClaudeId) && !runResultClaude && !claudeFallo;
   /**
    * Post-proceso: la API puede guardar primero el análisis IA y luego fusionar el módulo técnico del sitio (AEO).
    * Mientras el satélite corre, `satelliteModule.status === 'pending'`.
@@ -728,13 +755,16 @@ function VerResultadoContent() {
     diagnostic.showFullReport &&
     !diagnostic.domain.startsWith('brand-') &&
     (diagnostic.analysisJson == null || satelliteAeoPending);
-  const runResultToShow: PublicDiagnosticRunResult | null = runResult
-    ? vistaModelo === 'consolidado' && runResultGemini
-      ? buildRunResultAmbos(runResult, runResultGemini)
-      : vistaModelo === 'gemini' && runResultGemini
-        ? runResultGemini
-        : runResult
-    : null;
+  const runResultToShow: PublicDiagnosticRunResult | null = (() => {
+    if (!runResult) return null;
+    if (vistaModelo === 'gemini' && runResultGemini) return runResultGemini;
+    if (vistaModelo === 'perplexity' && runResultPerplexity) return runResultPerplexity;
+    if (vistaModelo === 'claude' && runResultClaude) return runResultClaude;
+    if (vistaModelo === 'consolidado' && runsParaConsolidado.length >= 2) {
+      return buildRunResultConsolidado(runsParaConsolidado);
+    }
+    return runResult;
+  })();
 
   return (
     <div>
@@ -825,63 +855,75 @@ function VerResultadoContent() {
                               </button>
                               <button
                                 type="button"
-                                disabled={!runResultGemini}
+                                disabled={!runResultPerplexity}
                                 title={
-                                  geminiFallo
-                                    ? 'Sin datos de Gemini no hay vista consolidada.'
-                                    : geminiEnCola
-                                      ? 'Disponible cuando termine Gemini.'
-                                      : 'Promedio ChatGPT + Gemini'
+                                  perplexityFallo
+                                    ? 'Perplexity no completó esta corrida.'
+                                    : perplexityEnCola
+                                      ? 'Generando resultados con Perplexity…'
+                                      : runResultPerplexity
+                                        ? 'Ver métricas según respuestas de Perplexity'
+                                        : 'Disponible solo en planes Premium con OpenRouter.'
                                 }
-                                onClick={() => runResultGemini && setVistaModelo('consolidado')}
+                                onClick={() => runResultPerplexity && setVistaModelo('perplexity')}
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
-                                  vistaModelo === 'consolidado' && runResultGemini
+                                  vistaModelo === 'perplexity' && runResultPerplexity
                                     ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
                                     : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
-                                {geminiEnCola ? (
-                                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary-600" />
+                                {perplexityEnCola ? (
+                                  <Loader2 className="h-[18px] w-[18px] shrink-0 animate-spin text-primary-600" />
                                 ) : (
-                                  <LayoutDashboard className="h-4 w-4 shrink-0" />
+                                  <Sparkles className="h-[18px] w-[18px] shrink-0" />
                                 )}
+                                {perplexityFallo ? 'Perplexity (no disponible)' : 'Perplexity'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!runResultClaude}
+                                title={
+                                  claudeFallo
+                                    ? 'Claude no completó esta corrida.'
+                                    : claudeEnCola
+                                      ? 'Generando resultados con Claude…'
+                                      : runResultClaude
+                                        ? 'Ver métricas según respuestas de Claude'
+                                        : 'Disponible solo en planes Premium con OpenRouter.'
+                                }
+                                onClick={() => runResultClaude && setVistaModelo('claude')}
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
+                                  vistaModelo === 'claude' && runResultClaude
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
+                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                }`}
+                              >
+                                {claudeEnCola ? (
+                                  <Loader2 className="h-[18px] w-[18px] shrink-0 animate-spin text-primary-600" />
+                                ) : (
+                                  <Sparkles className="h-[18px] w-[18px] shrink-0" />
+                                )}
+                                {claudeFallo ? 'Claude (no disponible)' : 'Claude'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={runsParaConsolidado.length < 2}
+                                title={
+                                  runsParaConsolidado.length < 2
+                                    ? 'Disponible cuando termine al menos un segundo LLM.'
+                                    : `Promedio de ${runsParaConsolidado.length} LLMs disponibles.`
+                                }
+                                onClick={() =>
+                                  runsParaConsolidado.length >= 2 && setVistaModelo('consolidado')
+                                }
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
+                                  vistaModelo === 'consolidado' && runsParaConsolidado.length >= 2
+                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
+                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                }`}
+                              >
+                                <LayoutDashboard className="h-4 w-4 shrink-0" />
                                 Consolidado
-                              </button>
-                              <button
-                                type="button"
-                                disabled={!tienePerplexity}
-                                title={
-                                  tienePerplexity
-                                    ? 'Cómo te ve Perplexity (motor de búsqueda con IA).'
-                                    : 'Disponible solo en planes Premium con análisis de Perplexity.'
-                                }
-                                onClick={() => tienePerplexity && setVistaModelo('perplexity')}
-                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
-                                  vistaModelo === 'perplexity' && tienePerplexity
-                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
-                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
-                                }`}
-                              >
-                                <Sparkles className="h-[18px] w-[18px] shrink-0" />
-                                Perplexity
-                              </button>
-                              <button
-                                type="button"
-                                disabled={!tieneClaude}
-                                title={
-                                  tieneClaude
-                                    ? 'Cómo te ve Claude (Anthropic).'
-                                    : 'Disponible solo en planes Premium con análisis de Claude.'
-                                }
-                                onClick={() => tieneClaude && setVistaModelo('claude')}
-                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
-                                  vistaModelo === 'claude' && tieneClaude
-                                    ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
-                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
-                                }`}
-                              >
-                                <Sparkles className="h-[18px] w-[18px] shrink-0" />
-                                Claude
                               </button>
                             </div>
                           </div>
@@ -898,20 +940,7 @@ function VerResultadoContent() {
                           )}
                         </div>
                       )}
-                      {(vistaModelo === 'perplexity' || vistaModelo === 'claude') && analisisGold ? (
-                        <AnalisisLLMTextual
-                          modelo={vistaModelo}
-                          analisis={
-                            vistaModelo === 'perplexity'
-                              ? analisisGold.analisisPerplexity!
-                              : analisisGold.analisisClaude!
-                          }
-                          brandName={diagnostic.brandName}
-                        />
-                      ) : null}
                       {runResultToShow &&
-                        vistaModelo !== 'perplexity' &&
-                        vistaModelo !== 'claude' &&
                         (legacyView ? (
                           <ReporteModerno
                             runResult={runResultToShow}
@@ -2058,64 +2087,6 @@ function SatelliteModuleCard({
         {!degraded && <SatelliteActionsExecuteBlock module={module} />}
         {degraded && (module.actions?.length ?? 0) > 0 ? <SatelliteActionsExecuteBlock module={module} /> : null}
       </div>
-    </div>
-  );
-}
-
-function AnalisisLLMTextual({
-  modelo,
-  analisis,
-  brandName,
-}: {
-  modelo: 'perplexity' | 'claude';
-  analisis: import('@/lib/api').DiagnosticAnalysisSingle;
-  brandName: string;
-}) {
-  const meta = modelo === 'perplexity'
-    ? {
-        nombre: 'Perplexity',
-        descripcion: 'Motor de búsqueda con IA basado en resultados web recientes.',
-        color: 'from-violet-500 to-fuchsia-600',
-        chip: 'Premium · Perplexity',
-      }
-    : {
-        nombre: 'Claude',
-        descripcion: 'Modelo de Anthropic, conocido por su razonamiento estructurado.',
-        color: 'from-amber-500 to-orange-600',
-        chip: 'Premium · Claude (Anthropic)',
-      };
-
-  return (
-    <div className="space-y-5">
-      <div className={`overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
-        <div className="flex flex-wrap items-start gap-3">
-          <span
-            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${meta.color} text-white shadow-md`}
-          >
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-slate-900">
-              Así te ven en {meta.nombre}
-            </p>
-            <p className="text-xs text-slate-600 mt-0.5">{meta.descripcion}</p>
-            <p className="text-[11px] mt-1 inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 font-medium text-primary-700 ring-1 ring-primary-200">
-              {meta.chip}
-            </p>
-          </div>
-        </div>
-        <p className="mt-4 text-xs text-slate-500">
-          Este análisis es cualitativo (resumen, fortalezas, debilidades y sugerencias específicas de {meta.nombre} para
-          {' '}{brandName}). Los rankings cuantitativos (Top 3, Cleexs Score, gráficos) se calculan a partir de las
-          corridas de ChatGPT y Gemini, disponibles en las otras pestañas.
-        </p>
-      </div>
-
-      <Card className="border-transparent bg-white shadow-md">
-        <CardContent className="p-5 sm:p-6">
-          <BlockAnalisisUnico a={analisis} />
-        </CardContent>
-      </Card>
     </div>
   );
 }

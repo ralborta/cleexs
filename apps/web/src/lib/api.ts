@@ -1109,8 +1109,14 @@ export interface PublicDiagnostic {
   showFullReport?: boolean;
   runId?: string | null;
   runGeminiId?: string | null;
+  runPerplexityId?: string | null;
+  runClaudeId?: string | null;
   /** Estado del segundo run (Gemini), si existe `runGeminiId`. */
   geminiRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
+  /** Estado del run Perplexity (OpenRouter), si existe `runPerplexityId`. Solo gold. */
+  perplexityRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
+  /** Estado del run Claude (OpenRouter), si existe `runClaudeId`. Solo gold. */
+  claudeRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
   shareSlug?: string | null;
   email?: string | null;
   /** URLs sugeridas y contexto antes de confirmar correo + competidores. */
@@ -1119,6 +1125,8 @@ export interface PublicDiagnostic {
   progressPercent?: number;
   runResult?: PublicDiagnosticRunResult;
   runResultGemini?: PublicDiagnosticRunResult;
+  runResultPerplexity?: PublicDiagnosticRunResult;
+  runResultClaude?: PublicDiagnosticRunResult;
   analysisJson?: DiagnosticAnalysisJson | null;
   trendData?: PublicDiagnosticTrendPoint[];
   satelliteModule?: PublicDiagnosticSatelliteModule | null;

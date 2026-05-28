@@ -587,11 +587,13 @@ model PublicDiagnostic {
   utmCampaign    String?  @map("utm_campaign")
   sourceChannel  String?  @map("source_channel") // web | whatsapp_yt | ...
   waPhone        String?  @map("wa_phone") // E.164 normalizado; límites anti-abuso canal WA
-  tier           String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini
+  tier           String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini + Perplexity + Claude
   email          String? // capturado al final del flujo (para enviar resultado)
   status         String   @default("pending") // pending | detecting_competitors | awaiting_user | running | completed | failed
   runId          String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
   runGeminiId    String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
+  runPerplexityId String? @map("run_perplexity_id") // Run con mismos prompts ejecutados con Perplexity vía OpenRouter (solo gold)
+  runClaudeId    String?  @map("run_claude_id") // Run con mismos prompts ejecutados con Claude vía OpenRouter (solo gold)
   analysisJson   Json?    @map("analysis_json") // análisis detallado con IA (Fase 2)
   // Borrador previo al run: URLs sugeridas de competidores, país (fase captcha + confirmación).
   setupDraftJson Json?    @map("setup_draft_json")

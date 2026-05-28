@@ -7,6 +7,12 @@ import { updatePRIAReport } from './pria';
 import { persistSavedPromptExecutionSnapshot } from './portal-saved-prompt-history';
 import { resolveBrandAnalysisContext } from './diagnostic-ai';
 import { buildDiagnosticPrompts, getDefaultDiagnosticIntention } from './diagnostic-prompts';
+import {
+  callOpenRouterChat,
+  getClaudeModelId,
+  getPerplexityModelId,
+  isOpenRouterConfigured,
+} from './openrouter-runner';
 
 /** Versión de prompts activa del tenant, o la del tenant root (000) si el cliente no tiene la suya. */
 export async function resolveActivePromptVersion(
@@ -966,4 +972,169 @@ export async function executeRunGemini(
   });
 
   return { promptsExecuted: prompts.length };
+}
+
+
+// =====================================================================
+// Runs PRIA via OpenRouter: Perplexity y Claude (solo diagnostico gold).
+// Mismo patron que executeRunGemini, pero usando OpenRouter como gateway.
+// Se invocan desde el orquestador en paralelo a OpenAI/Gemini.
+// =====================================================================
+
+export interface ExecuteRunOpenRouterOptions {
+  promptVersionId?: string;
+  onProgress?: (completed: number, total: number, promptName?: string) => void;
+}
+
+type RankerCallable = (userMessage: string, systemInstruction: string) => Promise<string>;
+
+async function executeRunWithRanker(
+  runId: string,
+  providerName: 'perplexity' | 'claude',
+  callRanker: RankerCallable,
+  options: ExecuteRunOpenRouterOptions = {}
+): Promise<{ promptsExecuted: number }> {
+  const run = await prisma.run.findUnique({
+    where: { id: runId },
+    include: {
+      brand: {
+        select: {
+          id: true,
+          name: true,
+          domain: true,
+          industry: true,
+          country: true,
+          productType: true,
+          objective: true,
+          description: true,
+          businessType: true,
+          category: true,
+          subcategory: true,
+          geoMarket: true,
+          aliases: true,
+          competitors: true,
+          selectedWeeklyPortalPromptId: true,
+        },
+      },
+    },
+  });
+
+  if (!run) throw new Error('Run no encontrado');
+
+  const promptVersion = await resolveActivePromptVersion(run.tenantId, options.promptVersionId ?? null);
+  if (!promptVersion) throw new Error('No hay version de prompts activa');
+
+  const prompts = await loadPromptsForRunExecution(run, promptVersion.id);
+  if (prompts.length === 0) throw new Error('No hay prompts activos');
+
+  await prisma.run.update({
+    where: { id: runId },
+    data: {
+      status: 'running',
+      modelMeta: {
+        provider: providerName,
+        promptVersionId: promptVersion.id,
+        promptVersionSource:
+          promptVersion.tenantId === run.tenantId ? 'tenant' : 'root_fallback',
+      } as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  const competitors = run.brand.competitors.map((c) => ({
+    name: c.name,
+    aliases: (c.aliases as string[]) || [],
+  }));
+  const competitorList = competitors.map((c) => c.name).join(', ');
+  const allowedBrands = [run.brand.name, ...competitors.map((c) => c.name)].join(', ');
+  const brandAliases = run.brand.aliases.map((a) => a.alias);
+  const systemInstruction =
+    'Respondé SOLO con un ranking Top 3 en formato numerado estricto: "1. Marca - motivo", "2. Marca - motivo", "3. Marca - motivo". ' +
+    'Usá exclusivamente marcas de la lista entregada. No inventes marcas nuevas. No agregues introducción ni cierre.';
+
+  for (let i = 0; i < prompts.length; i++) {
+    const prompt = prompts[i];
+    options.onProgress?.(i, prompts.length, prompt.name ?? prompt.promptText?.slice(0, 40));
+
+    const userMessage =
+      `${prompt.promptText}\n\n` +
+      `Marca a medir: ${run.brand.name}.\n` +
+      `Competidores: ${competitorList || 'no informados'}.\n` +
+      `Marcas permitidas para rankear: ${allowedBrands}.`;
+
+    const responseText = await callRanker(userMessage, systemInstruction);
+
+    const { top3, flags } = parseTop3(responseText, run.brand.name, competitors);
+    const brandPosition =
+      top3.find(
+        (e) =>
+          e.name.toLowerCase() === run.brand.name.toLowerCase() ||
+          brandAliases.some((a) => a.toLowerCase() === e.name.toLowerCase())
+      )?.position || null;
+
+    const score = calculateScore(brandPosition);
+    const maxSize = 100 * 1024;
+    const truncated = responseText.length > maxSize;
+    const finalResponseText = truncated ? responseText.substring(0, maxSize) : responseText;
+
+    await prisma.promptResult.create({
+      data: {
+        runId,
+        promptId: prompt.id,
+        responseText: finalResponseText,
+        top3Json: top3 as unknown as Prisma.InputJsonValue,
+        score,
+        flags: flags as unknown as Prisma.InputJsonValue,
+        truncated,
+      },
+    });
+  }
+
+  await updatePRIAReport(runId, run.brandId);
+
+  await prisma.run.update({
+    where: { id: runId },
+    data: { status: 'completed' },
+  });
+
+  return { promptsExecuted: prompts.length };
+}
+
+async function callPerplexityForRanking(userMessage: string, systemInstruction: string): Promise<string> {
+  if (!isOpenRouterConfigured()) throw new Error('OpenRouter no configurado (OPENROUTER_API_KEY)');
+  const text = await callOpenRouterChat({
+    model: getPerplexityModelId(),
+    systemPrompt: systemInstruction,
+    userPrompt: userMessage,
+    temperature: 0.2,
+    maxTokens: 800,
+  });
+  if (!text) throw new Error('Perplexity (OpenRouter) no devolvio respuesta');
+  return text;
+}
+
+async function callClaudeForRanking(userMessage: string, systemInstruction: string): Promise<string> {
+  if (!isOpenRouterConfigured()) throw new Error('OpenRouter no configurado (OPENROUTER_API_KEY)');
+  const text = await callOpenRouterChat({
+    model: getClaudeModelId(),
+    systemPrompt: systemInstruction,
+    userPrompt: userMessage,
+    temperature: 0.2,
+    maxTokens: 800,
+  });
+  if (!text) throw new Error('Claude (OpenRouter) no devolvio respuesta');
+  return text;
+}
+
+export async function executeRunPerplexity(
+  runId: string,
+  options: ExecuteRunOpenRouterOptions = {}
+): Promise<{ promptsExecuted: number }> {
+  return executeRunWithRanker(runId, 'perplexity', callPerplexityForRanking, options);
+}
+
+export async function executeRunClaude(
+  runId: string,
+  options: ExecuteRunOpenRouterOptions = {}
+): Promise<{ promptsExecuted: number }> {
+  return executeRunWithRanker(runId, 'claude', callClaudeForRanking, options);
 }

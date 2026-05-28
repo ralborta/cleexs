@@ -4,7 +4,13 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
-import { executeRun, executeRunGemini } from '../lib/run-executor';
+import {
+  executeRun,
+  executeRunGemini,
+  executeRunPerplexity,
+  executeRunClaude,
+} from '../lib/run-executor';
+import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { EntitlementAction, Prisma } from '@prisma/client';
 import { runOutreachForRun } from '../lib/outreach';
@@ -658,6 +664,8 @@ async function executePublicDiagnosticPipeline(params: {
   skipSatellite?: boolean;
   /** Canal WhatsApp: solo Cleexs core (OpenAI), sin corrida Gemini. */
   skipGemini?: boolean;
+  /** Canal WhatsApp / freemium-only: omitir corridas Perplexity y Claude vía OpenRouter. */
+  skipOpenRouter?: boolean;
 }): Promise<void> {
   const {
     log,
@@ -671,6 +679,7 @@ async function executePublicDiagnosticPipeline(params: {
     competitorRows,
     skipSatellite = false,
     skipGemini = false,
+    skipOpenRouter = false,
   } = params;
 
   const competitorNames = competitorRows.map((c) => c.name).filter(Boolean);
@@ -858,6 +867,56 @@ async function executePublicDiagnosticPipeline(params: {
     }
   };
 
+  const runPerplexityBranch = async (): Promise<void> => {
+    try {
+      const runPerplexity = await prisma.run.create({
+        data: {
+          tenantId: rootTenant.id,
+          brandId: brand.id,
+          periodStart,
+          periodEnd,
+          runType: 'diagnostic_perplexity',
+          status: 'pending',
+        },
+      });
+      await prisma.publicDiagnostic.update({
+        where: { id: diagnosticId },
+        data: { runPerplexityId: runPerplexity.id },
+      });
+      await executeRunPerplexity(runPerplexity.id, { promptVersionId: promptVersion.id });
+    } catch (perplexityErr) {
+      log.warn(
+        { err: perplexityErr, diagnosticId },
+        'Run Perplexity (OpenRouter) no ejecutado. Continuamos con el resto de los LLMs.'
+      );
+    }
+  };
+
+  const runClaudeBranch = async (): Promise<void> => {
+    try {
+      const runClaude = await prisma.run.create({
+        data: {
+          tenantId: rootTenant.id,
+          brandId: brand.id,
+          periodStart,
+          periodEnd,
+          runType: 'diagnostic_claude',
+          status: 'pending',
+        },
+      });
+      await prisma.publicDiagnostic.update({
+        where: { id: diagnosticId },
+        data: { runClaudeId: runClaude.id },
+      });
+      await executeRunClaude(runClaude.id, { promptVersionId: promptVersion.id });
+    } catch (claudeErr) {
+      log.warn(
+        { err: claudeErr, diagnosticId },
+        'Run Claude (OpenRouter) no ejecutado. Continuamos con el resto de los LLMs.'
+      );
+    }
+  };
+
   const runAnalysisSatelliteBranch = async (): Promise<void> => {
     let analysisDone: object | null = null;
     let analysisSettled = false;
@@ -934,8 +993,17 @@ async function executePublicDiagnosticPipeline(params: {
     }
   };
 
+  const diagnosticTierRow = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: { tier: true },
+  });
+  const isGoldRun = diagnosticTierRow?.tier === 'gold';
+  const shouldRunOpenRouter = !skipOpenRouter && isGoldRun && isOpenRouterConfigured();
+
   await Promise.all([
     skipGemini ? Promise.resolve() : runGeminiBranch(),
+    shouldRunOpenRouter ? runPerplexityBranch() : Promise.resolve(),
+    shouldRunOpenRouter ? runClaudeBranch() : Promise.resolve(),
     runAnalysisSatelliteBranch(),
   ]);
 
@@ -1475,6 +1543,7 @@ async function autoStartWhatsAppDiagnostic(params: {
       competitorRows,
       skipSatellite: true,
       skipGemini: true,
+      skipOpenRouter: true,
     });
     return { ok: true };
   } catch (err) {
@@ -2986,6 +3055,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         tier: true,
         runId: true,
         runGeminiId: true,
+        runPerplexityId: true,
+        runClaudeId: true,
         email: true,
         sourceChannel: true,
         createdAt: true,
@@ -3059,8 +3130,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       showFullReport: boolean;
       runId?: string | null;
       runGeminiId?: string | null;
-      /** Estado del run Gemini (si existe); útil para pestañas y polling en el cliente. */
+      runPerplexityId?: string | null;
+      runClaudeId?: string | null;
+      /** Estado de runs auxiliares; útil para pestañas y polling en el cliente. */
       geminiRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
+      perplexityRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
+      claudeRunStatus?: 'pending' | 'running' | 'completed' | 'failed' | null;
       shareSlug?: string | null;
       steps?: Array<{ id: string; label: string; completed: boolean }>;
       progressPercent?: number;
@@ -3068,6 +3143,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       satelliteModule?: SatelliteModuleResult | null;
       runResult?: RunResultType;
       runResultGemini?: RunResultType;
+      runResultPerplexity?: RunResultType;
+      runResultClaude?: RunResultType;
       trendData?: Array<{ label: string; score: number; date: string }>;
       setupDraft?: {
         suggestedCompetitorUrls: string[];
@@ -3088,6 +3165,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       showFullReport,
       runId: diagnostic.runId,
       runGeminiId: diagnostic.runGeminiId ?? null,
+      runPerplexityId: diagnostic.runPerplexityId ?? null,
+      runClaudeId: diagnostic.runClaudeId ?? null,
       shareSlug: shareSlugOut,
       setupDraft: setupDraft ?? null,
       email:
@@ -3220,6 +3299,66 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      // Helper para Perplexity y Claude: mismo formato que runResultGemini.
+      const loadExtraRunResult = async (
+        runIdValue: string
+      ): Promise<{
+        status: 'pending' | 'running' | 'completed' | 'failed' | null;
+        runResult?: RunResultType;
+      }> => {
+        const lite = await prisma.run.findUnique({
+          where: { id: runIdValue },
+          include: {
+            promptResults: { select: { promptId: true }, orderBy: { createdAt: 'asc' } },
+            priaReports: { take: 1, orderBy: { createdAt: 'desc' } },
+          },
+        });
+        const status = (lite?.status ?? null) as
+          | 'pending'
+          | 'running'
+          | 'completed'
+          | 'failed'
+          | null;
+        if (!lite || lite.status !== 'completed' || !lite.priaReports[0]) {
+          return { status };
+        }
+        const full = await prisma.run.findUnique({
+          where: { id: runIdValue },
+          include: {
+            promptResults: {
+              include: { prompt: { include: { category: true } } },
+              orderBy: { createdAt: 'asc' },
+            },
+            brand: { include: { competitors: true, aliases: true } },
+          },
+        });
+        if (!full) return { status };
+        return {
+          status,
+          runResult: {
+            brandId: full.brand.id,
+            brandName: full.brand.name,
+            cleexsScore: lite.priaReports[0].priaTotal,
+            competitors: full.brand.competitors.map((c) => c.name),
+            competitorDetails: full.brand.competitors.map((c) => ({ name: c.name, domain: c.domain })),
+            brandAliases: full.brand.aliases.map((a) => a.alias),
+            promptResults: full.promptResults.map((pr) => ({
+              category: pr.prompt?.category?.name ?? 'General',
+              score: pr.score,
+              promptText: pr.prompt?.promptText ?? '',
+              responseText: truncatePromptResponseText(pr.responseText),
+              top3Json: pr.top3Json as Array<{
+                position: number;
+                name: string;
+                type: string;
+                reason?: string;
+              }>,
+              flags: (pr.flags as Record<string, boolean>) ?? {},
+            })),
+          },
+        };
+      };
+
       // Run Gemini: mismo formato de runResult para score y métricas por modelo
       if (
         !isWaChannel &&
@@ -3269,6 +3408,30 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             };
           }
         }
+      }
+
+      // Run Perplexity (vía OpenRouter): mismo formato de runResult que Gemini.
+      if (
+        !isWaChannel &&
+        diagnostic.runPerplexityId &&
+        diagnostic.status === 'completed' &&
+        showFullReport
+      ) {
+        const { status, runResult: rr } = await loadExtraRunResult(diagnostic.runPerplexityId);
+        base.perplexityRunStatus = status;
+        if (rr) base.runResultPerplexity = rr;
+      }
+
+      // Run Claude (vía OpenRouter): mismo formato de runResult que Gemini.
+      if (
+        !isWaChannel &&
+        diagnostic.runClaudeId &&
+        diagnostic.status === 'completed' &&
+        showFullReport
+      ) {
+        const { status, runResult: rr } = await loadExtraRunResult(diagnostic.runClaudeId);
+        base.claudeRunStatus = status;
+        if (rr) base.runResultClaude = rr;
       }
     } else {
       const siteContextReady = !!diagnostic.runId || diagnostic.status === 'completed';
