@@ -856,6 +856,7 @@ function VerResultadoContent() {
                             trendData={diagnostic.trendData}
                             runResultChatGPT={tieneGemini ? runResult : undefined}
                             runResultGemini={tieneGemini ? runResultGemini : undefined}
+                            analysisJson={diagnostic.analysisJson ?? null}
                             satelliteBlock={
                               <>
                                 {showSatelliteSkeleton && <SatelliteModuleSkeleton />}

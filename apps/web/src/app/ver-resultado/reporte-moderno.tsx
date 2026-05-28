@@ -14,8 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { PublicDiagnosticRunResult, PublicDiagnosticPromptResult, PublicDiagnosticTrendPoint } from '@/lib/api';
+import type {
+  PublicDiagnosticRunResult,
+  PublicDiagnosticPromptResult,
+  PublicDiagnosticTrendPoint,
+  DiagnosticAnalysisJson,
+} from '@/lib/api';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
+import { AnalisisIA } from './analisis-ia';
 import {
   LineChart,
   Line,
@@ -391,6 +397,7 @@ export function ReporteModerno({
   runResultChatGPT,
   runResultGemini,
   satelliteBlock,
+  analysisJson,
 }: {
   runResult: PublicDiagnosticRunResult;
   brandName: string;
@@ -398,6 +405,7 @@ export function ReporteModerno({
   runResultChatGPT?: PublicDiagnosticRunResult;
   runResultGemini?: PublicDiagnosticRunResult;
   satelliteBlock?: ReactNode;
+  analysisJson?: DiagnosticAnalysisJson | null;
 }) {
   const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
   const [resumenExpanded, setResumenExpanded] = useState<Set<string>>(new Set());
@@ -950,6 +958,16 @@ export function ReporteModerno({
           </div>
         </details>
       </div>
+
+      {analysisJson ? (
+        <div className="space-y-4">
+          <ReportSectionTitle
+            title="Análisis con IA"
+            subtitle="Cómo te ven OpenAI, Gemini, Perplexity y Claude, con una síntesis combinada."
+          />
+          <AnalisisIA analysisJson={analysisJson} />
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         <ReportSectionTitle title="Compartir e invitar" subtitle="Difundí el análisis o invitá a tu equipo." />
