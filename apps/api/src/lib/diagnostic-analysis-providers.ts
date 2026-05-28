@@ -161,11 +161,13 @@ export async function generateWithOpenAI(
   }
 }
 
-// Orden de modelos a probar (sin gemini-2.0-*: Google suele devolver 404 a cuentas nuevas).
+// Gemini es complementario en el reporte gold; OpenAI es la estrella.
+// Mantenemos SOLO modelos Flash baratos para que el costo no se dispare si Flash falla.
+// (Antes habia fallback a gemini-2.5-pro que cuesta ~4x mas que Flash.)
 const GEMINI_MODELS_TO_TRY = [
   'gemini-2.5-flash',
-  'gemini-2.5-pro',
-  'gemini-3-flash-preview',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
 ];
 
 export async function generateWithGemini(
@@ -190,7 +192,8 @@ export async function generateWithGemini(
         contents: prompt,
         config: {
           temperature: 0.3,
-          maxOutputTokens: 4500,
+          // Gemini es LLM de soporte (no estrella). Menos tokens = menos costo.
+          maxOutputTokens: 3000,
         },
       });
 
@@ -237,7 +240,8 @@ export async function generateWithPerplexity(
     systemPrompt: SYSTEM_PROMPT,
     userPrompt,
     temperature: 0.3,
-    maxTokens: 4500,
+    // LLM complementario (OpenAI es la estrella del reporte). Output mas corto = menor costo.
+    maxTokens: 3000,
   });
 
   if (!content) return null;
@@ -245,8 +249,8 @@ export async function generateWithPerplexity(
 }
 
 /**
- * Genera el analisis con Anthropic Claude Sonnet via OpenRouter.
- * Claude tiene buen razonamiento estructurado; mismo prompt JSON estricto.
+ * Genera el analisis con Anthropic Claude (modelo configurable via env) via OpenRouter.
+ * Por defecto usa claude-haiku-4.5; se puede bajar a claude-3.5-haiku (legacy, mas barato).
  */
 export async function generateWithClaude(
   contextText: string
@@ -259,7 +263,8 @@ export async function generateWithClaude(
     systemPrompt: SYSTEM_PROMPT,
     userPrompt,
     temperature: 0.3,
-    maxTokens: 4500,
+    // LLM complementario (OpenAI es la estrella del reporte). Output mas corto = menor costo.
+    maxTokens: 3000,
   });
 
   if (!content) return null;
