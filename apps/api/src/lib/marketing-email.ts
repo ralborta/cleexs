@@ -388,39 +388,69 @@ export async function resolveMarketingRecipients(input: {
   return Array.from(byEmail.values()).slice(0, input.limit);
 }
 
-export function weeklyEmailForRecipient(recipient: MarketingEmailRecipient, weekSlot: 1 | 2 | 3 | 4): {
-  subject: string;
-  body: string;
-  preheader: string;
-} {
-  if (weekSlot === 1) {
-    return {
-      subject: '{{brandName}}: tu Cleexs Score es {{score}}',
-      preheader: 'Resumen mensual de visibilidad en IA.',
-      body:
-        'Hola, esta semana miramos el estado general de {{brandName}}.\n\nTu Cleexs Score actual es {{score}}. Este número resume qué tan visible y confiable aparecés frente a motores de IA y buscadores conversacionales.\n\nTip rápido: {{tip1}}',
-    };
-  }
-  if (weekSlot === 2) {
-    return {
-      subject: 'Un competidor que deberías mirar: {{topCompetitor}}',
-      preheader: 'Una señal competitiva simple para mantenerte atento.',
-      body:
-        'En las consultas de IA, la pelea no es solo por tráfico: también es por ser mencionado como opción.\n\nEsta semana te sugerimos mirar a {{topCompetitor}} y revisar si tu sitio explica con la misma claridad por qué elegir {{brandName}}.\n\nTip rápido: {{tip2}}',
-    };
-  }
-  if (weekSlot === 3) {
-    return {
-      subject: '3 ajustes para mejorar {{domain}}',
-      preheader: 'Acciones simples para que la IA entienda mejor tu negocio.',
-      body:
-        'Para {{domain}}, estas son tres mejoras de bajo esfuerzo que suelen ayudar a subir presencia en motores de IA:\n\n1. {{tip1}}\n2. {{tip2}}\n3. {{tip3}}\n\nNo hace falta rehacer todo: conviene empezar por la home, servicios y preguntas frecuentes.',
-    };
-  }
-  return {
+type WeeklyContent = { subject: string; body: string; preheader: string };
+
+const WEEKLY_DEFAULTS: Record<1 | 2 | 3 | 4, WeeklyContent> = {
+  1: {
+    subject: '{{brandName}}: tu Cleexs Score es {{score}}',
+    preheader: 'Resumen mensual de visibilidad en IA.',
+    body:
+      'Hola, esta semana miramos el estado general de {{brandName}}.\n\nTu Cleexs Score actual es {{score}}. Este número resume qué tan visible y confiable aparecés frente a motores de IA y buscadores conversacionales.\n\nTip rápido: {{tip1}}',
+  },
+  2: {
+    subject: 'Un competidor que deberías mirar: {{topCompetitor}}',
+    preheader: 'Una señal competitiva simple para mantenerte atento.',
+    body:
+      'En las consultas de IA, la pelea no es solo por tráfico: también es por ser mencionado como opción.\n\nEsta semana te sugerimos mirar a {{topCompetitor}} y revisar si tu sitio explica con la misma claridad por qué elegir {{brandName}}.\n\nTip rápido: {{tip2}}',
+  },
+  3: {
+    subject: '3 ajustes para mejorar {{domain}}',
+    preheader: 'Acciones simples para que la IA entienda mejor tu negocio.',
+    body:
+      'Para {{domain}}, estas son tres mejoras de bajo esfuerzo que suelen ayudar a subir presencia en motores de IA:\n\n1. {{tip1}}\n2. {{tip2}}\n3. {{tip3}}\n\nNo hace falta rehacer todo: conviene empezar por la home, servicios y preguntas frecuentes.',
+  },
+  4: {
     subject: 'Cómo aparecer mejor en ChatGPT y otros motores',
     preheader: 'Una recomendación semanal para sostener presencia de marca.',
     body:
       'Cada vez más personas descubren proveedores preguntándole a ChatGPT, Gemini o Perplexity. Para aparecer mejor, la IA necesita señales claras: qué hacés, para quién, dónde operás y por qué sos confiable.\n\nPara {{brandName}}, el mejor próximo paso es: {{tip1}}\n\nSi querés medirlo todas las semanas y ver motores extra, Premium lo deja automatizado.',
-  };
+  },
+};
+
+/**
+ * Lee la campania configurada para `weekIndex` y `bucket = 'all'`. Si existe
+ * y tiene subject/body/preheader cargados, los usa. Si no, cae al texto por
+ * defecto del slot. Esto permite editar el contenido desde /admin/email sin
+ * tocar codigo.
+ */
+async function loadWeeklyContentFromCampaign(weekSlot: 1 | 2 | 3 | 4): Promise<WeeklyContent | null> {
+  try {
+    const campaign = await prisma.cleexsInternalEmailCampaign.findFirst({
+      where: { weekIndex: weekSlot, active: true, scoreBucket: 'all' as never },
+      orderBy: { priority: 'desc' },
+    });
+    if (!campaign) return null;
+    const subject = (campaign.subject || '').trim();
+    const body = (campaign.body || '').trim();
+    const preheader = (campaign.preheader || campaign.description || '').trim();
+    if (!subject && !body) return null;
+    return {
+      subject: subject || WEEKLY_DEFAULTS[weekSlot].subject,
+      body: body || WEEKLY_DEFAULTS[weekSlot].body,
+      preheader: preheader || WEEKLY_DEFAULTS[weekSlot].preheader,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function weeklyEmailForRecipient(
+  recipient: MarketingEmailRecipient,
+  weekSlot: 1 | 2 | 3 | 4
+): Promise<WeeklyContent> {
+  // recipient no se usa por ahora aca; el merge de variables lo hace
+  // sendMarketingEmail despues con mergeText().
+  void recipient;
+  const fromDb = await loadWeeklyContentFromCampaign(weekSlot);
+  return fromDb ?? WEEKLY_DEFAULTS[weekSlot];
 }

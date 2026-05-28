@@ -38,6 +38,8 @@ export async function sendInternalCampaignTestEmail(
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const espId = campaign.espTemplateId?.trim();
   const from = buildTransactionalFromAddress();
+  // buildWeeklySequenceHtmlEmail ya respeta los campos editados
+  // (subject, body, preheader). Si estan vacios cae al template generico.
   const { subject, html, text } = buildWeeklySequenceHtmlEmail(campaign);
 
   let provider: 'resend_template' | 'resend_inline' | 'smtp';
@@ -47,7 +49,8 @@ export async function sendInternalCampaignTestEmail(
     if (apiKey && espId) {
       provider = 'resend_template';
       const resend = new Resend(apiKey);
-      const preheader = ((campaign.description || '').trim()).slice(0, 500);
+      const preheader = (((campaign.preheader || '').trim()) || ((campaign.description || '').trim())).slice(0, 500);
+      const editedBody = (campaign.body || '').trim();
       const { data, error } = await resend.emails.send({
         from,
         to: [to],
@@ -59,6 +62,8 @@ export async function sendInternalCampaignTestEmail(
             TITLE: campaign.title.slice(0, 500),
             PREHEADER: preheader,
             SLUG: campaign.slug.slice(0, 200),
+            SUBJECT: subject.slice(0, 300),
+            BODY: editedBody.slice(0, 20000),
           },
         },
       });

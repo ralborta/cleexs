@@ -853,6 +853,11 @@ model CleexsInternalEmailCampaign {
   title         String
   description   String?                @db.Text
   espTemplateId String?                @map("esp_template_id")
+  // Contenido editable usado por el cron weekly y por el boton "Probar".
+  // Si subject/body/preheader estan vacios, se cae al texto por defecto.
+  subject       String?                @db.Text
+  body          String?                @db.Text
+  preheader     String?                @db.Text
   active        Boolean                @default(true)
   priority      Int                    @default(0)
   createdAt     DateTime               @default(now()) @map("created_at")

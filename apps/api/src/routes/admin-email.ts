@@ -41,6 +41,9 @@ const patchCampaignBody = z.object({
   priority: z.number().int().min(0).max(999).optional(),
   weekIndex: z.number().int().min(1).max(52).optional(),
   scoreBucket: scoreBucketSchema.optional(),
+  subject: z.string().trim().max(300).nullable().optional(),
+  body: z.string().trim().max(20000).nullable().optional(),
+  preheader: z.string().trim().max(500).nullable().optional(),
 });
 
 const createLogBody = z.object({
@@ -318,6 +321,9 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       if (parsed.data.priority !== undefined) data.priority = parsed.data.priority;
       if (parsed.data.weekIndex !== undefined) data.weekIndex = parsed.data.weekIndex;
       if (parsed.data.scoreBucket !== undefined) data.scoreBucket = parsed.data.scoreBucket;
+      if (parsed.data.subject !== undefined) data.subject = parsed.data.subject;
+      if (parsed.data.body !== undefined) data.body = parsed.data.body;
+      if (parsed.data.preheader !== undefined) data.preheader = parsed.data.preheader;
 
       if (Object.keys(data).length === 0) {
         return reply.code(400).send({ error: 'Nada para actualizar.' });

@@ -148,15 +148,9 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (parsed.data.dryRun) {
-      return {
-        ok: true,
-        dryRun: true,
-        campaignSlug,
-        weekSlot: slot,
-        segment: parsed.data.segment,
-        totalRecipients: recipients.length,
-        sample: recipients.slice(0, 10).map((r) => {
-          const email = weeklyEmailForRecipient(r, slot);
+      const sample = await Promise.all(
+        recipients.slice(0, 10).map(async (r) => {
+          const email = await weeklyEmailForRecipient(r, slot);
           return {
             email: r.email,
             subject: email.subject,
@@ -165,7 +159,16 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
             cleexsScore: r.cleexsScore,
             scoreBucket: r.scoreBucket,
           };
-        }),
+        })
+      );
+      return {
+        ok: true,
+        dryRun: true,
+        campaignSlug,
+        weekSlot: slot,
+        segment: parsed.data.segment,
+        totalRecipients: recipients.length,
+        sample,
       };
     }
 
@@ -188,7 +191,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
         continue;
       }
 
-      const email = weeklyEmailForRecipient(recipient, slot);
+      const email = await weeklyEmailForRecipient(recipient, slot);
       try {
         await sendMarketingEmail({
           recipient,
