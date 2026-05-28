@@ -1373,6 +1373,84 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     };
   });
+
+  const SCHEDULE_KEY = 'default';
+
+  async function loadWeeklySchedule() {
+    let row = await prisma.weeklyEmailSchedule.findUnique({ where: { key: SCHEDULE_KEY } });
+    if (!row) {
+      row = await prisma.weeklyEmailSchedule.create({
+        data: {
+          key: SCHEDULE_KEY,
+          enabled: true,
+          dayOfWeekUtc: 2,
+          hourUtc: 13,
+          segment: 'free',
+          dryRun: false,
+        },
+      });
+    }
+    return row;
+  }
+
+  fastify.get('/internal/weekly-schedule', async () => {
+    const row = await loadWeeklySchedule();
+    return {
+      id: row.id,
+      key: row.key,
+      enabled: row.enabled,
+      dayOfWeekUtc: row.dayOfWeekUtc,
+      hourUtc: row.hourUtc,
+      segment: row.segment,
+      dryRun: row.dryRun,
+      notes: row.notes,
+      updatedAt: row.updatedAt.toISOString(),
+      updatedBy: row.updatedBy,
+    };
+  });
+
+  const updateScheduleSchema = z.object({
+    enabled: z.boolean().optional(),
+    dayOfWeekUtc: z.number().int().min(0).max(6).optional(),
+    hourUtc: z.number().int().min(0).max(23).optional(),
+    segment: z.enum(['all', 'free', 'premium']).optional(),
+    dryRun: z.boolean().optional(),
+    notes: z.string().trim().max(2000).nullable().optional(),
+  });
+
+  fastify.put('/internal/weekly-schedule', async (request, reply) => {
+    const parsed = updateScheduleSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload invalido', details: parsed.error.flatten() });
+    }
+
+    const current = await loadWeeklySchedule();
+
+    const row = await prisma.weeklyEmailSchedule.update({
+      where: { id: current.id },
+      data: {
+        enabled: parsed.data.enabled ?? current.enabled,
+        dayOfWeekUtc: parsed.data.dayOfWeekUtc ?? current.dayOfWeekUtc,
+        hourUtc: parsed.data.hourUtc ?? current.hourUtc,
+        segment: parsed.data.segment ?? current.segment,
+        dryRun: parsed.data.dryRun ?? current.dryRun,
+        notes: parsed.data.notes === undefined ? current.notes : parsed.data.notes,
+      },
+    });
+
+    return {
+      id: row.id,
+      key: row.key,
+      enabled: row.enabled,
+      dayOfWeekUtc: row.dayOfWeekUtc,
+      hourUtc: row.hourUtc,
+      segment: row.segment,
+      dryRun: row.dryRun,
+      notes: row.notes,
+      updatedAt: row.updatedAt.toISOString(),
+      updatedBy: row.updatedBy,
+    };
+  });
 };
 
 export default adminReportsRoutes;

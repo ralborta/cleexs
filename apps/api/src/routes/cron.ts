@@ -124,6 +124,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       dryRun?: boolean;
       weekSlot?: 1 | 2 | 3 | 4;
       ctaUrl?: string;
+      force?: boolean;
     };
   }>('/weekly-emails', async (request, reply) => {
     if (!checkCronSecret(request, reply)) return;
@@ -134,20 +135,75 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       dryRun: z.boolean().default(false),
       weekSlot: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
       ctaUrl: z.string().url().optional(),
+      force: z.boolean().default(false),
     });
     const parsed = schema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
     }
 
+    // Schedule (singleton). El cron del workflow puede correr cada hora;
+    // este guard hace que solo dispare cuando el dia/hora UTC coincidan
+    // con lo configurado en /admin/email/weekly.
+    let schedule = await prisma.weeklyEmailSchedule.findUnique({ where: { key: 'default' } });
+    if (!schedule) {
+      schedule = await prisma.weeklyEmailSchedule.create({
+        data: {
+          key: 'default',
+          enabled: true,
+          dayOfWeekUtc: 2,
+          hourUtc: 13,
+          segment: 'free',
+          dryRun: false,
+        },
+      });
+    }
+
+    const nowUtc = new Date();
+    const currentDow = nowUtc.getUTCDay();
+    const currentHour = nowUtc.getUTCHours();
+
+    if (!parsed.data.force) {
+      if (!schedule.enabled) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: 'schedule_disabled',
+          schedule: {
+            enabled: schedule.enabled,
+            dayOfWeekUtc: schedule.dayOfWeekUtc,
+            hourUtc: schedule.hourUtc,
+          },
+          nowUtc: nowUtc.toISOString(),
+        };
+      }
+      if (currentDow !== schedule.dayOfWeekUtc || currentHour !== schedule.hourUtc) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: 'outside_window',
+          schedule: {
+            enabled: schedule.enabled,
+            dayOfWeekUtc: schedule.dayOfWeekUtc,
+            hourUtc: schedule.hourUtc,
+          },
+          nowUtc: nowUtc.toISOString(),
+          currentDow,
+          currentHour,
+        };
+      }
+    }
+
+    const effectiveSegment = parsed.data.segment ?? (schedule.segment as 'all' | 'free' | 'premium');
+    const effectiveDryRun = parsed.data.dryRun || schedule.dryRun;
     const slot = parsed.data.weekSlot ?? weekSlotOfMonth();
     const campaignSlug = `weekly-auto-w${slot}-${dateSlug()}`;
     const recipients = await resolveMarketingRecipients({
-      segment: parsed.data.segment,
+      segment: effectiveSegment,
       limit: parsed.data.limit,
     });
 
-    if (parsed.data.dryRun) {
+    if (effectiveDryRun) {
       const sample = await Promise.all(
         recipients.slice(0, 10).map(async (r) => {
           const email = await weeklyEmailForRecipient(r, slot);
@@ -166,7 +222,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
         dryRun: true,
         campaignSlug,
         weekSlot: slot,
-        segment: parsed.data.segment,
+        segment: effectiveSegment,
         totalRecipients: recipients.length,
         sample,
       };
@@ -203,7 +259,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
           ctaUrl: parsed.data.ctaUrl,
           mergeSummary: {
             mode: 'weekly_auto',
-            segment: parsed.data.segment,
+            segment: effectiveSegment,
             weekSlot: slot,
           },
         });
@@ -219,7 +275,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       dryRun: false,
       campaignSlug,
       weekSlot: slot,
-      segment: parsed.data.segment,
+      segment: effectiveSegment,
       totalRecipients: recipients.length,
       sent,
       skipped,

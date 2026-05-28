@@ -4,12 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarClock,
+  Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
+  FileText,
   Loader2,
   Mail,
   RefreshCw,
   Send,
+  Settings,
   XCircle,
 } from 'lucide-react';
 import {
@@ -17,6 +22,8 @@ import {
   type WeeklyEmailLogStatus,
   type WeeklyEmailsStatsReport,
 } from '@/lib/api';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import { CampaignContentEditor, type CampaignRow } from '@/components/admin/campaign-content-editor';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +53,34 @@ const SEGMENT_LABEL: Record<string, string> = {
   premium: 'Premium',
   all: 'Todos',
 };
+
+const DAY_LABEL: Record<number, string> = {
+  0: 'Domingo',
+  1: 'Lunes',
+  2: 'Martes',
+  3: 'Miércoles',
+  4: 'Jueves',
+  5: 'Viernes',
+  6: 'Sábado',
+};
+
+type WeeklySchedule = {
+  enabled: boolean;
+  dayOfWeekUtc: number;
+  hourUtc: number;
+  segment: 'all' | 'free' | 'premium';
+  dryRun: boolean;
+  notes: string | null;
+  updatedAt: string;
+};
+
+// El offset de Argentina es UTC-3 todo el ano (no observa DST).
+const AR_OFFSET_HOURS = -3;
+
+function utcHourToAr(hourUtc: number) {
+  const ar = (hourUtc + AR_OFFSET_HOURS + 24) % 24;
+  return ar;
+}
 
 function formatNumber(n: number): string {
   return n.toLocaleString('es-AR');
@@ -95,6 +130,16 @@ export default function AdminWeeklyEmailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [windowDays, setWindowDays] = useState<number>(90);
 
+  const [schedule, setSchedule] = useState<WeeklySchedule | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleSavedAt, setScheduleSavedAt] = useState<number | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  const [weeklyCampaigns, setWeeklyCampaigns] = useState<CampaignRow[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+  const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -113,9 +158,85 @@ export default function AdminWeeklyEmailsPage() {
     }
   }, [windowDays]);
 
+  const loadSchedule = useCallback(async () => {
+    setScheduleLoading(true);
+    setScheduleError(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/weekly-schedule');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar configuración');
+      setSchedule(json as WeeklySchedule);
+    } catch (e) {
+      setScheduleError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, []);
+
+  const loadCampaigns = useCallback(async () => {
+    setCampaignsLoading(true);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/email/campaigns');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error');
+      const list = Array.isArray(json) ? (json as CampaignRow[]) : [];
+      // Solo las 4 que usa el cron weekly: weekIndex 1..4, bucket = all.
+      const filtered = list
+        .filter((c) => c.weekIndex >= 1 && c.weekIndex <= 4 && c.scoreBucket === 'all')
+        .sort((a, b) => a.weekIndex - b.weekIndex);
+      setWeeklyCampaigns(filtered);
+    } catch {
+      setWeeklyCampaigns([]);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadSchedule();
+    void loadCampaigns();
+  }, [loadSchedule, loadCampaigns]);
+
+  async function saveSchedule(patch: Partial<WeeklySchedule>) {
+    if (!schedule) return;
+    setScheduleSaving(true);
+    setScheduleError(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/weekly-schedule', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'No se pudo guardar');
+      setSchedule(json as WeeklySchedule);
+      setScheduleSavedAt(Date.now());
+    } catch (e) {
+      setScheduleError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setScheduleSaving(false);
+    }
+  }
+
+  async function saveCampaignContent(
+    c: CampaignRow,
+    payload: { subject: string | null; body: string | null; preheader: string | null }
+  ) {
+    const res = await adminUiFetch(`/api/admin-ui/email/campaigns/${encodeURIComponent(c.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error((json as { error?: string }).error || 'No se pudo guardar el contenido');
+    }
+    await loadCampaigns();
+  }
 
   const allTime = data?.allTime;
   const windowStats = data?.window;
@@ -211,8 +332,13 @@ export default function AdminWeeklyEmailsPage() {
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Corridas recientes</h2>
             <p className="text-xs text-slate-500">
-              Agrupado por campaña ({data?.campaignsTracked ?? 0} en la ventana). El cron real corre los{' '}
-              {data?.cron.scheduleHint ?? 'martes 13:00 UTC (10:00 AR)'}.
+              Agrupado por campaña ({data?.campaignsTracked ?? 0} en la ventana). El cron real corre{' '}
+              {schedule
+                ? `los ${DAY_LABEL[schedule.dayOfWeekUtc].toLowerCase()} a las ${schedule.hourUtc
+                    .toString()
+                    .padStart(2, '0')}:00 UTC`
+                : data?.cron.scheduleHint ?? 'martes 13:00 UTC (10:00 AR)'}
+              .
             </p>
           </div>
           <div className="text-xs text-slate-500">{campaigns.length} mostradas</div>
@@ -375,18 +501,327 @@ export default function AdminWeeklyEmailsPage() {
         </div>
       </section>
 
+      <ScheduleCard
+        schedule={schedule}
+        loading={scheduleLoading}
+        saving={scheduleSaving}
+        savedAt={scheduleSavedAt}
+        error={scheduleError}
+        onSave={saveSchedule}
+      />
+
+      <WeeklyTemplatesCard
+        campaigns={weeklyCampaigns}
+        loading={campaignsLoading}
+        expandedId={expandedCampaignId}
+        onToggleExpand={(id) => setExpandedCampaignId((prev) => (prev === id ? null : id))}
+        onSave={saveCampaignContent}
+        onRefresh={() => void loadCampaigns()}
+      />
+
       <section className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 text-xs leading-relaxed text-slate-600">
         <p>
-          <strong className="font-semibold text-slate-800">¿Cómo funciona?</strong> Cada martes a las{' '}
-          {data?.cron.scheduleHint ?? '10:00 AR'} un cron de GitHub Actions llama al endpoint{' '}
-          <code className="rounded bg-white px-1 font-mono text-[10px]">POST /api/cron/weekly-emails</code> con un
-          secret compartido. Esa corrida arma la lista de destinatarios, genera el cuerpo del mail según el slot de la
-          semana (1 a 4) y delega el envío en Resend. Cada destinatario queda guardado en{' '}
+          <strong className="font-semibold text-slate-800">¿Cómo funciona?</strong> Un cron en GitHub Actions llama
+          cada hora al endpoint{' '}
+          <code className="rounded bg-white px-1 font-mono text-[10px]">POST /api/cron/weekly-emails</code>. La API
+          revisa la configuración de arriba (día, hora UTC y si está habilitado) y solo dispara el envío cuando
+          coincide la ventana. Esa corrida arma la lista de destinatarios, genera el cuerpo del mail según el slot
+          de la semana (1 a 4 — texto editable más abajo) y delega el envío en Resend. Cada destinatario queda
+          guardado en{' '}
           <code className="rounded bg-white px-1 font-mono text-[10px]">cleexs_internal_email_send_logs</code> con su
-          estado (<em>sent / failed / skipped / pending</em>), y eso es lo que ves en estas tablas.
+          estado (<em>sent / failed / skipped / pending</em>).
         </p>
       </section>
     </div>
+  );
+}
+
+function ScheduleCard({
+  schedule,
+  loading,
+  saving,
+  savedAt,
+  error,
+  onSave,
+}: {
+  schedule: WeeklySchedule | null;
+  loading: boolean;
+  saving: boolean;
+  savedAt: number | null;
+  error: string | null;
+  onSave: (patch: Partial<WeeklySchedule>) => Promise<void>;
+}) {
+  const [localDay, setLocalDay] = useState<number>(2);
+  const [localHour, setLocalHour] = useState<number>(13);
+  const [localEnabled, setLocalEnabled] = useState<boolean>(true);
+  const [localSegment, setLocalSegment] = useState<'all' | 'free' | 'premium'>('free');
+  const [localDryRun, setLocalDryRun] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!schedule) return;
+    setLocalDay(schedule.dayOfWeekUtc);
+    setLocalHour(schedule.hourUtc);
+    setLocalEnabled(schedule.enabled);
+    setLocalSegment(schedule.segment);
+    setLocalDryRun(schedule.dryRun);
+  }, [schedule]);
+
+  const arHour = utcHourToAr(localHour);
+  // Dia AR puede diferir si la hora UTC esta entre 00 y 02 (en AR seria dia anterior).
+  const arDayShift = localHour + AR_OFFSET_HOURS < 0 ? -1 : 0;
+  const arDay = (localDay + arDayShift + 7) % 7;
+
+  async function handleSave() {
+    await onSave({
+      enabled: localEnabled,
+      dayOfWeekUtc: localDay,
+      hourUtc: localHour,
+      segment: localSegment,
+      dryRun: localDryRun,
+    });
+  }
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+          <Settings className="h-4 w-4" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Configuración del envío automático</h2>
+          <p className="text-xs text-slate-500">
+            Cuándo se dispara la secuencia. El cron consulta esto cada hora y solo manda si coincide el día y la
+            hora.
+          </p>
+        </div>
+      </header>
+      <div className="p-5">
+        {loading && !schedule ? (
+          <div className="text-sm text-slate-500">
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            Cargando configuración…
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Día de envío (UTC)</span>
+                <select
+                  value={localDay}
+                  onChange={(ev) => setLocalDay(Number(ev.target.value))}
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+                >
+                  {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                    <option key={d} value={d}>
+                      {DAY_LABEL[d]}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[11px] text-slate-500">
+                  En Argentina: <strong className="text-slate-700">{DAY_LABEL[arDay]}</strong>
+                </span>
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hora (UTC)</span>
+                <select
+                  value={localHour}
+                  onChange={(ev) => setLocalHour(Number(ev.target.value))}
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+                >
+                  {Array.from({ length: 24 }, (_, h) => h).map((h) => (
+                    <option key={h} value={h}>
+                      {h.toString().padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[11px] text-slate-500">
+                  En Argentina:{' '}
+                  <strong className="text-slate-700">{arHour.toString().padStart(2, '0')}:00</strong>
+                </span>
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Segmento</span>
+                <select
+                  value={localSegment}
+                  onChange={(ev) => setLocalSegment(ev.target.value as typeof localSegment)}
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+                >
+                  <option value="free">Free</option>
+                  <option value="premium">Premium</option>
+                  <option value="all">Todos</option>
+                </select>
+                <span className="mt-1 block text-[11px] text-slate-500">Audiencia que recibirá la secuencia.</span>
+              </label>
+              <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={localEnabled}
+                    onChange={(ev) => setLocalEnabled(ev.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  />
+                  Envío automático activado
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={localDryRun}
+                    onChange={(ev) => setLocalDryRun(ev.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  />
+                  Solo simular (no enviar todavía)
+                </label>
+              </div>
+            </div>
+
+            {error ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-2 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Próximo envío programado:{' '}
+                <strong className="text-slate-800">
+                  {DAY_LABEL[arDay]} a las {arHour.toString().padStart(2, '0')}:00 AR
+                </strong>{' '}
+                ({DAY_LABEL[localDay]} {localHour.toString().padStart(2, '0')}:00 UTC).{' '}
+                {!localEnabled ? <span className="text-amber-700">Actualmente desactivado.</span> : null}
+                {localDryRun ? <span className="ml-2 text-amber-700">Modo simulación.</span> : null}
+              </p>
+              <div className="flex items-center gap-3">
+                {savedAt ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <Check className="h-3.5 w-3.5" />
+                    Guardado
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {saving ? 'Guardando…' : 'Guardar cambios'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function WeeklyTemplatesCard({
+  campaigns,
+  loading,
+  expandedId,
+  onToggleExpand,
+  onSave,
+  onRefresh,
+}: {
+  campaigns: CampaignRow[];
+  loading: boolean;
+  expandedId: string | null;
+  onToggleExpand: (id: string) => void;
+  onSave: (
+    c: CampaignRow,
+    payload: { subject: string | null; body: string | null; preheader: string | null }
+  ) => Promise<void>;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+            <FileText className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Plantillas de la secuencia (semanas 1–4)</h2>
+            <p className="text-xs text-slate-500">
+              Editá lo que reciben los destinatarios cada semana. Si dejás un campo vacío, se usa el texto por
+              defecto de esa semana.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refrescar
+        </button>
+      </header>
+      <div className="space-y-3 p-5">
+        {loading && campaigns.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            Cargando plantillas…
+          </p>
+        ) : campaigns.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+            Todavía no hay campañas weekly con bucket{' '}
+            <code className="rounded bg-white px-1 font-mono text-[10px]">all</code>. Andá a{' '}
+            <a className="font-medium text-violet-700 underline" href="/admin/email">
+              Email · secuencia
+            </a>{' '}
+            y tocá «Crear plantillas 1–8» para generarlas.
+          </p>
+        ) : (
+          campaigns.map((c) => {
+            const isOpen = expandedId === c.id;
+            const hasCustom = Boolean((c.subject || '').trim() || (c.body || '').trim());
+            return (
+              <div key={c.id} className="rounded-xl border border-slate-200 bg-slate-50/40">
+                <button
+                  type="button"
+                  onClick={() => onToggleExpand(c.id)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-700">
+                      W{c.weekIndex}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Semana {c.weekIndex} · {c.title}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] text-slate-500">{c.slug}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${
+                        hasCustom
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                          : 'bg-slate-100 text-slate-600 ring-slate-200'
+                      }`}
+                    >
+                      {hasCustom ? 'Editado' : 'Por defecto'}
+                    </span>
+                    {isOpen ? (
+                      <ChevronUp className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    )}
+                  </div>
+                </button>
+                {isOpen ? (
+                  <div className="border-t border-slate-200 bg-white p-5">
+                    <CampaignContentEditor c={c} onSave={(payload) => onSave(c, payload)} />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </section>
   );
 }
 

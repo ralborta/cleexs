@@ -845,6 +845,22 @@ enum CleexsEmailSendStatus {
   skipped
 }
 
+model WeeklyEmailSchedule {
+  // Singleton: filas con key = 'default'.
+  id            String   @id @default(uuid())
+  key           String   @unique @default("default")
+  enabled       Boolean  @default(true)
+  dayOfWeekUtc  Int      @default(2) @map("day_of_week_utc") // 0 = domingo, 2 = martes
+  hourUtc       Int      @default(13) @map("hour_utc")       // hora UTC del envio
+  segment       String   @default("free")
+  dryRun        Boolean  @default(false) @map("dry_run")
+  notes         String?  @db.Text
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedBy     String?  @map("updated_by")
+
+  @@map("weekly_email_schedule")
+}
+
 model CleexsInternalEmailCampaign {
   id            String                 @id @default(uuid())
   slug          String                 @unique
