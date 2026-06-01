@@ -29,6 +29,7 @@ import meReferralRoutes from './routes/me-referral';
 import portalWeeklyPromptsRoutes from './routes/portal-weekly-prompts';
 import referralRoutes from './routes/referrals';
 import subscriptionRoutes from './routes/subscriptions';
+import googleIntegrationRoutes from './routes/google-integration';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -126,6 +127,7 @@ async function bootstrap() {
   await server.register(adminDashboardRoutes, { prefix: '/api/admin' });
   await server.register(webhooksResendRoutes, { prefix: '/api' });
   await server.register(webhooksMercadoPagoRoutes, { prefix: '/api' });
+  await server.register(googleIntegrationRoutes, { prefix: '/api' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server

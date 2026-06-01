@@ -961,3 +961,78 @@ model OutreachTemplate {
 
   @@map("outreach_templates")
 }
+
+// ============================================
+// GOOGLE INTEGRATIONS (GA4 + Search Console)
+// Solo disponible para planes Premium (crecimiento/enterprise).
+// El cliente autoriza con OAuth y guardamos el refresh token cifrado.
+// ============================================
+
+/// Una sola integración OAuth por tenant. Permite varias propiedades GA4 asociadas a brands.
+model GoogleIntegration {
+  id                     String   @id @default(uuid())
+  tenantId               String   @unique @map("tenant_id")
+  googleEmail            String   @map("google_email")
+  googleUserId           String?  @map("google_user_id")
+  refreshTokenEncrypted  String   @map("refresh_token_encrypted") @db.Text
+  scopesGranted          String   @map("scopes_granted") @db.Text
+  status                 String   @default("active") // active | revoked | error
+  lastErrorMessage       String?  @map("last_error_message") @db.Text
+  lastErrorAt            DateTime? @map("last_error_at")
+  connectedAt            DateTime @default(now()) @map("connected_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  properties GoogleAnalyticsProperty[]
+
+  @@index([status])
+  @@map("google_integrations")
+}
+
+/// Propiedad GA4 (y opcional sitio GSC) elegida para una brand específica.
+model GoogleAnalyticsProperty {
+  id              String   @id @default(uuid())
+  integrationId   String   @map("integration_id")
+  brandId         String   @unique @map("brand_id")
+  ga4PropertyId   String   @map("ga4_property_id") // formato "properties/123456"
+  ga4PropertyName String?  @map("ga4_property_name")
+  gscSiteUrl      String?  @map("gsc_site_url") // ej "sc-domain:cleexs.com" o "https://cleexs.com/"
+  lastSyncAt      DateTime? @map("last_sync_at")
+  lastSyncStatus  String?  @map("last_sync_status") // ok | error
+  lastSyncError   String?  @map("last_sync_error") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  integration GoogleIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  snapshots AITrafficSnapshot[]
+
+  @@index([integrationId])
+  @@map("google_analytics_properties")
+}
+
+/// Snapshot diario por brand + fuente IA. Se rellena con cron cada ~6h.
+/// `aiSource` valores típicos: chatgpt, perplexity, gemini, claude, copilot, you, otros_ia
+model AITrafficSnapshot {
+  id              String   @id @default(uuid())
+  propertyId      String   @map("property_id")
+  brandId         String   @map("brand_id")
+  date            DateTime @db.Date
+  aiSource        String   @map("ai_source")
+  sessions        Int      @default(0)
+  totalUsers      Int      @default(0) @map("total_users")
+  newUsers        Int      @default(0) @map("new_users")
+  conversions     Int      @default(0)
+  engagedSessions Int      @default(0) @map("engaged_sessions")
+  bounceRate      Float?   @map("bounce_rate")
+  topLandingPage  String?  @map("top_landing_page")
+  rawJson         Json?    @map("raw_json")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  property GoogleAnalyticsProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, date, aiSource])
+  @@index([brandId, date])
+  @@index([propertyId, date])
+  @@map("ai_traffic_snapshots")
+}

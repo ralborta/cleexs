@@ -8,6 +8,7 @@ import {
   FileBarChart2,
   Headphones,
   History,
+  LineChart,
   MessageSquare,
   Scale,
   Sparkles,
@@ -63,6 +64,7 @@ function premiumNavActive(pathname: string, runId: string): string {
   if (pathname.includes(`${premium}/suscripcion`)) return 'suscripcion';
   if (pathname.includes(`${premium}/equipo`)) return 'equipo';
   if (pathname.includes(`${premium}/herramientas`)) return 'herramientas';
+  if (pathname.includes(`${premium}/trafico-ia`)) return 'trafico-ia';
 
   return '';
 }
@@ -204,6 +206,12 @@ export function PortalPremiumSidebarNav({ runId, usage, loadingPlan }: PortalPre
             label="Historial"
             Icon={History}
             active={active === 'historial'}
+          />
+          <DisponibleLink
+            href={`${premiumBase}/trafico-ia`}
+            label="Tráfico de IAs"
+            Icon={LineChart}
+            active={active === 'trafico-ia'}
           />
           <DisponibleLink
             href={`${premiumBase}/reportes`}
