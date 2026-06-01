@@ -8,15 +8,20 @@ import {
   CheckCircle2,
   ChevronRight,
   Crown,
+  Eye,
   Globe,
   LineChart as LineChartIcon,
   Loader2,
   Lock,
   Plug,
   RefreshCw,
+  Shield,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
   Unplug,
+  X,
+  XCircle,
 } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 
@@ -144,6 +149,7 @@ export default function TraficoIAPage() {
   const [busy, setBusy] = useState<'connect' | 'sync' | 'select' | 'disconnect' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ kind: 'ok' | 'error'; msg: string } | null>(null);
+  const [confirmConnectOpen, setConfirmConnectOpen] = useState(false);
 
   // Mostrar flash desde el callback de Google
   useEffect(() => {
@@ -368,11 +374,14 @@ export default function TraficoIAPage() {
           ) : !status?.configured ? (
             <NotConfiguredCard />
           ) : !status?.integration ? (
-            <NotConnectedCard onConnect={startConnect} connecting={busy === 'connect'} />
+            <NotConnectedCard
+              onConnectRequest={() => setConfirmConnectOpen(true)}
+              connecting={busy === 'connect'}
+            />
           ) : status.integration.status !== 'active' ? (
             <IntegrationErrorCard
               integration={status.integration}
-              onReconnect={startConnect}
+              onReconnect={() => setConfirmConnectOpen(true)}
               connecting={busy === 'connect'}
             />
           ) : !traffic?.property ? (
@@ -405,6 +414,18 @@ export default function TraficoIAPage() {
           )}
         </div>
       </div>
+
+      {confirmConnectOpen && (
+        <ConfirmConnectModal
+          brandName={brandName}
+          busy={busy === 'connect'}
+          onCancel={() => setConfirmConnectOpen(false)}
+          onConfirm={() => {
+            setConfirmConnectOpen(false);
+            void startConnect();
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -571,10 +592,10 @@ function NotConfiguredCard() {
 }
 
 function NotConnectedCard({
-  onConnect,
+  onConnectRequest,
   connecting,
 }: {
-  onConnect: () => void;
+  onConnectRequest: () => void;
   connecting: boolean;
 }) {
   return (
@@ -587,13 +608,13 @@ function NotConnectedCard({
           Conectá Google Analytics
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-          Una sola vez, con tu cuenta de Google. Solo permisos de <strong>lectura</strong>.
-          Nunca modificamos ni vendemos tus datos.
+          Antes de conectar, te vamos a mostrar exactamente qué permisos pedimos y qué datos vamos a leer.
+          Vos decidís si avanzar.
         </p>
 
         <button
           type="button"
-          onClick={onConnect}
+          onClick={onConnectRequest}
           disabled={connecting}
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-60"
         >
@@ -602,8 +623,7 @@ function NotConnectedCard({
         </button>
 
         <p className="mt-3 text-[11px] text-slate-500">
-          Cleexs solicita: <code className="rounded bg-slate-100 px-1 py-0.5">analytics.readonly</code> ·{' '}
-          <code className="rounded bg-slate-100 px-1 py-0.5">webmasters.readonly</code>
+          Solo permisos de <strong>lectura</strong>. Podés desconectar cuando quieras.
         </p>
       </div>
 
@@ -630,7 +650,7 @@ function IntegrationErrorCard({
   connecting,
 }: {
   integration: NonNullable<GoogleStatus['integration']>;
-  onReconnect: () => void;
+  onReconnect: () => void; // ahora dispara el modal de confirmación
   connecting: boolean;
 }) {
   return (
@@ -1055,6 +1075,149 @@ function DailyChart({
             </span>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Modal de confirmación antes de OAuth
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ConfirmConnectModal({
+  brandName,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  brandName: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+      onClick={onCancel}
+    >
+      <div
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute right-4 top-4 rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-50"
+          aria-label="Cerrar"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="px-7 pt-7">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100">
+              <Plug className="h-5 w-5 text-violet-700" />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Conectar Google Analytics
+              </h2>
+              <p className="text-xs text-slate-500">
+                Antes de redirigirte a Google, revisá qué te vamos a pedir
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-7 py-5">
+          {/* Permisos */}
+          <section>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Permisos que Cleexs va a pedirle a Google
+            </p>
+            <ul className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm">
+              <li className="flex items-start gap-2">
+                <Eye className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                <span>
+                  <strong>Ver</strong> tus datos de Google Analytics (GA4) — solo lectura
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Eye className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                <span>
+                  <strong>Ver</strong> tus datos de Google Search Console — solo lectura
+                </span>
+              </li>
+            </ul>
+          </section>
+
+          {/* Qué vamos a hacer */}
+          <section>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Qué vamos a hacer con esos datos
+            </p>
+            <ul className="space-y-1.5 text-sm text-slate-700">
+              {[
+                `Medir cuántas sesiones llegan a ${brandName || 'tu sitio'} desde ChatGPT, Perplexity, Gemini y Claude`,
+                'Mostrarte top landing pages y conversiones atribuidas a IAs',
+                'Sincronizar automáticamente cada 6 horas',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Qué NUNCA hacemos */}
+          <section>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Qué Cleexs NUNCA hace
+            </p>
+            <ul className="space-y-1.5 text-sm text-slate-700">
+              {[
+                'Modificar tus datos de GA4 o Search Console',
+                'Vender, compartir ni publicar tu información',
+                'Acceder a otros servicios de Google (Gmail, Drive, etc.)',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Seguridad */}
+          <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Tu token de acceso se guarda cifrado (AES-256-GCM) y podés desconectar Google
+              en un click cuando quieras desde esta misma pantalla.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/60 px-7 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+            Sí, conectar con Google
+          </button>
+        </div>
       </div>
     </div>
   );
