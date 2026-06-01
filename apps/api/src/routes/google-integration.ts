@@ -22,7 +22,7 @@ import {
   runAITrafficReport,
   type AITrafficRow,
 } from '../lib/google-analytics-data';
-import { resolvePlanKeyFromName } from '../lib/entitlements';
+import { resolvePlanKey } from '../lib/entitlements';
 
 /**
  * Integración Google Analytics (GA4) + Search Console para portal Premium.
@@ -79,22 +79,19 @@ function verifyOAuthState(raw: string): OAuthState | null {
   }
 }
 
-async function ensurePremium(tenantId: string): Promise<
+/**
+ * Resuelve el plan del usuario respetando overrides (entitlement_overrides) y
+ * el "admin god mode" — exactamente la misma lógica que `/api/me/usage`.
+ * Esto evita que un cliente con plan base "free" pero override a "crecimiento"
+ * sea bloqueado erróneamente.
+ */
+async function ensurePremium(actor: { tenantId: string; userId?: string }): Promise<
   | { ok: true; planKey: string }
   | { ok: false; planKey: string; reason: string }
 > {
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    include: { plan: true },
-  });
-  if (!tenant) return { ok: false, planKey: 'free', reason: 'tenant_not_found' };
-  const planKey = resolvePlanKeyFromName(tenant.plan?.name);
+  const planKey = await resolvePlanKey(prisma, actor);
   if (!PREMIUM_PLAN_KEYS.has(planKey)) {
-    return {
-      ok: false,
-      planKey,
-      reason: 'plan_premium_requerido',
-    };
+    return { ok: false, planKey, reason: 'plan_premium_requerido' };
   }
   return { ok: true, planKey };
 }
@@ -245,7 +242,7 @@ const googleIntegrationRoutes: FastifyPluginAsync = async (fastify) => {
     const u = await resolvePortalUserFromRequest(request);
     if (!u) return reply.code(401).send({ error: 'No autenticado.' });
 
-    const premium = await ensurePremium(u.tenantId);
+    const premium = await ensurePremium({ tenantId: u.tenantId, userId: u.userId });
     const configured =
       isGoogleOAuthConfigured() && isGoogleTokenCryptoConfigured();
 
@@ -279,7 +276,7 @@ const googleIntegrationRoutes: FastifyPluginAsync = async (fastify) => {
     const u = await resolvePortalUserFromRequest(request);
     if (!u) return reply.code(401).send({ error: 'No autenticado.' });
 
-    const premium = await ensurePremium(u.tenantId);
+    const premium = await ensurePremium({ tenantId: u.tenantId, userId: u.userId });
     if (!premium.ok) {
       return reply.code(403).send({
         error: 'plan_premium_requerido',
@@ -330,7 +327,7 @@ const googleIntegrationRoutes: FastifyPluginAsync = async (fastify) => {
       if (!decoded) {
         return reply.code(400).send({ error: 'invalid_or_expired_state' });
       }
-      const premium = await ensurePremium(decoded.tenantId);
+      const premium = await ensurePremium({ tenantId: decoded.tenantId, userId: decoded.userId });
       if (!premium.ok) {
         return reply.redirect(
           buildReturnUrl(decoded, 'error', 'plan_premium_requerido'),

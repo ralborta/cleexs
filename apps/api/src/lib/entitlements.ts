@@ -147,7 +147,7 @@ async function isAdminGodMode(prisma: PrismaClient, actor: EntitlementActor): Pr
   return emailIsAdmin || rootOwner;
 }
 
-async function resolvePlanKey(prisma: PrismaClient, actor: EntitlementActor): Promise<PlanKey> {
+export async function resolvePlanKey(prisma: PrismaClient, actor: EntitlementActor): Promise<PlanKey> {
   if (!actor.tenantId && !actor.userId) return 'anonymous';
   let tenantId = actor.tenantId;
   let planName: string | null | undefined;
