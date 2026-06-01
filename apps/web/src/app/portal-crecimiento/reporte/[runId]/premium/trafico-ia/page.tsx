@@ -506,7 +506,7 @@ function NotPremiumCard({ planKey, basePath }: { planKey: string; basePath: stri
       <div className="relative px-8 py-10">
         <div className="absolute right-6 top-6 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
           <Crown className="h-3.5 w-3.5" />
-          Premium
+          Crecimiento
         </div>
 
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100">
@@ -519,7 +519,7 @@ function NotPremiumCard({ planKey, basePath }: { planKey: string; basePath: stri
         <p className="mt-2 max-w-xl text-sm text-slate-600">
           Conectá tu cuenta de Google Analytics para ver, en tiempo real, cuántos usuarios llegan
           a tu sitio desde <strong>ChatGPT, Perplexity, Gemini y Claude</strong>. Esta función
-          está disponible en planes Premium.
+          está disponible en el plan Crecimiento.
         </p>
 
         <ul className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
@@ -542,7 +542,7 @@ function NotPremiumCard({ planKey, basePath }: { planKey: string; basePath: stri
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700"
           >
             <Sparkles className="h-4 w-4" />
-            Actualizar a Premium
+            Pasarme al plan Crecimiento
           </a>
           <span className="text-xs text-slate-500">
             Tu plan actual: <strong className="capitalize">{planKey || 'free'}</strong>

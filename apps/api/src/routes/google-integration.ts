@@ -283,7 +283,7 @@ const googleIntegrationRoutes: FastifyPluginAsync = async (fastify) => {
     if (!premium.ok) {
       return reply.code(403).send({
         error: 'plan_premium_requerido',
-        message: 'Esta funcionalidad está disponible solo en planes Premium.',
+        message: 'Esta funcionalidad está disponible solo en el plan Crecimiento.',
         planKey: premium.planKey,
       });
     }
