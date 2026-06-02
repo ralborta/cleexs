@@ -39,6 +39,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ReportSectionTitle } from '@/components/report/report-section';
 import { IconLinkedInBrand, IconWhatsAppBrand } from '@/components/share/share-brand-icons';
+import { useT } from '@/lib/app-strings';
 import {
   Zap,
   Award,
@@ -399,6 +400,7 @@ export function ReporteModerno({
   runResultGemini?: PublicDiagnosticRunResult;
   satelliteBlock?: ReactNode;
 }) {
+  const { t } = useT();
   const [detailOpen, setDetailOpen] = useState<DetailCardId | null>(null);
   const [resumenExpanded, setResumenExpanded] = useState<Set<string>>(new Set());
   const toggleResumen = (id: string) => {
@@ -668,8 +670,11 @@ export function ReporteModerno({
     <div className="space-y-10">
       <div className="space-y-4">
         <ReportSectionTitle
-          title="Resumen ejecutivo"
-          subtitle="Lectura rápida de posición, score y tendencia en un solo vistazo."
+          title={t('reporte.resumen_ejecutivo.titulo', 'Resumen ejecutivo')}
+          subtitle={t(
+            'reporte.resumen_ejecutivo.subtitulo',
+            'Lectura rápida de posición, score y tendencia en un solo vistazo.',
+          )}
         />
         <Card className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-100/60">
           <CardContent className="p-6 sm:p-8">
@@ -746,7 +751,10 @@ export function ReporteModerno({
       </div>
 
       <div className="space-y-4">
-        <ReportSectionTitle title="KPIs clave" subtitle="Indicadores derivados de esta corrida." />
+        <ReportSectionTitle
+          title={t('reporte.kpis.titulo', 'KPIs clave')}
+          subtitle={t('reporte.kpis.subtitulo', 'Indicadores derivados de esta corrida.')}
+        />
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {/* KPI 1: Cleexs Score */}
           <Card className="rounded-2xl border border-slate-200/80 shadow-sm transition-shadow hover:shadow-md">
@@ -810,8 +818,11 @@ export function ReporteModerno({
 
       <div className="space-y-4">
         <ReportSectionTitle
-          title="Comparativa principal"
-          subtitle="Cuota aproximada en el Top 3 y desglose por intención de búsqueda."
+          title={t('reporte.comparativa.titulo', 'Comparativa principal')}
+          subtitle={t(
+            'reporte.comparativa.subtitulo',
+            'Cuota aproximada en el Top 3 y desglose por intención de búsqueda.',
+          )}
         />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
@@ -869,8 +880,11 @@ export function ReporteModerno({
 
       <div className="space-y-4">
         <ReportSectionTitle
-          title="Top 3 acciones prioritarias"
-          subtitle="Sugerencias automáticas según brechas y métricas de esta corrida."
+          title={t('reporte.acciones.titulo', 'Top 3 acciones prioritarias')}
+          subtitle={t(
+            'reporte.acciones.subtitulo',
+            'Sugerencias automáticas según brechas y métricas de esta corrida.',
+          )}
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {top3Acciones.map((accion, idx) => (
@@ -895,8 +909,11 @@ export function ReporteModerno({
         <details className="group rounded-2xl border border-slate-200/80 bg-slate-50/40 open:bg-white open:shadow-sm">
           <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
             <ReportSectionTitle
-              title="Métricas del análisis"
-              subtitle="Detalle técnico de cobertura y presencia (desplegable)."
+              title={t('reporte.metricas.titulo', 'Métricas del análisis')}
+              subtitle={t(
+                'reporte.metricas.subtitulo',
+                'Detalle técnico de cobertura y presencia (desplegable).',
+              )}
               className="min-w-0 flex-1"
             />
             <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
@@ -921,8 +938,11 @@ export function ReporteModerno({
         <details className="group rounded-2xl border border-slate-200/80 bg-slate-50/40 open:bg-white open:shadow-sm">
           <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
             <ReportSectionTitle
-              title="Visualizaciones adicionales"
-              subtitle="Radar y vistas complementarias cuando hay datos suficientes."
+              title={t('reporte.visualizaciones.titulo', 'Visualizaciones adicionales')}
+              subtitle={t(
+                'reporte.visualizaciones.subtitulo',
+                'Radar y vistas complementarias cuando hay datos suficientes.',
+              )}
               className="min-w-0 flex-1"
             />
             <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
@@ -952,7 +972,10 @@ export function ReporteModerno({
       </div>
 
       <div className="space-y-4">
-        <ReportSectionTitle title="Compartir e invitar" subtitle="Difundí el análisis o invitá a tu equipo." />
+        <ReportSectionTitle
+          title={t('reporte.compartir.titulo', 'Compartir e invitar')}
+          subtitle={t('reporte.compartir.subtitulo', 'Difundí el análisis o invitá a tu equipo.')}
+        />
         <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-2">
@@ -982,23 +1005,34 @@ export function ReporteModerno({
       </div>
 
       <div className="space-y-4">
-        <ReportSectionTitle title="Próximos pasos" subtitle="Pasá a Premium para reporte completo y más competidores en el análisis." />
+        <ReportSectionTitle
+          title={t('reporte.proximos_pasos.titulo', 'Próximos pasos')}
+          subtitle={t(
+            'reporte.proximos_pasos.subtitulo',
+            'Pasá a Crecimiento para reporte completo y más competidores en el análisis.',
+          )}
+        />
         <Card className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-white to-primary/10 shadow-sm">
           <CardContent className="p-6 sm:p-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="max-w-xl space-y-1">
-                <p className="font-semibold text-slate-900">Desbloqueá el reporte completo con Premium</p>
+                <p className="font-semibold text-slate-900">
+                  {t('reporte.upsell.titulo', 'Desbloqueá el reporte completo con Crecimiento')}
+                </p>
                 <p className="text-sm leading-relaxed text-slate-600">
-                  Más profundidad en métricas, más marcas competidoras en el informe y soporte prioritario.
+                  {t(
+                    'reporte.upsell.cuerpo',
+                    'Más profundidad en métricas, más marcas competidoras en el informe y soporte prioritario.',
+                  )}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button asChild>
-                  <Link href="/planes">Ver Plan y Premium</Link>
+                  <Link href="/planes">{t('reporte.upsell.cta_planes', 'Ver planes')}</Link>
                 </Button>
                 <Button variant="outline" asChild>
                   <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
-                    Otro diagnóstico
+                    {t('reporte.upsell.cta_secundario', 'Otro diagnóstico')}
                   </a>
                 </Button>
               </div>

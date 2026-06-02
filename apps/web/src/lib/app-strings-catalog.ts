@@ -106,6 +106,136 @@ export const APP_STRINGS_CATALOG: AppStringCatalogEntry[] = [
     section: 'Modal OAuth Google',
     description: 'Botón secundario del modal.',
   },
+
+  // ────────────────────────────────────────────────────────────────
+  // Reporte de análisis (/ver-resultado - vista pública moderna)
+  // ────────────────────────────────────────────────────────────────
+  {
+    key: 'reporte.resumen_ejecutivo.titulo',
+    default: 'Resumen ejecutivo',
+    section: 'Reporte · Secciones',
+    description: 'Título de la primera sección del reporte (resumen general).',
+  },
+  {
+    key: 'reporte.resumen_ejecutivo.subtitulo',
+    default: 'Lectura rápida de posición, score y tendencia en un solo vistazo.',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo debajo de "Resumen ejecutivo".',
+  },
+  {
+    key: 'reporte.kpis.titulo',
+    default: 'KPIs clave',
+    section: 'Reporte · Secciones',
+    description: 'Título de la sección con los 4 indicadores principales.',
+  },
+  {
+    key: 'reporte.kpis.subtitulo',
+    default: 'Indicadores derivados de esta corrida.',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo de la sección KPIs clave.',
+  },
+  {
+    key: 'reporte.comparativa.titulo',
+    default: 'Comparativa principal',
+    section: 'Reporte · Secciones',
+    description: 'Título de la sección de gráficos comparativos vs competidores.',
+  },
+  {
+    key: 'reporte.comparativa.subtitulo',
+    default: 'Cuota aproximada en el Top 3 y desglose por intención de búsqueda.',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo de "Comparativa principal".',
+  },
+  {
+    key: 'reporte.acciones.titulo',
+    default: 'Top 3 acciones prioritarias',
+    section: 'Reporte · Secciones',
+    description: 'Título del bloque de recomendaciones priorizadas.',
+  },
+  {
+    key: 'reporte.acciones.subtitulo',
+    default: 'Sugerencias automáticas según brechas y métricas de esta corrida.',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo de "Top 3 acciones prioritarias".',
+  },
+  {
+    key: 'reporte.metricas.titulo',
+    default: 'Métricas del análisis',
+    section: 'Reporte · Secciones',
+    description: 'Título del desplegable con métricas técnicas.',
+  },
+  {
+    key: 'reporte.metricas.subtitulo',
+    default: 'Detalle técnico de cobertura y presencia (desplegable).',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo del desplegable "Métricas del análisis".',
+  },
+  {
+    key: 'reporte.visualizaciones.titulo',
+    default: 'Visualizaciones adicionales',
+    section: 'Reporte · Secciones',
+    description: 'Título del desplegable de radar y gráficos extra.',
+  },
+  {
+    key: 'reporte.visualizaciones.subtitulo',
+    default: 'Radar y vistas complementarias cuando hay datos suficientes.',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo del desplegable "Visualizaciones adicionales".',
+  },
+  {
+    key: 'reporte.compartir.titulo',
+    default: 'Compartir e invitar',
+    section: 'Reporte · Secciones',
+    description: 'Título del bloque para compartir el reporte.',
+  },
+  {
+    key: 'reporte.compartir.subtitulo',
+    default: 'Difundí el análisis o invitá a tu equipo.',
+    section: 'Reporte · Secciones',
+    description: 'Subtítulo de la sección "Compartir e invitar".',
+  },
+
+  // ────────────────────────────────────────────────────────────────
+  // Upsell del reporte ("Próximos pasos" – pasarse a Crecimiento)
+  // ────────────────────────────────────────────────────────────────
+  {
+    key: 'reporte.proximos_pasos.titulo',
+    default: 'Próximos pasos',
+    section: 'Reporte · Upsell Crecimiento',
+    description: 'Título de la sección final con el CTA de upgrade.',
+  },
+  {
+    key: 'reporte.proximos_pasos.subtitulo',
+    default: 'Pasá a Crecimiento para reporte completo y más competidores en el análisis.',
+    section: 'Reporte · Upsell Crecimiento',
+    description: 'Subtítulo del bloque final.',
+    multiline: true,
+  },
+  {
+    key: 'reporte.upsell.titulo',
+    default: 'Desbloqueá el reporte completo con Crecimiento',
+    section: 'Reporte · Upsell Crecimiento',
+    description: 'Headline grande dentro del card de upsell.',
+  },
+  {
+    key: 'reporte.upsell.cuerpo',
+    default: 'Más profundidad en métricas, más marcas competidoras en el informe y soporte prioritario.',
+    section: 'Reporte · Upsell Crecimiento',
+    description: 'Texto descriptivo debajo del headline del upsell.',
+    multiline: true,
+  },
+  {
+    key: 'reporte.upsell.cta_planes',
+    default: 'Ver planes',
+    section: 'Reporte · Upsell Crecimiento',
+    description: 'Texto del botón principal que lleva a /planes.',
+  },
+  {
+    key: 'reporte.upsell.cta_secundario',
+    default: 'Otro diagnóstico',
+    section: 'Reporte · Upsell Crecimiento',
+    description: 'Texto del botón secundario (link a cleexs.net).',
+  },
 ];
 
 /** Devuelve el catálogo agrupado por section, ordenado por section. */
