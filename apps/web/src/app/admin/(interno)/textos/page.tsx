@@ -16,7 +16,6 @@ import {
   X,
 } from 'lucide-react';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
-import { AdminPanelSection } from '@/components/admin/admin-panel-section';
 import {
   APP_STRINGS_CATALOG,
   groupCatalogBySection,
@@ -39,16 +38,27 @@ type OverrideMap = Record<string, AppStringRow>;
 
 const SUPPORTED_LOCALES = [{ value: 'es', label: 'Español' }] as const;
 
-const SECTION_ACCENTS: Array<'violet' | 'indigo' | 'amber' | 'emerald' | 'slate'> = [
-  'violet',
-  'indigo',
-  'emerald',
-  'amber',
-  'slate',
+const SECTION_ACCENT_BORDERS = [
+  'border-l-violet-200',
+  'border-l-indigo-200',
+  'border-l-emerald-200',
+  'border-l-amber-200',
+  'border-l-sky-200',
 ];
 
-function pickAccent(idx: number) {
-  return SECTION_ACCENTS[idx % SECTION_ACCENTS.length];
+const SECTION_ACCENT_ICON_BG = [
+  'bg-violet-50 text-violet-500 ring-violet-100',
+  'bg-indigo-50 text-indigo-500 ring-indigo-100',
+  'bg-emerald-50 text-emerald-500 ring-emerald-100',
+  'bg-amber-50 text-amber-500 ring-amber-100',
+  'bg-sky-50 text-sky-500 ring-sky-100',
+];
+
+function pickAccentBorder(idx: number) {
+  return SECTION_ACCENT_BORDERS[idx % SECTION_ACCENT_BORDERS.length];
+}
+function pickAccentIcon(idx: number) {
+  return SECTION_ACCENT_ICON_BG[idx % SECTION_ACCENT_ICON_BG.length];
 }
 
 export default function AdminTextosPage() {
@@ -179,34 +189,34 @@ export default function AdminTextosPage() {
   return (
     <div className="space-y-6">
       {/* HERO */}
-      <section className="relative overflow-hidden rounded-3xl border border-violet-200/60 bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-700 p-6 text-white shadow-xl shadow-violet-900/20 md:p-8">
-        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-indigo-300/20 blur-3xl" aria-hidden />
+      <section className="relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50/80 via-white to-indigo-50/60 p-6 shadow-sm md:p-8">
+        <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-violet-200/30 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-indigo-200/30 blur-3xl" aria-hidden />
         <div className="relative flex flex-wrap items-start justify-between gap-5">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30 backdrop-blur-sm">
-              <Type className="h-6 w-6" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white ring-1 ring-violet-100 shadow-sm">
+              <Type className="h-6 w-6 text-violet-500" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-100/90">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500/80">
                 Portal interno · Configuración
               </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                 Textos editables
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-violet-50/90">
-                Editá los textos clave de <strong className="font-semibold">app.cleexs.net</strong>{' '}
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+                Editá los textos clave de <strong className="font-semibold text-slate-800">app.cleexs.net</strong>{' '}
                 sin tocar código. Los cambios impactan en la app en ~1 minuto y son reversibles.
               </p>
             </div>
           </div>
-          <label className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs backdrop-blur-sm">
-            <Languages className="h-3.5 w-3.5 text-violet-100" />
-            <span className="text-violet-100">Idioma</span>
+          <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm">
+            <Languages className="h-3.5 w-3.5 text-slate-400" />
+            <span className="text-slate-500">Idioma</span>
             <select
               value={locale}
               onChange={(e) => setLocale(e.target.value)}
-              className="rounded-md bg-white/95 px-2 py-1 text-xs font-medium text-slate-800 outline-none ring-0 focus:bg-white"
+              className="rounded-md bg-white px-1 py-0.5 text-xs font-medium text-slate-800 outline-none focus:text-violet-700"
             >
               {SUPPORTED_LOCALES.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -219,9 +229,9 @@ export default function AdminTextosPage() {
 
         {/* Stats inline */}
         <div className="relative mt-6 grid grid-cols-3 gap-3">
-          <StatPill label="Textos en catálogo" value={totalCatalog} icon={<FileText className="h-3.5 w-3.5" />} />
-          <StatPill label="Editados" value={totalEdited} icon={<PencilLine className="h-3.5 w-3.5" />} highlight />
-          <StatPill label="Sin editar" value={totalPending} icon={<Sparkles className="h-3.5 w-3.5" />} />
+          <StatPill label="Textos en catálogo" value={totalCatalog} icon={<FileText className="h-3.5 w-3.5" />} tone="slate" />
+          <StatPill label="Editados" value={totalEdited} icon={<PencilLine className="h-3.5 w-3.5" />} tone="violet" />
+          <StatPill label="Sin editar" value={totalPending} icon={<Sparkles className="h-3.5 w-3.5" />} tone="slate" />
         </div>
       </section>
 
@@ -303,23 +313,29 @@ export default function AdminTextosPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          {filteredGroups.map(({ section, items }, idx) => (
-            <AdminPanelSection
+          {filteredGroups.map(({ section, items }, idx) => {
+            const editedInSection = items.filter(
+              (i) => overrides[i.key] && overrides[i.key].value !== i.default,
+            ).length;
+            return (
+            <section
               key={section}
-              icon={FileText}
-              title={section}
-              accent={pickAccent(idx)}
-              description={
-                <span>
-                  {items.length} {items.length === 1 ? 'texto' : 'textos'} ·{' '}
-                  <span className="text-slate-400">
-                    {items.filter((i) => overrides[i.key] && overrides[i.key].value !== i.default).length}{' '}
-                    editados en esta sección
-                  </span>
-                </span>
-              }
+              className={`rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm md:p-7 border-l-[3px] ${pickAccentBorder(idx)}`}
             >
-              <ul className="divide-y divide-slate-100">
+              <header className="flex items-start gap-3.5">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${pickAccentIcon(idx)}`}>
+                  <FileText className="h-4.5 w-4.5" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-semibold tracking-tight text-slate-900">{section}</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {items.length} {items.length === 1 ? 'texto' : 'textos'}
+                    <span className="text-slate-300"> · </span>
+                    <span className="text-slate-400">{editedInSection} editados en esta sección</span>
+                  </p>
+                </div>
+              </header>
+              <ul className="mt-4 divide-y divide-slate-100">
                 {items.map((entry) => {
                   const override = overrides[entry.key];
                   const currentValue = override?.value ?? entry.default;
@@ -457,8 +473,9 @@ export default function AdminTextosPage() {
                   );
                 })}
               </ul>
-            </AdminPanelSection>
-          ))}
+            </section>
+            );
+          })}
         </div>
       )}
     </div>
@@ -469,26 +486,24 @@ function StatPill({
   label,
   value,
   icon,
-  highlight = false,
+  tone = 'slate',
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
-  highlight?: boolean;
+  tone?: 'slate' | 'violet';
 }) {
+  const toneCls =
+    tone === 'violet'
+      ? 'border-violet-100 bg-white text-violet-700'
+      : 'border-slate-200 bg-white text-slate-500';
   return (
-    <div
-      className={`rounded-xl border px-3 py-2.5 backdrop-blur-sm ${
-        highlight
-          ? 'border-white/40 bg-white/20'
-          : 'border-white/15 bg-white/[0.08]'
-      }`}
-    >
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-100/90">
+    <div className={`rounded-xl border px-3 py-2.5 shadow-sm ${toneCls}`}>
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold leading-none">{value}</div>
+      <div className="mt-1 text-2xl font-bold leading-none text-slate-900">{value}</div>
     </div>
   );
 }
