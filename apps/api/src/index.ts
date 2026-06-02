@@ -30,6 +30,7 @@ import portalWeeklyPromptsRoutes from './routes/portal-weekly-prompts';
 import referralRoutes from './routes/referrals';
 import subscriptionRoutes from './routes/subscriptions';
 import googleIntegrationRoutes from './routes/google-integration';
+import adminAppStringsRoutes, { publicAppStringsRoutes } from './routes/admin-app-strings';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -128,6 +129,8 @@ async function bootstrap() {
   await server.register(webhooksResendRoutes, { prefix: '/api' });
   await server.register(webhooksMercadoPagoRoutes, { prefix: '/api' });
   await server.register(googleIntegrationRoutes, { prefix: '/api' });
+  await server.register(adminAppStringsRoutes, { prefix: '/api/admin' });
+  await server.register(publicAppStringsRoutes, { prefix: '/api/public' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server

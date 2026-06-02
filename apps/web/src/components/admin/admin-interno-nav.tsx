@@ -16,6 +16,7 @@ import {
   Receipt,
   Settings,
   Sparkles,
+  Type,
   Users,
 } from 'lucide-react';
 
@@ -70,6 +71,7 @@ const sections: NavSection[] = [
     title: 'Configuración',
     links: [
       { href: '/admin/settings', label: 'Configuración general', icon: Settings, extraPrefixes: ['/settings'] },
+      { href: '/admin/textos', label: 'Textos editables', icon: Type },
     ],
   },
 ];

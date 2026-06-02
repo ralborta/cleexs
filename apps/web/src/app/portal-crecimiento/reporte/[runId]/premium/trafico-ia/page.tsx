@@ -24,6 +24,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { useT } from '@/lib/app-strings';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -435,20 +436,21 @@ export default function TraficoIAPage() {
 // ──────────────────────────────────────────────────────────────────────────────
 
 function Header({ brandName }: { brandName: string }) {
+  const { t } = useT();
+  const titulo = t('trafico_ia.header.titulo', '¿Cuánto tráfico te están enviando las IAs?');
+  const subtituloTpl = t(
+    'trafico_ia.header.subtitulo',
+    'Medí en tiempo real cuántos usuarios llegan a {brand} desde ChatGPT, Perplexity, Gemini, Claude y otras IAs generativas.',
+  );
+  const subtitulo = subtituloTpl.replace('{brand}', brandName || 'tu sitio');
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
       <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
         <LineChartIcon className="h-3.5 w-3.5" />
         Tráfico de IAs
       </div>
-      <h1 className="text-3xl font-bold text-slate-900">
-        ¿Cuánto tráfico te están enviando las IAs?
-      </h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Medí en tiempo real cuántos usuarios llegan a {brandName || 'tu sitio'} desde
-        <br className="hidden sm:block" />
-        <strong> ChatGPT, Perplexity, Gemini, Claude</strong> y otras IAs generativas.
-      </p>
+      <h1 className="text-3xl font-bold text-slate-900">{titulo}</h1>
+      <p className="mt-2 text-sm text-slate-600">{subtitulo}</p>
     </div>
   );
 }
@@ -522,6 +524,13 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
 }
 
 function NotPremiumCard({ planKey, basePath }: { planKey: string; basePath: string }) {
+  const { t } = useT();
+  const titulo = t('trafico_ia.no_premium.titulo', 'Medí cuánto tráfico te envían las IAs');
+  const cuerpo = t(
+    'trafico_ia.no_premium.cuerpo',
+    'Conectá tu cuenta de Google Analytics para ver, en tiempo real, cuántos usuarios llegan a tu sitio desde ChatGPT, Perplexity, Gemini y Claude. Esta función está disponible en el plan Crecimiento.',
+  );
+  const cta = t('trafico_ia.no_premium.cta', 'Pasarme al plan Crecimiento');
   return (
     <div className="overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/40 shadow-sm">
       <div className="relative px-8 py-10">
@@ -534,14 +543,8 @@ function NotPremiumCard({ planKey, basePath }: { planKey: string; basePath: stri
           <Lock className="h-7 w-7 text-violet-700" />
         </div>
 
-        <h2 className="mt-5 text-2xl font-bold text-slate-900">
-          Medí cuánto tráfico te envían las IAs
-        </h2>
-        <p className="mt-2 max-w-xl text-sm text-slate-600">
-          Conectá tu cuenta de Google Analytics para ver, en tiempo real, cuántos usuarios llegan
-          a tu sitio desde <strong>ChatGPT, Perplexity, Gemini y Claude</strong>. Esta función
-          está disponible en el plan Crecimiento.
-        </p>
+        <h2 className="mt-5 text-2xl font-bold text-slate-900">{titulo}</h2>
+        <p className="mt-2 max-w-xl text-sm text-slate-600">{cuerpo}</p>
 
         <ul className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
           {[
@@ -563,7 +566,7 @@ function NotPremiumCard({ planKey, basePath }: { planKey: string; basePath: stri
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700"
           >
             <Sparkles className="h-4 w-4" />
-            Pasarme al plan Crecimiento
+            {cta}
           </a>
           <span className="text-xs text-slate-500">
             Tu plan actual: <strong className="capitalize">{planKey || 'free'}</strong>
@@ -598,19 +601,21 @@ function NotConnectedCard({
   onConnectRequest: () => void;
   connecting: boolean;
 }) {
+  const { t } = useT();
+  const titulo = t('trafico_ia.conectar.titulo', 'Conectá Google Analytics');
+  const cuerpo = t(
+    'trafico_ia.conectar.cuerpo',
+    'Antes de conectar, te vamos a mostrar exactamente qué permisos pedimos y qué datos vamos a leer. Vos decidís si avanzar.',
+  );
+  const cta = t('trafico_ia.conectar.cta', 'Conectar Google Analytics');
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100">
           <Plug className="h-8 w-8 text-violet-700" />
         </div>
-        <h2 className="mt-5 text-2xl font-bold text-slate-900">
-          Conectá Google Analytics
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-          Antes de conectar, te vamos a mostrar exactamente qué permisos pedimos y qué datos vamos a leer.
-          Vos decidís si avanzar.
-        </p>
+        <h2 className="mt-5 text-2xl font-bold text-slate-900">{titulo}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">{cuerpo}</p>
 
         <button
           type="button"
@@ -619,7 +624,7 @@ function NotConnectedCard({
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-60"
         >
           {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
-          {connecting ? 'Redirigiendo a Google…' : 'Conectar Google Analytics'}
+          {connecting ? 'Redirigiendo a Google…' : cta}
         </button>
 
         <p className="mt-3 text-[11px] text-slate-500">
@@ -1095,6 +1100,11 @@ function ConfirmConnectModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useT();
+  const modalTitulo = t('oauth_google.modal.titulo', 'Conectar Google Analytics');
+  const modalSubtitulo = t('oauth_google.modal.subtitulo', 'Antes de redirigirte a Google, revisá qué te vamos a pedir');
+  const ctaConfirmar = t('oauth_google.modal.cta_confirmar', 'Sí, conectar con Google');
+  const ctaCancelar = t('oauth_google.modal.cta_cancelar', 'Cancelar');
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
@@ -1119,12 +1129,8 @@ function ConfirmConnectModal({
               <Plug className="h-5 w-5 text-violet-700" />
             </span>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                Conectar Google Analytics
-              </h2>
-              <p className="text-xs text-slate-500">
-                Antes de redirigirte a Google, revisá qué te vamos a pedir
-              </p>
+              <h2 className="text-lg font-bold text-slate-900">{modalTitulo}</h2>
+              <p className="text-xs text-slate-500">{modalSubtitulo}</p>
             </div>
           </div>
         </div>
@@ -1206,7 +1212,7 @@ function ConfirmConnectModal({
             disabled={busy}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
           >
-            Cancelar
+            {ctaCancelar}
           </button>
           <button
             type="button"
@@ -1215,7 +1221,7 @@ function ConfirmConnectModal({
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-            Sí, conectar con Google
+            {ctaConfirmar}
           </button>
         </div>
       </div>
