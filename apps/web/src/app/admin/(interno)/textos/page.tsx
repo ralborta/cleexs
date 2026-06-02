@@ -339,7 +339,10 @@ export default function AdminTextosPage() {
                                 <X className="h-3.5 w-3.5" /> Cancelar
                               </button>
                               <span className="text-[11px] text-slate-500">
-                                Default: <span className="italic">"{entry.default.length > 80 ? entry.default.slice(0, 80) + '…' : entry.default}"</span>
+                                Default:{' '}
+                                <span className="italic">
+                                  {`"${entry.default.length > 80 ? entry.default.slice(0, 80) + '…' : entry.default}"`}
+                                </span>
                               </span>
                             </div>
                           </div>
