@@ -191,15 +191,9 @@ export function SponsorWhatsAppQrModal({
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                placeholder="54911… (solo dígitos)"
+                placeholder="5411… (solo dígitos)"
                 className={fieldCls}
               />
-              {!CLEEXS_WHATSAPP_PHONE_E164 && (
-                <span className="mt-1 block text-[11px] text-amber-800">
-                  Configurá <code className="text-xs">NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE</code> en Vercel para
-                  precargar el número.
-                </span>
-              )}
             </label>
 
             {gentilezaPreview && (
