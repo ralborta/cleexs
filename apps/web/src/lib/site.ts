@@ -33,5 +33,5 @@ export const CLEEXS_TOOLS_PUBLIC_URL = (
  * Usado en QR de auspiciadores (wa.me).
  */
 export const CLEEXS_WHATSAPP_PHONE_E164 = (
-  process.env.NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE?.trim().replace(/\D/g, '') || '5491153866372'
+  process.env.NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE?.trim().replace(/\D/g, '') || '541153866372'
 ) as string;
