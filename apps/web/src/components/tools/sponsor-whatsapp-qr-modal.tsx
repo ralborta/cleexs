@@ -190,10 +190,13 @@ export function SponsorWhatsAppQrModal({
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                readOnly
                 placeholder="5411… (solo dígitos)"
                 className={fieldCls}
               />
+              <span className="mt-1 block text-[11px] text-slate-500">
+                Número fijo para todos los QR: <code className="text-xs">+541153866372</code>
+              </span>
             </label>
 
             {gentilezaPreview && (

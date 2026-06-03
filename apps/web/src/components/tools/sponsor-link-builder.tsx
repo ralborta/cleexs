@@ -322,6 +322,9 @@ export function SponsorLinkBuilder() {
               QR con mensaje <strong className="font-medium text-slate-800">Gentileza de …</strong> y tracking{' '}
               <code className="text-xs">ref:</code> en el texto prefijado.
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Número fijo del QR: <code className="text-[11px]">+541153866372</code>
+            </p>
           </div>
           <Button
             type="button"
