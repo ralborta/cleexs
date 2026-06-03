@@ -14,6 +14,7 @@ import {
   MessageCircle,
   MousePointerClick,
   Receipt,
+  ScanSearch,
   Settings,
   Sparkles,
   Type,
@@ -65,6 +66,17 @@ const sections: NavSection[] = [
     links: [
       { href: '/admin/marcas', label: 'Marcas analizadas', icon: Building2 },
       { href: '/admin/reportes', label: 'Reportes', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    title: 'Herramientas',
+    links: [
+      {
+        href: '/admin/auditoria-agentica',
+        label: 'Auditoría Agéntica',
+        icon: ScanSearch,
+        extraPrefixes: ['/auditoria-agentica'],
+      },
     ],
   },
   {

@@ -1056,3 +1056,36 @@ model AITrafficSnapshot {
   @@index([propertyId, date])
   @@map("ai_traffic_snapshots")
 }
+
+/// J101 — Auditoría Agéntica: producto standalone de venta única.
+/// El admin crea una auditoría para la URL de un cliente, corre el análisis
+/// (legibilidad para agentes de IA) y le entrega un link público con el informe.
+model AgenticAudit {
+  id           String    @id @default(uuid())
+  /// Slug para el link público que se le pasa al cliente: /auditoria/[slug]
+  slug         String    @unique
+  targetUrl    String    @map("target_url")
+  /// Nombre legible del sitio/cliente que se muestra en el informe.
+  siteLabel    String?   @map("site_label")
+  /// Marca asociada (opcional), por si se vincula a una cuenta existente.
+  brandId      String?   @map("brand_id")
+  clientEmail  String?   @map("client_email")
+  status       String    @default("pending") // pending | running | completed | failed
+  /// Agent-Readiness Score 0-100.
+  overallScore Int?      @map("overall_score")
+  /// Resultado completo: checks, métricas, recomendaciones.
+  resultJson   Json?     @map("result_json")
+  error        String?   @db.Text
+  /// Control de venta única / entrega (se marcan a mano desde el admin).
+  paidAt       DateTime? @map("paid_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  notes        String?   @db.Text
+  createdBy    String?   @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([brandId])
+  @@index([createdAt])
+  @@map("agentic_audits")
+}
