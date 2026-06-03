@@ -36,7 +36,25 @@ export interface AgenticAuditResult {
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
   categories: AuditCategory[];
   recommendations: AuditRecommendation[];
-  meta?: { psiUsed: boolean; durationMs: number; warnings: string[] };
+  deepTools?: {
+    schema?: {
+      schemas_found: Array<{ schema_type: string; source: string; missing_recommended: string[] }>;
+      total_schemas: number;
+      missing_types: string[];
+    };
+    crawlability?: {
+      pages_crawled: number;
+      issues: Array<{ severity: string; message: string; url: string; details?: string }>;
+      summary: { critical: number; warnings: number; total_issues: number };
+    };
+    recommendedRobots?: string;
+  };
+  meta?: {
+    psiUsed: boolean;
+    durationMs: number;
+    warnings: string[];
+    toolsSource?: string;
+  };
 }
 
 function scoreColor(score: number): { text: string; ring: string; bg: string } {
@@ -186,6 +204,58 @@ export function AgenticAuditReport({ result }: { result: AgenticAuditResult }) {
           );
         })}
       </div>
+
+      {result.deepTools?.schema && result.deepTools.schema.schemas_found.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900">Schemas detectados (análisis profundo)</h3>
+          <ul className="mt-3 space-y-2">
+            {result.deepTools.schema.schemas_found.slice(0, 8).map((s, i) => (
+              <li
+                key={i}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"
+              >
+                <span className="font-medium text-slate-800">
+                  {s.schema_type}{' '}
+                  <span className="text-xs font-normal text-slate-400">({s.source})</span>
+                </span>
+                {s.missing_recommended.length > 0 && (
+                  <span className="text-xs text-amber-700">
+                    Faltan: {s.missing_recommended.slice(0, 3).join(', ')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {result.deepTools?.crawlability && result.deepTools.crawlability.issues.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900">
+            Rastreo del sitio ({result.deepTools.crawlability.pages_crawled} páginas)
+          </h3>
+          <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+            {result.deepTools.crawlability.issues.slice(0, 10).map((issue, i) => (
+              <li key={i} className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm">
+                <p className="font-medium text-slate-800">{issue.message}</p>
+                <p className="mt-0.5 truncate text-xs text-slate-500">{issue.url}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {result.deepTools?.recommendedRobots && (
+        <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900">robots.txt recomendado</h3>
+          <p className="mt-1 text-xs text-slate-600">
+            Plantilla sugerida para permitir bots de IA (basada en cleexs-tools).
+          </p>
+          <pre className="mt-3 max-h-48 overflow-auto rounded-xl border border-violet-200 bg-white p-4 text-xs leading-relaxed text-slate-700">
+            {result.deepTools.recommendedRobots}
+          </pre>
+        </div>
+      )}
 
       {result.meta?.warnings && result.meta.warnings.length > 0 && (
         <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
