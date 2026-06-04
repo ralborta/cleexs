@@ -1462,6 +1462,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     async (request) => {
       const search = (request.query.search || '').trim();
       const limit = Math.min(200, Math.max(1, Number(request.query.limit) || 80));
+      const looksLikePhoneDigits = (value: string) => /^\d{8,15}$/.test(value);
 
       // Filtro de busqueda por phone (digitos), chatId o contenido del ultimo mensaje.
       const where: Prisma.WhatsAppMessageWhereInput = search
@@ -1497,12 +1498,15 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const map = new Map<string, ConvBucket>();
       for (const r of rows) {
-        const key = r.chatId;
+        // Agrupamos por teléfono cuando está disponible para evitar conversaciones duplicadas
+        // del mismo contacto con chatIds distintos (ej: JID vs número limpio).
+        const key = (r.phoneDigits || '').trim() || r.chatId;
         const existing = map.get(key);
         if (!existing) {
+          const keyIsPhone = looksLikePhoneDigits(key);
           map.set(key, {
-            chatId: r.chatId,
-            phoneDigits: r.phoneDigits,
+            chatId: key,
+            phoneDigits: r.phoneDigits || (keyIsPhone ? key : null),
             total: 1,
             inbound: r.direction === 'inbound' ? 1 : 0,
             outbound: r.direction === 'outbound' ? 1 : 0,
@@ -1558,9 +1562,14 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       const chatId = decodeURIComponent(request.params.chatId || '').trim();
       if (!chatId) return reply.code(400).send({ error: 'chatId requerido' });
       const limit = Math.min(500, Math.max(1, Number(request.query.limit) || 200));
+      const isPhoneGroup = /^\d{8,15}$/.test(chatId);
 
       const messages = await prisma.whatsAppMessage.findMany({
-        where: { chatId },
+        where: isPhoneGroup
+          ? {
+              OR: [{ phoneDigits: chatId }, { chatId }],
+            }
+          : { chatId },
         orderBy: { createdAt: 'asc' },
         take: limit,
       });
