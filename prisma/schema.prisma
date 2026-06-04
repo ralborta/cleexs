@@ -1089,3 +1089,39 @@ model AgenticAudit {
   @@index([createdAt])
   @@map("agentic_audits")
 }
+
+/// J102 — Análisis + Reescritura AEO (producto standalone de venta única).
+/// Servicio separado de la Auditoría Agéntica: analiza el CONTENIDO de un sitio
+/// con un LLM y entrega diagnóstico por dimensiones + landing reescrita + queries.
+model ContentAeoAudit {
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  targetUrl     String    @map("target_url")
+  siteLabel     String?   @map("site_label")
+  /// Contexto opcional cargado por el admin para guiar al LLM.
+  industry      String?
+  region        String?
+  brandId       String?   @map("brand_id")
+  clientEmail   String?   @map("client_email")
+  status        String    @default("pending") // pending | running | completed | failed
+  /// Promedio del score "antes" (0-100) que estima el LLM.
+  scoreBefore   Int?      @map("score_before")
+  /// Promedio del score "después" estimado tras la reescritura.
+  scoreAfter    Int?      @map("score_after")
+  /// Resultado completo (diagnóstico, reescritura, queries, claims a validar).
+  resultJson    Json?     @map("result_json")
+  /// Modelo usado (ej. gpt-4o) para trazabilidad.
+  model         String?
+  error         String?   @db.Text
+  paidAt        DateTime? @map("paid_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  notes         String?   @db.Text
+  createdBy     String?   @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([brandId])
+  @@index([createdAt])
+  @@map("content_aeo_audits")
+}

@@ -77,6 +77,12 @@ const sections: NavSection[] = [
         icon: ScanSearch,
         extraPrefixes: ['/auditoria-agentica'],
       },
+      {
+        href: '/admin/analisis-aeo',
+        label: 'Análisis AEO',
+        icon: Sparkles,
+        extraPrefixes: ['/analisis-aeo'],
+      },
     ],
   },
   {

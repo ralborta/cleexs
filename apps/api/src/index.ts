@@ -32,6 +32,7 @@ import subscriptionRoutes from './routes/subscriptions';
 import googleIntegrationRoutes from './routes/google-integration';
 import adminAppStringsRoutes, { publicAppStringsRoutes } from './routes/admin-app-strings';
 import adminAgenticAuditsRoutes, { publicAgenticAuditRoutes } from './routes/admin-agentic-audits';
+import adminAeoAuditsRoutes, { publicAeoAuditRoutes } from './routes/admin-aeo-audits';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -134,6 +135,8 @@ async function bootstrap() {
   await server.register(publicAppStringsRoutes, { prefix: '/api/public' });
   await server.register(adminAgenticAuditsRoutes, { prefix: '/api/admin' });
   await server.register(publicAgenticAuditRoutes, { prefix: '/api/public' });
+  await server.register(adminAeoAuditsRoutes, { prefix: '/api/admin' });
+  await server.register(publicAeoAuditRoutes, { prefix: '/api/public' });
   log('6/7 Rutas OK, iniciando listen...');
 
   // Start server
