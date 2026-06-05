@@ -88,7 +88,8 @@ function isPremiumPlan(planKey?: string) {
 }
 
 function isFreePortalPlan(planKey?: string) {
-  return planKey === 'free' || planKey === 'anonymous' || !planKey;
+  // `admin` = cuenta interna (god mode): debe poder ver el portal free para probar flujos.
+  return planKey === 'free' || planKey === 'anonymous' || planKey === 'admin' || !planKey;
 }
 
 function toPct(score: number | null | undefined) {
@@ -682,7 +683,11 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   }
 
   if (!isFreePortalPlan(usage?.planKey)) {
-    return null;
+    return (
+      <main className="min-h-screen bg-slate-50 p-6">
+        <p className="text-center text-sm text-slate-600">Redirigiendo al portal Crecimiento (Premium)…</p>
+      </main>
+    );
   }
 
   const base =
