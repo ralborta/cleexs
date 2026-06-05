@@ -500,6 +500,11 @@ model Run {
   periodStart               DateTime  @map("period_start")
   periodEnd                 DateTime  @map("period_end")
   runType                   String    @default("monthly") @map("run_type")
+  /// País/mercado de la corrida (premium elige; free usa su país por defecto).
+  /// `country` = nombre legible; `geoMarket` = bloque que consumen prompts/competidores.
+  country                   String?
+  geoMarket                 String?   @map("geo_market")
+  countryIso                String?   @map("country_iso")
   /// Si se setea al crear el run, executeRun usa solo ese prompt guardado (snapshot)
   weeklyPortalSavedPromptId String?   @map("weekly_portal_saved_prompt_id")
   status                    RunStatus @default(pending)

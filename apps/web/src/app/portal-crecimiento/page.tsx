@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import { PORTAL_SESSION_TOKEN_KEY, signOutPortalSession } from '@/components/portal/portal-sign-out';
+import { RunCountryModal, type RunCountrySelection } from '@/components/country/run-country-modal';
+import { DEFAULT_COUNTRY_ISO } from '@/lib/countries';
 
 type UsageResponse = {
   usage?: { scoreViews?: number; deepReportsGenerated?: number };
@@ -68,6 +70,7 @@ export default function PortalCrecimientoPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [runningMes, setRunningMes] = useState(false);
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
   /** false hasta conocer redirect vs panel “primera corrida” */
   const [portalBootstrapped, setPortalBootstrapped] = useState(false);
 
@@ -259,18 +262,29 @@ export default function PortalCrecimientoPage() {
     }
   }
 
-  async function runMonthlyAnalysis() {
+  function runMonthlyAnalysis() {
     if (!token || !brandId) {
       setError('Elegí una marca para ejecutar el análisis.');
       return;
     }
+    setError(null);
+    setCountryModalOpen(true);
+  }
+
+  async function confirmCountryAndRun(selection: RunCountrySelection) {
+    if (!token || !brandId) return;
     setRunningMes(true);
     setError(null);
     try {
       const res = await fetch(`${API_URL}/api/runs/portal/mes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
-        body: JSON.stringify({ brandId }),
+        body: JSON.stringify({
+          brandId,
+          country: selection.name,
+          countryIso: selection.iso,
+          geoMarket: selection.geoMarket,
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -288,6 +302,7 @@ export default function PortalCrecimientoPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar la corrida');
+      setCountryModalOpen(false);
     } finally {
       setRunningMes(false);
     }
@@ -389,6 +404,14 @@ export default function PortalCrecimientoPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 pb-12 sm:p-6">
+      <RunCountryModal
+        open={countryModalOpen}
+        isPremium={isPremiumPlan(usage?.planKey)}
+        defaultIso={DEFAULT_COUNTRY_ISO}
+        busy={runningMes}
+        onClose={() => setCountryModalOpen(false)}
+        onConfirm={confirmCountryAndRun}
+      />
       <div className="mx-auto max-w-2xl space-y-6">
         <header className="flex flex-col gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>

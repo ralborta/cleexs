@@ -20,6 +20,8 @@ import {
   computeInterpretacionAmpliada,
   type CorridasPromptRow,
 } from '@/lib/interpretacion-ampliada-corridas';
+import { RunCountryModal, type RunCountrySelection } from '@/components/country/run-country-modal';
+import { findCountryByName, DEFAULT_COUNTRY_ISO } from '@/lib/countries';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -31,6 +33,7 @@ type PortalRunDetail = {
     id?: string;
     name: string;
     domain?: string | null;
+    country?: string | null;
     aliases: Array<{ id: string; alias: string }>;
     competitors?: Array<{ id: string; name: string; domain?: string | null }>;
   };
@@ -100,6 +103,7 @@ export default function PortalReportePremiumInterpretacionPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
 
   useEffect(() => {
     if (!runId) return;
@@ -298,11 +302,17 @@ export default function PortalReportePremiumInterpretacionPage() {
   const competitorsWithScore = competitorRows.filter((row) => row.score != null).length;
   const competitorsWithoutScore = competitorRows.length - competitorsWithScore;
 
-  async function runNewDiagnostic() {
+  function runNewDiagnostic() {
     if (!run?.brand.id) {
       setActionError('No se pudo identificar la marca para ejecutar una nueva corrida.');
       return;
     }
+    setActionError(null);
+    setCountryModalOpen(true);
+  }
+
+  async function confirmCountryAndRun(selection: RunCountrySelection) {
+    if (!run?.brand.id) return;
     let token: string | null = null;
     try {
       token = sessionStorage.getItem(TOKEN_KEY);
@@ -311,6 +321,7 @@ export default function PortalReportePremiumInterpretacionPage() {
     }
     if (!token) {
       setActionError('Sesión vencida. Volvé al portal e iniciá sesión.');
+      setCountryModalOpen(false);
       return;
     }
 
@@ -320,7 +331,12 @@ export default function PortalReportePremiumInterpretacionPage() {
       const res = await fetch(`${API_URL}/api/runs/portal/mes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ brandId: run.brand.id }),
+        body: JSON.stringify({
+          brandId: run.brand.id,
+          country: selection.name,
+          countryIso: selection.iso,
+          geoMarket: selection.geoMarket,
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -335,6 +351,7 @@ export default function PortalReportePremiumInterpretacionPage() {
       window.location.href = '/portal-crecimiento';
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Error al iniciar la corrida');
+      setCountryModalOpen(false);
     } finally {
       setRunningMes(false);
     }
@@ -391,6 +408,14 @@ export default function PortalReportePremiumInterpretacionPage() {
 
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
+      <RunCountryModal
+        open={countryModalOpen}
+        isPremium={premium}
+        defaultIso={findCountryByName(run.brand.country)?.iso ?? DEFAULT_COUNTRY_ISO}
+        busy={runningMes}
+        onClose={() => setCountryModalOpen(false)}
+        onConfirm={confirmCountryAndRun}
+      />
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
         <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
 

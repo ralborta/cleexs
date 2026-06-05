@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import {
   CreditCard,
   FileBarChart2,
+  Globe,
   Headphones,
   History,
   LineChart,
@@ -56,6 +57,7 @@ function premiumNavActive(pathname: string, runId: string): string {
   const norm = pathname.replace(/\/$/, '');
   if (norm === premium) return 'interpretacion';
 
+  if (pathname.includes(`${premium}/visibilidad-global`)) return 'visibilidad-global';
   if (pathname.includes(`${premium}/comparacion`)) return 'comparacion';
   if (pathname.includes(`${premium}/prompts`)) return 'prompts';
   if (pathname.includes(`${premium}/competidores`)) return 'competidores';
@@ -183,6 +185,12 @@ export function PortalPremiumSidebarNav({ runId, usage, loadingPlan }: PortalPre
         </div>
 
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">
+          <DisponibleLink
+            href={`${premiumBase}/visibilidad-global`}
+            label="Visibilidad global"
+            Icon={Globe}
+            active={active === 'visibilidad-global'}
+          />
           <DisponibleLink
             href={`${premiumBase}/comparacion`}
             label="Comparación"

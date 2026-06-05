@@ -65,19 +65,45 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(401).send({ error: 'Autenticación requerida: Bearer <token> del portal.' });
     }
 
-    const parsed = z.object({ brandId: z.string().uuid() }).safeParse(request.body ?? {});
+    const parsed = z
+      .object({
+        brandId: z.string().uuid(),
+        country: z.string().trim().max(80).optional().nullable(),
+        countryIso: z.string().trim().max(4).optional().nullable(),
+        geoMarket: z.string().trim().max(16).optional().nullable(),
+      })
+      .safeParse(request.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: 'brandId inválido.' });
 
     const { tenantId, userId } = portalUser;
     const { brandId } = parsed.data;
+    const reqCountry = parsed.data.country?.trim() || null;
+    const reqCountryIso = parsed.data.countryIso?.trim()?.toUpperCase() || null;
+    const reqGeoMarket = parsed.data.geoMarket?.trim() || null;
 
     const brand = await prisma.brand.findUnique({
       where: { id: brandId },
-      select: { id: true, tenantId: true },
+      select: { id: true, tenantId: true, country: true, geoMarket: true },
     });
     if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
     if (brand.tenantId !== tenantId) {
       return reply.code(403).send({ error: 'La marca no pertenece a tu cuenta.' });
+    }
+
+    // Tope de 5 países distintos por marca (histórico de corridas con país sellado).
+    if (reqGeoMarket) {
+      const distinct = await prisma.run.findMany({
+        where: { brandId, geoMarket: { not: null } },
+        distinct: ['geoMarket'],
+        select: { geoMarket: true },
+      });
+      const distinctMarkets = new Set(distinct.map((r) => r.geoMarket as string));
+      if (!distinctMarkets.has(reqGeoMarket) && distinctMarkets.size >= 5) {
+        return reply.code(403).send({
+          error: 'country_limit_reached',
+          message: 'Alcanzaste el tope de 5 países. Repetí uno ya usado o ampliá tu plan.',
+        });
+      }
     }
 
     const canCreate = await canCreateRun(tenantId);
@@ -111,6 +137,9 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
         runType: 'monthly',
         periodStart: now,
         periodEnd: now,
+        country: reqCountry ?? brand.country ?? null,
+        countryIso: reqCountryIso,
+        geoMarket: reqGeoMarket ?? brand.geoMarket ?? null,
       },
     });
 
@@ -135,7 +164,10 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     setImmediate(() => {
-      void executeRun(run.id).catch(async (err) => {
+      void executeRun(run.id, {
+        countryOverride: reqCountry,
+        geoMarketOverride: reqGeoMarket,
+      }).catch(async (err) => {
         fastify.log.error({ err, runId: run.id }, 'executeRun portal/mes falló');
         await prisma.run.update({ where: { id: run.id }, data: { status: 'failed' } }).catch(() => {});
       });

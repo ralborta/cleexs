@@ -44,6 +44,9 @@ export interface ExecuteRunOptions {
   maxTokens?: number;
   promptVersionId?: string;
   onProgress?: (completed: number, total: number, promptName?: string) => void;
+  /** País/mercado elegido para esta corrida (premium). Sobrescribe el de la marca. */
+  countryOverride?: string | null;
+  geoMarketOverride?: string | null;
 }
 
 type RunForPromptLoad = {
@@ -666,6 +669,11 @@ export async function executeRun(
       } as unknown as Prisma.InputJsonValue,
     },
   });
+
+  // País/mercado elegido para esta corrida (premium): sobrescribe el de la marca
+  // para que los prompts y el contexto se generen para ese mercado.
+  if (options.geoMarketOverride) currentBrand.geoMarket = options.geoMarketOverride;
+  if (options.countryOverride) currentBrand.country = options.countryOverride;
 
   const competitors = currentBrand.competitors.map((c: any) => ({
     name: c.name,

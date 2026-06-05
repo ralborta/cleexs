@@ -20,6 +20,7 @@ import {
   resolveCompetitorDomains,
 } from '../lib/diagnostic-ai';
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
+import { countryNameFromIso, geoMarketForCountryName } from '../lib/countries';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
 import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
@@ -223,6 +224,14 @@ function getCountryFromDomain(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** Normaliza el header `x-vercel-ip-country` (puede venir como string o string[]). */
+function headerCountryIso(value: string | string[] | undefined): string | null {
+  if (!value) return null;
+  const raw = Array.isArray(value) ? value[0] : value;
+  const iso = (raw || '').trim();
+  return iso.length === 2 ? iso : null;
 }
 
 /** Heurística si la IA devolvió nombre sin dominio: proponer `slug.com` para que el usuario edite en el wizard. */
@@ -789,6 +798,9 @@ async function executePublicDiagnosticPipeline(params: {
       periodEnd,
       runType: 'diagnostic',
       status: 'pending',
+      // Sella el mercado de la primera corrida para trazabilidad por país.
+      country: marketCountry,
+      geoMarket: geoMarketForCountryName(marketCountry),
     },
   });
 
@@ -1979,7 +1991,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           error: 'El servicio de análisis no está disponible. Intentá más tarde.',
         });
       }
-      const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+      // País del visitante (IP) como mejor fallback que el default ciego.
+      // No pisa al TLD del dominio ni al análisis de marca: solo reemplaza el fallback.
+      const ipCountry = countryNameFromIso(headerCountryIso(request.headers['x-vercel-ip-country']));
+      const defaultCountry =
+        ipCountry || (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
       const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
 
       const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
@@ -2108,7 +2124,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       const draft = parsePublicSetupDraft(diagnostic.setupDraftJson);
       const useSerp = useSerpBody ?? draft?.useSerp ?? true;
-      const defaultCountry = (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+      // País del visitante (IP) como mejor fallback que el default ciego.
+      const ipCountry = countryNameFromIso(headerCountryIso(request.headers['x-vercel-ip-country']));
+      const defaultCountry =
+        ipCountry || (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
       const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
 
       const trimmedUrl =
