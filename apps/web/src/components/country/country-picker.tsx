@@ -98,7 +98,7 @@ export function CountryPicker({ value, onChange, usedIsos = [], disabled = false
                     >
                       <CountryFlag
                         iso={c.iso}
-                        className="h-6 w-9 shrink-0 overflow-hidden rounded-[3px] shadow-sm ring-1 ring-black/5"
+                        className="h-4 w-6 shrink-0 overflow-hidden rounded-[2px] shadow-sm ring-1 ring-black/5"
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-slate-800">{c.name}</span>
