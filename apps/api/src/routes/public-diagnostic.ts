@@ -36,7 +36,6 @@ import {
   buildWhatsAppStartedReply,
   buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
-  deliverWaChannelStart,
   deliverWaReplyToUser,
   extractUrlFromWhatsAppMessage,
   resolveWebsiteUrlFromWhatsAppMessage,
@@ -1897,7 +1896,6 @@ async function processWhatsAppUrlHttpRequest(params: {
     };
   }
 
-  const recipient = (waRecipient || phone).trim();
   // El flow HTTP de BuilderBot envía el reply al cliente (avoidResponse: false).
   // No llamamos deliverWaChannelStart acá para evitar mensaje duplicado.
 
