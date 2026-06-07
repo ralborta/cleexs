@@ -103,6 +103,7 @@ const SOURCE_LABEL: Record<string, string> = {
   api_send: 'Envío directo',
   webhook_score: 'Score listo',
   api_error: 'Error',
+  bot_reply: 'Respuesta del bot',
 };
 
 export default function AdminWhatsAppPage() {
@@ -115,26 +116,32 @@ export default function AdminWhatsAppPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingThread, setLoadingThread] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
-  const loadConversations = useCallback(async () => {
-    setLoadingList(true);
-    setError(null);
-    try {
-      const qs = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
-      const res = await adminUiFetch(`/api/admin-ui/whatsapp/conversations${qs}`);
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar conversaciones');
-      setKpis((json as { kpis: Kpis }).kpis);
-      setConversations((json as { conversations: Conversation[] }).conversations || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
-    } finally {
-      setLoadingList(false);
-    }
-  }, [search]);
+  const loadConversations = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) setLoadingList(true);
+      try {
+        const qs = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+        const res = await adminUiFetch(`/api/admin-ui/whatsapp/conversations${qs}`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar conversaciones');
+        setKpis((json as { kpis: Kpis }).kpis);
+        setConversations((json as { conversations: Conversation[] }).conversations || []);
+        setLastSync(new Date());
+        setError(null);
+      } catch (e) {
+        if (!opts?.silent) setError(e instanceof Error ? e.message : 'Error');
+      } finally {
+        if (!opts?.silent) setLoadingList(false);
+      }
+    },
+    [search]
+  );
 
-  const loadThread = useCallback(async (chatId: string) => {
-    setLoadingThread(true);
+  const loadThread = useCallback(async (chatId: string, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoadingThread(true);
     try {
       const res = await adminUiFetch(
         `/api/admin-ui/whatsapp/conversations/${encodeURIComponent(chatId)}/messages`
@@ -142,10 +149,11 @@ export default function AdminWhatsAppPage() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error');
       setMessages((json as { messages: Message[] }).messages || []);
+      if (!opts?.silent) setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
+      if (!opts?.silent) setError(e instanceof Error ? e.message : 'Error');
     } finally {
-      setLoadingThread(false);
+      if (!opts?.silent) setLoadingThread(false);
     }
   }, []);
 
@@ -157,6 +165,16 @@ export default function AdminWhatsAppPage() {
     if (!selectedChat) return;
     void loadThread(selectedChat);
   }, [selectedChat, loadThread]);
+
+  // Auto-refresco: refresca lista y, si hay un chat abierto, su hilo, cada 12s.
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = setInterval(() => {
+      void loadConversations({ silent: true });
+      if (selectedChat) void loadThread(selectedChat, { silent: true });
+    }, 12_000);
+    return () => clearInterval(id);
+  }, [autoRefresh, loadConversations, loadThread, selectedChat]);
 
   const selectedConv = useMemo(
     () => conversations.find((c) => c.chatId === selectedChat) || null,
@@ -182,15 +200,37 @@ export default function AdminWhatsAppPage() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void loadConversations()}
-          disabled={loadingList}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-        >
-          {loadingList ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Refrescar
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(ev) => setAutoRefresh(ev.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            Auto-refresco
+            {autoRefresh ? (
+              <span className="inline-flex items-center gap-1 text-emerald-600">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+              </span>
+            ) : null}
+            {lastSync ? (
+              <span className="text-slate-400">· {lastSync.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            ) : null}
+          </label>
+          <button
+            type="button"
+            onClick={() => void loadConversations()}
+            disabled={loadingList}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+          >
+            {loadingList ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Refrescar
+          </button>
+        </div>
       </header>
 
       {error ? (

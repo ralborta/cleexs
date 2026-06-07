@@ -26,7 +26,7 @@ import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModule
 import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
 import { extractSponsorRefFromWhatsAppMessage } from '@cleexs/shared';
 import { notifyWhatsAppDiagnosticCompleted } from '../lib/whatsapp-notify';
-import { logIncomingWhatsApp, logOutgoingWhatsApp } from '../lib/whatsapp-message-log';
+import { logIncomingWhatsApp, logOutgoingWhatsApp, sanitizeWaInboundText } from '../lib/whatsapp-message-log';
 import {
   buildWaResultUrl,
   buildWhatsAppAskUrlReply,
@@ -2354,10 +2354,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   function waMessageFromFlowBody(body: unknown): string {
-    if (typeof body === 'string') return body.trim();
+    if (typeof body === 'string') return sanitizeWaInboundText(body);
     if (body && typeof body === 'object' && !Array.isArray(body)) {
       const o = body as { message?: string; body?: string; url?: string };
-      return `${o.message ?? o.body ?? o.url ?? ''}`.trim();
+      return sanitizeWaInboundText(`${o.message ?? o.body ?? o.url ?? ''}`);
     }
     return '';
   }
@@ -2383,6 +2383,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       utmCampaign?: string;
     }
   ) {
+    fastify.log.info({ rawBody: request.body }, 'WA flow URL payload');
     const parsed = waUrlFlowBodySchema.safeParse(request.body);
     const trackingFields = parsed.success ? parsed.data : {};
     const messageText = waMessageFromFlowBody(request.body);
@@ -2522,36 +2523,89 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // POST /api/public/whatsapp/builderbot-inbound — Webhook del proyecto BuilderBot (patrón Mis Reclamos)
+  // POST /api/public/whatsapp/builderbot-inbound — Webhook del proyecto BuilderBot.
+  // Acepta mensajes ENTRANTES (del cliente) y SALIENTES (respuestas del bot/IA),
+  // según el eventName o un campo de dirección. Tolerante a varios formatos
+  // porque el payload cambia entre canal QR y Meta Business API.
   const builderbotInboundSchema = z.object({
-    eventName: z.string(),
+    eventName: z.string().optional(),
+    direction: z.string().optional(),
     data: z
       .object({
         body: z.union([z.string(), z.number()]).optional(),
-        from: z.union([z.string(), z.number()]),
+        answer: z.union([z.string(), z.number()]).optional(),
+        message: z.union([z.string(), z.number()]).optional(),
+        from: z.union([z.string(), z.number()]).optional(),
+        to: z.union([z.string(), z.number()]).optional(),
       })
       .passthrough(),
   });
 
+  /** Decide si el evento del webhook es saliente (lo manda el bot/agente). */
+  function isOutgoingWaEvent(eventName: string | undefined, direction: string | undefined): boolean {
+    const e = `${eventName || ''}`.toLowerCase();
+    const d = `${direction || ''}`.toLowerCase();
+    return (
+      e.includes('outgoing') ||
+      e.includes('send_message') ||
+      e.includes('send') ||
+      e.includes('outbound') ||
+      d === 'out' ||
+      d === 'outbound' ||
+      d === 'outgoing'
+    );
+  }
+
   fastify.post('/whatsapp/builderbot-inbound', async (request, reply) => {
     try {
+      // Log del payload crudo: BuilderBot cambió el formato al pasar de QR a Meta API.
+      // Esto nos deja ver exactamente qué campos llegan para ajustar el parser.
+      fastify.log.info({ rawBody: request.body }, 'WA builderbot webhook payload');
+
       const parsed = builderbotInboundSchema.safeParse(request.body);
       if (!parsed.success) {
-        return reply.code(400).send({ ok: false, error: 'Formato inválido' });
+        fastify.log.warn(
+          { issues: parsed.error.issues, rawBody: request.body },
+          'WA builderbot webhook: formato no reconocido'
+        );
+        return reply.code(200).send({ ok: true, skipped: 'unrecognized_format' });
       }
 
-      const { eventName, data } = parsed.data;
-      if (eventName !== 'message.incoming') {
+      const { eventName, direction, data } = parsed.data;
+
+      // ── Mensaje SALIENTE (respuesta del bot / asistente IA) ──────────────
+      if (isOutgoingWaEvent(eventName, direction)) {
+        const outText = sanitizeWaInboundText(
+          String(data.answer ?? data.message ?? data.body ?? '')
+        );
+        const outChat = `${data.to ?? data.from ?? waRecipientFromFlowBody(data) ?? ''}`.trim();
+        if (!outText || !outChat || /^_event_/i.test(outText)) {
+          return reply.send({ ok: true, skipped: 'empty_outgoing' });
+        }
+        void logOutgoingWhatsApp(fastify.log, {
+          chatId: outChat,
+          message: outText,
+          source: 'bot_reply',
+          status: 'sent',
+        });
+        return reply.send({ ok: true, code: 'outgoing_logged' });
+      }
+
+      // ── Mensaje ENTRANTE (lo que escribe el cliente) ─────────────────────
+      if (eventName && eventName !== 'message.incoming') {
         return reply.send({ ok: true, skipped: eventName });
       }
 
-      const bodyText = data.body != null ? String(data.body).trim() : '';
+      const bodyText = data.body != null ? sanitizeWaInboundText(String(data.body)) : '';
       if (!bodyText || /^_event_/i.test(bodyText)) {
         return reply.send({ ok: true, skipped: 'empty_or_system_event' });
       }
 
-      const phone = String(data.from);
+      const phone = String(data.from ?? '');
       const recipient = waRecipientFromFlowBody(data) || phone;
+      if (!recipient) {
+        return reply.send({ ok: true, skipped: 'no_recipient' });
+      }
       const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
 
       // Log de cada mensaje entrante por el webhook generico (saludos, FAQ, etc.).
