@@ -1898,13 +1898,8 @@ async function processWhatsAppUrlHttpRequest(params: {
   }
 
   const recipient = (waRecipient || phone).trim();
-  await deliverWaChannelStart(
-    log,
-    recipient,
-    started.domain,
-    started.resultUrl,
-    !!started.reused
-  );
+  // El flow HTTP de BuilderBot envía el reply al cliente (avoidResponse: false).
+  // No llamamos deliverWaChannelStart acá para evitar mensaje duplicado.
 
   const reply = started.reused
     ? buildWhatsAppAlreadyStartedReply(started.domain, started.resultUrl)
