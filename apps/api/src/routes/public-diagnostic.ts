@@ -2537,9 +2537,31 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         message: z.union([z.string(), z.number()]).optional(),
         from: z.union([z.string(), z.number()]).optional(),
         to: z.union([z.string(), z.number()]).optional(),
+        recipient: z.union([z.string(), z.number()]).optional(),
+        recipientId: z.union([z.string(), z.number()]).optional(),
+        chatId: z.union([z.string(), z.number()]).optional(),
+        jid: z.union([z.string(), z.number()]).optional(),
+        remoteJid: z.union([z.string(), z.number()]).optional(),
+        author: z.union([z.string(), z.number()]).optional(),
+        key: z
+          .object({
+            remoteJid: z.union([z.string(), z.number()]).optional(),
+            participant: z.union([z.string(), z.number()]).optional(),
+          })
+          .passthrough()
+          .optional(),
       })
       .passthrough(),
   });
+
+  function firstWaString(...values: unknown[]): string {
+    for (const value of values) {
+      if (value == null) continue;
+      const text = sanitizeWaInboundText(String(value)).trim();
+      if (text) return text;
+    }
+    return '';
+  }
 
   /** Decide si el evento del webhook es saliente (lo manda el bot/agente). */
   function isOutgoingWaEvent(eventName: string | undefined, direction: string | undefined): boolean {
@@ -2547,6 +2569,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const d = `${direction || ''}`.toLowerCase();
     return (
       e.includes('outgoing') ||
+      e === 'message.sent' ||
+      e === 'message.send' ||
+      e === 'message_outgoing' ||
       e.includes('send_message') ||
       e.includes('send') ||
       e.includes('outbound') ||
@@ -2575,10 +2600,20 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       // ── Mensaje SALIENTE (respuesta del bot / asistente IA) ──────────────
       if (isOutgoingWaEvent(eventName, direction)) {
-        const outText = sanitizeWaInboundText(
-          String(data.answer ?? data.message ?? data.body ?? '')
+        const outText = firstWaString(data.answer, data.message, data.body);
+        const outChat = firstWaString(
+          data.to,
+          data.recipient,
+          data.recipientId,
+          data.remoteJid,
+          data.key?.remoteJid,
+          data.key?.participant,
+          data.chatId,
+          data.jid,
+          data.author,
+          data.from,
+          waRecipientFromFlowBody(data)
         );
-        const outChat = `${data.to ?? data.from ?? waRecipientFromFlowBody(data) ?? ''}`.trim();
         if (!outText || !outChat || /^_event_/i.test(outText)) {
           return reply.send({ ok: true, skipped: 'empty_outgoing' });
         }
