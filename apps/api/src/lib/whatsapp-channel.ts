@@ -374,9 +374,10 @@ export function buildWhatsAppErrorReply(code: string, fallback?: string): string
 
 export function buildWhatsAppAskUrlReply(): string {
   return (
-    '👋 *Cleexs Score gratis*\n\n' +
-    'Pasame la URL de tu empresa y medimos si ChatGPT te recomienda 🤖\n\n' +
-    '📝 _Ejemplo:_ tuempresa.com'
+    '✨ *Cleexs Score gratis*\n\n' +
+    'Medimos si la IA (ChatGPT y similares) recomienda tu marca. ' +
+    'El *Cleexs Score* (0–100) resume esa visibilidad y por WhatsApp es *gratis* 🎁\n\n' +
+    '👉 Pasame la URL de tu empresa _(ej. tuempresa.com)_ y arrancamos 🚀'
   );
 }
 

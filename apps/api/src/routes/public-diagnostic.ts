@@ -30,7 +30,6 @@ import { logIncomingWhatsApp, logOutgoingWhatsApp, sanitizeWaInboundText } from 
 import {
   buildWaResultUrl,
   buildWhatsAppAskUrlReply,
-  buildWhatsAppCleexsFaqReply,
   buildWhatsAppCompletedReply,
   buildWhatsAppErrorReply,
   buildWhatsAppAlreadyStartedReply,
@@ -40,12 +39,9 @@ import {
   deliverWaChannelStart,
   deliverWaReplyToUser,
   extractUrlFromWhatsAppMessage,
-  buildWhatsAppGreetingReply,
-  isWaGreetingMessage,
   resolveWebsiteUrlFromWhatsAppMessage,
   getWaChannelDailyLimit,
   getWaCompetitorWaitMs,
-  isCleexsFaqOnlyMessage,
   isPlaceholderPublicSuffixOnlyDomain,
   isWhatsAppSourceChannel,
   normalizeWaPhone,
@@ -2654,17 +2650,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.send({ ok: true, skipped: 'url_handled_by_flow' });
       }
 
-      if (isWaGreetingMessage(bodyText)) {
-        await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppGreetingReply());
-        return reply.send({ ok: true, code: 'greeting' });
-      }
-
-      if (isCleexsFaqOnlyMessage(bodyText)) {
-        await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppCleexsFaqReply());
-        return reply.send({ ok: true, code: 'cleexs_info' });
-      }
-
-      return reply.send({ ok: true, skipped: 'no_url_entrada_flow' });
+      // Este webhook SOLO registra el mensaje entrante. No respondemos nada acá.
+      // En BuilderBot, el ruteo y las respuestas las resuelven los flows:
+      //   • «Cleexs - Saludo»       → saludos
+      //   • «Cleexs — Consultas IA» → TODAS las consultas (qué es, precio, score,
+      //                                cómo funciona, info...) con el asistente IA
+      //   • «Cleexs — URL diagnóstico» → cuando llega una URL real
+      // Responder canned acá duplicaba la respuesta y pisaba al asistente de IA.
+      return reply.send({ ok: true, skipped: 'logged_only_handled_by_builderbot' });
     } catch (err) {
       fastify.log.error({ err }, 'Error POST /whatsapp/builderbot-inbound');
       return reply.code(500).send({ ok: false });
