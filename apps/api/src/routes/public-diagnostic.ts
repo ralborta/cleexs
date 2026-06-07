@@ -2606,6 +2606,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       if (!recipient) {
         return reply.send({ ok: true, skipped: 'no_recipient' });
       }
+      const trimmedUrl = extractUrlFromWhatsAppMessage(bodyText);
+
       // Log de cada mensaje entrante por el webhook generico (saludos, FAQ, etc.).
       void logIncomingWhatsApp(fastify.log, {
         chatId: recipient,
@@ -2613,10 +2615,21 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         source: 'builderbot_inbound',
       });
 
-      // Cleexs NO responde por su cuenta: las respuestas las generan los flows de
-      // BuilderBot (Saludo, Consultas IA con base de datos, URL diagnóstico). Acá
-      // solo registramos el mensaje entrante para evitar respuestas duplicadas.
-      return reply.send({ ok: true, code: 'logged_inbound' });
+      if (trimmedUrl) {
+        return reply.send({ ok: true, skipped: 'url_handled_by_flow' });
+      }
+
+      if (isWaGreetingMessage(bodyText)) {
+        await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppGreetingReply());
+        return reply.send({ ok: true, code: 'greeting' });
+      }
+
+      if (isCleexsFaqOnlyMessage(bodyText)) {
+        await deliverWaReplyToUser(fastify.log, recipient, buildWhatsAppCleexsFaqReply());
+        return reply.send({ ok: true, code: 'cleexs_info' });
+      }
+
+      return reply.send({ ok: true, skipped: 'no_url_entrada_flow' });
     } catch (err) {
       fastify.log.error({ err }, 'Error POST /whatsapp/builderbot-inbound');
       return reply.code(500).send({ ok: false });
