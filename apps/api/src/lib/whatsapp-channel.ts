@@ -391,7 +391,8 @@ export function buildWhatsAppAskUrlReply(): string {
     '✨ *Cleexs Score gratis*\n\n' +
     'Medimos si la IA (ChatGPT y similares) recomienda tu marca. ' +
     'El *Cleexs Score* (0–100) resume esa visibilidad y por WhatsApp es *gratis* 🎁\n\n' +
-    '👉 Pasame la URL de tu empresa _(ej. tuempresa.com)_ y arrancamos 🚀'
+    '👉 Pasame la URL de tu empresa _(ej. tuempresa.com)_ y arrancamos 🚀\n\n' +
+    '⏳ _El análisis puede demorar unos minutos (entre 2 y 5)._'
   );
 }
 
@@ -400,7 +401,8 @@ export function buildWhatsAppCleexsFaqReply(): string {
     '✨ *Cleexs* mide si la IA (ChatGPT y similares) recomienda tu marca.\n\n' +
     '📊 El *Cleexs Score* (0–100) resume esa visibilidad.\n' +
     '🎁 Por WhatsApp es *gratis*.\n\n' +
-    '👉 Pasame la URL de tu sitio _(ej. empresa.com)_ y arrancamos.'
+    '👉 Pasame la URL de tu sitio _(ej. empresa.com)_ y arrancamos.\n\n' +
+    '⏳ _El análisis puede demorar unos minutos (entre 2 y 5)._'
   );
 }
 
