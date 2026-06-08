@@ -181,6 +181,26 @@ export default function AdminWhatsAppPage() {
     [conversations, selectedChat]
   );
 
+  // Deduplica el doble registro de auditoría: cada mensaje se loguea por dos
+  // orígenes (inbound: builderbot_inbound + flow; outbound: api_send + bot_reply).
+  // Colapsamos filas con misma dirección y mismo texto dentro de una ventana corta.
+  const visibleMessages = useMemo(() => {
+    const DEDUPE_WINDOW_MS = 15_000;
+    const kept: Message[] = [];
+    for (const m of messages) {
+      const key = m.message.trim();
+      const ts = new Date(m.createdAt).getTime();
+      const dup = kept.some(
+        (k) =>
+          k.direction === m.direction &&
+          k.message.trim() === key &&
+          Math.abs(new Date(k.createdAt).getTime() - ts) <= DEDUPE_WINDOW_MS
+      );
+      if (!dup) kept.push(m);
+    }
+    return kept;
+  }, [messages]);
+
   if (error && looksLikeAdminAuthError(error)) {
     return <AdminAuthExpiredCard />;
   }
@@ -387,62 +407,62 @@ export default function AdminWhatsAppPage() {
                 </button>
               </header>
 
-              <div className="max-h-[640px] overflow-y-auto space-y-3 bg-slate-50/40 p-5">
-                {loadingThread && messages.length === 0 ? (
+              <div className="max-h-[640px] space-y-4 overflow-y-auto bg-[#f4f6f8] p-5">
+                {loadingThread && visibleMessages.length === 0 ? (
                   <div className="px-5 py-10 text-center text-sm text-slate-500">
                     <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" />
                     Cargando hilo…
                   </div>
-                ) : messages.length === 0 ? (
+                ) : visibleMessages.length === 0 ? (
                   <p className="px-5 py-10 text-center text-sm text-slate-500">
                     Sin mensajes en esta conversación.
                   </p>
                 ) : (
-                  messages.map((m) => {
+                  visibleMessages.map((m) => {
                     const isOut = m.direction === 'outbound';
                     return (
                       <div key={m.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                        <div
-                          className={`max-w-[78%] rounded-2xl px-4 py-3 shadow-sm ring-1 ${
-                            isOut
-                              ? 'bg-violet-600 text-white ring-violet-700/20'
-                              : 'bg-white text-slate-900 ring-slate-200'
-                          }`}
-                        >
+                        <div className={`flex max-w-[80%] flex-col gap-1 ${isOut ? 'items-end' : 'items-start'}`}>
                           <div
-                            className={`mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide ${
-                              isOut ? 'text-violet-100' : 'text-slate-500'
-                            }`}
+                            className={`flex items-center gap-1.5 px-1 text-[10px] font-medium uppercase tracking-wide text-slate-400`}
                           >
                             {isOut ? <Send className="h-3 w-3" /> : <Inbox className="h-3 w-3" />}
-                            <span>{isOut ? 'Cleexs' : 'Cliente'}</span>
+                            <span className={isOut ? 'text-emerald-700' : 'text-slate-600'}>
+                              {isOut ? 'Cleexs' : 'Cliente'}
+                            </span>
                             <span>· {formatDateTime(m.createdAt)}</span>
-                            {m.source ? <span>· {SOURCE_LABEL[m.source] ?? m.source}</span> : null}
+                            {m.source ? (
+                              <span className="rounded-full bg-slate-200/70 px-1.5 py-0.5 text-[9px] normal-case text-slate-500">
+                                {SOURCE_LABEL[m.source] ?? m.source}
+                              </span>
+                            ) : null}
                           </div>
-                          <p className={`whitespace-pre-wrap text-sm leading-relaxed ${isOut ? '' : 'text-slate-800'}`}>
-                            {m.message}
-                          </p>
-                          {m.mediaUrl ? (
-                            <a
-                              href={m.mediaUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={`mt-2 inline-block text-[11px] underline ${
-                                isOut ? 'text-violet-100' : 'text-violet-700'
-                              }`}
-                            >
-                              Ver adjunto
-                            </a>
-                          ) : null}
-                          {m.status === 'failed' ? (
-                            <p
-                              className={`mt-2 rounded-md px-2 py-1 text-[10px] ${
-                                isOut ? 'bg-rose-100 text-rose-700' : 'bg-rose-50 text-rose-700'
-                              }`}
-                            >
-                              Falló el envío{m.errorMessage ? `: ${m.errorMessage}` : ''}
-                            </p>
-                          ) : null}
+                          <div
+                            className={`px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+                              isOut
+                                ? 'rounded-2xl rounded-br-md bg-emerald-100 text-emerald-950 ring-1 ring-emerald-200'
+                                : 'rounded-2xl rounded-bl-md bg-white text-slate-800 ring-1 ring-slate-200'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap">{m.message}</p>
+                            {m.mediaUrl ? (
+                              <a
+                                href={m.mediaUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`mt-2 inline-block text-[11px] underline ${
+                                  isOut ? 'text-emerald-700' : 'text-emerald-700'
+                                }`}
+                              >
+                                Ver adjunto
+                              </a>
+                            ) : null}
+                            {m.status === 'failed' ? (
+                              <p className="mt-2 rounded-md bg-rose-50 px-2 py-1 text-[10px] text-rose-700">
+                                Falló el envío{m.errorMessage ? `: ${m.errorMessage}` : ''}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     );
