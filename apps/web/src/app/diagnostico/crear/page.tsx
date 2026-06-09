@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
+import { trackPageview } from '@/lib/track';
 import { Search, Globe, Loader2 } from 'lucide-react';
 
 /** Si parece dominio (tiene punto, sin espacios) → true */
@@ -59,6 +60,16 @@ export default function CrearDiagnosticoPage() {
   const [error, setError] = useState<string | null>(null);
   const [autoStartRunning, setAutoStartRunning] = useState(false);
   const autoStartTriggered = useRef(false);
+
+  // Pageview para el funnel de conversión interno (anónimo). Una vez por sesión/ruta.
+  useEffect(() => {
+    trackPageview('/diagnostico/crear', {
+      refCode: refParam || undefined,
+      utmSource: utmSourceParam || undefined,
+      utmMedium: utmMediumParam || undefined,
+      utmCampaign: utmCampaignParam || undefined,
+    });
+  }, [refParam, utmSourceParam, utmMediumParam, utmCampaignParam]);
 
   // Prefill cuando vienen desde WP (Checkear visibilidad): ?url=, ?brand= o ?q=
   useEffect(() => {

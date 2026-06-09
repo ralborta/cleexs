@@ -51,13 +51,37 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
         return;
       }
 
+      let attribution: Record<string, string> = {};
+      try {
+        const raw =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('cleexs_diagnostic_attribution')
+            : null;
+        if (raw) {
+          const j = JSON.parse(raw) as {
+            ref?: string;
+            utm_source?: string;
+            utm_medium?: string;
+            utm_campaign?: string;
+          };
+          attribution = {
+            ...(j.ref ? { refCode: j.ref } : {}),
+            ...(j.utm_source ? { utmSource: j.utm_source } : {}),
+            ...(j.utm_medium ? { utmMedium: j.utm_medium } : {}),
+            ...(j.utm_campaign ? { utmCampaign: j.utm_campaign } : {}),
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+
       const res = await fetch(`${API_URL}/api/subscriptions/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ planId, billingMode }),
+        body: JSON.stringify({ planId, billingMode, ...attribution }),
       });
 
       const json = (await res.json().catch(() => ({}))) as {

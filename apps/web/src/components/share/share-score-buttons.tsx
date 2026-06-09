@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Check, Copy, Mail } from 'lucide-react';
 import { buildPublicShareCopy, buildTeamInviteCopy } from '@/lib/share-messages';
 import { IconLinkedInBrand, IconWhatsAppBrand, IconXBrand } from '@/components/share/share-brand-icons';
+import { trackShare, type ShareChannel } from '@/lib/track';
 
 const shareIconClass = 'h-3 w-3';
 
@@ -23,6 +24,9 @@ type ShareScoreButtonsProps = {
   domain?: string | null;
   title?: string;
   summary?: string;
+  /** Para atribuir el evento de compartir en el funnel interno. */
+  diagnosticId?: string;
+  shareSlug?: string;
 };
 
 export function ShareScoreButtons({
@@ -32,6 +36,8 @@ export function ShareScoreButtons({
   domain,
   title = '',
   summary = '',
+  diagnosticId,
+  shareSlug,
 }: ShareScoreButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState(PUBLIC_SITE_URL);
@@ -80,7 +86,12 @@ export function ShareScoreButtons({
 
   const showSocialNetworks = intent === 'social';
 
+  function onShare(channel: ShareChannel) {
+    trackShare(channel, { diagnosticId, shareSlug });
+  }
+
   async function copyLink() {
+    onShare('copy');
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -112,7 +123,7 @@ export function ShareScoreButtons({
         className="gap-1 border-0 bg-[#25D366] px-2.5 text-xs text-white shadow-sm hover:bg-[#20bd5a] hover:text-white"
         asChild
       >
-        <a href={links.wa} target="_blank" rel="noopener noreferrer">
+        <a href={links.wa} target="_blank" rel="noopener noreferrer" onClick={() => onShare('whatsapp')}>
           <IconWhatsAppBrand className={shareIconClass} />
           WhatsApp
         </a>
@@ -123,7 +134,7 @@ export function ShareScoreButtons({
         className="gap-1 border-0 bg-sky-600 px-2.5 text-xs text-white shadow-sm hover:bg-sky-700 hover:text-white"
         asChild
       >
-        <a href={links.mailto}>
+        <a href={links.mailto} onClick={() => onShare('email')}>
           <Mail className={shareIconClass} strokeWidth={2.25} />
           Email
         </a>
@@ -136,7 +147,7 @@ export function ShareScoreButtons({
             className="gap-1 border-0 bg-[#0A66C2] px-2.5 text-xs text-white shadow-sm hover:bg-[#095195] hover:text-white"
             asChild
           >
-            <a href={links.linkedin} target="_blank" rel="noopener noreferrer">
+            <a href={links.linkedin} target="_blank" rel="noopener noreferrer" onClick={() => onShare('linkedin')}>
               <IconLinkedInBrand className={shareIconClass} />
               LinkedIn
             </a>
@@ -147,7 +158,7 @@ export function ShareScoreButtons({
             className="gap-1 border-0 bg-slate-900 px-2.5 text-xs text-white shadow-sm hover:bg-slate-800 hover:text-white"
             asChild
           >
-            <a href={links.x} target="_blank" rel="noopener noreferrer">
+            <a href={links.x} target="_blank" rel="noopener noreferrer" onClick={() => onShare('x')}>
               <IconXBrand className={shareIconClass} />
               X
             </a>

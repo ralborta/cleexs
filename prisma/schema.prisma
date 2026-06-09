@@ -152,6 +152,12 @@ model Subscription {
   currentPeriodStart  DateTime?          @map("current_period_start")
   currentPeriodEnd    DateTime?          @map("current_period_end")
   cancelledAt         DateTime?          @map("cancelled_at")
+  // Atribución de adquisición de la compra (para el dashboard de conversión interno).
+  refCode             String?            @map("ref_code")
+  utmSource           String?            @map("utm_source")
+  utmMedium           String?            @map("utm_medium")
+  utmCampaign         String?            @map("utm_campaign")
+  sourceChannel       String?            @map("source_channel")
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
 
@@ -628,6 +634,38 @@ model PublicDiagnosticShareVisit {
   @@unique([diagnosticId, visitorId])
   @@index([diagnosticId])
   @@map("public_diagnostic_share_visits")
+}
+
+// Visitas a la landing/app de Cleexs (denominador del funnel de conversión interno).
+// Anónimo: solo ruta + visitante (UUID de navegador) + atribución utm/ref.
+model PageView {
+  id            String   @id @default(uuid())
+  path          String // ruta visitada (ej: /diagnostico/crear)
+  visitorId     String?  @map("visitor_id") // UUID estable en el navegador (anónimo)
+  refCode       String?  @map("ref_code")
+  utmSource     String?  @map("utm_source")
+  utmMedium     String?  @map("utm_medium")
+  utmCampaign   String?  @map("utm_campaign")
+  sourceChannel String?  @map("source_channel")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@map("page_views")
+}
+
+// Clicks en botones de compartir el Cleexs Score, por canal (para el funnel).
+model ShareEvent {
+  id           String   @id @default(uuid())
+  channel      String // whatsapp | email | linkedin | x | copy
+  diagnosticId String?  @map("diagnostic_id")
+  shareSlug    String?  @map("share_slug")
+  visitorId    String?  @map("visitor_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([channel, createdAt])
+  @@map("share_events")
 }
 
 // Campañas internas de referidores / auspiciadores para links de tráfico a Cleexs.

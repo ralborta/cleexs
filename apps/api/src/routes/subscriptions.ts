@@ -12,10 +12,22 @@ import { getPreApprovalClient, getPublicAppUrl } from '../lib/mercadopago';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 
+const attributionField = z.string().trim().max(120).optional();
 const checkoutSchema = z.object({
   planId: z.enum(['crecimiento']),
   billingMode: z.enum(['monthly', 'annual']).default('monthly'),
+  // Atribuci?n de adquisici?n (funnel interno). Opcional.
+  refCode: attributionField,
+  utmSource: attributionField,
+  utmMedium: attributionField,
+  utmCampaign: attributionField,
+  sourceChannel: attributionField,
 });
+
+const cleanAttr = (v?: string) => {
+  const t = (v || '').trim();
+  return t ? t : null;
+};
 
 function toBillingInterval(value: z.infer<typeof checkoutSchema>['billingMode']) {
   return value === 'annual' ? BillingInterval.annual : BillingInterval.monthly;
@@ -24,12 +36,12 @@ function toBillingInterval(value: z.infer<typeof checkoutSchema>['billingMode'])
 function checkoutErrorMessage(error: unknown): string {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2021') {
-      return 'Falta aplicar la migración de facturación en la base de datos (tabla subscriptions).';
+      return 'Falta aplicar la migraci?n de facturaci?n en la base de datos (tabla subscriptions).';
     }
   }
   if (error instanceof Error) {
     if (error.message.includes('MP_ACCESS_TOKEN')) {
-      return 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).';
+      return 'Mercado Pago no est? configurado en el servidor (MP_ACCESS_TOKEN).';
     }
     return error.message;
   }
@@ -46,7 +58,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
       const portalUser = await resolvePortalUserFromRequest(request);
       if (!portalUser) {
         return reply.code(401).send({
-          error: 'Para pagar necesitás iniciar sesión en el portal, así podemos activar el plan en tu cuenta.',
+          error: 'Para pagar necesit?s iniciar sesi?n en el portal, as? podemos activar el plan en tu cuenta.',
         });
       }
 
@@ -59,10 +71,10 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const parsed = checkoutSchema.safeParse(request.body ?? {});
-      if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear suscripción.' });
+      if (!parsed.success) return reply.code(400).send({ error: 'Payload inv?lido para crear suscripci?n.' });
 
       if (!process.env.MP_ACCESS_TOKEN?.trim()) {
-        return reply.code(503).send({ error: 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).' });
+        return reply.code(503).send({ error: 'Mercado Pago no est? configurado en el servidor (MP_ACCESS_TOKEN).' });
       }
 
       const interval = toBillingInterval(parsed.data.billingMode);
@@ -88,6 +100,11 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           fxRate,
           payerEmail: portalUser.email,
           reason,
+          refCode: cleanAttr(parsed.data.refCode),
+          utmSource: cleanAttr(parsed.data.utmSource),
+          utmMedium: cleanAttr(parsed.data.utmMedium),
+          utmCampaign: cleanAttr(parsed.data.utmCampaign),
+          sourceChannel: cleanAttr(parsed.data.sourceChannel),
         },
       });
 
@@ -113,7 +130,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         };
         const checkoutUrl = mercadoPagoCheckoutUrl(mpLinks);
         if (!checkoutUrl) {
-          throw new Error('Mercado Pago no devolvió URL de checkout.');
+          throw new Error('Mercado Pago no devolvi? URL de checkout.');
         }
 
         await prisma.subscription.update({
@@ -144,7 +161,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           data: { status: SubscriptionStatus.cancelled, cancelledAt: new Date() },
         });
         fastify.log.error({ err: error }, 'Mercado Pago preapproval create failed');
-        return reply.code(502).send({ error: 'Mercado Pago no pudo crear la suscripción. Revisá credenciales TEST y el monto en ARS.' });
+        return reply.code(502).send({ error: 'Mercado Pago no pudo crear la suscripci?n. Revis? credenciales TEST y el monto en ARS.' });
       }
     } catch (error) {
       fastify.log.error({ err: error }, 'subscriptions/checkout failed');
@@ -214,7 +231,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!subscription?.mpPreapprovalId) {
-      return reply.code(404).send({ error: 'No hay una suscripción activa para cancelar.' });
+      return reply.code(404).send({ error: 'No hay una suscripci?n activa para cancelar.' });
     }
 
     await getPreApprovalClient().update({

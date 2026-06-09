@@ -1593,6 +1593,151 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       };
     }
   );
+
+  // ============================================
+  // Métricas de Conversión (funnel interno del team)
+  // ============================================
+  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+    '/internal/conversion-metrics',
+    async (request) => {
+      // Rango de fechas: default últimos 7 días. `from`/`to` en YYYY-MM-DD (inclusive).
+      const now = new Date();
+      const parseDay = (value: string | undefined, fallback: Date): Date => {
+        if (!value) return fallback;
+        const d = new Date(`${value}T00:00:00.000Z`);
+        return Number.isNaN(d.getTime()) ? fallback : d;
+      };
+      const defaultFrom = new Date(now);
+      defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 6);
+      defaultFrom.setUTCHours(0, 0, 0, 0);
+      const from = parseDay(request.query.from, defaultFrom);
+      const toRaw = parseDay(request.query.to, now);
+      // `to` inclusive: llevamos al final del día.
+      const to = new Date(toRaw);
+      to.setUTCHours(23, 59, 59, 999);
+
+      const where = { createdAt: { gte: from, lte: to } };
+      const pct = (num: number, den: number): number | null =>
+        den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+
+      const [
+        pageViewsTotal,
+        visitorGroups,
+        urlSubmitted,
+        emailLeft,
+        shareGroups,
+        referredRows,
+        purchases,
+        sentEmails,
+      ] = await Promise.all([
+        prisma.pageView.count({ where }),
+        prisma.pageView.groupBy({
+          by: ['visitorId'],
+          where: { ...where, visitorId: { not: null } },
+        }),
+        prisma.publicDiagnostic.count({ where }),
+        prisma.publicDiagnostic.count({ where: { ...where, email: { not: null } } }),
+        prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
+        prisma.publicDiagnostic.findMany({
+          where: { ...where, refCode: { not: null } },
+          select: { refCode: true },
+        }),
+        prisma.subscription.findMany({
+          where: { ...where, status: 'authorized' },
+          select: { utmSource: true, refCode: true, sourceChannel: true, amountUsd: true },
+        }),
+        prisma.leadEmail.findMany({
+          where: { status: 'sent', sentAt: { gte: from, lte: to } },
+          select: { leadSource: { select: { competitorDomain: true } } },
+        }),
+      ]);
+
+      const homeVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
+
+      // Share por canal
+      const shareByChannel = shareGroups
+        .map((g) => ({ channel: g.channel, count: g._count._all }))
+        .sort((a, b) => b.count - a.count);
+      const sharedTotal = shareByChannel.reduce((acc, r) => acc + r.count, 0);
+
+      // Referidos por refCode
+      const refMap = new Map<string, number>();
+      for (const r of referredRows) {
+        const key = (r.refCode || '').trim() || '—';
+        refMap.set(key, (refMap.get(key) || 0) + 1);
+      }
+      const referredByCode = Array.from(refMap.entries())
+        .map(([refCode, count]) => ({ refCode, count }))
+        .sort((a, b) => b.count - a.count);
+      const referredTotal = referredRows.length;
+
+      // Compras por source (utm_source || ref_code || source_channel || 'directo')
+      const purchaseMap = new Map<string, { count: number; usd: number }>();
+      for (const p of purchases) {
+        const key =
+          (p.utmSource || '').trim() ||
+          (p.refCode || '').trim() ||
+          (p.sourceChannel || '').trim() ||
+          'directo';
+        const prev = purchaseMap.get(key) || { count: 0, usd: 0 };
+        prev.count += 1;
+        prev.usd += p.amountUsd ? Number(p.amountUsd) : 0;
+        purchaseMap.set(key, prev);
+      }
+      const purchasesBySource = Array.from(purchaseMap.entries())
+        .map(([source, v]) => ({ source, count: v.count, usd: Math.round(v.usd) }))
+        .sort((a, b) => b.count - a.count);
+      const purchasedTotal = purchases.length;
+
+      // Cold outreach: dominios contactados (email enviado) que luego entraron al diagnóstico.
+      const contactedDomains = new Set<string>();
+      for (const e of sentEmails) {
+        const dom = (e.leadSource?.competitorDomain || '').trim().toLowerCase();
+        if (dom) contactedDomains.add(dom);
+      }
+      let returnedDomains = 0;
+      if (contactedDomains.size > 0) {
+        const matches = await prisma.publicDiagnostic.findMany({
+          where: { domain: { in: Array.from(contactedDomains) } },
+          select: { domain: true },
+          distinct: ['domain'],
+        });
+        const matchedSet = new Set(matches.map((m) => (m.domain || '').trim().toLowerCase()));
+        for (const d of contactedDomains) if (matchedSet.has(d)) returnedDomains += 1;
+      }
+
+      return {
+        ok: true,
+        range: { from: from.toISOString(), to: to.toISOString() },
+        funnel: {
+          homeVisitors: { count: homeVisitors, pageViews: pageViewsTotal },
+          urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
+          emailLeft: { count: emailLeft, pct: pct(emailLeft, urlSubmitted) },
+          shared: {
+            count: sharedTotal,
+            pct: pct(sharedTotal, urlSubmitted),
+            byChannel: shareByChannel,
+          },
+          referred: {
+            count: referredTotal,
+            pct: pct(referredTotal, urlSubmitted),
+            byCode: referredByCode,
+          },
+          purchased: {
+            count: purchasedTotal,
+            pct: pct(purchasedTotal, urlSubmitted),
+            bySource: purchasesBySource,
+          },
+        },
+        outreach: {
+          emailsSent: sentEmails.length,
+          domainsContacted: contactedDomains.size,
+          domainsReturned: returnedDomains,
+          returnPct: pct(returnedDomains, contactedDomains.size),
+        },
+      };
+    }
+  );
 };
 
 export default adminReportsRoutes;

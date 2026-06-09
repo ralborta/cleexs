@@ -17,6 +17,7 @@ import {
   ScanSearch,
   Settings,
   Sparkles,
+  TrendingUp,
   Type,
   Users,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ const sections: NavSection[] = [
     title: 'Operaciones',
     links: [
       { href: '/admin/dashboard', label: 'Dashboard', icon: BarChart3, extraPrefixes: ['/dashboard'] },
+      { href: '/admin/conversion', label: 'Métricas de Conversión', icon: TrendingUp, extraPrefixes: ['/conversion'] },
       { href: '/admin/runs', label: 'Runs · diagnósticos', icon: Layers, extraPrefixes: ['/runs'] },
       { href: '/admin/outreach', label: 'Outreach competidores', icon: Sparkles, extraPrefixes: ['/outreach'] },
     ],
