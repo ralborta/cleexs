@@ -209,7 +209,7 @@ function CompetitorBars({
               key={`${row.name}-${idx}`}
               className={cn(
                 'rounded-xl px-2.5 py-2',
-                isBrand ? 'bg-primary-500/15 ring-1 ring-primary-400/30' : 'bg-white/5'
+                isBrand ? 'bg-rose-500/15 ring-1 ring-rose-400/40' : 'bg-white/5'
               )}
             >
               <div className="mb-1 flex items-center gap-2">
@@ -223,8 +223,8 @@ function CompetitorBars({
                 </span>
                 <span
                   className={cn(
-                    'min-w-0 flex-1 truncate text-xs font-semibold',
-                    isBrand ? 'text-primary-200' : 'text-slate-300'
+                    'min-w-0 flex-1 truncate text-xs font-bold',
+                    isBrand ? 'text-rose-400' : 'text-slate-300'
                   )}
                 >
                   {label}
@@ -232,7 +232,7 @@ function CompetitorBars({
                 <span
                   className={cn(
                     'shrink-0 text-sm font-bold tabular-nums',
-                    isBrand ? 'text-primary-300' : 'text-white'
+                    isBrand ? 'text-rose-400' : 'text-white'
                   )}
                 >
                   {row.share.toFixed(1)}%
@@ -242,7 +242,7 @@ function CompetitorBars({
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-700',
-                    isBrand ? 'bg-primary-500' : 'bg-slate-400'
+                    isBrand ? 'bg-rose-500' : 'bg-slate-400'
                   )}
                   style={{ width: `${(row.share / maxShare) * 100}%` }}
                 />
