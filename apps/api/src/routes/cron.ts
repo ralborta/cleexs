@@ -1,6 +1,8 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { resolveMarketingRecipients, sendMarketingEmail, weeklyEmailForRecipient } from '../lib/marketing-email';
+import { sendLeadEmail } from '../lib/lead-email-sender';
+import { createOutreachLeadEmailDraft } from '../lib/outreach-email-builder';
 import { prisma } from '../lib/prisma';
 
 const RUN_SCHEDULE_VALUES = ['semanal', 'quincenal', 'mensual'] as const;
@@ -73,6 +75,11 @@ function weekSlotOfMonth(date = new Date()): 1 | 2 | 3 | 4 {
 
 function dateSlug(date = new Date()): string {
   return date.toISOString().slice(0, 10);
+}
+
+function outreachAutoShadowLimit(): number {
+  const parsed = Number(process.env.OUTREACH_AUTO_SHADOW_LIMIT || 10);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(50, Math.floor(parsed)) : 10;
 }
 
 const cronRoutes: FastifyPluginAsync = async (fastify) => {
@@ -280,6 +287,105 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       totalRecipients: recipients.length,
       sent,
       skipped,
+      failed,
+      errors,
+    };
+  });
+
+  // POST /api/cron/outreach-shadow
+  // Automatiza cold outreach en modo seguro: genera el email y lo manda en SHADOW
+  // al buzón de revisión (OUTREACH_SHADOW_TO / reply-to), nunca al competidor.
+  fastify.post<{
+    Body: {
+      limit?: number;
+      dryRun?: boolean;
+    };
+  }>('/outreach-shadow', async (request, reply) => {
+    if (!checkCronSecret(request, reply)) return;
+
+    const schema = z.object({
+      limit: z.number().int().min(1).max(50).default(outreachAutoShadowLimit()),
+      dryRun: z.boolean().default(false),
+    });
+    const parsed = schema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    const candidates = await prisma.leadContact.findMany({
+      where: {
+        status: { notIn: ['ignored', 'sent'] },
+        email: { contains: '@' },
+        emails: { none: {} },
+      },
+      include: {
+        leadSource: {
+          include: {
+            brand: { select: { name: true, industry: true, domain: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: parsed.data.limit,
+    });
+
+    if (parsed.data.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        mode: 'shadow',
+        candidates: candidates.map((c) => ({
+          leadContactId: c.id,
+          email: c.email,
+          competitorName: c.leadSource.competitorName,
+          competitorDomain: c.leadSource.competitorDomain,
+          brandName: c.leadSource.brand?.name ?? null,
+          industry: c.leadSource.brand?.industry ?? null,
+        })),
+      };
+    }
+
+    let generated = 0;
+    let sent = 0;
+    let failed = 0;
+    const errors: Array<{ leadContactId: string; email: string; error: string }> = [];
+
+    for (const contact of candidates) {
+      try {
+        const email = await createOutreachLeadEmailDraft({
+          leadSourceId: contact.leadSourceId,
+          leadContactId: contact.id,
+          meta: {
+            automated: true,
+            automation: 'cron_outreach_shadow',
+          },
+        });
+        generated += 1;
+
+        await sendLeadEmail({
+          leadEmailId: email.id,
+          mode: 'shadow',
+        });
+        sent += 1;
+      } catch (e) {
+        failed += 1;
+        if (errors.length < 20) {
+          errors.push({
+            leadContactId: contact.id,
+            email: contact.email,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+    }
+
+    return {
+      ok: failed === 0,
+      dryRun: false,
+      mode: 'shadow',
+      candidates: candidates.length,
+      generated,
+      sent,
       failed,
       errors,
     };

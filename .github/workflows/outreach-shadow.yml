@@ -1,0 +1,47 @@
+name: Outreach Shadow
+
+on:
+  schedule:
+    # Diario 13:30 UTC (10:30 Argentina aprox). Envia solo SHADOW al buzón de revisión.
+    - cron: '30 13 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview candidates without sending shadow emails'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      limit:
+        description: 'Maximum contacts to process'
+        required: true
+        default: '10'
+
+jobs:
+  outreach-shadow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger outreach shadow batch
+        env:
+          CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          LIMIT: ${{ github.event_name == 'schedule' && '10' || inputs.limit }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CLEEXS_CRON_SECRET GitHub secret"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --argjson limit "$LIMIT" \
+            --argjson dryRun "$DRY_RUN" \
+            '{limit:$limit, dryRun:$dryRun}')
+
+          curl --fail-with-body -sS \
+            -X POST "$API_URL/api/cron/outreach-shadow" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
