@@ -150,6 +150,81 @@ function buildTextBody(email: LeadEmailWithRelations, mode: LeadEmailSendMode, o
   return `${prefix}${email.body}`;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function publicAppUrl(): string {
+  return (
+    process.env.PUBLIC_APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    'https://app.cleexs.net'
+  ).replace(/\/$/, '');
+}
+
+function buildHtmlBody(email: LeadEmailWithRelations, mode: LeadEmailSendMode, originalTo: string): string {
+  const paragraphs = email.body
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const html = escapeHtml(part).replace(/\n/g, '<br>');
+      const isSignature = /Gonzalo\s+—\s+Fundador,\s*Cleexs/i.test(part);
+      return isSignature
+        ? `<p style="margin:24px 0 0 0;color:#0f172a;font-size:15px;line-height:1.6;font-weight:700;">${html}</p>`
+        : `<p style="margin:0 0 18px 0;color:#334155;font-size:16px;line-height:1.65;">${html}</p>`;
+    })
+    .join('');
+  const shadowBanner =
+    mode === 'shadow'
+      ? `<div style="margin:0 0 18px 0;padding:12px 14px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.45;">
+          <strong>SHADOW SEND</strong> · No se envió al competidor.<br>
+          Destinatario original: ${escapeHtml(originalTo)} · Competidor: ${escapeHtml(email.leadSource.competitorName)}
+        </div>`
+      : '';
+  const logoUrl = `${publicAppUrl()}/CleexsLogo.png`;
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f1f5f9;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #e2e8f0;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(15,23,42,0.10);font-family:Inter,Arial,sans-serif;">
+            <tr>
+              <td style="padding:28px 30px 22px 30px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);">
+                <img src="${logoUrl}" width="118" alt="Cleexs" style="display:block;width:118px;max-width:118px;height:auto;margin:0 0 22px 0;">
+                <p style="margin:0 0 8px 0;color:#bfdbfe;font-size:12px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;">Visibilidad en ChatGPT</p>
+                <h1 style="margin:0;color:#ffffff;font-size:28px;line-height:1.12;font-weight:800;">ChatGPT elige a un competidor tuyo</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 30px 30px 30px;">
+                ${shadowBanner}
+                ${paragraphs}
+                <div style="margin:26px 0 4px 0;padding:16px 18px;border-radius:16px;background:#eff6ff;border:1px solid #bfdbfe;">
+                  <p style="margin:0;color:#1e3a8a;font-size:14px;line-height:1.55;font-weight:700;">Para recibir el diagnóstico completo, solo respondé este email.</p>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 30px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+                <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.5;">Cleexs mide cómo aparece una marca en respuestas de IA y dónde puede mejorar para ser recomendada.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 async function sendViaResend(args: {
   email: LeadEmailWithRelations;
   to: string;
@@ -157,6 +232,7 @@ async function sendViaResend(args: {
   mode: LeadEmailSendMode;
   subject: string;
   body: string;
+  html: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) throw new Error('RESEND_API_KEY no configurado.');
@@ -166,6 +242,7 @@ async function sendViaResend(args: {
     to: [args.to],
     subject: args.subject,
     text: args.body,
+    html: args.html,
     replyTo: getReplyTo(),
     headers: {
       'X-Cleexs-Lead-Email-Id': args.email.id,
@@ -187,11 +264,13 @@ async function sendViaSmtp(args: {
   mode: LeadEmailSendMode;
   subject: string;
   body: string;
+  html: string;
 }) {
   const info = await sendSmtpMail({
     to: args.to,
     subject: args.subject,
     text: args.body,
+    html: args.html,
     replyTo: getReplyTo(),
     headers: {
       'X-Cleexs-Lead-Email-Id': args.email.id,
@@ -242,6 +321,7 @@ export async function sendLeadEmail(args: {
 
   const subject = args.mode === 'shadow' ? shadowSubject(originalTo, baseSubject) : baseSubject;
   const body = buildTextBody({ ...email, subject: baseSubject, body: baseBody }, args.mode, originalTo);
+  const html = buildHtmlBody({ ...email, subject: baseSubject, body: baseBody }, args.mode, originalTo);
 
   await prisma.leadEmail.update({
     where: { id: email.id },
@@ -264,10 +344,10 @@ export async function sendLeadEmail(args: {
   try {
     if (process.env.RESEND_API_KEY?.trim()) {
       provider = 'resend';
-      externalId = await sendViaResend({ email, to, originalTo, mode: args.mode, subject, body });
+      externalId = await sendViaResend({ email, to, originalTo, mode: args.mode, subject, body, html });
     } else if (isEmailConfigured()) {
       provider = 'smtp';
-      externalId = await sendViaSmtp({ email, to, originalTo, mode: args.mode, subject, body });
+      externalId = await sendViaSmtp({ email, to, originalTo, mode: args.mode, subject, body, html });
     } else {
       throw Object.assign(new Error('Sin canal de envío: configurá RESEND_API_KEY o SMTP completo.'), { statusCode: 503 });
     }
