@@ -11,15 +11,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { OnboardingRightStage } from '@/components/diagnostico/onboarding-right-stage';
 import {
   OnboardingSetupWizard,
-  ENGINE_OPTIONS,
   type SetupStep,
 } from '@/components/diagnostico/onboarding-setup-wizard';
-import { ONBOARDING_STEP_LABELS, saveOnboardingSnapshot, type SitePreviewContext } from './diagnostic-onboarding';
+import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
-import { OnboardingMomentStack, type MomentKind } from './onboarding-moments';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
 
 function formatElapsed(seconds: number): string {
@@ -58,12 +55,6 @@ const ANALYSIS_STEP_CARD_LABELS = [
   'Midiendo intención cubierta',
   'Evaluando comprensión por IA',
 ] as const;
-
-type OverlayMoment = Extract<MomentKind, { type: 'quiz1' } | { type: 'quiz2' } | { type: 'insight' } | { type: 'social' } | { type: 'social2' } | { type: 'prediction' }> | { type: 'idle' };
-
-function isBlockingOverlay(m: OverlayMoment): m is Extract<OverlayMoment, { type: Exclude<OverlayMoment['type'], 'idle'> }> {
-  return m.type !== 'idle';
-}
 
 function fiveUrlsFromDraft(draft: PublicDiagnostic['setupDraft']): string[] {
   const raw = draft?.suggestedCompetitorUrls ?? [];
@@ -148,14 +139,7 @@ function VerificandoContent() {
   }, []);
 
   const [handoff, setHandoff] = useState<'no' | 'preview' | 'leaving'>('no');
-  const [pipeline, setPipeline] = useState(0);
-  const [overlay, setOverlay] = useState<OverlayMoment>({ type: 'idle' });
-  const [visualBoost, setVisualBoost] = useState(0);
   const [visibleStepCards, setVisibleStepCards] = useState(3);
-  const overlayRef = useRef(overlay);
-  useEffect(() => {
-    overlayRef.current = overlay;
-  }, [overlay]);
 
   const started = useRef(false);
   const abandonedTracked = useRef(false);
@@ -205,13 +189,6 @@ function VerificandoContent() {
   // El progreso de la izquierda "arranca" recién cuando el usuario confirma país+rubro
   // (captchaVerified) o el análisis ya está corriendo. Antes, invita a confirmar a la derecha.
   const displayCaptchaVerified = captchaVerified || hasServerEmailAfterStart;
-  const ctx: SitePreviewContext = useMemo(
-    () => ({
-      brandName: brandLabel,
-      domain: domain || '',
-    }),
-    [brandLabel, domain]
-  );
   const showLegacyEmail =
     analysisRunningPhase &&
     captchaVerified &&
@@ -226,64 +203,6 @@ function VerificandoContent() {
     if (normalizedDiagnosticStatus === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
     return Math.max(activeIndex, 0);
   }, [stepsList, normalizedDiagnosticStatus, activeIndex, isPreRunBackdrop]);
-
-  const advancePipeline = useCallback((next: number) => {
-    setPipeline(next);
-    setOverlay({ type: 'idle' });
-  }, []);
-
-  const onQuiz1 = useCallback(
-    (v: string) => {
-      if (!diagnosticId) return;
-      saveOnboardingSnapshot(diagnosticId, { quiz1: v });
-      trackOnboarding('onboarding_quiz_answered', { q: 'chatgpt_treatment', v });
-      setVisualBoost((b) => b + 1);
-      advancePipeline(1);
-    },
-    [diagnosticId, advancePipeline]
-  );
-  const onQuiz2 = useCallback(
-    (v: string) => {
-      if (!diagnosticId) return;
-      saveOnboardingSnapshot(diagnosticId, { quiz2: v });
-      trackOnboarding('onboarding_quiz_answered', { q: 'competitors', v });
-      setVisualBoost((b) => b + 1);
-      advancePipeline(4);
-    },
-    [diagnosticId, advancePipeline]
-  );
-  const onPredict = useCallback(
-    (r: string) => {
-      if (!diagnosticId) return;
-      saveOnboardingSnapshot(diagnosticId, { predictedRange: r });
-      trackOnboarding('onboarding_score_predicted', { range: r });
-      setVisualBoost((b) => b + 1);
-      advancePipeline(6);
-    },
-    [diagnosticId, advancePipeline]
-  );
-  const onInsightClose = useCallback(() => {
-    const o = overlayRef.current;
-    if (o.type !== 'insight') {
-      setOverlay({ type: 'idle' });
-      return;
-    }
-    if (o.stepIndex === 2) advancePipeline(2);
-    else if (o.stepIndex === 5) advancePipeline(5);
-    else if (o.stepIndex === 8) advancePipeline(7);
-  }, [advancePipeline]);
-  const onSocialClose = useCallback(() => {
-    const o = overlayRef.current;
-    if (o.type === 'social') {
-      trackOnboarding('onboarding_social_shown', { n: '1' });
-      advancePipeline(3);
-    } else if (o.type === 'social2') {
-      trackOnboarding('onboarding_social_shown', { n: '2' });
-      advancePipeline(8);
-    } else {
-      setOverlay({ type: 'idle' });
-    }
-  }, [advancePipeline]);
 
   // Solo saltar el captcha del onboarding clásico cuando el análisis ya arrancó CON email
   // (flujo nuevo POST /start). Si está `running` sin email, el usuario debe ver el modal.
@@ -417,7 +336,6 @@ function VerificandoContent() {
 
   useEffect(() => {
     if (handoff !== 'preview' || !diagnosticId) return;
-    setOverlay({ type: 'idle' });
     trackOnboarding('onboarding_preview_viewed', { diagnosticId });
     const t = setTimeout(() => {
       setHandoff('leaving');
@@ -446,44 +364,6 @@ function VerificandoContent() {
     document.addEventListener('visibilitychange', h);
     return () => document.removeEventListener('visibilitychange', h);
   }, [diagnosticId, diagnostic?.steps, handoff]);
-
-  useEffect(() => {
-    if (!analysisRunningPhase) return;
-    if (!captchaVerified) return;
-    if (diagnostic?.status === 'completed' || handoff !== 'no') return;
-    if (isBlockingOverlay(overlay)) return;
-
-    if (pipeline === 0 && activeIndex >= 1) {
-      setOverlay({ type: 'quiz1' });
-    } else if (pipeline === 1 && activeIndex >= 2) {
-      if (diagnosticId) trackOnboarding('onboarding_insight_shown', { step: '2' });
-      setOverlay({ type: 'insight', stepIndex: 2, ctx });
-    } else if (pipeline === 2) {
-      setOverlay({ type: 'social' });
-    } else if (pipeline === 3 && activeIndex >= 4) {
-      setOverlay({ type: 'quiz2' });
-    } else if (pipeline === 4 && activeIndex >= 5) {
-      if (diagnosticId) trackOnboarding('onboarding_insight_shown', { step: '5' });
-      setOverlay({ type: 'insight', stepIndex: 5, ctx });
-    } else if (pipeline === 5 && activeIndex >= 7) {
-      setOverlay({ type: 'prediction' });
-    } else if (pipeline === 6 && activeIndex >= 8) {
-      if (diagnosticId) trackOnboarding('onboarding_insight_shown', { step: '8' });
-      setOverlay({ type: 'insight', stepIndex: 8, ctx });
-    } else if (pipeline === 7) {
-      setOverlay({ type: 'social2' });
-    }
-  }, [
-    analysisRunningPhase,
-    captchaVerified,
-    activeIndex,
-    pipeline,
-    overlay,
-    diagnostic?.status,
-    ctx,
-    handoff,
-    diagnosticId,
-  ]);
 
   useEffect(() => {
     const targetVisible = Math.min(ANALYSIS_STEP_CARD_LABELS.length, Math.max(3, activeStepForCards + 2));
@@ -1018,24 +898,6 @@ function VerificandoContent() {
                 />
               ) : (
                 <>
-              <OnboardingRightStage
-                stepIndex={displayActiveIndex}
-                brandName={brandLabel}
-                domainShort={domainShort}
-                pulseKey={visualBoost}
-                className="shrink-0"
-              />
-              {captchaVerified && isBlockingOverlay(overlay) && (
-                <OnboardingMomentStack
-                  className="flex-1"
-                  moment={overlay as MomentKind}
-                  onClose={overlay.type === 'insight' ? onInsightClose : onSocialClose}
-                  onQuiz1={onQuiz1}
-                  onQuiz2={onQuiz2}
-                  onPredict={onPredict}
-                />
-              )}
-
               {captchaVerified && showLegacyEmail && !emailSent && (
                 <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
                   <div className="flex items-start gap-3">
