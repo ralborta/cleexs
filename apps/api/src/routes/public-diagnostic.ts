@@ -15,6 +15,7 @@ import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
 import { EntitlementAction, Prisma } from '@prisma/client';
 import { runOutreachForRun } from '../lib/outreach';
 import {
+  determineIndustry,
   getTop5Competitors,
   resolveBrandAnalysisContext,
   resolveCompetitorDomains,
@@ -1373,7 +1374,22 @@ async function runCompetitorDetectionJob(params: {
     (analysisContext.confidence >= marketConfidenceMin
       ? analysisContext.country || defaultCountry
       : defaultCountry);
-  const suggestedIndustry = forcedIndustryTrim || analysisContext.industry || undefined;
+  // El contexto de marca no devuelve un rubro corto cuando hay sitio (siempre "General"):
+  // lo inferimos explícitamente para la sugerencia del wizard (2-5 palabras, español).
+  let suggestedIndustry = forcedIndustryTrim || undefined;
+  if (!suggestedIndustry) {
+    const ctxIndustry = (analysisContext.industry || '').trim();
+    suggestedIndustry = ctxIndustry && ctxIndustry.toLowerCase() !== 'general' ? ctxIndustry : undefined;
+  }
+  if (!suggestedIndustry) {
+    try {
+      const ind = await determineIndustry(brandForRun, trimmedUrl, marketCountry);
+      const val = (ind.industry || '').trim();
+      if (val && val.toLowerCase() !== 'general') suggestedIndustry = val;
+    } catch (err) {
+      log.warn({ err, diagnosticId }, 'No se pudo inferir rubro para sugerencia');
+    }
+  }
 
   const seenHosts = new Set<string>();
   const suggestedCompetitorUrls: string[] = [];
