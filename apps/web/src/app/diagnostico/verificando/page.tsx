@@ -15,6 +15,7 @@ import {
   OnboardingSetupWizard,
   type SetupStep,
 } from '@/components/diagnostico/onboarding-setup-wizard';
+import { AnalysisProgressDial } from '@/components/diagnostico/analysis-progress-dial';
 import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
@@ -177,16 +178,6 @@ function VerificandoContent() {
   const isFinalizing = isRunning && allStepsDone;
   const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6;
   const barPct = isFinalizing ? finalizingWave : Math.min(progress, 100);
-  const backdropStep = Math.min(fakeBackdropStep, ONBOARDING_STEP_LABELS.length - 1);
-  const displayActiveIndex = isPreRunBackdrop ? backdropStep : activeIndex;
-  const displayCardLabel =
-    isPreRunBackdrop
-      ? ANALYSIS_STEP_CARD_LABELS[backdropStep] ?? ''
-      : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
-  const displayCompletedCount = isPreRunBackdrop ? backdropStep : completedCount;
-  const displayBarPct = isPreRunBackdrop
-    ? Math.round((backdropStep / ONBOARDING_STEP_LABELS.length) * 100)
-    : barPct;
   const diagnosticEmailTrimmed = diagnostic?.email?.trim() ?? '';
   const hasServerEmailAfterStart = isRunning && Boolean(diagnosticEmailTrimmed);
   const needsLegacyEmailCaptchaModal =
@@ -194,6 +185,21 @@ function VerificandoContent() {
   // El progreso de la izquierda "arranca" recién cuando el usuario confirma país+rubro
   // (captchaVerified) o el análisis ya está corriendo. Antes, invita a confirmar a la derecha.
   const displayCaptchaVerified = captchaVerified || hasServerEmailAfterStart;
+  const backdropStep = Math.min(fakeBackdropStep, ONBOARDING_STEP_LABELS.length - 1);
+  // Avance "fake" continuo: corre desde que se confirma país+rubro y NO se reinicia al pasar
+  // del onboarding al análisis real; solo se apaga al completarse o fallar.
+  const usingFakeProgress =
+    displayCaptchaVerified &&
+    normalizedDiagnosticStatus !== 'completed' &&
+    normalizedDiagnosticStatus !== 'failed';
+  const displayActiveIndex = usingFakeProgress ? backdropStep : activeIndex;
+  const displayCardLabel = usingFakeProgress
+    ? ANALYSIS_STEP_CARD_LABELS[backdropStep] ?? ''
+    : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
+  const displayCompletedCount = usingFakeProgress ? backdropStep : completedCount;
+  const displayBarPct = usingFakeProgress
+    ? Math.round((backdropStep / ONBOARDING_STEP_LABELS.length) * 100)
+    : barPct;
   const showLegacyEmail =
     analysisRunningPhase &&
     captchaVerified &&
@@ -202,12 +208,12 @@ function VerificandoContent() {
     progress >= 50;
 
   const activeStepForCards = useMemo(() => {
-    if (isPreRunBackdrop) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
+    if (usingFakeProgress) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
     const firstPending = stepsList.findIndex((s) => !s.completed);
     if (firstPending >= 0) return firstPending;
     if (normalizedDiagnosticStatus === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
     return Math.max(activeIndex, 0);
-  }, [stepsList, normalizedDiagnosticStatus, activeIndex, isPreRunBackdrop, backdropStep]);
+  }, [stepsList, normalizedDiagnosticStatus, activeIndex, usingFakeProgress, backdropStep]);
 
   // Solo saltar el captcha del onboarding clásico cuando el análisis ya arrancó CON email
   // (flujo nuevo POST /start). Si está `running` sin email, el usuario debe ver el modal.
@@ -374,7 +380,8 @@ function VerificandoContent() {
   // independiente del proceso real. Arranca al confirmar país+rubro (displayCaptchaVerified)
   // y se frena en el último paso (queda "en proceso"), sin marcar todo completo.
   useEffect(() => {
-    if (!isPreRunBackdrop || !displayCaptchaVerified) {
+    if (!usingFakeProgress) {
+      if (normalizedDiagnosticStatus === 'completed' || normalizedDiagnosticStatus === 'failed') return;
       setFakeBackdropStep(0);
       return;
     }
@@ -384,7 +391,7 @@ function VerificandoContent() {
       setFakeBackdropStep((s) => Math.min(maxStep, s + 1));
     }, 3500);
     return () => clearInterval(id);
-  }, [isPreRunBackdrop, displayCaptchaVerified]);
+  }, [usingFakeProgress, normalizedDiagnosticStatus]);
 
   useEffect(() => {
     const targetVisible = Math.min(ANALYSIS_STEP_CARD_LABELS.length, Math.max(3, activeStepForCards + 2));
@@ -620,7 +627,7 @@ function VerificandoContent() {
     diagnostic.analysisJson == null;
   const waitingFinalReady = waitingSecondModel || waitingConsolidation;
   const analysisSteps: AnalysisStepItem[] = ANALYSIS_STEP_CARD_LABELS.map((label, i) => {
-    if (isPreRunBackdrop) {
+    if (usingFakeProgress) {
       const isCompleted = i < backdropStep;
       const isActive = i === backdropStep;
       const state: AnalysisStepItem['state'] = isCompleted ? 'completed' : isActive ? 'active' : 'pending';
@@ -919,6 +926,15 @@ function VerificandoContent() {
                 />
               ) : (
                 <>
+              {analysisRunningPhase && (
+                <AnalysisProgressDial
+                  percent={displayBarPct}
+                  label={displayCardLabel}
+                  brandName={brandLabel}
+                  elapsed={formatElapsed(elapsedSeconds)}
+                />
+              )}
+
               {captchaVerified && showLegacyEmail && !emailSent && (
                 <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
                   <div className="flex items-start gap-3">
