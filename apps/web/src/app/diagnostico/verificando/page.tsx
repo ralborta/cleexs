@@ -946,21 +946,26 @@ function VerificandoContent() {
           </div>
 
           <div className="relative flex min-h-0 min-w-0 flex-col">
-            {HERO.map((src, i) => (
-              <div
-                key={src}
-                aria-hidden
-                className={cn(
-                  'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
-                  heroIdx === i ? 'opacity-25' : 'opacity-0'
-                )}
-                style={{ backgroundImage: `url('${src}')`, backgroundSize: '60% auto' }}
-              />
-            ))}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
-            />
+            {/* Fondo (GIF/hero + overlay) solo durante el análisis real; en el setup la derecha queda limpia. */}
+            {!isPreRunBackdrop && (
+              <>
+                {HERO.map((src, i) => (
+                  <div
+                    key={src}
+                    aria-hidden
+                    className={cn(
+                      'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
+                      heroIdx === i ? 'opacity-25' : 'opacity-0'
+                    )}
+                    style={{ backgroundImage: `url('${src}')`, backgroundSize: '60% auto' }}
+                  />
+                ))}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
+                />
+              </>
+            )}
 
             <div
               className={cn(
