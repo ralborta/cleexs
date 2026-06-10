@@ -1088,6 +1088,16 @@ export interface PublicDiagnosticSetupDraft {
   suggestedCompetitorUrls: string[];
   marketCountry?: string;
   useSerp?: boolean;
+  /** País sugerido (nombre en español) para que el usuario confirme. */
+  suggestedCountry?: string;
+  /** Rubro/industria sugerido por la IA para que el usuario confirme/edite. */
+  suggestedIndustry?: string;
+  /** País confirmado por el usuario. */
+  confirmedCountry?: string;
+  /** Rubro confirmado por el usuario. */
+  confirmedIndustry?: string;
+  /** Motores de IA elegidos (registrados para plan pago). */
+  selectedEngines?: string[];
 }
 
 export interface PublicDiagnostic {
@@ -1194,7 +1204,14 @@ export const publicDiagnosticApi = {
     }),
   start: (
     id: string,
-    body: { email: string; competitorUrls: string[]; useSerp?: boolean },
+    body: {
+      email: string;
+      competitorUrls: string[];
+      useSerp?: boolean;
+      country?: string;
+      industry?: string;
+      engines?: string[];
+    },
     opts?: { visitorId?: string }
   ) =>
     api<{ ok: boolean; diagnosticId: string }>(`/api/public/diagnostic/${id}/start`, {
@@ -1203,6 +1220,19 @@ export const publicDiagnosticApi = {
       headers: {
         ...(opts?.visitorId ? { 'x-visitor-id': opts.visitorId } : {}),
       },
+    }),
+  confirmContext: (
+    id: string,
+    body: { country?: string; industry?: string; engines?: string[] }
+  ) =>
+    api<{
+      ok: boolean;
+      redetecting: boolean;
+      confirmedCountry: string;
+      confirmedIndustry: string;
+    }>(`/api/public/diagnostic/${id}/confirm-context`, {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
   setEmail: (id: string, email: string) =>
     api<{ ok: boolean; emailSent?: boolean | null; emailError?: 'provider_rejected' | 'send_failed' }>(

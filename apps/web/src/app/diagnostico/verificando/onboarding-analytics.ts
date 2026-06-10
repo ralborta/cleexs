@@ -5,6 +5,7 @@
 export type OnboardingAnalyticName =
   | 'onboarding_started'
   | 'onboarding_captcha_completed'
+  | 'onboarding_context_confirmed'
   | 'onboarding_setup_completed'
   | 'onboarding_quiz_answered'
   | 'onboarding_score_predicted'

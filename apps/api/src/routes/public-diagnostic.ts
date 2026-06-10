@@ -670,6 +670,10 @@ async function executePublicDiagnosticPipeline(params: {
   skipGemini?: boolean;
   /** Canal WhatsApp / freemium-only: omitir corridas Perplexity y Claude vía OpenRouter. */
   skipOpenRouter?: boolean;
+  /** País confirmado por el usuario: si viene, sella el mercado de la corrida. */
+  forcedCountry?: string;
+  /** Rubro confirmado por el usuario: pista fuerte de industria. */
+  forcedIndustry?: string;
 }): Promise<void> {
   const {
     log,
@@ -684,7 +688,11 @@ async function executePublicDiagnosticPipeline(params: {
     skipSatellite = false,
     skipGemini = false,
     skipOpenRouter = false,
+    forcedCountry,
+    forcedIndustry,
   } = params;
+  const forcedCountryTrim = forcedCountry?.trim() || '';
+  const forcedIndustryTrim = forcedIndustry?.trim() || '';
 
   const competitorNames = competitorRows.map((c) => c.name).filter(Boolean);
   if (competitorNames.length < 1) {
@@ -701,17 +709,18 @@ async function executePublicDiagnosticPipeline(params: {
     throw new Error('Tenant root no encontrado');
   }
 
-  const countryFromTld = trimmedUrl ? getCountryFromDomain(trimmedUrl) : null;
+  const countryFromTld = forcedCountryTrim || (trimmedUrl ? getCountryFromDomain(trimmedUrl) : null);
   const analysisContext = await resolveBrandAnalysisContext({
     brandName: brandForRun,
     websiteUrl: trimmedUrl || undefined,
-    fallbackCountry: defaultCountry,
-    fallbackIndustry: 'General',
+    fallbackCountry: forcedCountryTrim || defaultCountry,
+    fallbackIndustry: forcedIndustryTrim || 'General',
     knownCountry: countryFromTld || undefined,
     useSearchEvidence: useSerp !== false,
   });
   const marketCountry =
-    countryFromTld ??
+    forcedCountryTrim ||
+    countryFromTld ||
     (analysisContext.confidence >= marketConfidenceMin
       ? analysisContext.country || defaultCountry
       : defaultCountry);
@@ -735,7 +744,7 @@ async function executePublicDiagnosticPipeline(params: {
       tenantId: rootTenant.id,
       name: brandForRun,
       domain: trimmedUrl ? normalizeDomain(trimmedUrl) : null,
-      industry: null,
+      industry: forcedIndustryTrim || null,
       country: marketCountry,
       description: analysisContext.verticalSummary || null,
     },
@@ -1055,6 +1064,16 @@ function parsePublicSetupDraft(json: unknown): {
   marketCountry?: string;
   useSerp?: boolean;
   competitorRescueAttemptedAt?: string;
+  /** País sugerido (nombre) para que el usuario confirme antes del análisis. */
+  suggestedCountry?: string;
+  /** Rubro/industria sugerido por la IA para que el usuario confirme/edite. */
+  suggestedIndustry?: string;
+  /** País confirmado por el usuario (puede diferir del sugerido). */
+  confirmedCountry?: string;
+  /** Rubro confirmado por el usuario (puede diferir del sugerido). */
+  confirmedIndustry?: string;
+  /** Motores de IA elegidos (free: todos disponibles; se registran para plan pago). */
+  selectedEngines?: string[];
 } | null {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
   const o = json as Record<string, unknown>;
@@ -1066,7 +1085,24 @@ function parsePublicSetupDraft(json: unknown): {
   const useSerp = typeof o.useSerp === 'boolean' ? o.useSerp : undefined;
   const competitorRescueAttemptedAt =
     typeof o.competitorRescueAttemptedAt === 'string' ? o.competitorRescueAttemptedAt : undefined;
-  return { suggestedCompetitorUrls, marketCountry, useSerp, competitorRescueAttemptedAt };
+  const suggestedCountry = typeof o.suggestedCountry === 'string' ? o.suggestedCountry : undefined;
+  const suggestedIndustry = typeof o.suggestedIndustry === 'string' ? o.suggestedIndustry : undefined;
+  const confirmedCountry = typeof o.confirmedCountry === 'string' ? o.confirmedCountry : undefined;
+  const confirmedIndustry = typeof o.confirmedIndustry === 'string' ? o.confirmedIndustry : undefined;
+  const selectedEngines = Array.isArray(o.selectedEngines)
+    ? o.selectedEngines.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : undefined;
+  return {
+    suggestedCompetitorUrls,
+    marketCountry,
+    useSerp,
+    competitorRescueAttemptedAt,
+    suggestedCountry,
+    suggestedIndustry,
+    confirmedCountry,
+    confirmedIndustry,
+    selectedEngines,
+  };
 }
 
 function setupDraftJsonRecord(json: unknown): Record<string, unknown> {
@@ -1302,6 +1338,10 @@ async function runCompetitorDetectionJob(params: {
   serp: boolean;
   defaultCountry: string;
   marketConfidenceMin: number;
+  /** País confirmado por el usuario: si viene, manda sobre el detectado (re-detect). */
+  forcedCountry?: string;
+  /** Rubro confirmado por el usuario: se usa como pista fuerte para los competidores. */
+  forcedIndustry?: string;
 }): Promise<{ suggestedCompetitorUrls: string[]; marketCountry: string; useSerp: boolean }> {
   const {
     log,
@@ -1312,22 +1352,28 @@ async function runCompetitorDetectionJob(params: {
     serp,
     defaultCountry,
     marketConfidenceMin,
+    forcedCountry,
+    forcedIndustry,
   } = params;
 
-  const countryFromTld = getCountryFromDomain(trimmedUrl);
+  const forcedCountryTrim = forcedCountry?.trim() || '';
+  const forcedIndustryTrim = forcedIndustry?.trim() || '';
+  const countryFromTld = forcedCountryTrim || getCountryFromDomain(trimmedUrl);
   const analysisContext = await resolveBrandAnalysisContext({
     brandName: brandForRun,
     websiteUrl: trimmedUrl,
-    fallbackCountry: defaultCountry,
-    fallbackIndustry: 'General',
+    fallbackCountry: forcedCountryTrim || defaultCountry,
+    fallbackIndustry: forcedIndustryTrim || 'General',
     knownCountry: countryFromTld || undefined,
     useSearchEvidence: serp,
   });
   const marketCountry =
-    countryFromTld ??
+    forcedCountryTrim ||
+    countryFromTld ||
     (analysisContext.confidence >= marketConfidenceMin
       ? analysisContext.country || defaultCountry
       : defaultCountry);
+  const suggestedIndustry = forcedIndustryTrim || analysisContext.industry || undefined;
 
   const seenHosts = new Set<string>();
   const suggestedCompetitorUrls: string[] = [];
@@ -1404,14 +1450,21 @@ async function runCompetitorDetectionJob(params: {
     return { suggestedCompetitorUrls: [], marketCountry, useSerp: serp };
   }
 
+  const existingDraftRow = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: { setupDraftJson: true },
+  });
   await prisma.publicDiagnostic.update({
     where: { id: diagnosticId },
     data: {
       status: 'awaiting_user',
       setupDraftJson: {
+        ...setupDraftJsonRecord(existingDraftRow?.setupDraftJson),
         suggestedCompetitorUrls,
         marketCountry,
         useSerp: serp,
+        suggestedCountry: marketCountry,
+        ...(suggestedIndustry ? { suggestedIndustry } : {}),
       },
     },
   });
@@ -2041,7 +2094,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /api/public/diagnostic/:id/start — email + 1–5 URLs competidor; consume cupo y ejecuta pipeline.
   fastify.post<{
     Params: { id: string };
-    Body: { email: string; competitorUrls: string[]; useSerp?: boolean };
+    Body: {
+      email: string;
+      competitorUrls: string[];
+      useSerp?: boolean;
+      country?: string;
+      industry?: string;
+      engines?: string[];
+    };
   }>('/diagnostic/:id/start', async (request, reply) => {
     try {
       const schema = z.object({
@@ -2052,6 +2112,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           .max(MAX_PUBLIC_COMPETITOR_URLS)
           .refine((arr) => arr.some((s) => String(s).trim().length > 0), 'Al menos una URL de competidor.'),
         useSerp: z.boolean().optional(),
+        country: z.string().trim().max(120).optional(),
+        industry: z.string().trim().max(160).optional(),
+        engines: z.array(z.string().trim().max(40)).max(10).optional(),
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -2060,7 +2123,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const { id } = request.params;
-      const { email, competitorUrls, useSerp: useSerpBody } = parsed.data;
+      const { email, competitorUrls, useSerp: useSerpBody, country, industry, engines } = parsed.data;
 
       const diagnostic = await prisma.publicDiagnostic.findUnique({ where: { id } });
       if (!diagnostic) {
@@ -2127,6 +2190,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       const competitorRows = competitorRowsFromDomains(domains, originalUrls);
 
+      const confirmedCountry = country?.trim() || draft?.confirmedCountry?.trim() || '';
+      const confirmedIndustry = industry?.trim() || draft?.confirmedIndustry?.trim() || '';
+      const selectedEngines =
+        (engines && engines.length ? engines : draft?.selectedEngines)?.filter(Boolean) ?? [];
+
       await prisma.publicDiagnostic.update({
         where: { id },
         data: {
@@ -2136,6 +2204,9 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             ...(draft ?? {}),
             confirmedCompetitorUrls: competitorUrls,
             confirmedAt: new Date().toISOString(),
+            ...(confirmedCountry ? { confirmedCountry } : {}),
+            ...(confirmedIndustry ? { confirmedIndustry } : {}),
+            ...(selectedEngines.length ? { selectedEngines } : {}),
           },
         },
       });
@@ -2161,6 +2232,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             defaultCountry,
             marketConfidenceMin,
             competitorRows,
+            ...(confirmedCountry ? { forcedCountry: confirmedCountry } : {}),
+            ...(confirmedIndustry ? { forcedIndustry: confirmedIndustry } : {}),
           });
         } catch (err) {
           fastify.log.error({ err, diagnosticId: id }, 'Error en diagnóstico');
@@ -2175,6 +2248,103 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/:id/start');
       const message = err instanceof Error ? err.message : 'Error interno';
       return reply.code(500).send({ error: message || 'Error interno.' });
+    }
+  });
+
+  // POST /api/public/diagnostic/:id/confirm-context — usuario confirma país + rubro (+ motores).
+  // Si cambió país o rubro respecto a lo sugerido, re-detecta competidores con el nuevo contexto.
+  fastify.post<{
+    Params: { id: string };
+    Body: { country?: string; industry?: string; engines?: string[] };
+  }>('/diagnostic/:id/confirm-context', async (request, reply) => {
+    try {
+      const schema = z.object({
+        country: z.string().trim().max(120).optional(),
+        industry: z.string().trim().max(160).optional(),
+        engines: z.array(z.string().trim().max(40)).max(10).optional(),
+      });
+      const parsed = schema.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: parsed.error.errors.map((e) => e.message).join(', ') || 'Datos inválidos.',
+        });
+      }
+      const { id } = request.params;
+      const diagnostic = await prisma.publicDiagnostic.findUnique({ where: { id } });
+      if (!diagnostic) {
+        return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
+      }
+      if (diagnostic.status !== 'awaiting_user' && diagnostic.status !== 'detecting_competitors') {
+        return reply.code(409).send({ error: 'El diagnóstico no está en etapa de confirmación.' });
+      }
+
+      const draft = parsePublicSetupDraft(diagnostic.setupDraftJson);
+      const confirmedCountry = parsed.data.country?.trim() || draft?.suggestedCountry?.trim() || '';
+      const confirmedIndustry = parsed.data.industry?.trim() || draft?.suggestedIndustry?.trim() || '';
+      const selectedEngines = (parsed.data.engines ?? draft?.selectedEngines ?? []).filter(Boolean);
+
+      const norm = (s?: string) => (s || '').trim().toLowerCase();
+      const countryChanged =
+        norm(confirmedCountry) !== norm(draft?.suggestedCountry) && Boolean(confirmedCountry);
+      const industryChanged =
+        norm(confirmedIndustry) !== norm(draft?.suggestedIndustry) && Boolean(confirmedIndustry);
+      const needsRedetect = countryChanged || industryChanged;
+
+      await prisma.publicDiagnostic.update({
+        where: { id },
+        data: {
+          status: needsRedetect ? 'detecting_competitors' : diagnostic.status,
+          setupDraftJson: {
+            ...setupDraftJsonRecord(diagnostic.setupDraftJson),
+            ...(confirmedCountry ? { confirmedCountry } : {}),
+            ...(confirmedIndustry ? { confirmedIndustry } : {}),
+            ...(selectedEngines.length ? { selectedEngines } : {}),
+          },
+        },
+      });
+
+      if (needsRedetect) {
+        const ipCountry = countryNameFromIso(headerCountryIso(request.headers['x-vercel-ip-country']));
+        const defaultCountry =
+          ipCountry || (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+        const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
+        const serp = draft?.useSerp ?? true;
+        const trimmedUrl =
+          diagnostic.domain && !diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '';
+        if (trimmedUrl) {
+          setImmediate(async () => {
+            try {
+              await runCompetitorDetectionJob({
+                log: fastify.log,
+                diagnosticId: id,
+                brandForRun: diagnostic.brandName,
+                trimmedUrl,
+                domain: diagnostic.domain,
+                serp,
+                defaultCountry,
+                marketConfidenceMin,
+                forcedCountry: confirmedCountry,
+                forcedIndustry: confirmedIndustry,
+              });
+            } catch (err) {
+              fastify.log.error({ err, diagnosticId: id }, 'Error en re-detección de competidores');
+              await prisma.publicDiagnostic
+                .update({ where: { id }, data: { status: 'awaiting_user' } })
+                .catch(() => {});
+            }
+          });
+        }
+      }
+
+      return reply.code(200).send({
+        ok: true,
+        redetecting: needsRedetect,
+        confirmedCountry,
+        confirmedIndustry,
+      });
+    } catch (err) {
+      fastify.log.error({ err, body: request.body }, 'Error POST /diagnostic/:id/confirm-context');
+      return reply.code(500).send({ error: 'Error interno al confirmar contexto.' });
     }
   });
 
@@ -3244,6 +3414,11 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         suggestedCompetitorUrls: string[];
         marketCountry?: string;
         useSerp?: boolean;
+        suggestedCountry?: string;
+        suggestedIndustry?: string;
+        confirmedCountry?: string;
+        confirmedIndustry?: string;
+        selectedEngines?: string[];
       } | null;
       email?: string | null;
       sourceChannel?: string | null;

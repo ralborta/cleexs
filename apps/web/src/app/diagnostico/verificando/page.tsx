@@ -6,12 +6,17 @@ import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
-import { ArrowLeft, Boxes, Globe, Loader2, Lock, Mail, Pencil, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OnboardingRightStage } from '@/components/diagnostico/onboarding-right-stage';
+import {
+  OnboardingSetupWizard,
+  ENGINE_OPTIONS,
+  type SetupStep,
+} from '@/components/diagnostico/onboarding-setup-wizard';
 import { ONBOARDING_STEP_LABELS, saveOnboardingSnapshot, type SitePreviewContext } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { OnboardingMomentStack, type MomentKind } from './onboarding-moments';
@@ -106,8 +111,14 @@ function VerificandoContent() {
   const [legacySetupHumanOk, setLegacySetupHumanOk] = useState(false);
   const [startAnalysisLoading, setStartAnalysisLoading] = useState(false);
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null);
-  /** Setup público (awaiting_user): 1 captcha → 2 email → 3 competidores */
-  const [publicSetupStep, setPublicSetupStep] = useState<1 | 2 | 3>(1);
+  /** Setup público (awaiting_user): 1 humano → 2 país → 3 rubro → 4 motores → 5 competidores → 6 email */
+  const [publicSetupStep, setPublicSetupStep] = useState<SetupStep>(1);
+  const [setupCountry, setSetupCountry] = useState('');
+  const [setupIndustry, setSetupIndustry] = useState('');
+  const [setupEngines, setSetupEngines] = useState<string[]>(['chatgpt']);
+  const [contextLoading, setContextLoading] = useState(false);
+  /** True una vez que el usuario confirmó país+rubro (gatilla la detección/progreso). */
+  const contextConfirmedRef = useRef(false);
   /** Modal legacy (running sin email): 1 captcha → 2 email */
   const [legacyPublicStep, setLegacyPublicStep] = useState<1 | 2>(1);
   const setupWizardInitRef = useRef<string | null>(null);
@@ -191,8 +202,9 @@ function VerificandoContent() {
   const hasServerEmailAfterStart = isRunning && Boolean(diagnosticEmailTrimmed);
   const needsLegacyEmailCaptchaModal =
     isRunning && !diagnosticEmailTrimmed && !captchaVerified;
-  const displayCaptchaVerified =
-    captchaVerified || isPreRunBackdrop || hasServerEmailAfterStart;
+  // El progreso de la izquierda "arranca" recién cuando el usuario confirma país+rubro
+  // (captchaVerified) o el análisis ya está corriendo. Antes, invita a confirmar a la derecha.
+  const displayCaptchaVerified = captchaVerified || hasServerEmailAfterStart;
   const ctx: SitePreviewContext = useMemo(
     () => ({
       brandName: brandLabel,
@@ -288,7 +300,22 @@ function VerificandoContent() {
     setLegacySetupHumanOk(false);
     setPublicSetupStep(1);
     setLegacyPublicStep(1);
+    setSetupCountry('');
+    setSetupIndustry('');
+    setSetupEngines(['chatgpt']);
+    contextConfirmedRef.current = false;
   }, [diagnosticId]);
+
+  // Hidrata país/rubro sugeridos cuando llegan del backend (si el usuario aún no tocó).
+  useEffect(() => {
+    const draft = diagnostic?.setupDraft;
+    if (!draft) return;
+    if (contextConfirmedRef.current) return;
+    setSetupCountry(
+      (prev) => prev || draft.confirmedCountry || draft.suggestedCountry || draft.marketCountry || ''
+    );
+    setSetupIndustry((prev) => prev || draft.confirmedIndustry || draft.suggestedIndustry || '');
+  }, [diagnostic?.setupDraft]);
 
   useEffect(() => {
     if (normalizedDiagnosticStatus === 'detecting_competitors') {
@@ -302,12 +329,16 @@ function VerificandoContent() {
     if (!d?.id) return;
     if (setupWizardInitRef.current === d.id) return;
     setupWizardInitRef.current = d.id;
-    setPublicSetupStep(1);
+    if (!contextConfirmedRef.current) setPublicSetupStep(1);
     setSetupHumanOk(false);
     setSetupEmail('');
     setStartAnalysisError(null);
+    const draft = d.setupDraft;
+    setSetupCountry((prev) => prev || draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '');
+    setSetupIndustry((prev) => prev || draft?.confirmedIndustry || draft?.suggestedIndustry || '');
+    if (draft?.selectedEngines?.length) setSetupEngines(draft.selectedEngines);
     // Las URLs de competidores las hidrata el efecto que sigue el setupDraft (evita quedar en blanco si el primer poll llega sin borrador).
-  }, [normalizedDiagnosticStatus, diagnostic?.id]);
+  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft]);
 
   useEffect(() => {
     if (normalizedDiagnosticStatus !== 'awaiting_user') return;
@@ -461,31 +492,73 @@ function VerificandoContent() {
     return () => clearTimeout(t);
   }, [activeStepForCards, visibleStepCards]);
 
-  const handlePublicSetupStep1Next = useCallback(() => {
-    if (!setupHumanOk) return;
-    if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
-    setStartAnalysisError(null);
-    setPublicSetupStep(2);
-  }, [setupHumanOk, diagnosticId]);
-
-  const handlePublicSetupStep2Next = useCallback(() => {
-    const em = setupEmail.trim();
-    if (!em.includes('@')) {
-      setStartAnalysisError('Ingresá un correo válido.');
+  // Confirma país + rubro → arranca detección/progreso y avanza al paso de motores.
+  const handleConfirmContext = useCallback(async () => {
+    if (!diagnosticId) return;
+    const c = setupCountry.trim();
+    const ind = setupIndustry.trim();
+    if (!c || !ind) {
+      setStartAnalysisError('Confirmá país y rubro para continuar.');
       return;
     }
     setStartAnalysisError(null);
-    competitorUrlsTouchedRef.current = false;
-    lastHydratedSuggestedJsonRef.current = '';
-    const draftUrls = fiveUrlsFromDraft(diagnostic?.setupDraft ?? null);
-    if (draftUrls.some((u) => u.trim())) {
-      setCompetitorUrls(draftUrls);
-      lastHydratedSuggestedJsonRef.current = JSON.stringify(
-        diagnostic?.setupDraft?.suggestedCompetitorUrls ?? []
-      );
+    setContextLoading(true);
+    try {
+      contextConfirmedRef.current = true;
+      setCaptchaVerified(true);
+      await publicDiagnosticApi.confirmContext(diagnosticId, {
+        country: c,
+        industry: ind,
+        engines: setupEngines,
+      });
+      trackOnboarding('onboarding_context_confirmed', { diagnosticId });
+      setPublicSetupStep(4);
+    } catch (err) {
+      setStartAnalysisError(err instanceof Error ? err.message : 'No se pudo confirmar el contexto.');
+    } finally {
+      setContextLoading(false);
     }
-    setPublicSetupStep(3);
-  }, [setupEmail, diagnostic?.setupDraft]);
+  }, [diagnosticId, setupCountry, setupIndustry, setupEngines]);
+
+  const handleToggleEngine = useCallback((id: string) => {
+    setSetupEngines((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]));
+  }, []);
+
+  const handleCompetitorChange = useCallback(
+    (idx: number, nextVal: string) => {
+      const hydrated = fiveUrlsFromDraft(diagnostic?.setupDraft ?? null);
+      const wasHydratedEmpty = !hydrated.some((u) => u.trim());
+      if (!wasHydratedEmpty && nextVal !== (hydrated[idx] ?? '')) {
+        competitorUrlsTouchedRef.current = true;
+      } else if (wasHydratedEmpty && nextVal.trim()) {
+        competitorUrlsTouchedRef.current = true;
+      }
+      setCompetitorUrls((prev) => {
+        const next = [...prev];
+        next[idx] = nextVal;
+        return next;
+      });
+    },
+    [diagnostic?.setupDraft]
+  );
+
+  const handleCompetitorRemove = useCallback((idx: number) => {
+    competitorUrlsTouchedRef.current = true;
+    setCompetitorUrls((prev) => {
+      const next = [...prev];
+      next[idx] = '';
+      return next;
+    });
+  }, []);
+
+  const handleRestoreSuggested = useCallback(() => {
+    competitorUrlsTouchedRef.current = false;
+    const next = fiveUrlsFromDraft(diagnostic?.setupDraft ?? null);
+    lastHydratedSuggestedJsonRef.current = JSON.stringify(
+      diagnostic?.setupDraft?.suggestedCompetitorUrls ?? []
+    );
+    setCompetitorUrls(next);
+  }, [diagnostic?.setupDraft]);
 
   const handleLegacyStep1Next = useCallback(() => {
     if (!legacySetupHumanOk) return;
@@ -493,8 +566,8 @@ function VerificandoContent() {
     setLegacyPublicStep(2);
   }, [legacySetupHumanOk, diagnosticId]);
 
-  const handleSetupStartAnalysis = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSetupStartAnalysis = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!diagnosticId || !diagnostic) return;
     setStartAnalysisError(null);
     const trimmed = competitorUrls.map((u) => u.trim());
@@ -527,6 +600,9 @@ function VerificandoContent() {
           ...(typeof diagnostic.setupDraft?.useSerp === 'boolean'
             ? { useSerp: diagnostic.setupDraft.useSerp }
             : {}),
+          ...(setupCountry.trim() ? { country: setupCountry.trim() } : {}),
+          ...(setupIndustry.trim() ? { industry: setupIndustry.trim() } : {}),
+          ...(setupEngines.length ? { engines: setupEngines } : {}),
         },
         { visitorId: vid }
       );
@@ -539,6 +615,45 @@ function VerificandoContent() {
     } finally {
       setStartAnalysisLoading(false);
     }
+  };
+
+  const handleWizardNext = () => {
+    setStartAnalysisError(null);
+    switch (publicSetupStep) {
+      case 1:
+        if (!setupHumanOk) return;
+        if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
+        setPublicSetupStep(2);
+        return;
+      case 2:
+        if (!setupCountry.trim()) return;
+        setPublicSetupStep(3);
+        return;
+      case 3:
+        void handleConfirmContext();
+        return;
+      case 4:
+        if (setupEngines.length < 1) return;
+        setPublicSetupStep(5);
+        return;
+      case 5: {
+        const filled = competitorUrls.map((u) => u.trim()).filter(Boolean).length;
+        if (filled < 1) {
+          setStartAnalysisError('Agregá al menos una URL de competidor.');
+          return;
+        }
+        setPublicSetupStep(6);
+        return;
+      }
+      case 6:
+        void handleSetupStartAnalysis();
+        return;
+    }
+  };
+
+  const handleWizardBack = (to: SetupStep) => {
+    setStartAnalysisError(null);
+    setPublicSetupStep(to);
   };
 
   const handleLegacySetupSave = async (e: React.FormEvent) => {
@@ -708,25 +823,15 @@ function VerificandoContent() {
   const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
   const filledSetupCompetitorCount = trimmedSetupCompetitorUrls.filter(Boolean).length;
   const suggestedFromServer = diagnostic.setupDraft?.suggestedCompetitorUrls ?? [];
-  const awaitingCompetitorSuggestions =
-    publicSetupStep === 3 &&
-    normalizedDiagnosticStatus === 'awaiting_user' &&
-    filledSetupCompetitorCount < 1 &&
-    suggestedFromServer.length < 1;
-  const canFinalizePublicSetup =
-    setupHumanOk &&
-    setupEmail.trim().includes('@') &&
-    filledSetupCompetitorCount >= 1 &&
-    filledSetupCompetitorCount <= 5;
+  const competitorsDetecting =
+    normalizedDiagnosticStatus === 'detecting_competitors' ||
+    (normalizedDiagnosticStatus === 'awaiting_user' &&
+      filledSetupCompetitorCount < 1 &&
+      suggestedFromServer.length < 1);
 
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
-      <div
-        className={cn(
-          'mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0',
-          isPreRunBackdrop && 'pointer-events-none select-none'
-        )}
-      >
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
         <div className="mb-4 shrink-0 sm:mb-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -743,13 +848,13 @@ function VerificandoContent() {
           </div>
         </div>
 
-        <div
-          className={cn(
-            'grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8',
-            isPreRunBackdrop && 'pointer-events-none'
-          )}
-        >
-          <div className="flex min-h-0 min-w-0 flex-col">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
+          <div
+            className={cn(
+              'flex min-h-0 min-w-0 flex-col',
+              isPreRunBackdrop && 'pointer-events-none select-none'
+            )}
+          >
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="h-1.5 w-full overflow-hidden bg-slate-100">
                 <div
@@ -813,8 +918,8 @@ function VerificandoContent() {
                     Completá verificación y correo en el formulario que aparece sobre esta pantalla (centro).
                   </p>
                 ) : (
-                  <p className="mt-2 text-sm text-slate-600">Confirmá que sos humano en la ventana a la derecha. Ahí
-                    arranca el análisis visual y el progreso.</p>
+                  <p className="mt-2 text-sm text-slate-600">Confirmá tu país y rubro en los pasos de la derecha. Al
+                    confirmarlos arranca el análisis y el progreso.</p>
                 )}
               </div>
             </div>
@@ -853,6 +958,34 @@ function VerificandoContent() {
             />
 
             <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3">
+              {isPreRunBackdrop ? (
+                <OnboardingSetupWizard
+                  step={publicSetupStep}
+                  humanOk={setupHumanOk}
+                  onHumanOk={setSetupHumanOk}
+                  country={setupCountry}
+                  onCountry={setSetupCountry}
+                  industry={setupIndustry}
+                  onIndustry={setSetupIndustry}
+                  engines={setupEngines}
+                  onToggleEngine={handleToggleEngine}
+                  competitorUrls={competitorUrls}
+                  onCompetitorChange={handleCompetitorChange}
+                  onCompetitorRemove={handleCompetitorRemove}
+                  onRestoreSuggested={handleRestoreSuggested}
+                  competitorsLoading={competitorsDetecting}
+                  filledCompetitorCount={filledSetupCompetitorCount}
+                  email={setupEmail}
+                  onEmail={setSetupEmail}
+                  onStepNext={handleWizardNext}
+                  onBack={handleWizardBack}
+                  onExit={exitPublicSetupToMarketingSite}
+                  contextLoading={contextLoading}
+                  finalizeLoading={startAnalysisLoading}
+                  error={startAnalysisError}
+                />
+              ) : (
+                <>
               <OnboardingRightStage
                 stepIndex={displayActiveIndex}
                 brandName={brandLabel}
@@ -927,6 +1060,8 @@ function VerificandoContent() {
               {captchaVerified && !showLegacyEmail && !emailSent && progress >= 45 && analysisRunningPhase && (
                 <p className="text-center text-[10px] text-slate-500">El correo se habilita al 60% del progreso.</p>
               )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -936,340 +1071,6 @@ function VerificandoContent() {
           informe.
         </p>
       </div>
-
-      {portalRoot &&
-        normalizedDiagnosticStatus === 'awaiting_user' &&
-        createPortal(
-        <div
-          className="pointer-events-auto fixed inset-0 flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-md sm:items-center"
-          style={{ zIndex: 2147483000 }}
-        >
-          <div
-            className={cn(
-              'relative my-auto w-full max-w-xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl sm:p-8',
-              (publicSetupStep === 1 || publicSetupStep === 2) &&
-                'flex min-h-[31rem] flex-col sm:min-h-[33rem]'
-            )}
-            role="dialog"
-            aria-modal
-            aria-labelledby="setup-modal-title"
-          >
-            <button
-              type="button"
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-              onClick={exitPublicSetupToMarketingSite}
-              aria-label="Cerrar y volver al sitio público de Cleexs"
-            >
-              <X className="h-5 w-5" aria-hidden />
-            </button>
-
-            <div className="mb-6 flex gap-2 pr-10" aria-hidden>
-              {([1, 2, 3] as const).map((s) => (
-                <div
-                  key={s}
-                  className={cn(
-                    'h-1.5 flex-1 rounded-full transition-colors',
-                    publicSetupStep >= s ? 'bg-violet-600' : 'bg-slate-200'
-                  )}
-                />
-              ))}
-            </div>
-
-            {publicSetupStep === 1 ? (
-              <div className="flex flex-col items-center px-2 pb-1 pt-1 text-center sm:px-4">
-                <Lock className="h-10 w-10 text-slate-400" strokeWidth={1.25} aria-hidden />
-                <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Paso 1 de 3
-                </p>
-                <h1 id="setup-modal-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                  Confirmá que sos humano y empezamos
-                </h1>
-                <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600">
-                  Con un click activamos el análisis en vivo de tu sitio. Después vas a ver el progreso paso a paso hasta
-                  tu Cleexs Score.
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3 pr-10">
-                <span
-                  className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1',
-                    publicSetupStep === 2
-                      ? 'bg-violet-600 text-white ring-violet-700/30'
-                      : 'bg-violet-100 text-violet-700 ring-violet-200/60'
-                  )}
-                >
-                  {publicSetupStep === 2 ? (
-                    <Mail className="h-6 w-6" aria-hidden />
-                  ) : (
-                    <Globe className="h-6 w-6" aria-hidden />
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-                    Paso {publicSetupStep} de 3
-                  </p>
-                  <h1 id="setup-modal-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                    {publicSetupStep === 2 && 'Desbloqueá el envío a tu mail'}
-                    {publicSetupStep === 3 && 'Competidores'}
-                  </h1>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    {publicSetupStep === 2 &&
-                      'Escribí el correo donde querés recibir el aviso cuando el análisis cierre.'}
-                    {publicSetupStep === 3 &&
-                      'Te sugerimos competidores de tu sector. Podés dejar solo los que quieras comparar: con al menos una URL válida el análisis continúa (hasta cinco).'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {publicSetupStep === 1 && (
-              <form
-                className="mt-6 sm:mt-8"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handlePublicSetupStep1Next();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter' || e.repeat) return;
-                  if (e.nativeEvent.isComposing) return;
-                  const el = e.target as HTMLElement;
-                  if (el.closest('a[href]')) return;
-                  const btn = el.closest('button');
-                  if (btn?.getAttribute('type') === 'button') return;
-                  if (btn?.getAttribute('type') === 'submit') return;
-                  if (!setupHumanOk) return;
-                  e.preventDefault();
-                  handlePublicSetupStep1Next();
-                }}
-              >
-                <div className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-4 sm:px-5">
-                  <label className="flex w-full cursor-pointer items-center gap-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={setupHumanOk}
-                      onChange={(e) => setSetupHumanOk(e.target.checked)}
-                      className="h-[18px] w-[18px] shrink-0 rounded border-slate-400 text-violet-600 focus:ring-2 focus:ring-violet-500"
-                    />
-                    <span className="text-sm font-medium text-slate-800">Soy Humano</span>
-                  </label>
-                </div>
-                <div className="mt-8 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={exitPublicSetupToMarketingSite}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6"
-                    disabled={!setupHumanOk}
-                  >
-                    Continuar
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {publicSetupStep === 2 && (
-              <form
-                className="mt-8 border-t border-slate-100 pt-8"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handlePublicSetupStep2Next();
-                }}
-              >
-                <div className="rounded-2xl border border-violet-200/90 bg-gradient-to-b from-violet-50/95 via-white to-white p-5 shadow-sm ring-1 ring-violet-100/80">
-                  <input
-                    type="email"
-                    value={setupEmail}
-                    onChange={(e) => setSetupEmail(e.target.value)}
-                    className="w-full rounded-xl border border-violet-200/90 bg-white py-3 px-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-violet-500/15 focus:border-violet-400 focus:ring-2"
-                    placeholder="correo@empresa.com"
-                    autoComplete="email"
-                  />
-                </div>
-                {startAnalysisError && publicSetupStep === 2 && (
-                  <p className="mt-3 text-sm text-red-600" role="alert">
-                    {startAnalysisError}
-                  </p>
-                )}
-                <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="gap-1 rounded-xl text-slate-700"
-                    onClick={() => {
-                      setStartAnalysisError(null);
-                      setPublicSetupStep(1);
-                    }}
-                  >
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                    Atrás
-                  </Button>
-                  <Button type="submit" className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6">
-                    Continuar
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {publicSetupStep === 3 && (
-              <form onSubmit={handleSetupStartAnalysis}>
-                <section className="mt-8 border-t border-slate-100 pt-8">
-                  {awaitingCompetitorSuggestions && (
-                    <div
-                      className="mb-4 flex items-center gap-3 rounded-xl border border-violet-200/80 bg-violet-50/60 px-4 py-3 text-sm text-violet-900"
-                      role="status"
-                    >
-                      <Loader2 className="h-5 w-5 shrink-0 animate-spin text-violet-600" aria-hidden />
-                      <span>Buscando competidores de tu sector… Si tarda, podés cargar las URLs a mano abajo.</span>
-                    </div>
-                  )}
-                  <div className="mt-4 space-y-2.5">
-                    {competitorUrls.map((val, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1.5 sm:gap-3"
-                      >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-bold tabular-nums text-slate-500 ring-1 ring-slate-200/80">
-                          {idx + 1}
-                        </span>
-                        <Globe className="hidden h-4 w-4 shrink-0 text-slate-400 sm:block" aria-hidden />
-                        <input
-                          type="text"
-                          inputMode="url"
-                          id={`comp-url-${idx}`}
-                          value={val}
-                          onChange={(e) => {
-                            const nextVal = e.target.value;
-                            const hydrated = fiveUrlsFromDraft(diagnostic.setupDraft);
-                            const wasHydratedEmpty = !hydrated.some((u) => u.trim());
-                            if (!wasHydratedEmpty && nextVal !== (hydrated[idx] ?? '')) {
-                              competitorUrlsTouchedRef.current = true;
-                            } else if (wasHydratedEmpty && nextVal.trim()) {
-                              competitorUrlsTouchedRef.current = true;
-                            }
-                            const next = [...competitorUrls];
-                            next[idx] = nextVal;
-                            setCompetitorUrls(next);
-                          }}
-                          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-0"
-                          placeholder="https://competidor.com"
-                        />
-                        <button
-                          type="button"
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-50"
-                          aria-label={`Editar URL ${idx + 1}`}
-                          onClick={() => {
-                            document.getElementById(`comp-url-${idx}`)?.focus();
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            competitorUrlsTouchedRef.current = true;
-                            const next = [...competitorUrls];
-                            next[idx] = '';
-                            setCompetitorUrls(next);
-                          }}
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50"
-                          aria-label={`Quitar competidor ${idx + 1}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        competitorUrlsTouchedRef.current = false;
-                        const next = fiveUrlsFromDraft(diagnostic.setupDraft);
-                        lastHydratedSuggestedJsonRef.current = JSON.stringify(
-                          diagnostic.setupDraft?.suggestedCompetitorUrls ?? []
-                        );
-                        setCompetitorUrls(next);
-                      }}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Restaurar sugeridos
-                    </button>
-                  </div>
-                </section>
-
-                {startAnalysisError && (
-                  <p className="mt-4 text-sm text-red-600" role="alert">
-                    {startAnalysisError}
-                  </p>
-                )}
-
-                <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="gap-1 rounded-xl text-slate-700"
-                    onClick={() => {
-                      setStartAnalysisError(null);
-                      setPublicSetupStep(2);
-                    }}
-                  >
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                    Atrás
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!canFinalizePublicSetup || startAnalysisLoading}
-                    className="h-11 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 text-sm font-semibold text-white shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40"
-                  >
-                    <Save className="h-4 w-4" />
-                    {startAnalysisLoading ? 'Guardando…' : 'Guardar'}
-                  </Button>
-                </div>
-
-                <p className="mt-6 text-center text-[11px] text-slate-500">
-                  Al guardar aceptás los{' '}
-                  <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
-                    Términos
-                  </a>{' '}
-                  y la{' '}
-                  <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
-                    Privacidad
-                  </a>
-                  .
-                </p>
-              </form>
-            )}
-          </div>
-        </div>,
-        portalRoot
-        )}
-
-      {portalRoot &&
-        normalizedDiagnosticStatus === 'detecting_competitors' &&
-        createPortal(
-        <div
-          className="pointer-events-auto fixed inset-0 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-md"
-          style={{ zIndex: 2147483000 }}
-        >
-          <div className="flex max-w-sm flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
-            <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
-            <p className="mt-4 text-center text-lg font-semibold text-slate-900">Detectando competidores</p>
-            <p className="mt-2 text-center text-sm text-slate-600">
-              Buscamos competidores de tu sector (mínimo unas pocas sugerencias). Después podés completar la lista
-              hasta cinco en el siguiente paso. Suele tardar unos segundos.
-            </p>
-          </div>
-        </div>,
-        portalRoot
-        )}
 
       {portalRoot &&
         needsLegacyEmailCaptchaModal &&
