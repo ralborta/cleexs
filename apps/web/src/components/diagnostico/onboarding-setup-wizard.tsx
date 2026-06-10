@@ -7,11 +7,11 @@ import {
   Check,
   Globe,
   Loader2,
-  Lock,
   Mail,
   Pencil,
   Plus,
   Save,
+  ShieldCheck,
   Sparkles,
   Trash2,
   X,
@@ -31,7 +31,7 @@ export const ENGINE_OPTIONS: Array<{ id: string; label: string; sub: string }> =
 ];
 
 const STEP_META: Record<SetupStep, { label: string; title: string; icon: typeof Globe }> = {
-  1: { label: 'Paso 1 de 6', title: 'Confirmá que sos humano', icon: Lock },
+  1: { label: 'Paso 1 de 6', title: 'Confirmá que sos humano', icon: ShieldCheck },
   2: { label: 'Paso 2 de 6', title: '¿En qué país operás?', icon: Globe },
   3: { label: 'Paso 3 de 6', title: '¿Cuál es tu rubro?', icon: Building2 },
   4: { label: 'Paso 4 de 6', title: 'Motores de IA', icon: Sparkles },
@@ -125,7 +125,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
   const primaryLoading = step === 3 ? contextLoading : step === 6 ? finalizeLoading : false;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-lg backdrop-blur-sm">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-lg backdrop-blur-sm">
       {/* Progreso de pasos */}
       <div className="flex items-center gap-2 border-b border-slate-100 px-5 pb-3 pt-4">
         <div className="flex flex-1 gap-1.5" aria-hidden>
@@ -149,7 +149,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5">
+      <div className="flex flex-col px-5 py-5">
         {/* Encabezado del paso */}
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 ring-1 ring-violet-200/60">
@@ -162,7 +162,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
         </div>
 
         <form
-          className="mt-5 flex min-h-0 flex-1 flex-col"
+          className="mt-5 flex flex-col"
           onSubmit={(e) => {
             e.preventDefault();
             if (canNext && !primaryLoading) onStepNext();
@@ -170,26 +170,63 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
         >
           {/* ---------- Paso 1: humano ---------- */}
           {step === 1 && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
-                Con un click activamos el análisis en vivo de tu sitio. Vas a confirmar país y rubro, y después ver el
-                progreso paso a paso hasta tu Cleexs Score.
+                Ya tenemos tu país y rubro listos. Confirmá que sos una persona y arrancamos el análisis en vivo de tu
+                sitio.
               </p>
-              <label className="mt-5 flex w-full cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-left">
-                <input
-                  type="checkbox"
-                  checked={humanOk}
-                  onChange={(e) => onHumanOk(e.target.checked)}
-                  className="h-[18px] w-[18px] shrink-0 rounded border-slate-400 text-violet-600 focus:ring-2 focus:ring-violet-500"
-                />
-                <span className="text-sm font-medium text-slate-800">Soy humano</span>
-              </label>
+              <button
+                type="button"
+                onClick={() => onHumanOk(!humanOk)}
+                aria-pressed={humanOk}
+                className={cn(
+                  'group mt-5 flex w-full items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all',
+                  humanOk
+                    ? 'border-violet-500 bg-gradient-to-r from-violet-50 to-indigo-50 ring-2 ring-violet-100'
+                    : 'border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/30'
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all',
+                    humanOk
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+                      : 'bg-slate-100 text-slate-400 group-hover:bg-violet-100 group-hover:text-violet-500'
+                  )}
+                >
+                  {humanOk ? (
+                    <Check className="h-6 w-6" strokeWidth={2.5} />
+                  ) : (
+                    <ShieldCheck className="h-6 w-6" strokeWidth={1.75} />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-slate-900">Soy humano</span>
+                  <span className="block text-xs text-slate-500">
+                    {humanOk ? 'Verificado. Tocá “Continuar”.' : 'Tocá para confirmar'}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'relative h-7 w-12 shrink-0 rounded-full transition-colors',
+                    humanOk ? 'bg-violet-600' : 'bg-slate-200'
+                  )}
+                  aria-hidden
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all',
+                      humanOk ? 'left-[1.375rem]' : 'left-0.5'
+                    )}
+                  />
+                </span>
+              </button>
             </div>
           )}
 
           {/* ---------- Paso 2: país ---------- */}
           {step === 2 && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
                 Detectamos este país. Confirmalo o elegí otro: define el mercado del análisis.
               </p>
@@ -219,7 +256,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
 
           {/* ---------- Paso 3: rubro ---------- */}
           {step === 3 && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
                 Este es el rubro que inferimos. Confirmalo o reescribilo con tus palabras: ajusta los competidores y el
                 análisis.
@@ -246,7 +283,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
 
           {/* ---------- Paso 4: motores ---------- */}
           {step === 4 && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
                 Hoy el análisis es gratis con ChatGPT. Elegí qué motores querés medir: dejamos registrada tu selección
                 para cuando sumes el plan pago.
@@ -287,7 +324,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
 
           {/* ---------- Paso 5: competidores ---------- */}
           {step === 5 && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
                 Estos son los competidores de tu sector. Dejá los que quieras comparar (al menos 1, hasta 5).
               </p>
@@ -349,7 +386,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
 
           {/* ---------- Paso 6: email ---------- */}
           {step === 6 && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
                 Escribí el correo donde querés recibir el aviso y el resumen cuando cierre el análisis. Sin spam.
               </p>

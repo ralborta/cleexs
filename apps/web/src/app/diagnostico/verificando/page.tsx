@@ -828,6 +828,11 @@ function VerificandoContent() {
     (normalizedDiagnosticStatus === 'awaiting_user' &&
       filledSetupCompetitorCount < 1 &&
       suggestedFromServer.length < 1);
+  // El captcha + wizard aparecen recién cuando la detección terminó (awaiting_user).
+  // Antes mostramos un "remolino procesando". Tras confirmar país+rubro (captchaVerified)
+  // ya no volvemos a tapar con el spinner aunque se re-detecten competidores.
+  const setupDataReady = normalizedDiagnosticStatus === 'awaiting_user';
+  const setupShowProcessing = !setupDataReady && !captchaVerified;
 
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
@@ -957,8 +962,30 @@ function VerificandoContent() {
               className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
             />
 
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3">
-              {isPreRunBackdrop ? (
+            <div
+              className={cn(
+                'relative z-10 flex min-h-0 flex-1 flex-col gap-3',
+                isPreRunBackdrop && 'justify-center'
+              )}
+            >
+              {isPreRunBackdrop && setupShowProcessing ? (
+                <div className="m-auto flex w-full max-w-md flex-col items-center rounded-2xl border border-slate-200/90 bg-white/95 p-10 text-center shadow-lg backdrop-blur-sm">
+                  <span className="relative flex h-16 w-16 items-center justify-center">
+                    <span className="absolute inset-0 animate-ping rounded-full bg-violet-400/30" />
+                    <Loader2 className="h-12 w-12 animate-spin text-violet-600" aria-hidden />
+                  </span>
+                  <p className="mt-6 text-lg font-bold text-slate-900">Procesando tu información</p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Estamos detectando tu país, tu rubro y los competidores de tu sector. En unos segundos vas a poder
+                    confirmar y arrancar.
+                  </p>
+                  <div className="mt-5 flex items-center gap-1.5 text-xs font-medium text-violet-600">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              ) : isPreRunBackdrop ? (
                 <OnboardingSetupWizard
                   step={publicSetupStep}
                   humanOk={setupHumanOk}
