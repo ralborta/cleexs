@@ -2179,6 +2179,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         const canGenerate = await checkEntitlement(prisma, {
           actor: { anonymousId: visitorId },
           action: EntitlementAction.score_generate,
+          // Cupo por dominio: una marca nueva nunca se bloquea por marcas previas.
+          domainScope: diagnostic.domain,
         });
         if (!canGenerate.allowed) {
           return reply.code(403).send({
@@ -2232,7 +2234,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           actor: { anonymousId: visitorId },
           action: EntitlementAction.score_generate,
           dedupeKey: `anon-score-generate:${visitorId}:${id}`,
-          metaJson: { diagnosticId: id, domain: diagnostic.domain },
+          metaJson: { diagnosticId: id, domain: (diagnostic.domain || '').toLowerCase() },
         });
       }
 

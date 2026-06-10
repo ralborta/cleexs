@@ -21,6 +21,12 @@ export type EntitlementCheckInput = {
   brandId?: string;
   profileSlug?: string;
   dedupeKey?: string;
+  /**
+   * Acota el conteo de uso a un dominio/marca puntual (se compara contra `metaJson.domain`).
+   * Pensado para `score_generate` anónimo: cada dominio nuevo arranca su propio cupo,
+   * así una marca nueva nunca se bloquea por haber analizado otras marcas antes.
+   */
+  domainScope?: string;
 };
 
 export type EntitlementCheckResult = {
@@ -192,7 +198,8 @@ async function countUsageForAction(
   actor: EntitlementActor,
   action: EntitlementAction,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
+  domainScope?: string
 ) {
   const where: Prisma.UsageLedgerWhereInput = {
     action,
@@ -203,6 +210,12 @@ async function countUsageForAction(
   if (actor.userId) where.userId = actor.userId;
   else if (actor.tenantId) where.tenantId = actor.tenantId;
   else where.anonymousId = actor.anonymousId || 'anonymous';
+
+  // Cupo por dominio: solo cuenta usos del mismo dominio (marca nueva = contador 0).
+  const scope = domainScope?.trim().toLowerCase();
+  if (scope) {
+    where.metaJson = { path: ['domain'], equals: scope } as Prisma.UsageLedgerWhereInput['metaJson'];
+  }
 
   const aggregate = await prisma.usageLedger.aggregate({
     where,
@@ -369,7 +382,7 @@ export async function checkEntitlement(
   const usage =
     input.action === EntitlementAction.score_view
       ? await countDistinctScoreViews(prisma, input.actor, start, end)
-      : await countUsageForAction(prisma, input.actor, input.action, start, end);
+      : await countUsageForAction(prisma, input.actor, input.action, start, end, input.domainScope);
 
   const limit = monthlyUsageLimit(limits, input.action);
 
