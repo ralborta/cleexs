@@ -1330,6 +1330,80 @@ async function notifyWaChannelFailure(
   await deliverWaReplyToUser(log, recipient, buildWhatsAppErrorReply(code, message));
 }
 
+/** Solo infiere país + rubro para el wizard; los competidores vienen después de confirm-context. */
+async function runContextInferenceJob(params: {
+  log: PublicDiagLog;
+  diagnosticId: string;
+  brandForRun: string;
+  trimmedUrl: string;
+  domain: string;
+  serp: boolean;
+  defaultCountry: string;
+  marketConfidenceMin: number;
+}): Promise<void> {
+  const { log, diagnosticId, brandForRun, trimmedUrl, serp, defaultCountry, marketConfidenceMin } = params;
+
+  try {
+    const countryFromTld = getCountryFromDomain(trimmedUrl);
+    const analysisContext = await resolveBrandAnalysisContext({
+      brandName: brandForRun,
+      websiteUrl: trimmedUrl,
+      fallbackCountry: defaultCountry,
+      fallbackIndustry: 'General',
+      knownCountry: countryFromTld || undefined,
+      useSearchEvidence: serp,
+    });
+    const marketCountry =
+      countryFromTld ??
+      (analysisContext.confidence >= marketConfidenceMin
+        ? analysisContext.country || defaultCountry
+        : defaultCountry);
+
+    let suggestedIndustry: string | undefined;
+    const ctxIndustry = (analysisContext.industry || '').trim();
+    if (ctxIndustry && ctxIndustry.toLowerCase() !== 'general') suggestedIndustry = ctxIndustry;
+    if (!suggestedIndustry) {
+      try {
+        const ind = await determineIndustry(brandForRun, trimmedUrl, marketCountry);
+        const val = (ind.industry || '').trim();
+        if (val && val.toLowerCase() !== 'general') suggestedIndustry = val;
+      } catch (err) {
+        log.warn({ err, diagnosticId }, 'No se pudo inferir rubro en context inference');
+      }
+    }
+
+    await prisma.publicDiagnostic.update({
+      where: { id: diagnosticId },
+      data: {
+        status: 'awaiting_user',
+        setupDraftJson: {
+          suggestedCompetitorUrls: [],
+          marketCountry,
+          useSerp: serp,
+          suggestedCountry: marketCountry,
+          ...(suggestedIndustry ? { suggestedIndustry } : {}),
+        },
+      },
+    });
+  } catch (err) {
+    log.warn({ err, diagnosticId }, 'Context inference falló; awaiting_user con defaults');
+    await prisma.publicDiagnostic
+      .update({
+        where: { id: diagnosticId },
+        data: {
+          status: 'awaiting_user',
+          setupDraftJson: {
+            suggestedCompetitorUrls: [],
+            marketCountry: defaultCountry,
+            useSerp: serp,
+            suggestedCountry: defaultCountry,
+          },
+        },
+      })
+      .catch(() => {});
+  }
+}
+
 async function runCompetitorDetectionJob(params: {
   log: PublicDiagLog;
   diagnosticId: string;
@@ -1450,15 +1524,22 @@ async function runCompetitorDetectionJob(params: {
   }
 
   if (suggestedCompetitorUrls.length === 0) {
-    log.warn({ diagnosticId, domain }, 'Detección de competidores: sin URLs tras rescue');
+    log.warn({ diagnosticId, domain }, 'Detección de competidores: sin URLs tras rescue; usuario puede cargar manual');
+    const existingDraftRow = await prisma.publicDiagnostic.findUnique({
+      where: { id: diagnosticId },
+      select: { setupDraftJson: true },
+    });
     await prisma.publicDiagnostic.update({
       where: { id: diagnosticId },
       data: {
-        status: 'failed',
+        status: 'awaiting_user',
         setupDraftJson: {
+          ...setupDraftJsonRecord(existingDraftRow?.setupDraftJson),
           suggestedCompetitorUrls: [],
           marketCountry,
           useSerp: serp,
+          suggestedCountry: marketCountry,
+          ...(suggestedIndustry ? { suggestedIndustry } : {}),
           competitorRescueAttemptedAt: new Date().toISOString(),
         },
       },
@@ -2074,24 +2155,18 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const diagId = diagnostic.id;
       const serp = useSerp !== false;
 
+      // Solo país + rubro al crear; competidores después de confirm-context.
       setImmediate(async () => {
-        try {
-          await runCompetitorDetectionJob({
-            log: fastify.log,
-            diagnosticId: diagId,
-            brandForRun,
-            trimmedUrl,
-            domain,
-            serp,
-            defaultCountry,
-            marketConfidenceMin,
-          });
-        } catch (err) {
-          fastify.log.error({ err, diagnosticId: diagId }, 'Error en detección de competidores');
-          await prisma.publicDiagnostic
-            .update({ where: { id: diagId }, data: { status: 'failed' } })
-            .catch(() => {});
-        }
+        await runContextInferenceJob({
+          log: fastify.log,
+          diagnosticId: diagId,
+          brandForRun,
+          trimmedUrl,
+          domain,
+          serp,
+          defaultCountry,
+          marketConfidenceMin,
+        });
       });
 
       return reply.code(201).send({ diagnosticId: diagnostic.id });
@@ -2301,17 +2376,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const confirmedIndustry = parsed.data.industry?.trim() || draft?.suggestedIndustry?.trim() || '';
       const selectedEngines = (parsed.data.engines ?? draft?.selectedEngines ?? []).filter(Boolean);
 
-      const norm = (s?: string) => (s || '').trim().toLowerCase();
-      const countryChanged =
-        norm(confirmedCountry) !== norm(draft?.suggestedCountry) && Boolean(confirmedCountry);
-      const industryChanged =
-        norm(confirmedIndustry) !== norm(draft?.suggestedIndustry) && Boolean(confirmedIndustry);
-      const needsRedetect = countryChanged || industryChanged;
-
       await prisma.publicDiagnostic.update({
         where: { id },
         data: {
-          status: needsRedetect ? 'detecting_competitors' : diagnostic.status,
+          status: 'detecting_competitors',
           setupDraftJson: {
             ...setupDraftJsonRecord(diagnostic.setupDraftJson),
             ...(confirmedCountry ? { confirmedCountry } : {}),
@@ -2321,42 +2389,40 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (needsRedetect) {
-        const ipCountry = countryNameFromIso(headerCountryIso(request.headers['x-vercel-ip-country']));
-        const defaultCountry =
-          ipCountry || (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
-        const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
-        const serp = draft?.useSerp ?? true;
-        const trimmedUrl =
-          diagnostic.domain && !diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '';
-        if (trimmedUrl) {
-          setImmediate(async () => {
-            try {
-              await runCompetitorDetectionJob({
-                log: fastify.log,
-                diagnosticId: id,
-                brandForRun: diagnostic.brandName,
-                trimmedUrl,
-                domain: diagnostic.domain,
-                serp,
-                defaultCountry,
-                marketConfidenceMin,
-                forcedCountry: confirmedCountry,
-                forcedIndustry: confirmedIndustry,
-              });
-            } catch (err) {
-              fastify.log.error({ err, diagnosticId: id }, 'Error en re-detección de competidores');
-              await prisma.publicDiagnostic
-                .update({ where: { id }, data: { status: 'awaiting_user' } })
-                .catch(() => {});
-            }
-          });
-        }
+      const ipCountry = countryNameFromIso(headerCountryIso(request.headers['x-vercel-ip-country']));
+      const defaultCountry =
+        ipCountry || (process.env.PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY || 'Argentina').trim();
+      const marketConfidenceMin = Number(process.env.PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN || 70);
+      const serp = draft?.useSerp ?? true;
+      const trimmedUrl =
+        diagnostic.domain && !diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '';
+      if (trimmedUrl) {
+        setImmediate(async () => {
+          try {
+            await runCompetitorDetectionJob({
+              log: fastify.log,
+              diagnosticId: id,
+              brandForRun: diagnostic.brandName,
+              trimmedUrl,
+              domain: diagnostic.domain,
+              serp,
+              defaultCountry,
+              marketConfidenceMin,
+              forcedCountry: confirmedCountry,
+              forcedIndustry: confirmedIndustry,
+            });
+          } catch (err) {
+            fastify.log.error({ err, diagnosticId: id }, 'Error en detección de competidores post-confirm');
+            await prisma.publicDiagnostic
+              .update({ where: { id }, data: { status: 'awaiting_user' } })
+              .catch(() => {});
+          }
+        });
       }
 
       return reply.code(200).send({
         ok: true,
-        redetecting: needsRedetect,
+        redetecting: true,
         confirmedCountry,
         confirmedIndustry,
       });

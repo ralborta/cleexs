@@ -4,9 +4,10 @@
 // Best-effort: nunca rompe la UX; si falla, se ignora.
 
 function apiBase(): string {
+  // En el navegador usamos proxy same-origin (evita CORS/credentials con sendBeacon).
+  if (typeof window !== 'undefined') return '/proxy-api';
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
-  if (process.env.NODE_ENV === 'development') return '/proxy-api';
   return 'https://cleexsapi-production.up.railway.app';
 }
 

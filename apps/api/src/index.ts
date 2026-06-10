@@ -73,6 +73,7 @@ async function bootstrap() {
 
   log('4/7 Registrando CORS...');
   await server.register(cors, {
+    credentials: true,
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
       if (allowedOrigins.length === 0) return cb(null, true);
