@@ -140,6 +140,8 @@ function VerificandoContent() {
 
   const [handoff, setHandoff] = useState<'no' | 'preview' | 'leaving'>('no');
   const [visibleStepCards, setVisibleStepCards] = useState(3);
+  /** Avance "fake" del checklist izquierdo durante el setup (uno por uno), independiente del proceso real. */
+  const [fakeBackdropStep, setFakeBackdropStep] = useState(0);
 
   const started = useRef(false);
   const abandonedTracked = useRef(false);
@@ -175,13 +177,16 @@ function VerificandoContent() {
   const isFinalizing = isRunning && allStepsDone;
   const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6;
   const barPct = isFinalizing ? finalizingWave : Math.min(progress, 100);
-  const displayActiveIndex = isPreRunBackdrop ? Math.min(10, ONBOARDING_STEP_LABELS.length - 1) : activeIndex;
+  const backdropStep = Math.min(fakeBackdropStep, ONBOARDING_STEP_LABELS.length - 1);
+  const displayActiveIndex = isPreRunBackdrop ? backdropStep : activeIndex;
   const displayCardLabel =
     isPreRunBackdrop
-      ? ANALYSIS_STEP_CARD_LABELS[Math.min(10, ANALYSIS_STEP_CARD_LABELS.length - 1)] ?? ''
+      ? ANALYSIS_STEP_CARD_LABELS[backdropStep] ?? ''
       : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
-  const displayCompletedCount = isPreRunBackdrop ? ONBOARDING_STEP_LABELS.length : completedCount;
-  const displayBarPct = isPreRunBackdrop ? 91 : barPct;
+  const displayCompletedCount = isPreRunBackdrop ? backdropStep : completedCount;
+  const displayBarPct = isPreRunBackdrop
+    ? Math.round((backdropStep / ONBOARDING_STEP_LABELS.length) * 100)
+    : barPct;
   const diagnosticEmailTrimmed = diagnostic?.email?.trim() ?? '';
   const hasServerEmailAfterStart = isRunning && Boolean(diagnosticEmailTrimmed);
   const needsLegacyEmailCaptchaModal =
@@ -197,12 +202,12 @@ function VerificandoContent() {
     progress >= 50;
 
   const activeStepForCards = useMemo(() => {
-    if (isPreRunBackdrop) return Math.min(10, ANALYSIS_STEP_CARD_LABELS.length - 1);
+    if (isPreRunBackdrop) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
     const firstPending = stepsList.findIndex((s) => !s.completed);
     if (firstPending >= 0) return firstPending;
     if (normalizedDiagnosticStatus === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
     return Math.max(activeIndex, 0);
-  }, [stepsList, normalizedDiagnosticStatus, activeIndex, isPreRunBackdrop]);
+  }, [stepsList, normalizedDiagnosticStatus, activeIndex, isPreRunBackdrop, backdropStep]);
 
   // Solo saltar el captcha del onboarding clásico cuando el análisis ya arrancó CON email
   // (flujo nuevo POST /start). Si está `running` sin email, el usuario debe ver el modal.
@@ -364,6 +369,22 @@ function VerificandoContent() {
     document.addEventListener('visibilitychange', h);
     return () => document.removeEventListener('visibilitychange', h);
   }, [diagnosticId, diagnostic?.steps, handoff]);
+
+  // Avance fake del checklist izquierdo durante el setup: uno por uno, por tiempo,
+  // independiente del proceso real. Arranca al confirmar país+rubro (displayCaptchaVerified)
+  // y se frena en el último paso (queda "en proceso"), sin marcar todo completo.
+  useEffect(() => {
+    if (!isPreRunBackdrop || !displayCaptchaVerified) {
+      setFakeBackdropStep(0);
+      return;
+    }
+    const maxStep = ONBOARDING_STEP_LABELS.length - 1;
+    setFakeBackdropStep((s) => (s > 0 ? s : 1));
+    const id = setInterval(() => {
+      setFakeBackdropStep((s) => Math.min(maxStep, s + 1));
+    }, 3500);
+    return () => clearInterval(id);
+  }, [isPreRunBackdrop, displayCaptchaVerified]);
 
   useEffect(() => {
     const targetVisible = Math.min(ANALYSIS_STEP_CARD_LABELS.length, Math.max(3, activeStepForCards + 2));
@@ -600,14 +621,14 @@ function VerificandoContent() {
   const waitingFinalReady = waitingSecondModel || waitingConsolidation;
   const analysisSteps: AnalysisStepItem[] = ANALYSIS_STEP_CARD_LABELS.map((label, i) => {
     if (isPreRunBackdrop) {
-      const isCompleted = i < 10;
-      const isActive = i === 10;
+      const isCompleted = i < backdropStep;
+      const isActive = i === backdropStep;
       const state: AnalysisStepItem['state'] = isCompleted ? 'completed' : isActive ? 'active' : 'pending';
       return {
         id: i + 1,
         label,
         state,
-        visible: i < ANALYSIS_STEP_CARD_LABELS.length,
+        visible: i <= backdropStep,
       };
     }
     const completedFromApi = stepsList[i]?.completed === true;
