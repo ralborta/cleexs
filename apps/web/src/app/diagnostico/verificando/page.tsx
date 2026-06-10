@@ -878,7 +878,7 @@ function VerificandoContent() {
             <div
               className={cn(
                 'relative z-10 flex min-h-0 flex-1 flex-col gap-3',
-                isPreRunBackdrop && 'justify-center'
+                (isPreRunBackdrop || analysisRunningPhase) && 'justify-center'
               )}
             >
               {isPreRunBackdrop && setupShowProcessing ? (
