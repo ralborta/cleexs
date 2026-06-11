@@ -11,6 +11,7 @@ const MINIMAL_HEADER_PATHS = [
   '/diagnostico/crear',
   '/ver-resultado',
   '/prueba-gratuita',
+  '/plan-conquistar',
   '/planes',
   '/dashboard',
   '/runs',
