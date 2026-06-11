@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   BarChart3,
+  Building2,
   DollarSign,
   Eye,
   Globe,
@@ -12,6 +13,7 @@ import {
   RefreshCw,
   Share2,
   Users,
+  X,
 } from 'lucide-react';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
@@ -37,8 +39,39 @@ type Metrics = {
   };
 };
 
+type EmailLead = {
+  id: string;
+  email: string | null;
+  brandName: string | null;
+  domain: string | null;
+  industry: string | null;
+  sourceChannel: string | null;
+  tier: string | null;
+  status: string | null;
+  shareSlug: string | null;
+  createdAt: string;
+};
+
+type EmailLeadsResponse = {
+  ok: boolean;
+  total: number;
+  items: EmailLead[];
+};
+
 function fmt(n: number) {
   return n.toLocaleString('es-AR');
+}
+
+function fmtDateTime(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function pctLabel(p: number | null) {
@@ -83,6 +116,28 @@ export default function AdminConversionPage() {
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailLeads, setEmailLeads] = useState<EmailLead[] | null>(null);
+  const [emailLeadsLoading, setEmailLeadsLoading] = useState(false);
+  const [emailLeadsError, setEmailLeadsError] = useState<string | null>(null);
+
+  const openEmailDetail = useCallback(async () => {
+    setEmailModalOpen(true);
+    setEmailLeadsLoading(true);
+    setEmailLeadsError(null);
+    try {
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const res = await adminUiFetch(`/api/admin-ui/conversion/emails${qs}`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
+      setEmailLeads((json as EmailLeadsResponse).items ?? []);
+    } catch (e) {
+      setEmailLeadsError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setEmailLeadsLoading(false);
+    }
+  }, [from, to]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -223,6 +278,8 @@ export default function AdminConversionPage() {
           value={fmt(f?.emailLeft.count ?? 0)}
           pct={pctLabel(f?.emailLeft.pct ?? null)}
           pctHint="de los que pusieron URL"
+          onClick={openEmailDetail}
+          actionHint="Ver detalle"
         />
         <FunnelCard
           icon={<Share2 className="h-4 w-4 text-amber-600" />}
@@ -280,6 +337,159 @@ export default function AdminConversionPage() {
           ingresaron una URL en el diagnóstico (aproximado por coincidencia de dominio).
         </p>
       </section>
+
+      {emailModalOpen ? (
+        <EmailLeadsModal
+          loading={emailLeadsLoading}
+          error={emailLeadsError}
+          leads={emailLeads}
+          rangeFrom={from}
+          rangeTo={to}
+          onClose={() => setEmailModalOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+const SOURCE_LABEL: Record<string, string> = {
+  web: 'Web',
+  whatsapp_yt: 'WhatsApp',
+  whatsapp: 'WhatsApp',
+};
+
+function EmailLeadsModal({
+  loading,
+  error,
+  leads,
+  rangeFrom,
+  rangeTo,
+  onClose,
+}: {
+  loading: boolean;
+  error: string | null;
+  leads: EmailLead[] | null;
+  rangeFrom: string;
+  rangeTo: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const total = leads?.length ?? 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px] sm:items-center sm:p-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalle de leads que dejaron email"
+        className="relative my-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+              <Mail className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Dejaron su email</h2>
+              <p className="text-xs text-slate-500">
+                {rangeFrom} → {rangeTo}
+                {!loading && !error ? ` · ${fmt(total)} ${total === 1 ? 'lead' : 'leads'}` : ''}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando detalle...
+            </div>
+          ) : error ? (
+            <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          ) : total === 0 ? (
+            <div className="py-12 text-center text-sm text-slate-400">
+              No hay emails dejados en este rango de fechas.
+            </div>
+          ) : (
+            <ul className="space-y-2.5">
+              {(leads ?? []).map((lead) => (
+                <li
+                  key={lead.id}
+                  className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 transition hover:border-violet-200 hover:bg-violet-50/40"
+                >
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {lead.email ? (
+                        <a
+                          href={`mailto:${lead.email}`}
+                          className="truncate text-sm font-semibold text-slate-900 hover:text-violet-700 hover:underline"
+                        >
+                          {lead.email}
+                        </a>
+                      ) : (
+                        <span className="text-sm font-semibold text-slate-400">Sin email</span>
+                      )}
+                      {lead.tier ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                            lead.tier === 'gold'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {lead.tier}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                      <span className="inline-flex items-center gap-1">
+                        <Building2 className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{lead.brandName || lead.domain || '—'}</span>
+                      </span>
+                      {lead.domain ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Globe className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{lead.domain}</span>
+                        </span>
+                      ) : null}
+                      {lead.sourceChannel ? (
+                        <span className="rounded-full bg-slate-200/70 px-1.5 py-0.5 font-medium text-slate-600">
+                          {SOURCE_LABEL[lead.sourceChannel] ?? lead.sourceChannel}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
+                    {fmtDateTime(lead.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -291,6 +501,8 @@ function FunnelCard({
   pct,
   pctHint,
   hint,
+  onClick,
+  actionHint,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -298,9 +510,17 @@ function FunnelCard({
   pct: string;
   pctHint?: string;
   hint?: string;
+  onClick?: () => void;
+  actionHint?: string;
 }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  const clickable = typeof onClick === 'function';
+  const className = `group rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+    clickable
+      ? 'border-violet-200 hover:border-violet-300 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-200'
+      : 'border-slate-200'
+  }`;
+  const inner = (
+    <>
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
         {icon}
         <span>{label}</span>
@@ -311,8 +531,21 @@ function FunnelCard({
         {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
       </div>
       {hint ? <p className="mt-0.5 text-[10px] text-slate-400">{hint}</p> : null}
-    </div>
+      {clickable && actionHint ? (
+        <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+          {actionHint} →
+        </p>
+      ) : null}
+    </>
   );
+  if (clickable) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={className}>{inner}</div>;
 }
 
 function BreakdownCard({

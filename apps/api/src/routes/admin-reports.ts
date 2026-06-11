@@ -1738,6 +1738,51 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       };
     }
   );
+
+  // Detalle de leads que dejaron email (para el drilldown de "Dejaron email").
+  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+    '/internal/conversion-metrics/emails',
+    async (request) => {
+      const now = new Date();
+      const parseDay = (value: string | undefined, fallback: Date): Date => {
+        if (!value) return fallback;
+        const d = new Date(`${value}T00:00:00.000Z`);
+        return Number.isNaN(d.getTime()) ? fallback : d;
+      };
+      const defaultFrom = new Date(now);
+      defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 6);
+      defaultFrom.setUTCHours(0, 0, 0, 0);
+      const from = parseDay(request.query.from, defaultFrom);
+      const toRaw = parseDay(request.query.to, now);
+      const to = new Date(toRaw);
+      to.setUTCHours(23, 59, 59, 999);
+
+      const rows = await prisma.publicDiagnostic.findMany({
+        where: { createdAt: { gte: from, lte: to }, email: { not: null } },
+        select: {
+          id: true,
+          email: true,
+          brandName: true,
+          domain: true,
+          industry: true,
+          sourceChannel: true,
+          tier: true,
+          status: true,
+          shareSlug: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+      });
+
+      return {
+        ok: true,
+        range: { from: from.toISOString(), to: to.toISOString() },
+        total: rows.length,
+        items: rows,
+      };
+    }
+  );
 };
 
 export default adminReportsRoutes;
