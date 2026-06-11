@@ -1841,18 +1841,26 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       const q = (request.query.q || '').trim();
       const limit = Math.min(Math.max(Number(request.query.limit) || 50, 1), 100);
 
-      const where: Prisma.RunWhereInput = {
-        promptResults: { some: {} },
-        NOT: { runType: { startsWith: 'engine_' } },
-      };
+      const and: Prisma.RunWhereInput[] = [
+        { promptResults: { some: {} } },
+        // Excluir las sub-corridas auxiliares por motor (engine_*, *_gemini/_perplexity/_claude);
+        // solo queremos las corridas principales (diagnostic / monthly / deep_report).
+        { NOT: { runType: { startsWith: 'engine_' } } },
+        { NOT: { runType: { endsWith: '_gemini' } } },
+        { NOT: { runType: { endsWith: '_perplexity' } } },
+        { NOT: { runType: { endsWith: '_claude' } } },
+      ];
       if (q) {
-        where.brand = {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { domain: { contains: q, mode: 'insensitive' } },
-          ],
-        };
+        and.push({
+          brand: {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { domain: { contains: q, mode: 'insensitive' } },
+            ],
+          },
+        });
       }
+      const where: Prisma.RunWhereInput = { AND: and };
 
       const runs = await prisma.run.findMany({
         where,

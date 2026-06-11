@@ -280,11 +280,14 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
   const [runs, setRuns] = useState<RunListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [manual, setManual] = useState('');
+  const [opening, setOpening] = useState(false);
 
   const loadRuns = useCallback(async (q: string) => {
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       const url = `/api/admin-ui/plan-conquistar/runs${q ? `?q=${encodeURIComponent(q)}` : ''}`;
       const res = await fetch(url, { cache: 'no-store' });
@@ -302,13 +305,59 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
     loadRuns('');
   }, [loadRuns]);
 
-  function openManual() {
-    const match = manual.match(UUID_RE);
-    if (!match) {
-      setError('Pegá un runId válido o una URL que lo contenga.');
+  function termFromInput(raw: string): string {
+    let term = raw.trim();
+    try {
+      if (/^https?:\/\//i.test(term)) term = new URL(term).hostname;
+    } catch {
+      // input no es URL válida; lo usamos tal cual como término de búsqueda
+    }
+    return term.replace(/^www\./i, '').replace(/\/.*$/, '').trim();
+  }
+
+  async function openManual() {
+    const raw = manual.trim();
+    if (!raw) return;
+    setError(null);
+    setNotice(null);
+
+    const uuid = raw.match(UUID_RE);
+    if (uuid) {
+      onSelect(uuid[0]);
       return;
     }
-    onSelect(match[0]);
+
+    const term = termFromInput(raw);
+    if (!term) {
+      setError('Pegá un runId, un dominio o el nombre de una marca.');
+      return;
+    }
+
+    setOpening(true);
+    try {
+      const res = await fetch(`/api/admin-ui/plan-conquistar/runs?q=${encodeURIComponent(term)}`, {
+        cache: 'no-store',
+      });
+      const body = (await res.json().catch(() => ({}))) as { items?: RunListItem[]; error?: string };
+      if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
+      const items = body.items || [];
+      if (items.length === 0) {
+        setRuns([]);
+        setError(`No hay corridas para "${term}". Probá con otro dominio o buscá un cliente.`);
+        return;
+      }
+      if (items.length === 1) {
+        onSelect(items[0].id);
+        return;
+      }
+      setRuns(items);
+      setQuery(term);
+      setNotice(`Encontré ${items.length} corridas para "${term}". Elegí cuál abrir abajo.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo buscar por ese dominio.');
+    } finally {
+      setOpening(false);
+    }
   }
 
   return (
@@ -325,12 +374,15 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-semibold text-slate-900">Probar con un runId o URL</p>
+        <p className="text-sm font-semibold text-slate-900">Probar con un dominio, runId o URL</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Pegá un dominio (ej: nivea.com.ar), el nombre de una marca, un runId o una URL. Busco la corrida del cliente y abro el reporte.
+        </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
             value={manual}
             onChange={(e) => setManual(e.target.value)}
-            placeholder="Pegá un runId o una URL del reporte"
+            placeholder="nivea.com.ar  ·  marca  ·  runId  ·  URL"
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
             onKeyDown={(e) => {
               if (e.key === 'Enter') openManual();
@@ -339,9 +391,10 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
           <button
             type="button"
             onClick={openManual}
-            disabled={!manual.trim()}
+            disabled={!manual.trim() || opening}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Abrir reporte
           </button>
         </div>
@@ -374,6 +427,7 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
         </div>
 
         {error ? <p className="mt-4 text-sm text-rose-600">{error}</p> : null}
+        {notice ? <p className="mt-4 text-sm text-violet-700">{notice}</p> : null}
 
         {loading ? (
           <div className="mt-6 flex items-center gap-2 text-sm text-slate-500">
