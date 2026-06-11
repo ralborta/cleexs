@@ -2,6 +2,52 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { executeRunGemini, executeRunPerplexity, executeRunClaude } from '../lib/run-executor';
+import { isOpenRouterConfigured } from '../lib/openrouter-runner';
+
+type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
+
+function planConquistarGeminiConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+  );
+}
+
+function planConquistarAvailableEngines(): PlanConquistarEngineKey[] {
+  const engines: PlanConquistarEngineKey[] = [];
+  if (planConquistarGeminiConfigured()) engines.push('gemini');
+  if (isOpenRouterConfigured()) {
+    engines.push('perplexity');
+    engines.push('claude');
+  }
+  return engines;
+}
+
+function planConquistarReadEngineRuns(
+  modelMeta: unknown
+): Partial<Record<PlanConquistarEngineKey, string>> {
+  if (modelMeta && typeof modelMeta === 'object' && modelMeta !== null && 'engineRuns' in modelMeta) {
+    const value = (modelMeta as { engineRuns?: unknown }).engineRuns;
+    if (value && typeof value === 'object') {
+      return value as Partial<Record<PlanConquistarEngineKey, string>>;
+    }
+  }
+  return {};
+}
+
+function planConquistarReadPromptVersionId(modelMeta: unknown): string | undefined {
+  if (modelMeta && typeof modelMeta === 'object' && modelMeta !== null && 'promptVersionId' in modelMeta) {
+    const value = (modelMeta as { promptVersionId?: unknown }).promptVersionId;
+    if (typeof value === 'string' && value) return value;
+  }
+  return undefined;
+}
+
+function planConquistarExecutorForEngine(engine: PlanConquistarEngineKey) {
+  if (engine === 'gemini') return executeRunGemini;
+  if (engine === 'perplexity') return executeRunPerplexity;
+  return executeRunClaude;
+}
 
 const windowDaysSchema = z.object({
   windowDays: z
@@ -1781,6 +1827,216 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         total: rows.length,
         items: rows,
       };
+    }
+  );
+
+  // ----------------------------------------------------------------
+  // Plan Conquistar (AI Visibility Accelerator) — generado desde admin
+  // ----------------------------------------------------------------
+
+  // Lista de corridas para elegir el cliente desde el panel admin.
+  fastify.get<{ Querystring: { q?: string; limit?: string } }>(
+    '/internal/plan-conquistar/runs',
+    async (request) => {
+      const q = (request.query.q || '').trim();
+      const limit = Math.min(Math.max(Number(request.query.limit) || 50, 1), 100);
+
+      const where: Prisma.RunWhereInput = {
+        promptResults: { some: {} },
+        NOT: { runType: { startsWith: 'engine_' } },
+      };
+      if (q) {
+        where.brand = {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { domain: { contains: q, mode: 'insensitive' } },
+          ],
+        };
+      }
+
+      const runs = await prisma.run.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          status: true,
+          runType: true,
+          createdAt: true,
+          brand: { select: { name: true, domain: true } },
+          _count: { select: { promptResults: true } },
+        },
+      });
+
+      return {
+        ok: true,
+        items: runs.map((r) => ({
+          id: r.id,
+          status: r.status,
+          runType: r.runType,
+          createdAt: r.createdAt,
+          brandName: r.brand?.name ?? 'Sin marca',
+          domain: r.brand?.domain ?? null,
+          prompts: r._count.promptResults,
+        })),
+      };
+    }
+  );
+
+  // Detalle de una corrida (misma forma que el endpoint del portal, sin chequeo de tenant).
+  fastify.get<{ Params: { id: string } }>(
+    '/internal/plan-conquistar/runs/:id',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const run = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        include: {
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              domain: true,
+              tenantId: true,
+              industry: true,
+              productType: true,
+              competitors: { select: { id: true, name: true, domain: true } },
+              aliases: { select: { id: true, alias: true } },
+            },
+          },
+          promptResults: { include: { prompt: { include: { category: true } } }, orderBy: { createdAt: 'asc' } },
+          priaReports: { orderBy: { createdAt: 'desc' } },
+        },
+      });
+      if (!run) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+      return run;
+    }
+  );
+
+  // Estado + score por motor de la corrida (ChatGPT del run padre + auxiliares).
+  fastify.get<{ Params: { id: string } }>(
+    '/internal/plan-conquistar/runs/:id/engines',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const parent = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        select: {
+          id: true,
+          status: true,
+          modelMeta: true,
+          priaReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { priaTotal: true } },
+        },
+      });
+      if (!parent) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+
+      const scoreOf = (priaReports: Array<{ priaTotal: number }>) =>
+        priaReports[0] ? Math.round(priaReports[0].priaTotal) : null;
+
+      const engineRuns = planConquistarReadEngineRuns(parent.modelMeta);
+      const engineEntries = await Promise.all(
+        planConquistarAvailableEngines().map(async (engine) => {
+          const subRunId = engineRuns[engine];
+          if (!subRunId) return { engine, status: 'not_started' as const, score: null };
+          const subRun = await prisma.run.findUnique({
+            where: { id: subRunId },
+            select: {
+              status: true,
+              priaReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { priaTotal: true } },
+            },
+          });
+          if (!subRun) return { engine, status: 'not_started' as const, score: null };
+          return { engine, status: subRun.status, score: scoreOf(subRun.priaReports) };
+        })
+      );
+
+      return {
+        ok: true,
+        chatgpt: { status: parent.status, score: scoreOf(parent.priaReports) },
+        engines: engineEntries,
+        configured: { gemini: planConquistarGeminiConfigured(), openrouter: isOpenRouterConfigured() },
+      };
+    }
+  );
+
+  // Genera el score real por motor (Gemini / Perplexity / Claude) en background.
+  fastify.post<{ Params: { id: string }; Body: { engines?: string[] } }>(
+    '/internal/plan-conquistar/runs/:id/engines',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const parent = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        select: { id: true, tenantId: true, brandId: true, periodStart: true, periodEnd: true, modelMeta: true },
+      });
+      if (!parent) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+
+      const available = planConquistarAvailableEngines();
+      if (available.length === 0) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'No hay motores extra configurados en el servidor (Gemini / OpenRouter).',
+        });
+      }
+
+      const requested = Array.isArray(request.body?.engines) ? request.body.engines : null;
+      const engines = requested ? available.filter((e) => requested.includes(e)) : available;
+      if (engines.length === 0) {
+        return reply.code(400).send({ ok: false, error: 'Ninguno de los motores solicitados está disponible.' });
+      }
+
+      const promptVersionId = planConquistarReadPromptVersionId(parent.modelMeta);
+      const existingMap = planConquistarReadEngineRuns(parent.modelMeta);
+      const engineRuns: Partial<Record<PlanConquistarEngineKey, string>> = { ...existingMap };
+      const started: PlanConquistarEngineKey[] = [];
+
+      for (const engine of engines) {
+        const existingId = existingMap[engine];
+        if (existingId) {
+          const existingRun = await prisma.run.findUnique({
+            where: { id: existingId },
+            select: { status: true },
+          });
+          if (existingRun && existingRun.status !== 'failed') continue;
+        }
+
+        const subRun = await prisma.run.create({
+          data: {
+            tenantId: parent.tenantId,
+            brandId: parent.brandId,
+            periodStart: parent.periodStart,
+            periodEnd: parent.periodEnd,
+            runType: `engine_${engine}`,
+            status: 'pending',
+          },
+        });
+        engineRuns[engine] = subRun.id;
+        started.push(engine);
+
+        const executor = planConquistarExecutorForEngine(engine);
+        setImmediate(async () => {
+          try {
+            await executor(subRun.id, promptVersionId ? { promptVersionId } : {});
+          } catch (err) {
+            request.log.error({ err, subRunId: subRun.id, engine }, 'plan-conquistar engine sub-run failed');
+            await prisma.run.update({ where: { id: subRun.id }, data: { status: 'failed' } }).catch(() => {});
+          }
+        });
+      }
+
+      const baseMeta =
+        parent.modelMeta && typeof parent.modelMeta === 'object' && !Array.isArray(parent.modelMeta)
+          ? (parent.modelMeta as Record<string, unknown>)
+          : {};
+      await prisma.run.update({
+        where: { id: parent.id },
+        data: { modelMeta: { ...baseMeta, engineRuns } as unknown as Prisma.InputJsonValue },
+      });
+
+      return { ok: true, started, engines: Object.keys(engineRuns) };
     }
   );
 };

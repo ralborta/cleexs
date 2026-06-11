@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, BarChart3, Mail, Trophy } from 'lucide-react';
+import { ArrowRight, BarChart3, Mail, Rocket, Trophy } from 'lucide-react';
 
 const REPORTS = [
   {
@@ -30,6 +30,15 @@ const REPORTS = [
     metrics: ['Enviados / abiertos / clicks', 'Eventos Resend', 'Top dominios outreach', 'Estado del webhook'],
     icon: Mail,
     tone: 'bg-violet-100 text-violet-700',
+  },
+  {
+    href: '/admin/reportes/plan-conquistar',
+    title: 'Plan Conquistar (AI Visibility Accelerator)',
+    description:
+      'Genera el entregable de 90 dias para un cliente. Elegi una corrida o pega un runId/URL para probar el reporte completo.',
+    metrics: ['Score real por motor', 'Top oportunidades priorizadas', 'Roadmap 90 dias', 'Competitor gap analysis'],
+    icon: Rocket,
+    tone: 'bg-emerald-100 text-emerald-700',
   },
 ] as const;
 
