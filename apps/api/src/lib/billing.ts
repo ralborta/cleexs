@@ -6,6 +6,7 @@ export const PREMIUM_PLAN_ID = '00000000-0000-0000-0000-000000000002';
 const DEFAULT_USD_TO_ARS_RATE = 1400;
 const PREMIUM_MONTHLY_USD = 99;
 const PREMIUM_ANNUAL_DISCOUNT = 0.8;
+const PLAN_CONQUISTAR_USD = 99;
 
 export const DEFAULT_BILLING_CURRENCY = BillingCurrency.ARS;
 
@@ -33,6 +34,12 @@ export function getPlanBillingAmountUsd(planKey: string, interval: BillingInterv
   }
 
   return PREMIUM_MONTHLY_USD;
+}
+
+export function getPlanConquistarAmountUsd(): number {
+  const raw = process.env.PLAN_CONQUISTAR_USD;
+  const parsed = raw ? Number(raw) : PLAN_CONQUISTAR_USD;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : PLAN_CONQUISTAR_USD;
 }
 
 export function getBillingCurrency(): BillingCurrency {

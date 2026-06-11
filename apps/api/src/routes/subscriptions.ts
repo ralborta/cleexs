@@ -1,14 +1,15 @@
-import { BillingInterval, Prisma, SubscriptionStatus, UserRole } from '@prisma/client';
+import { BillingInterval, PaymentStatus, Prisma, SubscriptionStatus, UserRole } from '@prisma/client';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import {
   ensurePremiumPlan,
   getBillingCurrency,
+  getPlanConquistarAmountUsd,
   getBillingUsdToArsRate,
   getPlanBillingAmountUsd,
   usdToArs,
 } from '../lib/billing';
-import { getPreApprovalClient, getPublicAppUrl } from '../lib/mercadopago';
+import { getPreApprovalClient, getPreferenceClient, getPublicAppUrl } from '../lib/mercadopago';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 
@@ -17,6 +18,14 @@ const checkoutSchema = z.object({
   planId: z.enum(['crecimiento']),
   billingMode: z.enum(['monthly', 'annual']).default('monthly'),
   // Atribuci?n de adquisici?n (funnel interno). Opcional.
+  refCode: attributionField,
+  utmSource: attributionField,
+  utmMedium: attributionField,
+  utmCampaign: attributionField,
+  sourceChannel: attributionField,
+});
+
+const planConquistarCheckoutSchema = z.object({
   refCode: attributionField,
   utmSource: attributionField,
   utmMedium: attributionField,
@@ -168,6 +177,151 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(500).send({ error: checkoutErrorMessage(error) });
     }
   });
+
+  fastify.post<{ Body: z.infer<typeof planConquistarCheckoutSchema> }>(
+    '/subscriptions/plan-conquistar/checkout',
+    async (request, reply) => {
+      try {
+        const portalUser = await resolvePortalUserFromRequest(request);
+        if (!portalUser) {
+          return reply.code(401).send({
+            error: 'Para comprar el Plan Conquistar necesitás iniciar sesión en el portal.',
+          });
+        }
+
+        const actor = await prisma.user.findUnique({
+          where: { id: portalUser.userId },
+          select: { role: true },
+        });
+        if (actor?.role !== UserRole.owner) {
+          return reply.code(403).send({ error: 'Solo el administrador de la cuenta puede contratar el plan.' });
+        }
+
+        const parsed = planConquistarCheckoutSchema.safeParse(request.body ?? {});
+        if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear el checkout.' });
+
+        if (!process.env.MP_ACCESS_TOKEN?.trim()) {
+          return reply.code(503).send({ error: 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).' });
+        }
+
+        const fxRate = getBillingUsdToArsRate();
+        const amountUsd = getPlanConquistarAmountUsd();
+        const amountArs = usdToArs(amountUsd, fxRate);
+        const publicUrl = getPublicAppUrl();
+
+        const localPayment = await prisma.payment.create({
+          data: {
+            tenantId: portalUser.tenantId,
+            status: PaymentStatus.pending,
+            currency: getBillingCurrency(),
+            amountUsd,
+            amountArs,
+            fxRate,
+            payerEmail: portalUser.email,
+            rawPayload: {
+              product: 'plan_conquistar_90d',
+              source: 'checkout_created',
+              refCode: cleanAttr(parsed.data.refCode),
+              utmSource: cleanAttr(parsed.data.utmSource),
+              utmMedium: cleanAttr(parsed.data.utmMedium),
+              utmCampaign: cleanAttr(parsed.data.utmCampaign),
+              sourceChannel: cleanAttr(parsed.data.sourceChannel),
+            },
+          },
+        });
+
+        try {
+          const preference = await getPreferenceClient().create({
+            body: {
+              external_reference: localPayment.id,
+              back_urls: {
+                success: `${publicUrl}/pago/exito?product=plan-conquistar&payment=${encodeURIComponent(localPayment.id)}`,
+                pending: `${publicUrl}/pago/exito?product=plan-conquistar&payment=${encodeURIComponent(localPayment.id)}&status=pending`,
+                failure: `${publicUrl}/plan-conquistar?payment=failed`,
+              },
+              auto_return: 'approved',
+              payer: {
+                email: portalUser.email,
+              },
+              metadata: {
+                product: 'plan_conquistar_90d',
+                payment_id: localPayment.id,
+                tenant_id: portalUser.tenantId,
+                user_id: portalUser.userId,
+              },
+              items: [
+                {
+                  id: 'plan_conquistar_90d',
+                  title: 'Plan Conquistar ChatGPT en 90 días',
+                  description: 'Plan de acción personalizado + Cleexs Premium por 90 días',
+                  quantity: 1,
+                  unit_price: amountArs,
+                  currency_id: 'ARS',
+                },
+              ],
+            },
+          });
+
+          const links = preference as typeof preference & {
+            id?: string;
+            init_point?: string | null;
+            sandbox_init_point?: string | null;
+          };
+          const checkoutUrl = links.sandbox_init_point ?? links.init_point ?? null;
+          if (!checkoutUrl) throw new Error('Mercado Pago no devolvió URL de checkout.');
+
+          await prisma.payment.update({
+            where: { id: localPayment.id },
+            data: {
+              rawPayload: {
+                product: 'plan_conquistar_90d',
+                source: 'preference_created',
+                preferenceId: links.id ?? null,
+                checkoutUrl,
+                amountUsd,
+                amountArs,
+                fxRate,
+                refCode: cleanAttr(parsed.data.refCode),
+                utmSource: cleanAttr(parsed.data.utmSource),
+                utmMedium: cleanAttr(parsed.data.utmMedium),
+                utmCampaign: cleanAttr(parsed.data.utmCampaign),
+                sourceChannel: cleanAttr(parsed.data.sourceChannel),
+              },
+            },
+          });
+
+          return {
+            ok: true,
+            paymentId: localPayment.id,
+            checkoutUrl,
+            amount: {
+              usd: amountUsd,
+              ars: amountArs,
+              fxRate,
+              currency: 'ARS',
+            },
+          };
+        } catch (error) {
+          await prisma.payment.update({
+            where: { id: localPayment.id },
+            data: {
+              status: PaymentStatus.cancelled,
+              rawPayload: {
+                product: 'plan_conquistar_90d',
+                source: 'preference_failed',
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+          });
+          fastify.log.error({ err: error }, 'Mercado Pago preference create failed');
+          return reply.code(502).send({ error: 'Mercado Pago no pudo crear el pago único del Plan Conquistar.' });
+        }
+      } catch (error) {
+        fastify.log.error({ err: error }, 'plan-conquistar checkout failed');
+        return reply.code(500).send({ error: checkoutErrorMessage(error) });
+      }
+    }
+  );
 
   fastify.get('/me/subscription', async (request, reply) => {
     const portalUser = await resolvePortalUserFromRequest(request);

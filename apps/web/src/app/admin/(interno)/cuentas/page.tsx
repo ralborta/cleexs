@@ -97,6 +97,8 @@ export default function AdminCuentasPage() {
   const [oUserId, setOUserId] = useState('');
   const [oGrant, setOGrant] = useState('crecimiento');
   const [oReason, setOReason] = useState('Cortesía manual');
+  /** Días de vigencia del override. '' = sin vencimiento (permanente). */
+  const [oDays, setODays] = useState<string>('');
   const [oBusy, setOBusy] = useState(false);
 
   const [listTenant, setListTenant] = useState('');
@@ -201,6 +203,10 @@ export default function AdminCuentasPage() {
         reason: oReason.trim() || undefined,
       };
       if (oUserId.trim()) body.userId = oUserId.trim();
+      const days = Number(oDays);
+      if (oDays.trim() && Number.isFinite(days) && days > 0) {
+        body.endsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      }
 
       const res = await adminUiFetch('/api/admin-ui/overrides', {
         method: 'POST',
@@ -641,6 +647,44 @@ export default function AdminCuentasPage() {
             <label className="block">
               <span className={labelCls}>Motivo</span>
               <input value={oReason} onChange={(ev) => setOReason(ev.target.value)} className={field} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Vigencia (días)</span>
+              <input
+                type="number"
+                min={1}
+                value={oDays}
+                onChange={(ev) => setODays(ev.target.value)}
+                placeholder="Vacío = permanente"
+                className={field}
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOGrant('crecimiento');
+                    setODays('90');
+                    setOReason('Plan Conquistar ChatGPT 90 días');
+                  }}
+                  className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                >
+                  Premium 90 días (Plan Conquistar)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setODays('365')}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                >
+                  365 días
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setODays('')}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                >
+                  Permanente
+                </button>
+              </div>
             </label>
             <div className="sm:col-span-2">
               <button

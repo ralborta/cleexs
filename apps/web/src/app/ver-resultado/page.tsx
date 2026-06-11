@@ -58,6 +58,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReporteModerno } from './reporte-moderno';
+import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-modal';
 import { ReporteCorridas } from './reporte-corridas';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
@@ -84,7 +85,7 @@ const isBrandEntry = (entryName: string, brandName: string, aliases: string[]) =
 };
 
 const extractIntention = (promptText: string) => {
-  const match = promptText.match(/Intención:\s*([^\(\n]+)\s*\((\d+)%\)/i);
+  const match = promptText.match(/Intenci?n:\s*([^\(\n]+)\s*\((\d+)%\)/i);
   if (!match) return null;
   return { name: match[1].trim().toLowerCase(), weight: Number(match[2]) };
 };
@@ -98,15 +99,15 @@ const normalizeIntentionKey = (value: string) => {
   return null;
 };
 
-/** Etiqueta y descripción por intención */
+/** Etiqueta y descripci?n por intenci?n */
 const INTENTION_LABELS: Record<string, { label: string; description: string }> = {
   urgencia: {
     label: 'Urgencia',
-    description: 'Mide cómo la IA te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta rápida).',
+    description: 'Mide c?mo la IA te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta r?pida).',
   },
   consideracion: {
-    label: 'Consideración',
-    description: 'Mide cómo la IA te recomienda cuando el usuario está evaluando con tiempo (ej. educación, banco, seguro, decisión a mediano plazo).',
+    label: 'Consideraci?n',
+    description: 'Mide c?mo la IA te recomienda cuando el usuario est? evaluando con tiempo (ej. educaci?n, banco, seguro, decisi?n a mediano plazo).',
   },
   calidad: {
     label: 'Calidad',
@@ -114,7 +115,7 @@ const INTENTION_LABELS: Record<string, { label: string; description: string }> =
   },
   precio: {
     label: 'Precio',
-    description: 'Mide cómo aparecés cuando el usuario busca buen precio y valor.',
+    description: 'Mide c?mo aparec?s cuando el usuario busca buen precio y valor.',
   },
 };
 
@@ -244,10 +245,10 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-xl text-foreground">
             <Lock className="h-5 w-5 text-amber-600" />
-            Desbloqueá el reporte completo
+            Desbloque? el reporte completo
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Ya hiciste una corrida gratuita para este dominio. Para ver métricas detalladas, comparaciones, análisis por intención y recomendaciones, elegí un plan de Cleexs.
+            Ya hiciste una corrida gratuita para este dominio. Para ver m?tricas detalladas, comparaciones, an?lisis por intenci?n y recomendaciones, eleg? un plan de Cleexs.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -260,7 +261,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
             </Button>
             <Button variant="outline" asChild>
               <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
-                Otro diagnóstico
+                Otro diagn?stico
               </a>
             </Button>
           </div>
@@ -271,7 +272,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
 }
 
 /**
- * Construye un runResult sintético "Consolidado" promediando los scores de los modelos
+ * Construye un runResult sint?tico "Consolidado" promediando los scores de los modelos
  * disponibles (ChatGPT + Gemini + Perplexity + Claude). Si hay 1 solo run, lo devuelve igual.
  */
 function buildRunResultConsolidado(
@@ -381,7 +382,7 @@ function ReporteCompleto({
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{modelLabel}</p>
           <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
+            {intentionScores.length > 0 ? 'Ponderado por intenci?n' : 'Promedio de la corrida'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -389,7 +390,7 @@ function ReporteCompleto({
             <p className="text-xs font-medium text-primary-700">Cleexs Score</p>
             <p className="text-4xl font-bold text-foreground">{(cleexsScore || runResult.cleexsScore).toFixed(0)}</p>
             <p className="text-xs text-muted-foreground">
-              {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
+              {intentionScores.length > 0 ? 'Ponderado por intenci?n' : 'Promedio de la corrida'}
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
@@ -424,10 +425,10 @@ function ReporteCompleto({
         </CardContent>
       </Card>
 
-      {/* Métricas del análisis */}
+      {/* M?tricas del an?lisis */}
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl text-foreground">Métricas del análisis</CardTitle>
+          <CardTitle className="text-xl text-foreground">M?tricas del an?lisis</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             Indicadores simples para evaluar coherencia, visibilidad y ranking en esta corrida.
           </CardDescription>
@@ -440,17 +441,17 @@ function ReporteCompleto({
               <p className="text-xs text-muted-foreground">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
             </div>
             <div className="rounded-lg border border-border bg-primary-50/80 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Mención de marca</p>
+              <p className="text-xs font-medium text-muted-foreground">Menci?n de marca</p>
               <p className="text-2xl font-semibold text-foreground">{mentionRate}%</p>
               <p className="text-xs text-muted-foreground">{mentionCount}/{totalPrompts} respuestas la mencionan</p>
             </div>
             <div className="rounded-lg border border-border bg-primary-50/80 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Aparición en Top 3</p>
+              <p className="text-xs font-medium text-muted-foreground">Aparici?n en Top 3</p>
               <p className="text-2xl font-semibold text-foreground">{top3Rate}%</p>
               <p className="text-xs text-muted-foreground">{top3Count}/{totalPrompts} en Top 3</p>
             </div>
             <div className="rounded-lg border border-border bg-primary-50/80 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Posición #1</p>
+              <p className="text-xs font-medium text-muted-foreground">Posici?n #1</p>
               <p className="text-2xl font-semibold text-foreground">{top1Rate}%</p>
               <p className="text-xs text-muted-foreground">{top1Count}/{totalPrompts} en primer lugar</p>
             </div>
@@ -483,7 +484,7 @@ function ReporteCompleto({
                     <TableHead className="text-foreground font-semibold">Marca</TableHead>
                     <TableHead className="text-foreground font-semibold">Tipo</TableHead>
                     <TableHead className="text-right text-foreground font-semibold">Apariciones</TableHead>
-                    <TableHead className="text-right text-foreground font-semibold">Posición media</TableHead>
+                    <TableHead className="text-right text-foreground font-semibold">Posici?n media</TableHead>
                     <TableHead className="text-right text-foreground font-semibold">% del Top 3</TableHead>
                     <TableHead className="text-foreground font-semibold max-w-[200px]">Motivo (ejemplo)</TableHead>
                   </TableRow>
@@ -504,7 +505,7 @@ function ReporteCompleto({
                         <TableCell className="text-right text-muted-foreground">{row.averagePosition.toFixed(2)}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{row.share.toFixed(1)}%</TableCell>
                         <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={row.sampleReason}>
-                          {(row.sampleReason && row.sampleReason.replace(/\*+/g, '').trim().length >= 2) ? row.sampleReason.replace(/\*+/g, '').trim() : '—'}
+                          {(row.sampleReason && row.sampleReason.replace(/\*+/g, '').trim().length >= 2) ? row.sampleReason.replace(/\*+/g, '').trim() : '...'}
                         </TableCell>
                       </TableRow>
                     ))
@@ -516,7 +517,7 @@ function ReporteCompleto({
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Definí industria o tipo de producto en la marca para sugerencias relevantes.
+            Defin? industria o tipo de producto en la marca para sugerencias relevantes.
           </p>
         </CardContent>
       </Card>
@@ -533,12 +534,13 @@ function VerResultadoContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [vistaModelo, setVistaModelo] = useState<'consolidado' | 'chatgpt' | 'gemini' | 'perplexity' | 'claude'>('chatgpt');
+  const [paywallEngine, setPaywallEngine] = useState<string | null>(null);
 
   useEffect(() => {
     const id = diagnosticId;
     if (!id) {
       setLoading(false);
-      setError('Falta el ID del diagnóstico.');
+      setError('Falta el ID del diagn?stico.');
       return;
     }
     let cancelled = false;
@@ -547,7 +549,7 @@ function VerResultadoContent() {
         const data = await publicDiagnosticApi.get(id, tierFromQuery);
         if (!cancelled) setDiagnostic(data);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagnóstico.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagn?stico.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -555,7 +557,7 @@ function VerResultadoContent() {
     return () => { cancelled = true; };
   }, [diagnosticId, tierFromQuery]);
 
-  // Si está completado y falta análisis o el módulo AEO sigue en `pending`, refrescar hasta que termine.
+  // Si est? completado y falta an?lisis o el m?dulo AEO sigue en `pending`, refrescar hasta que termine.
   useEffect(() => {
     const id = diagnosticId;
     if (!id || !diagnostic || diagnostic.status !== 'completed' || !diagnostic.showFullReport) {
@@ -600,8 +602,8 @@ function VerResultadoContent() {
     };
   }, [diagnosticId, diagnostic, tierFromQuery]);
 
-  // Si Gemini/Perplexity/Claude fueron iniciados pero aún no terminaron, seguir refrescando
-  // hasta que aparezcan sus runResult o el diagnóstico falle.
+  // Si Gemini/Perplexity/Claude fueron iniciados pero a?n no terminaron, seguir refrescando
+  // hasta que aparezcan sus runResult o el diagn?stico falle.
   useEffect(() => {
     const id = diagnosticId;
     if (!id || !diagnostic) return;
@@ -667,7 +669,7 @@ function VerResultadoContent() {
       <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
         <div className="text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary-600" />
-          <p className="mt-4 text-muted-foreground">Cargando resultado…</p>
+          <p className="mt-4 text-muted-foreground">Cargando resultado...</p>
         </div>
       </main>
     );
@@ -678,9 +680,9 @@ function VerResultadoContent() {
       <main className="min-h-[calc(100vh-72px)] px-6 py-16">
         <div className="mx-auto max-w-lg text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
-          <p className="mt-4 text-muted-foreground">{error || 'Diagnóstico no encontrado.'}</p>
+          <p className="mt-4 text-muted-foreground">{error || 'Diagn?stico no encontrado.'}</p>
           <Link href="/diagnostico/crear">
-            <Button className="mt-4">Hacer un nuevo diagnóstico</Button>
+            <Button className="mt-4">Hacer un nuevo diagn?stico</Button>
           </Link>
         </div>
       </main>
@@ -746,8 +748,15 @@ function VerResultadoContent() {
   const claudeFallo = diagnostic.claudeRunStatus === 'failed';
   const claudeEnCola = Boolean(diagnostic.runClaudeId) && !runResultClaude && !claudeFallo;
   /**
-   * Post-proceso: la API puede guardar primero el análisis IA y luego fusionar el módulo técnico del sitio (AEO).
-   * Mientras el satélite corre, `satelliteModule.status === 'pending'`.
+   * Motor "bloqueado por Premium": no hay resultado, no se est? generando y no fall?;
+   * simplemente nunca se corri? porque es exclusivo de planes Premium. Al clickearlo
+   * mostramos el upsell del Plan Conquistar en vez de un bot?n muerto.
+   */
+  const perplexityLocked = !runResultPerplexity && !perplexityEnCola && !perplexityFallo;
+  const claudeLocked = !runResultClaude && !claudeEnCola && !claudeFallo;
+  /**
+   * Post-proceso: la API puede guardar primero el an?lisis IA y luego fusionar el m?dulo t?cnico del sitio (AEO).
+   * Mientras el sat?lite corre, `satelliteModule.status === 'pending'`.
    */
   const satelliteAeoPending = diagnostic.satelliteModule?.status === 'pending';
   const showSatelliteSkeleton =
@@ -776,11 +785,11 @@ function VerResultadoContent() {
               <div className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
-                  Resultado del diagnóstico
+                  Resultado del diagn?stico
                 </CardTitle>
                 <CardDescription className="mt-1 text-xs sm:text-sm">
                   <span className="font-medium">{diagnostic.brandName}</span>
-                  {!diagnostic.domain.startsWith('brand-') && ` · ${diagnostic.domain}`}
+                  {!diagnostic.domain.startsWith('brand-') && ` ? ${diagnostic.domain}`}
                 </CardDescription>
               </div>
               <img
@@ -794,15 +803,15 @@ function VerResultadoContent() {
             {isPending && (
               <div className="flex items-center gap-3 rounded-lg border border-primary-200 bg-primary-50 p-4 text-primary-800">
                 <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                <p>Tu diagnóstico sigue en proceso. Cuando esté listo podés recargar la página o te enviamos el link por correo si ingresás tu email abajo.</p>
+                <p>Tu diagn?stico sigue en proceso. Cuando est? listo pod?s recargar la p?gina o te enviamos el link por correo si ingres?s tu email abajo.</p>
               </div>
             )}
 
             {isFailed && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
-                <p>El análisis no pudo completarse. Podés intentar de nuevo con un nuevo diagnóstico.</p>
+                <p>El an?lisis no pudo completarse. Pod?s intentar de nuevo con un nuevo diagn?stico.</p>
 <Link href="/diagnostico/crear">
-                <Button variant="outline" className="mt-3">Nuevo diagnóstico</Button>
+                <Button variant="outline" className="mt-3">Nuevo diagn?stico</Button>
                 </Link>
               </div>
             )}
@@ -834,10 +843,10 @@ function VerResultadoContent() {
                                 disabled={!runResultGemini}
                                 title={
                                   geminiFallo
-                                    ? 'Gemini no completó esta corrida.'
+                                    ? 'Gemini no complet? esta corrida.'
                                     : geminiEnCola
-                                      ? 'Generando resultados con Gemini…'
-                                      : 'Ver métricas según respuestas de Gemini'
+                                      ? 'Generando resultados con Gemini...'
+                                      : 'Ver m?tricas seg?n respuestas de Gemini'
                                 }
                                 onClick={() => runResultGemini && setVistaModelo('gemini')}
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
@@ -855,25 +864,35 @@ function VerResultadoContent() {
                               </button>
                               <button
                                 type="button"
-                                disabled={!runResultPerplexity}
+                                disabled={!runResultPerplexity && !perplexityLocked}
                                 title={
                                   perplexityFallo
-                                    ? 'Perplexity no completó esta corrida.'
+                                    ? 'Perplexity no complet? esta corrida.'
                                     : perplexityEnCola
-                                      ? 'Generando resultados con Perplexity…'
+                                      ? 'Generando resultados con Perplexity...'
                                       : runResultPerplexity
-                                        ? 'Ver métricas según respuestas de Perplexity'
+                                        ? 'Ver m?tricas seg?n respuestas de Perplexity'
                                         : 'Disponible solo en planes Premium con OpenRouter.'
                                 }
-                                onClick={() => runResultPerplexity && setVistaModelo('perplexity')}
+                                onClick={() =>
+                                  runResultPerplexity
+                                    ? setVistaModelo('perplexity')
+                                    : perplexityLocked
+                                      ? setPaywallEngine('Perplexity')
+                                      : undefined
+                                }
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
                                   vistaModelo === 'perplexity' && runResultPerplexity
                                     ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
-                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                    : perplexityLocked
+                                      ? 'bg-white text-slate-500 shadow-sm ring-1 ring-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:ring-violet-300'
+                                      : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
                                 {perplexityEnCola ? (
                                   <Loader2 className="h-[18px] w-[18px] shrink-0 animate-spin text-primary-600" />
+                                ) : perplexityLocked ? (
+                                  <Lock className="h-[14px] w-[14px] shrink-0 text-violet-500" />
                                 ) : (
                                   <Sparkles className="h-[18px] w-[18px] shrink-0" />
                                 )}
@@ -881,25 +900,35 @@ function VerResultadoContent() {
                               </button>
                               <button
                                 type="button"
-                                disabled={!runResultClaude}
+                                disabled={!runResultClaude && !claudeLocked}
                                 title={
                                   claudeFallo
-                                    ? 'Claude no completó esta corrida.'
+                                    ? 'Claude no complet? esta corrida.'
                                     : claudeEnCola
-                                      ? 'Generando resultados con Claude…'
+                                      ? 'Generando resultados con Claude...'
                                       : runResultClaude
-                                        ? 'Ver métricas según respuestas de Claude'
+                                        ? 'Ver m?tricas seg?n respuestas de Claude'
                                         : 'Disponible solo en planes Premium con OpenRouter.'
                                 }
-                                onClick={() => runResultClaude && setVistaModelo('claude')}
+                                onClick={() =>
+                                  runResultClaude
+                                    ? setVistaModelo('claude')
+                                    : claudeLocked
+                                      ? setPaywallEngine('Claude')
+                                      : undefined
+                                }
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
                                   vistaModelo === 'claude' && runResultClaude
                                     ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
-                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                    : claudeLocked
+                                      ? 'bg-white text-slate-500 shadow-sm ring-1 ring-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:ring-violet-300'
+                                      : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
                                 {claudeEnCola ? (
                                   <Loader2 className="h-[18px] w-[18px] shrink-0 animate-spin text-primary-600" />
+                                ) : claudeLocked ? (
+                                  <Lock className="h-[14px] w-[14px] shrink-0 text-violet-500" />
                                 ) : (
                                   <Sparkles className="h-[18px] w-[18px] shrink-0" />
                                 )}
@@ -929,17 +958,22 @@ function VerResultadoContent() {
                           </div>
                           {geminiEnCola && (
                             <p className="text-xs text-slate-600 pl-0 sm:pl-[11.5rem]">
-                              ChatGPT ya está listo. Gemini y la vista consolidada se habilitan en cuanto termine el
+                              ChatGPT ya est? listo. Gemini y la vista consolidada se habilitan en cuanto termine el
                               segundo modelo (normalmente menos de un minuto).
                             </p>
                           )}
                           {geminiFallo && (
                             <p className="text-xs text-amber-800 pl-0 sm:pl-[11.5rem]">
-                              El run de Gemini falló en esta corrida. Mostramos solo resultados de ChatGPT.
+                              El run de Gemini fall? en esta corrida. Mostramos solo resultados de ChatGPT.
                             </p>
                           )}
                         </div>
                       )}
+                      <EnginePaywallModal
+                        open={paywallEngine !== null}
+                        engineName={paywallEngine}
+                        onClose={() => setPaywallEngine(null)}
+                      />
                       {runResultToShow &&
                         (legacyView ? (
                           <ReporteModerno
@@ -982,8 +1016,8 @@ function VerResultadoContent() {
                   )
                 ) : (
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-                    <p className="font-medium">Diagnóstico listo</p>
-                    <p className="text-sm mt-1">Cargando detalle del reporte…</p>
+                    <p className="font-medium">Diagn?stico listo</p>
+                    <p className="text-sm mt-1">Cargando detalle del reporte...</p>
                   </div>
                 )}
 
@@ -1008,15 +1042,15 @@ function VerResultadoContent() {
                                 </span>
                                 <div>
                                   <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
-                                  <p className="text-[11px] text-indigo-700/80">Difusión · página pública</p>
+                                  <p className="text-[11px] text-indigo-700/80">Difusi?n ? p?gina p?blica</p>
                                 </div>
                               </div>
                               <span className="rounded-full bg-indigo-600/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
-                                Vista pública · resumida
+                                Vista p?blica ? resumida
                               </span>
                             </div>
                             <p className="text-xs leading-relaxed text-slate-600 mb-4">
-                              Enlace a la página pública del Cleexs Score: pensado para redes, email o difusión. Muestra el
+                              Enlace a la p?gina p?blica del Cleexs Score: pensado para redes, email o difusi?n. Muestra el
                               score y un resumen; no reemplaza el informe detallado de abajo.
                             </p>
                             <ShareScoreButtons
@@ -1036,7 +1070,7 @@ function VerResultadoContent() {
                                 </span>
                                 <div>
                                   <p className="text-sm font-semibold text-slate-900">Invitar a tu equipo</p>
-                                  <p className="text-[11px] text-teal-800/80">Uso interno · mismo informe que ves acá</p>
+                                  <p className="text-[11px] text-teal-800/80">Uso interno ? mismo informe que ves ac?</p>
                                 </div>
                               </div>
                               <span className="rounded-md border border-teal-200/70 bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-900">
@@ -1044,8 +1078,8 @@ function VerResultadoContent() {
                               </span>
                             </div>
                             <p className="text-xs leading-relaxed text-slate-600 mb-4">
-                              Compartí este enlace con marketing, agencia o personas internas: verán el mismo informe
-                              extenso que vos (métricas, comparativas y análisis). Si quieren seguir con más diagnósticos,
+                              Compart? este enlace con marketing, agencia o personas internas: ver?n el mismo informe
+                              extenso que vos (m?tricas, comparativas y an?lisis). Si quieren seguir con m?s diagn?sticos,
                               pueden crear cuenta en Cleexs desde la web.
                             </p>
                             <ShareScoreButtons
@@ -1062,7 +1096,7 @@ function VerResultadoContent() {
                         {diagnostic.shareSlug && (
                           <div className="flex-1 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
                             <p className="mb-0.5 text-xs font-bold text-slate-900">Compartir resultado</p>
-                            <p className="mb-3 text-[11px] text-slate-500">Página pública del Cleexs Score · redes y difusión</p>
+                            <p className="mb-3 text-[11px] text-slate-500">P?gina p?blica del Cleexs Score ? redes y difusi?n</p>
                             <ShareScoreButtons
                               path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
                               intent="social"
@@ -1080,7 +1114,7 @@ function VerResultadoContent() {
                               <div>
                                 <p className="text-xs font-bold text-slate-900">Invitar a tu equipo</p>
                                 <p className="mt-0.5 text-xs leading-snug text-slate-600">
-                                  Compartí el informe con tu equipo o colaboradores.
+                                  Compart? el informe con tu equipo o colaboradores.
                                 </p>
                               </div>
                             </div>
@@ -1103,16 +1137,16 @@ function VerResultadoContent() {
                       <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
                         8
                       </span>
-                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Próximos pasos</p>
+                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Pr?ximos pasos</p>
                     </div>
                   )}
                   {legacyView ? (
                     <div className="rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
                       <p className="text-sm font-medium text-foreground mb-2">
-                        ¿Querés más corridas y reportes completos?
+                        ?Quer?s m?s corridas y reportes completos?
                       </p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Elegí un plan para habilitar análisis y reportes completos.
+                        Eleg? un plan para habilitar an?lisis y reportes completos.
                       </p>
                       <div className="flex flex-wrap gap-3">
                         <Button asChild className="bg-primary-600 hover:bg-primary-700">
@@ -1123,7 +1157,7 @@ function VerResultadoContent() {
                         </Button>
                         <Button variant="outline" asChild>
                           <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
-                            Otro diagnóstico
+                            Otro diagn?stico
                           </a>
                         </Button>
                       </div>
@@ -1151,7 +1185,7 @@ function VerResultadoContent() {
                           className="inline-flex items-center gap-1.5"
                         >
                           <FileText className="h-3.5 w-3.5" />
-                          Otro diagnóstico
+                          Otro diagn?stico
                         </a>
                       </Button>
                     </div>
@@ -1244,16 +1278,16 @@ function formatDetailPrimitive(
 ): string | null {
   if (key !== undefined && shouldOmitDetailFieldKey(key)) return null;
   if (value === null || value === undefined) return null;
-  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (typeof value === 'boolean') return value ? 'S?' : 'No';
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string') {
     const t = value.trim();
     if (!t.length) return null;
     if (looksLikeRawMarkup(t)) {
-      return 'La respuesta parece HTML o XML (no es texto plano con URLs, como un sitemap o robots.txt legibles línea a línea). En este panel no mostramos el cuerpo completo por tamaño y legibilidad.';
+      return 'La respuesta parece HTML o XML (no es texto plano con URLs, como un sitemap o robots.txt legibles l?nea a l?nea). En este panel no mostramos el cuerpo completo por tama?o y legibilidad.';
     }
     if (t.length > maxStr) {
-      return `${t.slice(0, maxStr)}… [${t.length - maxStr} caracteres más no mostrados aquí]`;
+      return `${t.slice(0, maxStr)}... [${t.length - maxStr} caracteres m?s no mostrados aqu?]`;
     }
     return t;
   }
@@ -1267,7 +1301,7 @@ const SUGGESTION_PRIORITY_META: Record<
   critica: {
     box: 'border-red-200/80 bg-red-50/90 text-red-900',
     Icon: ShieldAlert,
-    short: 'Crítica',
+    short: 'Cr?tica',
   },
   alta: {
     box: 'border-amber-200/80 bg-amber-50/90 text-amber-900',
@@ -1301,20 +1335,20 @@ function SatelliteValueBlock({
   depth: number;
 }): React.ReactNode {
   if (depth > 8) {
-    return <p className="text-xs italic text-slate-400">Profundidad máxima alcanzada.</p>;
+    return <p className="text-xs italic text-slate-400">Profundidad m?xima alcanzada.</p>;
   }
   if (value === null || value === undefined) {
-    return <span className="text-sm text-slate-400">—</span>;
+    return <span className="text-sm text-slate-400">...</span>;
   }
   if (typeof value === 'boolean') {
-    return <span className="text-sm">{value ? 'Sí' : 'No'}</span>;
+    return <span className="text-sm">{value ? 'S?' : 'No'}</span>;
   }
   if (typeof value === 'number' && Number.isFinite(value)) {
     return <span className="text-sm tabular-nums font-medium text-slate-800">{String(value)}</span>;
   }
   if (typeof value === 'string') {
     const t = value.trim();
-    if (!t.length) return <span className="text-sm text-slate-400">—</span>;
+    if (!t.length) return <span className="text-sm text-slate-400">...</span>;
     if (looksLikeRawMarkup(t)) {
       return (
         <p className="text-sm text-amber-800 bg-amber-50/80 rounded-lg border border-amber-100 px-3 py-2">
@@ -1323,13 +1357,13 @@ function SatelliteValueBlock({
       );
     }
     const max = MAX_DETAIL_STRING_EXPANDED;
-    const shown = t.length > max ? `${t.slice(0, max)}…` : t;
+    const shown = t.length > max ? `${t.slice(0, max)}...` : t;
     return (
       <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words max-h-72 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
         {shown}
         {t.length > max ? (
           <span className="mt-2 block text-xs font-medium text-slate-500">
-            Total {t.length} caracteres — el resto no se muestra completo en este panel.
+            Total {t.length} caracteres ... el resto no se muestra completo en este panel.
           </span>
         ) : null}
       </p>
@@ -1337,7 +1371,7 @@ function SatelliteValueBlock({
   }
   if (Array.isArray(value)) {
     if (value.length === 0) {
-      return <span className="text-sm text-slate-400">Sin ítems</span>;
+      return <span className="text-sm text-slate-400">Sin ?tems</span>;
     }
     if (value.every((x) => typeof x === 'string')) {
       return (
@@ -1459,10 +1493,10 @@ function SatelliteDetailSections({ detail }: { detail: Record<string, unknown> }
 }
 
 const AEO_SKELETON_HINTS = [
-  'Seguimos analizando tu sitio…',
-  'En sitios con mucho contenido puede demorar un poco más.',
-  'Podés usar el resto del informe arriba; esta sección se actualiza sola.',
-  'Estamos consolidando señales técnicas del dominio.',
+  'Seguimos analizando tu sitio...',
+  'En sitios con mucho contenido puede demorar un poco m?s.',
+  'Pod?s usar el resto del informe arriba; esta secci?n se actualiza sola.',
+  'Estamos consolidando se?ales t?cnicas del dominio.',
 ] as const;
 
 function SatelliteModuleSkeleton() {
@@ -1480,11 +1514,11 @@ function SatelliteModuleSkeleton() {
       <CardHeader className="space-y-3 pb-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-xl text-foreground">
           <Sparkles className="h-5 w-5 shrink-0 animate-pulse text-primary-600" aria-hidden />
-          <span>Análisis técnico del sitio (AEO)</span>
+          <span>An?lisis t?cnico del sitio (AEO)</span>
         </CardTitle>
         <div className="space-y-2">
           <div className="aeo-progress-track" aria-hidden />
-          <p className="text-sm font-semibold text-primary-900 sm:text-base">Generando análisis técnico del sitio…</p>
+          <p className="text-sm font-semibold text-primary-900 sm:text-base">Generando an?lisis t?cnico del sitio...</p>
           <p
             key={hintIdx}
             className="text-xs leading-relaxed text-slate-600 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 sm:text-sm"
@@ -1525,7 +1559,7 @@ function SatelliteModuleSkeleton() {
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">Proceso en curso</p>
             <p className="text-xs leading-relaxed text-primary-900/85 sm:text-sm">
-              La página se actualiza sola cuando termine. No hace falta recargar manualmente.
+              La p?gina se actualiza sola cuando termine. No hace falta recargar manualmente.
             </p>
           </div>
         </div>
@@ -1549,7 +1583,7 @@ function SatelliteToolDetailPanel({
     return (
       <p className="text-left text-sm leading-relaxed text-muted-foreground">
         No hay detalle guardado para <span className="font-medium text-foreground">{label}</span> en este informe.
-        Podés generar un diagnóstico nuevo o revisar más adelante si el análisis técnico aún se está completando.
+        Pod?s generar un diagn?stico nuevo o revisar m?s adelante si el an?lisis t?cnico a?n se est? completando.
       </p>
     );
   }
@@ -1596,7 +1630,7 @@ function SatelliteToolDetailPanel({
                   </div>
                   <p className="text-sm font-semibold leading-snug">{message}</p>
                   {item.action && (
-                    <p className="mt-1.5 text-xs font-semibold leading-relaxed">→ {item.action}</p>
+                    <p className="mt-1.5 text-xs font-semibold leading-relaxed">... {item.action}</p>
                   )}
                 </li>
               );
@@ -1635,14 +1669,14 @@ const ACTION_PILL_META: Record<
   string,
   { label: string; className: string }
 > = {
-  critica: { label: 'CRÍTICO', className: 'border-red-400 bg-red-50 text-red-900' },
+  critica: { label: 'CR?TICO', className: 'border-red-400 bg-red-50 text-red-900' },
   alta: { label: 'ALTA', className: 'border-amber-400 bg-amber-50 text-amber-950' },
   media: { label: 'MEDIA', className: 'border-sky-400 bg-sky-50 text-sky-950' },
   baja: { label: 'BAJA', className: 'border-slate-300 bg-slate-50 text-slate-800' },
   info: { label: 'INFO', className: 'border-emerald-400 bg-emerald-50 text-emerald-950' },
 };
 
-/** Prioridad visual del borde izquierdo en tarjetas de acción (orden de severidad). */
+/** Prioridad visual del borde izquierdo en tarjetas de acci?n (orden de severidad). */
 function actionCardBorderClass(priority: string): string {
   const p = priority.trim().toLowerCase();
   if (p === 'critica') return 'border-l-red-500';
@@ -1672,20 +1706,20 @@ function SatelliteAeoDegradedNotice({
     module.status === 'timeout'
       ? 'Tiempo de espera agotado'
       : module.status === 'failed'
-        ? 'No pudimos analizar el sitio desde aquí'
+        ? 'No pudimos analizar el sitio desde aqu?'
         : module.status === 'skipped'
-          ? 'Análisis técnico no ejecutado'
+          ? 'An?lisis t?cnico no ejecutado'
           : 'Sin datos de herramientas en esta corrida';
 
   const body =
     module.status === 'timeout'
-      ? 'El análisis técnico del sitio tardó más de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no llegó a completarse.'
+      ? 'El an?lisis t?cnico del sitio tard? m?s de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no lleg? a completarse.'
       : module.status === 'failed'
         ? module.error?.trim() ||
-          'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o generá un diagnóstico nuevo con la misma URL.'
+          'El servicio de an?lisis del sitio respondi? con error. Volv? a intentar m?s tarde o gener? un diagn?stico nuevo con la misma URL.'
         : module.status === 'skipped'
-          ? 'Este diagnóstico no incluye URL de sitio o el módulo AEO está desactivado.'
-          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Podés generar un diagnóstico nuevo o revisar el sitio con tu equipo técnico.';
+          ? 'Este diagn?stico no incluye URL de sitio o el m?dulo AEO est? desactivado.'
+          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Pod?s generar un diagn?stico nuevo o revisar el sitio con tu equipo t?cnico.';
 
   const toolsUrl = CLEEXS_TOOLS_PUBLIC_URL;
 
@@ -1714,7 +1748,7 @@ function SatelliteAeoDegradedNotice({
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800"
               >
-                Ver análisis técnico ampliado
+                Ver an?lisis t?cnico ampliado
                 <ExternalLink className="h-4 w-4 opacity-90" aria-hidden />
               </a>
             ) : null}
@@ -1722,15 +1756,15 @@ function SatelliteAeoDegradedNotice({
               href="/diagnostico/crear"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
             >
-              Nuevo diagnóstico
+              Nuevo diagn?stico
             </Link>
           </div>
           {!toolsUrl ? (
             <p className="text-xs text-slate-500">
-              Si tu organización tiene un enlace propio al análisis técnico ampliado, puede configurarse en el
+              Si tu organizaci?n tiene un enlace propio al an?lisis t?cnico ampliado, puede configurarse en el
               despliegue:{' '}
               <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_CLEEXS_TOOLS_URL</code>{' '}
-              (solo equipo técnico).
+              (solo equipo t?cnico).
             </p>
           ) : null}
         </div>
@@ -1769,13 +1803,13 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
         <div className="min-w-0 flex-1">
           <span className="block text-base font-bold tracking-tight text-white sm:text-lg">Acciones a ejecutar</span>
           <span className="mt-0.5 block text-xs font-medium leading-snug text-white/90 sm:text-sm">
-            Prioridades del análisis técnico del sitio (AEO).{' '}
+            Prioridades del an?lisis t?cnico del sitio (AEO).{' '}
             <span className="text-white/85">
               {total > 0
-                ? `${total} tareas · tocá para ${expanded ? 'ocultar' : 'ver'} píldoras y lista.`
+                ? `${total} tareas ? toc? para ${expanded ? 'ocultar' : 'ver'} p?ldoras y lista.`
                 : expanded
-                  ? 'Tocá de nuevo para ocultar.'
-                  : 'Tocá para ver el mensaje cuando no hay acciones.'}
+                  ? 'Toc? de nuevo para ocultar.'
+                  : 'Toc? para ver el mensaje cuando no hay acciones.'}
             </span>
           </span>
         </div>
@@ -1856,8 +1890,8 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
             </>
           ) : (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-              No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
-              herramienta o consultá con tu equipo si hace falta un análisis más profundo.
+              No se generaron acciones agrupadas para este sitio en esta corrida. Revis? el detalle en cada tarjeta de
+              herramienta o consult? con tu equipo si hace falta un an?lisis m?s profundo.
             </p>
           )}
         </div>
@@ -1943,7 +1977,7 @@ function SatelliteModuleCard({
                   </p>
                   {!openHasStoredDetail ? (
                     <p className="mt-1 text-xs font-medium text-amber-800/90">
-                      No hay detalle guardado para esta herramienta en el diagnóstico público.
+                      No hay detalle guardado para esta herramienta en el diagn?stico p?blico.
                     </p>
                   ) : null}
                 </div>
@@ -1980,11 +2014,11 @@ function SatelliteModuleCard({
             <Sparkles className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-900">Análisis técnico del sitio (AEO)</p>
+            <p className="text-sm font-bold text-slate-900">An?lisis t?cnico del sitio (AEO)</p>
             <p className="text-xs leading-relaxed text-slate-600">
               {degraded
-                ? 'Cuando la corrida falla o hace timeout, no mostramos scores vacíos como si fueran reales.'
-                : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas según el análisis técnico.'}
+                ? 'Cuando la corrida falla o hace timeout, no mostramos scores vac?os como si fueran reales.'
+                : 'Toc? una herramienta para ver el detalle. Abajo, acciones priorizadas seg?n el an?lisis t?cnico.'}
             </p>
           </div>
         </div>
@@ -2009,7 +2043,7 @@ function SatelliteModuleCard({
                 {siteUrl}
               </a>
             ) : (
-              '—'
+              '...'
             )}
           </p>
           <p className="mt-1 text-xs text-slate-500">
@@ -2017,7 +2051,7 @@ function SatelliteModuleCard({
             {degraded ? null : (
               <>
                 {' '}
-                · {totalTools} herramientas con datos · Si algo aparece recortado, parte del volcado técnico puede no
+                ? {totalTools} herramientas con datos ? Si algo aparece recortado, parte del volcado t?cnico puede no
                 mostrarse completo en esta vista.
               </>
             )}
@@ -2030,7 +2064,7 @@ function SatelliteModuleCard({
           <div>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-slate-900">Herramientas (1–10)</p>
+                <p className="text-sm font-bold text-slate-900">Herramientas (1...10)</p>
                 <p className="text-xs text-slate-500">Clic para abrir el detalle en un panel.</p>
               </div>
             </div>
@@ -2041,7 +2075,7 @@ function SatelliteModuleCard({
                 const score = t?.score ?? 0;
                 const hasErr = Boolean(t?.error);
                 const colors = satelliteScoreColor(score, hasErr);
-                const labelShort = label.length > 16 ? `${label.slice(0, 14)}…` : label;
+                const labelShort = label.length > 16 ? `${label.slice(0, 14)}...` : label;
 
                 return (
                   <button
@@ -2067,7 +2101,7 @@ function SatelliteModuleCard({
                     <div className="mt-2 flex items-end justify-between gap-2 border-t border-slate-100 pt-2">
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Detalle</span>
                       <span className={cn('text-lg font-black tabular-nums leading-none', colors.text)}>
-                        {score > 0 ? Math.round(score) : '—'}
+                        {score > 0 ? Math.round(score) : '...'}
                       </span>
                     </div>
                     {hasErr ? (

@@ -3,8 +3,55 @@ import { z } from 'zod';
 import { EntitlementAction, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
-import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
-import { executeRun } from '../lib/run-executor';
+import { checkEntitlement, consumeEntitlement, resolvePlanKey } from '../lib/entitlements';
+import {
+  executeRun,
+  executeRunGemini,
+  executeRunPerplexity,
+  executeRunClaude,
+} from '../lib/run-executor';
+import { isOpenRouterConfigured } from '../lib/openrouter-runner';
+
+type EngineKey = 'gemini' | 'perplexity' | 'claude';
+
+function isGeminiConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+  );
+}
+
+/** Motores extra disponibles según las llaves configuradas en el servidor. */
+function availableExtraEngines(): EngineKey[] {
+  const engines: EngineKey[] = [];
+  if (isGeminiConfigured()) engines.push('gemini');
+  if (isOpenRouterConfigured()) {
+    engines.push('perplexity');
+    engines.push('claude');
+  }
+  return engines;
+}
+
+function readEngineRuns(modelMeta: unknown): Partial<Record<EngineKey, string>> {
+  if (modelMeta && typeof modelMeta === 'object' && modelMeta !== null && 'engineRuns' in modelMeta) {
+    const value = (modelMeta as { engineRuns?: unknown }).engineRuns;
+    if (value && typeof value === 'object') return value as Partial<Record<EngineKey, string>>;
+  }
+  return {};
+}
+
+function readPromptVersionId(modelMeta: unknown): string | undefined {
+  if (modelMeta && typeof modelMeta === 'object' && modelMeta !== null && 'promptVersionId' in modelMeta) {
+    const value = (modelMeta as { promptVersionId?: unknown }).promptVersionId;
+    if (typeof value === 'string' && value) return value;
+  }
+  return undefined;
+}
+
+function executorForEngine(engine: EngineKey) {
+  if (engine === 'gemini') return executeRunGemini;
+  if (engine === 'perplexity') return executeRunPerplexity;
+  return executeRunClaude;
+}
 
 const normalizeName = (value: string) =>
   value
@@ -299,6 +346,183 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
 
     return run;
   });
+
+  /**
+   * Score real por motor (Plan Conquistar): crea runs auxiliares Gemini/Perplexity/Claude
+   * para el mismo run del portal y los ejecuta en background. Solo Premium.
+   */
+  fastify.post<{
+    Params: { id: string };
+    Querystring: { tenantId?: string; userId?: string };
+    Body: { engines?: string[] };
+  }>(
+    '/app/reports/:id/engines',
+    async (request, reply) => {
+      const portalUser = await resolvePortalUserFromRequest(request);
+      let tenantId: string;
+      let userId: string | undefined;
+      if (portalUser) {
+        tenantId = portalUser.tenantId;
+        userId = portalUser.userId;
+      } else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true') {
+        const parsed = z
+          .object({ tenantId: z.string().uuid(), userId: z.string().uuid().optional() })
+          .safeParse(request.query);
+        if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+        tenantId = parsed.data.tenantId;
+        userId = parsed.data.userId;
+      } else {
+        return reply.code(401).send({ error: 'Autenticación requerida.' });
+      }
+
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+
+      const planKey = await resolvePlanKey(prisma, { tenantId, userId });
+      if (planKey !== 'crecimiento' && planKey !== 'enterprise' && planKey !== 'admin') {
+        return reply.code(403).send({
+          ok: false,
+          error: 'El score por los 4 motores está disponible en planes Premium (Plan Conquistar).',
+        });
+      }
+
+      const parent = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        select: { id: true, tenantId: true, brandId: true, periodStart: true, periodEnd: true, modelMeta: true },
+      });
+      if (!parent) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+      if (parent.tenantId !== tenantId) return reply.code(403).send({ error: 'Este reporte no pertenece a tu cuenta.' });
+
+      const available = availableExtraEngines();
+      if (available.length === 0) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'No hay motores extra configurados en el servidor (Gemini / OpenRouter).',
+        });
+      }
+
+      // El comprador puede elegir con cuáles motores generar. Sin selección = todos los disponibles.
+      const requested = Array.isArray(request.body?.engines) ? request.body.engines : null;
+      const engines = requested
+        ? available.filter((e) => requested.includes(e))
+        : available;
+      if (engines.length === 0) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Ninguno de los motores solicitados está disponible.',
+        });
+      }
+
+      const promptVersionId = readPromptVersionId(parent.modelMeta);
+      const existingMap = readEngineRuns(parent.modelMeta);
+      const engineRuns: Partial<Record<EngineKey, string>> = { ...existingMap };
+      const started: EngineKey[] = [];
+
+      for (const engine of engines) {
+        const existingId = existingMap[engine];
+        if (existingId) {
+          const existingRun = await prisma.run.findUnique({
+            where: { id: existingId },
+            select: { status: true },
+          });
+          // Reusar si está completo o corriendo; solo regenerar si no existe o falló.
+          if (existingRun && existingRun.status !== 'failed') continue;
+        }
+
+        const subRun = await prisma.run.create({
+          data: {
+            tenantId: parent.tenantId,
+            brandId: parent.brandId,
+            periodStart: parent.periodStart,
+            periodEnd: parent.periodEnd,
+            runType: `engine_${engine}`,
+            status: 'pending',
+          },
+        });
+        engineRuns[engine] = subRun.id;
+        started.push(engine);
+
+        const executor = executorForEngine(engine);
+        setImmediate(async () => {
+          try {
+            await executor(subRun.id, promptVersionId ? { promptVersionId } : {});
+          } catch (err) {
+            request.log.error({ err, subRunId: subRun.id, engine }, 'engine sub-run failed');
+            await prisma.run.update({ where: { id: subRun.id }, data: { status: 'failed' } }).catch(() => {});
+          }
+        });
+      }
+
+      const baseMeta =
+        parent.modelMeta && typeof parent.modelMeta === 'object' && !Array.isArray(parent.modelMeta)
+          ? (parent.modelMeta as Record<string, unknown>)
+          : {};
+      await prisma.run.update({
+        where: { id: parent.id },
+        data: { modelMeta: { ...baseMeta, engineRuns } as unknown as Prisma.InputJsonValue },
+      });
+
+      return { ok: true, started, engines: Object.keys(engineRuns) };
+    }
+  );
+
+  /** Estado + score por motor para el run del portal (ChatGPT del run padre + auxiliares). */
+  fastify.get<{ Params: { id: string }; Querystring: { tenantId?: string; userId?: string } }>(
+    '/app/reports/:id/engines',
+    async (request, reply) => {
+      const portalUser = await resolvePortalUserFromRequest(request);
+      let tenantId: string;
+      if (portalUser) {
+        tenantId = portalUser.tenantId;
+      } else if (process.env.ALLOW_USAGE_ACTOR_QUERY === 'true') {
+        const parsed = z.object({ tenantId: z.string().uuid() }).safeParse(request.query);
+        if (!parsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+        tenantId = parsed.data.tenantId;
+      } else {
+        return reply.code(401).send({ error: 'Autenticación requerida.' });
+      }
+
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'Parámetros inválidos.' });
+
+      const parent = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        select: {
+          id: true,
+          tenantId: true,
+          status: true,
+          modelMeta: true,
+          priaReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { priaTotal: true } },
+        },
+      });
+      if (!parent) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+      if (parent.tenantId !== tenantId) return reply.code(403).send({ error: 'Este reporte no pertenece a tu cuenta.' });
+
+      const scoreOf = (priaReports: Array<{ priaTotal: number }>) =>
+        priaReports[0] ? Math.round(priaReports[0].priaTotal) : null;
+
+      const engineRuns = readEngineRuns(parent.modelMeta);
+      const engineEntries = await Promise.all(
+        availableExtraEngines().map(async (engine) => {
+          const subRunId = engineRuns[engine];
+          if (!subRunId) return { engine, status: 'not_started' as const, score: null };
+          const subRun = await prisma.run.findUnique({
+            where: { id: subRunId },
+            select: { status: true, priaReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { priaTotal: true } } },
+          });
+          if (!subRun) return { engine, status: 'not_started' as const, score: null };
+          return { engine, status: subRun.status, score: scoreOf(subRun.priaReports) };
+        })
+      );
+
+      return {
+        ok: true,
+        chatgpt: { status: parent.status, score: scoreOf(parent.priaReports) },
+        engines: engineEntries,
+        configured: { gemini: isGeminiConfigured(), openrouter: isOpenRouterConfigured() },
+      };
+    }
+  );
 
   fastify.post<{
     Params: { brandId: string };

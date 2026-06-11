@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { MercadoPagoConfig, Payment, PreApproval } from 'mercadopago';
+import { MercadoPagoConfig, Payment, PreApproval, Preference } from 'mercadopago';
 import type { FastifyRequest } from 'fastify';
 
 let client: MercadoPagoConfig | null = null;
@@ -23,6 +23,10 @@ export function getPreApprovalClient() {
 
 export function getPaymentClient() {
   return new Payment(getMercadoPagoClient());
+}
+
+export function getPreferenceClient() {
+  return new Preference(getMercadoPagoClient());
 }
 
 export function getPublicAppUrl() {

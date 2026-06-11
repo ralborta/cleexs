@@ -10,7 +10,9 @@ import {
   Lock,
   MessageSquare,
   Scale,
+  Sparkles,
   Target,
+  Trophy,
   Users,
   UserSquare2,
   Wrench,
@@ -182,7 +184,27 @@ export function PortalFreeTierNav({
         </div>
       </nav>
 
-      <div className="mt-6 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/80 to-white p-4">
+      <Link
+        href="/plan-conquistar"
+        className="mt-6 block rounded-xl border border-violet-300/70 bg-gradient-to-br from-violet-600 to-fuchsia-600 p-4 text-white shadow-md shadow-violet-600/20 transition hover:from-violet-700 hover:to-fuchsia-700"
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="text-sm font-bold leading-tight">Plan Conquistar</span>
+          <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide">
+            USD 99
+          </span>
+        </div>
+        <p className="mt-2 text-[11px] leading-snug text-violet-50">
+          Sé la marca favorita de ChatGPT, Claude, Gemini y Perplexity en 90 días. Plan de acción + Premium incluido.
+        </p>
+        <span className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-white py-2 text-xs font-bold text-violet-700">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          Quiero conquistar ChatGPT
+        </span>
+      </Link>
+
+      <div className="mt-4 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/80 to-white p-4">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-medium text-slate-500">Plan actual</p>
           <span className="rounded-full bg-violet-200/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">

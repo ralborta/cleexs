@@ -2,6 +2,7 @@ import {
   BillingInterval,
   PaymentStatus,
   SubscriptionStatus,
+  type Payment as LocalPayment,
   type Prisma,
   type Subscription,
 } from '@prisma/client';
@@ -62,6 +63,12 @@ function parseDate(value?: string | number | null) {
 function addMonths(date: Date, months: number) {
   const copy = new Date(date);
   copy.setMonth(copy.getMonth() + months);
+  return copy;
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
   return copy;
 }
 
@@ -209,13 +216,111 @@ async function findSubscriptionForPayment(payment: RawPayment) {
   return null;
 }
 
+function isPlanConquistarPayment(payment: RawPayment) {
+  return (
+    payment.external_reference?.startsWith('plan_conquistar') ||
+    payment.metadata?.product === 'plan_conquistar_90d' ||
+    payment.metadata?.product === 'plan-conquistar-90d'
+  );
+}
+
+async function findOneTimePaymentForPayment(payment: RawPayment): Promise<LocalPayment | null> {
+  if (payment.id) {
+    const existing = await prisma.payment.findUnique({
+      where: { mpPaymentId: String(payment.id) },
+    });
+    if (existing) return existing;
+  }
+
+  const externalReference = typeof payment.external_reference === 'string' ? payment.external_reference : undefined;
+  if (externalReference) {
+    const byExternalReference = await prisma.payment.findUnique({
+      where: { id: externalReference },
+    });
+    if (byExternalReference) return byExternalReference;
+  }
+
+  const metadataPaymentId =
+    typeof payment.metadata?.payment_id === 'string' ? payment.metadata.payment_id : undefined;
+  if (metadataPaymentId) {
+    return prisma.payment.findUnique({ where: { id: metadataPaymentId } });
+  }
+
+  return null;
+}
+
+async function processPlanConquistarPayment(payment: RawPayment, status: PaymentStatus) {
+  const localPayment = await findOneTimePaymentForPayment(payment);
+  if (!localPayment) return { processed: false, reason: 'one_time_payment_not_found' };
+
+  const approvedAt = parseDate(payment.date_approved) ?? new Date();
+  const amountArs = payment.transaction_amount ?? Number(localPayment.amountArs);
+
+  await prisma.payment.update({
+    where: { id: localPayment.id },
+    data: {
+      status,
+      amountArs,
+      netReceivedAmountArs: payment.transaction_details?.net_received_amount,
+      mpPaymentId: payment.id ? String(payment.id) : localPayment.mpPaymentId,
+      mpMerchantOrderId: payment.merchant_order_id ? String(payment.merchant_order_id) : undefined,
+      paymentMethodId: payment.payment_method_id,
+      paymentTypeId: payment.payment_type_id,
+      statusDetail: payment.status_detail,
+      payerEmail: payment.payer?.email ?? localPayment.payerEmail,
+      paidAt: status === PaymentStatus.approved ? approvedAt : localPayment.paidAt,
+      rawPayload: toJson({
+        product: 'plan_conquistar_90d',
+        payment,
+      }),
+    },
+  });
+
+  if (status !== PaymentStatus.approved) return { processed: true, product: 'plan_conquistar_90d' };
+
+  const reason = `Plan Conquistar ChatGPT 90 días - MP ${payment.id ?? localPayment.id}`;
+  const existingOverride = await prisma.entitlementOverride.findFirst({
+    where: {
+      tenantId: localPayment.tenantId,
+      active: true,
+      reason,
+    },
+    select: { id: true },
+  });
+
+  if (!existingOverride) {
+    await prisma.entitlementOverride.create({
+      data: {
+        tenantId: localPayment.tenantId,
+        grantPlan: 'crecimiento',
+        reason,
+        startsAt: approvedAt,
+        endsAt: addDays(approvedAt, 90),
+        active: true,
+        createdBy: 'mercadopago-webhook',
+      },
+    });
+  }
+
+  return { processed: true, product: 'plan_conquistar_90d', premiumDays: 90 };
+}
+
 async function processPayment(resourceId: string) {
   const payment = (await getPaymentClient().get({ id: resourceId })) as RawPayment;
   if (!payment.id) return { processed: false, reason: 'payment_without_id' };
 
   const status = mapPaymentStatus(payment.status);
   const subscription = await findSubscriptionForPayment(payment);
-  if (!subscription) return { processed: false, reason: 'subscription_not_found_for_payment' };
+  if (!subscription) {
+    // MercadoPago no siempre propaga `metadata` al payment en Checkout Pro, pero el
+    // external_reference (id de nuestro Payment) sí. Detectamos el pago único por
+    // metadata o por la existencia del Payment local creado en el checkout.
+    const oneTimePayment = await findOneTimePaymentForPayment(payment);
+    if (oneTimePayment || isPlanConquistarPayment(payment)) {
+      return processPlanConquistarPayment(payment, status);
+    }
+    return { processed: false, reason: 'subscription_not_found_for_payment' };
+  }
 
   const approvedAt = parseDate(payment.date_approved);
   const periodMonths = subscription.billingInterval === BillingInterval.annual ? 12 : 1;
