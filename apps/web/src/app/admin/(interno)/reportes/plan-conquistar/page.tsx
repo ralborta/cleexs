@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   ExternalLink,
+  FileCheck,
   Flag,
   Gauge,
   Layers3,
@@ -27,6 +28,14 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReporteCorridas, sectionHeading } from '@/app/ver-resultado/reporte-corridas';
+import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
+import type {
+  PublicDiagnosticRunResult,
+  PublicDiagnosticSatelliteModule,
+  PublicDiagnosticTrendPoint,
+} from '@/lib/api';
 
 type Top3Entry = { position: number; name: string; type: string; reason?: string };
 
@@ -77,6 +86,47 @@ type RunListItem = {
   domain: string | null;
   prompts: number;
 };
+
+type PlanConquistarContext = {
+  ok: boolean;
+  diagnostic: {
+    id: string;
+    domain: string;
+    brandName: string;
+    primaryRunId: string | null;
+  } | null;
+  satelliteModule: PublicDiagnosticSatelliteModule | null;
+  trendData: PublicDiagnosticTrendPoint[];
+};
+
+function normalizePromptScore(score: number) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 0;
+  return n <= 1 ? n : n / 100;
+}
+
+function portalRunToPublicRunResult(run: PortalRunDetail): PublicDiagnosticRunResult {
+  const prompts = run.promptResults || [];
+  const cleexsScore =
+    run.priaReports?.[0]?.priaTotal ??
+    (prompts.length ? prompts.reduce((sum, p) => sum + scoreToPct(p.score), 0) / prompts.length : 0);
+
+  return {
+    brandId: run.brand.id,
+    brandName: run.brand.name,
+    cleexsScore: Math.round(cleexsScore),
+    competitors: run.brand.competitors?.map((c) => c.name) ?? [],
+    competitorDetails: run.brand.competitors?.map((c) => ({ name: c.name, domain: c.domain })) ?? [],
+    brandAliases: run.brand.aliases?.map((a) => a.alias) ?? [],
+    promptResults: prompts.map((pr) => ({
+      category: pr.prompt?.category?.name ?? 'General',
+      score: normalizePromptScore(pr.score),
+      promptText: pr.prompt?.promptText ?? '',
+      responseText: pr.responseText ?? '',
+      top3Json: top3Entries(pr.top3Json),
+    })),
+  };
+}
 
 const ENGINE_LABEL: Record<string, string> = {
   chatgpt: 'ChatGPT',
@@ -465,6 +515,7 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
 
 function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
   const [run, setRun] = useState<PortalRunDetail | null>(null);
+  const [context, setContext] = useState<PlanConquistarContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [engineData, setEngineData] = useState<EnginesResponse | null>(null);
@@ -481,14 +532,22 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}`, {
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error((body as { error?: string }).error || `Error ${res.status}`);
+        const [runRes, contextRes] = await Promise.all([
+          fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}`, { cache: 'no-store' }),
+          fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}/context`, { cache: 'no-store' }),
+        ]);
+        if (!runRes.ok) {
+          const body = await runRes.json().catch(() => ({}));
+          throw new Error((body as { error?: string }).error || `Error ${runRes.status}`);
         }
-        if (!cancelled) setRun((await res.json()) as PortalRunDetail);
+        if (!cancelled) {
+          setRun((await runRes.json()) as PortalRunDetail);
+          if (contextRes.ok) {
+            setContext((await contextRes.json()) as PlanConquistarContext);
+          } else {
+            setContext(null);
+          }
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'No se pudo cargar el reporte.');
       } finally {
@@ -690,6 +749,16 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
   const estimatedAnnualRevenue = estimatedExtraRevenue * 12;
   const quickWins = analysis.opportunities.filter((o) => o.impact === 'Alto' && o.effort !== 'Alto').slice(0, 6);
   const strategicPlays = analysis.opportunities.filter((o) => o.impact !== 'Defensivo').slice(0, 6);
+  const publicRunResult = portalRunToPublicRunResult(run);
+  const domain =
+    context?.diagnostic?.domain && !context.diagnostic.domain.startsWith('brand-')
+      ? context.diagnostic.domain
+      : run.brand.domain ?? '';
+  const siteUrl = domain ? (domain.startsWith('http') ? domain : `https://${domain}`) : '';
+  const satelliteBlock: ReactNode =
+    context?.satelliteModule && context.satelliteModule.status !== 'pending' ? (
+      <SatelliteModuleCard module={context.satelliteModule} siteUrl={siteUrl} />
+    ) : null;
 
   return (
     <div className="space-y-6">
@@ -698,91 +767,43 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
         <span className="text-xs text-slate-400">runId: {run.id}</span>
       </div>
 
-      <section className="rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-700 via-violet-600 to-indigo-700 p-7 text-white shadow-xl sm:p-10">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/20">
-              <Trophy className="h-4 w-4" />
-              AI Visibility Accelerator · 90 días
-            </div>
-            <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
-              El plan para que {run.brand.name} sea más recomendada por la IA
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-violet-50 sm:text-base">
-              Diagnóstico avanzado, benchmark competitivo, acciones priorizadas, roadmap semanal, curso express y acceso
-              Premium durante todo el período de implementación.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Badge tone="violet">Score real por motor</Badge>
-              <Badge tone="violet">Top oportunidades</Badge>
-              <Badge tone="violet">Roadmap 90 días</Badge>
-              <Badge tone="violet">Re-análisis día 75</Badge>
-            </div>
-          </div>
-          <div className="rounded-2xl bg-white/12 p-4 text-right ring-1 ring-white/20">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Vista</p>
-            <p className="mt-1 text-lg font-bold">Admin · Plan Conquistar</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="Cleexs Score" value={`${analysis.cleexsScore}`} hint="Indicador 0-100 de recomendación en IA." />
-        <MetricCard label="Aparición Top 3" value={`${analysis.top3Rate}%`} hint="Prompts donde la marca aparece en posiciones 1 a 3." />
-        <MetricCard label="Mención de marca" value={`${analysis.mentionRate}%`} hint="Respuestas donde la IA menciona la marca." />
-        <MetricCard label="Posición #1" value={`${analysis.top1Rate}%`} hint="Prompts donde la marca aparece primera." />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={Rocket}
-            title="Tu punto de partida"
-            desc="Esta es la lectura ejecutiva del diagnóstico: dónde está hoy y qué debe cambiar primero."
-          />
-          <div className="rounded-2xl bg-slate-950 p-5 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-200">Estado actual</p>
-            <p className="mt-3 text-5xl font-black tabular-nums">{analysis.cleexsScore}</p>
-            <p className="mt-2 text-sm text-slate-300">
-              Nivel {scoreLabel(analysis.cleexsScore)}. La oportunidad está en convertir intención, evidencia y
-              autoridad externa en señales fáciles de entender para los motores de IA.
-            </p>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-violet-50 p-4">
-              <p className="text-xs font-semibold text-violet-700">Primer objetivo</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">Subir presencia Top 3</p>
-            </div>
-            <div className="rounded-xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold text-emerald-700">Momento clave</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">Re-análisis en el día 75</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={Zap}
-            title="Quick wins recomendados"
-            desc="Las acciones de mayor impacto relativo y menor fricción para empezar esta semana."
-          />
-          <div className="space-y-3">
-            {(quickWins.length ? quickWins : analysis.opportunities.slice(0, 6)).map((item, idx) => (
-              <div key={item.id} className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
-                  {idx + 1}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mx-auto max-w-5xl space-y-5">
+          <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
+            <CardHeader className="space-y-1 p-4 pb-3 sm:p-5 sm:pb-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
+                    AI Visibility Accelerator · Plan Conquistar
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-xs sm:text-sm">
+                    <span className="font-medium">{run.brand.name}</span>
+                    {domain ? ` · ${domain}` : null}
+                    {context?.diagnostic ? ` · diagnóstico ${context.diagnostic.id.slice(0, 8)}…` : ' · corrida de portal'}
+                  </CardDescription>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-600">{item.action}</p>
-                </div>
+                <img src="/CleexsLogo.png" alt="Cleexs" className="h-14 w-auto shrink-0 object-contain sm:h-16" />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </CardHeader>
+            <CardContent className="space-y-5 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+              <ReporteCorridas
+                runResult={publicRunResult}
+                brandName={run.brand.name}
+                trendData={context?.trendData}
+                satelliteBlock={satelliteBlock}
+              />
+            </CardContent>
+          </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="space-y-6 border-t border-slate-200/80 pt-6">
+            {sectionHeading(
+              8,
+              'Plan Conquistar · entregable 90 días',
+              'Diagnóstico avanzado, score por motor, oportunidades priorizadas, roadmap y materiales de implementación.'
+            )}
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         {(() => {
           const extraEngines: EngineKey[] = ['gemini', 'claude', 'perplexity'];
           const isAvailable = (engine: EngineKey) => !engineData || engineData.engines.some((e) => e.engine === engine);
@@ -883,88 +904,10 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
             </>
           );
         })()}
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={Users}
-            title="Competitor Gap Analysis"
-            desc="Empresas que hoy capturan respuestas que podrían ser de la marca y la brecha probable a cerrar."
-          />
-          <div className="space-y-3">
-            {analysis.competitors.length === 0 ? (
-              <p className="text-sm text-slate-500">No se detectaron competidores con suficiente claridad en esta corrida.</p>
-            ) : (
-              analysis.competitors.map((competitor, idx) => (
-                <div key={competitor.name} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-slate-900">
-                      {idx + 1}. {competitor.name}
-                    </p>
-                    <Badge tone={idx === 0 ? 'rose' : 'violet'}>{competitor.appearances} apariciones</Badge>
-                  </div>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Posición promedio</p>
-                      <p className="mt-0.5 text-sm font-bold text-slate-900">#{competitor.avgPosition.toFixed(1)}</p>
-                    </div>
-                    <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Brecha</p>
-                      <p className="mt-0.5 text-sm font-bold text-slate-900">{competitor.gap}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                    {competitor.reasons[0] ||
-                      'Probablemente gana por tener señales más claras de categoría, autoridad o contenido específico para esta intención.'}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={BarChart3}
-            title="Scorecard por intención"
-            desc="Categorías donde la IA debería recomendar a la marca y qué prioridad tiene cada una."
-          />
-          <div className="space-y-3">
-            {analysis.intentionScores.length === 0 ? (
-              <p className="text-sm text-slate-500">Esta corrida no trae intenciones ponderadas parseables.</p>
-            ) : (
-              analysis.intentionScores.map((item) => (
-                <div key={item.label}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{item.label}</span>
-                    <span className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">peso {item.weight}%</span>
-                      <span className="font-semibold text-slate-900">{item.score}</span>
-                    </span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div
-                      className={`h-2 rounded-full ${
-                        item.score >= 70 ? 'bg-emerald-500' : item.score >= 45 ? 'bg-amber-500' : 'bg-rose-500'
-                      }`}
-                      style={{ width: `${Math.min(100, item.score)}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-[11px] font-medium text-slate-500">{scoreLabel(item.score)}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
+            </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <SectionTitle
-          icon={Target}
-          title="Top oportunidades priorizadas"
-          desc="Ordenadas por score actual, impacto esperado y esfuerzo. No son 100 tareas: son las que conviene ejecutar primero."
-        />
+        {sectionHeading(9, 'Top oportunidades priorizadas', 'Ordenadas por score, impacto y esfuerzo. Las que conviene ejecutar primero.')}
         <div className="grid gap-3 md:grid-cols-2">
           {analysis.opportunities.map((opportunity, idx) => (
             <div key={opportunity.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
@@ -1204,6 +1147,9 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
           ))}
         </div>
       </section>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

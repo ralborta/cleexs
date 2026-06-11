@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { executeRunGemini, executeRunPerplexity, executeRunClaude } from '../lib/run-executor';
 import { isOpenRouterConfigured } from '../lib/openrouter-runner';
+import type { SatelliteModuleResult } from '../lib/satellite-client';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
 
@@ -47,6 +48,15 @@ function planConquistarExecutorForEngine(engine: PlanConquistarEngineKey) {
   if (engine === 'gemini') return executeRunGemini;
   if (engine === 'perplexity') return executeRunPerplexity;
   return executeRunClaude;
+}
+
+function planConquistarExtractSatelliteModule(analysisJson: unknown): SatelliteModuleResult | null {
+  if (!analysisJson || typeof analysisJson !== 'object' || Array.isArray(analysisJson)) return null;
+  const externalModules = (analysisJson as { externalModules?: unknown }).externalModules;
+  if (!externalModules || typeof externalModules !== 'object' || Array.isArray(externalModules)) return null;
+  const satellite = (externalModules as { satelliteAeo?: unknown }).satelliteAeo;
+  if (!satellite || typeof satellite !== 'object' || Array.isArray(satellite)) return null;
+  return satellite as SatelliteModuleResult;
 }
 
 const windowDaysSchema = z.object({
@@ -2045,6 +2055,93 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       return { ok: true, started, engines: Object.keys(engineRuns) };
+    }
+  );
+
+  // Contexto del diagnóstico público vinculado (AEO satélite + tendencia), si existe.
+  fastify.get<{ Params: { id: string } }>(
+    '/internal/plan-conquistar/runs/:id/context',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const runId = idParsed.data.id;
+      const diagnostic = await prisma.publicDiagnostic.findFirst({
+        where: {
+          OR: [
+            { runId },
+            { runGeminiId: runId },
+            { runPerplexityId: runId },
+            { runClaudeId: runId },
+          ],
+        },
+        select: {
+          id: true,
+          domain: true,
+          brandName: true,
+          status: true,
+          runId: true,
+        },
+      });
+
+      if (!diagnostic) {
+        return { ok: true, diagnostic: null, satelliteModule: null, trendData: [] };
+      }
+
+      let analysisJson: unknown = null;
+      if (diagnostic.status === 'completed') {
+        const jsonRow = await prisma.publicDiagnostic.findUnique({
+          where: { id: diagnostic.id },
+          select: { analysisJson: true },
+        });
+        analysisJson = jsonRow?.analysisJson ?? null;
+      }
+
+      const satelliteModule = analysisJson
+        ? planConquistarExtractSatelliteModule(analysisJson)
+        : null;
+
+      let trendData: Array<{ label: string; score: number; date: string }> = [];
+      if (diagnostic.status === 'completed' && diagnostic.domain) {
+        const lastDiagnostics = await prisma.publicDiagnostic.findMany({
+          where: { domain: diagnostic.domain, status: 'completed', runId: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+          select: { id: true, runId: true, createdAt: true },
+        });
+        const runIds = lastDiagnostics.map((d) => d.runId).filter(Boolean) as string[];
+        if (runIds.length > 0) {
+          const runs = await prisma.run.findMany({
+            where: { id: { in: runIds } },
+            include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+          });
+          const scoreByRunId = new Map<string, number>();
+          for (const r of runs) {
+            const score = r.priaReports[0]?.priaTotal;
+            if (score != null) scoreByRunId.set(r.id, score);
+          }
+          const chronological = [...lastDiagnostics].reverse();
+          trendData = chronological
+            .filter((d) => d.runId && scoreByRunId.has(d.runId))
+            .map((d, idx) => ({
+              label: `Corrida ${idx + 1}`,
+              score: scoreByRunId.get(d.runId!) ?? 0,
+              date: d.createdAt.toISOString(),
+            }));
+        }
+      }
+
+      return {
+        ok: true,
+        diagnostic: {
+          id: diagnostic.id,
+          domain: diagnostic.domain,
+          brandName: diagnostic.brandName,
+          primaryRunId: diagnostic.runId,
+        },
+        satelliteModule,
+        trendData,
+      };
     }
   );
 };

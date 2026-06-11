@@ -186,7 +186,7 @@ function scoreLabelEs(score: number) {
   return 'bajo';
 }
 
-function sectionHeading(num: number, title: string, subtitle?: string) {
+export function sectionHeading(num: number, title: string, subtitle?: string) {
   return (
     <div className="mb-2 flex items-start gap-2">
       <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
