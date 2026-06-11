@@ -1,15 +1,11 @@
 'use client';
 
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
-  BarChart3,
   BookOpen,
-  CalendarCheck,
-  Calculator,
   CheckCircle2,
-  ClipboardCheck,
   ExternalLink,
   FileCheck,
   Flag,
@@ -19,14 +15,10 @@ import {
   ListChecks,
   Loader2,
   Lock,
-  Rocket,
   Search,
   Sparkles,
-  Target,
   TrendingUp,
   Trophy,
-  Users,
-  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReporteCorridas, sectionHeading } from '@/app/ver-resultado/reporte-corridas';
@@ -275,30 +267,6 @@ function money(value: number) {
 
 function top3Entries(value: unknown): Top3Entry[] {
   return Array.isArray(value) ? (value as Top3Entry[]) : [];
-}
-
-function MetricCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-      <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
-    </div>
-  );
-}
-
-function SectionTitle({ icon: Icon, title, desc }: { icon: ComponentType<{ className?: string }>; title: string; desc: string }) {
-  return (
-    <div className="mb-5 flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">{desc}</p>
-      </div>
-    </div>
-  );
 }
 
 function Badge({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'violet' | 'emerald' | 'amber' | 'rose' }) {
@@ -760,6 +728,343 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       <SatelliteModuleCard module={context.satelliteModule} siteUrl={siteUrl} />
     ) : null;
 
+  // Score por los 4 motores: va pegado al resumen ejecutivo, como continuación del Cleexs Score.
+  const extraEngines: EngineKey[] = ['gemini', 'claude', 'perplexity'];
+  const isEngineAvailable = (engine: EngineKey) => !engineData || engineData.engines.some((e) => e.engine === engine);
+  const engineEntryOf = (engine: EngineKey) => engineData?.engines.find((e) => e.engine === engine);
+  const isEngineDone = (engine: EngineKey) => {
+    const entry = engineEntryOf(engine);
+    return entry?.status === 'completed' && entry.score != null;
+  };
+  const pendingEngineTargets = extraEngines.filter(
+    (engine) => isEngineAvailable(engine) && !isEngineDone(engine) && !busyEngines.includes(engine)
+  );
+  const engineCards: Array<{ key: string; score: number | null; status: string }> = [
+    { key: 'chatgpt', score: engineData?.chatgpt.score ?? analysis.cleexsScore, status: 'completed' },
+    ...extraEngines.map((engine) => {
+      const entry = engineEntryOf(engine);
+      return { key: engine, score: entry?.score ?? null, status: entry?.status ?? 'not_started' };
+    }),
+  ];
+
+  const engineScoreSlot = (
+    <section>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700 ring-1 ring-violet-200">
+            <Gauge className="h-4 w-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 sm:text-base">Cleexs Score por los 4 motores</h3>
+            <p className="text-[11px] text-slate-500">ChatGPT sale de la corrida. Generá Gemini, Claude y Perplexity: uno, varios o todos.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => generateEngines(pendingEngineTargets)}
+          disabled={pendingEngineTargets.length === 0}
+          className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Generar todos los pendientes
+        </button>
+      </div>
+      {engineError ? <p className="mb-2 text-xs text-amber-700">{engineError}</p> : null}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {engineCards.map((card) => {
+          const inProgress = card.status === 'pending' || card.status === 'running';
+          const done = card.status === 'completed' && card.score != null;
+          const engineKey = card.key as EngineKey;
+          const isExtra = card.key !== 'chatgpt';
+          const busy = isExtra && busyEngines.includes(engineKey);
+          const available = !isExtra || isEngineAvailable(engineKey);
+          return (
+            <div key={card.key} className="flex flex-col rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-slate-900">{ENGINE_LABEL[card.key]}</p>
+                {inProgress || busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                ) : done ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Lock className="h-4 w-4 text-slate-400" />
+                )}
+              </div>
+              <p className="mt-3 text-3xl font-bold text-slate-900">{card.score ?? '—'}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {!isExtra
+                  ? 'Disponible'
+                  : !available
+                    ? 'No disponible en el servidor'
+                    : busy || inProgress
+                      ? 'Generando...'
+                      : done
+                        ? 'Disponible'
+                        : card.status === 'failed'
+                          ? 'Falló, reintentá'
+                          : 'Sin generar'}
+              </p>
+              {isExtra && available ? (
+                <button
+                  type="button"
+                  onClick={() => generateEngines([engineKey])}
+                  disabled={busy || inProgress}
+                  className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {busy || inProgress ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generando
+                    </>
+                  ) : done ? (
+                    'Regenerar'
+                  ) : (
+                    'Generar'
+                  )}
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  // Resto del entregable Plan Conquistar, en el mismo flujo numerado del reporte (continúa después de la sección 7).
+  const planSlot = (
+    <>
+      <section>
+        {sectionHeading(8, 'Top oportunidades priorizadas', 'Ordenadas por score, impacto esperado y esfuerzo. Las que conviene ejecutar primero.')}
+        <div className="grid gap-3 md:grid-cols-2">
+          {analysis.opportunities.map((opportunity, idx) => (
+            <div key={opportunity.id} className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  {idx + 1}. {opportunity.label}
+                </p>
+                <span className="rounded-full bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                  Score {opportunity.score}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Badge tone={opportunity.impact === 'Alto' ? 'rose' : opportunity.impact === 'Medio' ? 'amber' : 'emerald'}>
+                  Impacto {opportunity.impact}
+                </Badge>
+                <Badge tone={opportunity.effort === 'Bajo' ? 'emerald' : 'amber'}>Esfuerzo {opportunity.effort}</Badge>
+                <Badge>{opportunity.intention}</Badge>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{opportunity.action}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        {sectionHeading(9, 'Mapa de ejecución', 'Dónde poner el foco primero y qué señales externas reforzar.')}
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+            <div className="mb-3 flex items-center gap-2">
+              <Layers3 className="h-4 w-4 text-violet-600" />
+              <p className="text-sm font-bold text-slate-900">Impacto / esfuerzo</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { title: 'Hacer ahora', tone: 'emerald' as const, items: quickWins },
+                { title: 'Apostar estratégicamente', tone: 'violet' as const, items: strategicPlays },
+              ].map((group) => (
+                <div key={group.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-900">{group.title}</h4>
+                    <Badge tone={group.tone}>{group.items.length}</Badge>
+                  </div>
+                  <div className="space-y-1.5">
+                    {group.items.slice(0, 4).map((item) => (
+                      <div key={`${group.title}-${item.id}`} className="rounded-md bg-white p-2 text-xs text-slate-700 ring-1 ring-slate-100">
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+            <div className="mb-3 flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-violet-600" />
+              <p className="text-sm font-bold text-slate-900">Autoridad externa</p>
+            </div>
+            <div className="grid gap-2">
+              {EXTERNAL_AUTHORITY_CHANNELS.map((channel) => (
+                <div key={channel.name} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                  <p className="text-sm font-semibold text-slate-900">{channel.name}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-600">{channel.goal}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        {sectionHeading(10, 'Plan de acción de 90 días', 'Secuencia semanal para transformar el diagnóstico en ejecución y llegar al re-análisis del día 75.')}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {ROADMAP_WEEKS.map((phase) => (
+            <div key={phase.range} className="rounded-xl border border-violet-100 bg-violet-50/40 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-semibold text-slate-900">{phase.range}</h3>
+                <Flag className="h-4 w-4 text-violet-600" />
+              </div>
+              <p className="mt-1 text-sm font-semibold text-violet-700">{phase.theme}</p>
+              <ul className="mt-3 space-y-2">
+                {phase.tasks.map((item) => (
+                  <li key={item} className="flex gap-2 text-sm text-slate-700">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        {sectionHeading(11, 'Oportunidad económica estimada', 'Estimación simple para dimensionar cuánto podría valer mejorar la visibilidad. No es promesa de revenue.')}
+        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: 'Visitas mensuales estimadas', value: monthlyVisits, setter: setMonthlyVisits, suffix: '' },
+              { label: 'Conversión a lead (%)', value: conversionRate, setter: setConversionRate, suffix: '%' },
+              { label: 'Valor promedio por lead (USD)', value: leadValue, setter: setLeadValue, suffix: 'USD' },
+              { label: 'Mejora de visibilidad esperada (%)', value: visibilityLift, setter: setVisibilityLift, suffix: '%' },
+            ].map((field) => (
+              <label key={field.label} className="block rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                <span className="text-xs font-semibold text-slate-500">{field.label}</span>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={field.value}
+                    onChange={(e) => field.setter(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                  />
+                  {field.suffix ? <span className="text-xs font-semibold text-slate-400">{field.suffix}</span> : null}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="mt-4 rounded-xl bg-gradient-to-br from-emerald-50 to-violet-50 p-4 ring-1 ring-emerald-100">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Oportunidad aproximada</p>
+            <p className="mt-1 text-3xl font-black text-slate-900">{money(estimatedExtraRevenue)} / mes</p>
+            <p className="mt-1 text-sm text-slate-600">{money(estimatedAnnualRevenue)} estimados al año si las variables se cumplen.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        {sectionHeading(12, 'Materiales de implementación', 'Curso express y prompts listos para ejecutar el plan.')}
+        <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+            <div className="mb-3 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-violet-600" />
+              <p className="text-sm font-bold text-slate-900">Curso Express de Visibilidad IA</p>
+            </div>
+            <div className="space-y-2">
+              {COURSE_MODULES.map((module, idx) => (
+                <div key={module} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-700">
+                    {idx + 1}
+                  </div>
+                  <p className="text-sm font-medium text-slate-800">{module}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+            <div className="mb-3 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-violet-600" />
+              <p className="text-sm font-bold text-slate-900">AI Visibility GPT / Prompt Pack</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  title: 'Mejorar una intención',
+                  prompt: `Actuá como consultor de AI Visibility. Para la marca ${run.brand.name}, proponé una página que responda mejor una intención débil del reporte.`,
+                },
+                {
+                  title: 'Comparativa competitiva',
+                  prompt: `Compará ${run.brand.name} contra sus competidores principales y redactá una sección honesta que explique cuándo elegir cada opción.`,
+                },
+                {
+                  title: 'Checklist semanal',
+                  prompt: `Convertí el roadmap de 90 días de ${run.brand.name} en 3 tareas concretas para ejecutar esta semana.`,
+                },
+              ].map((item) => (
+                <div key={item.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                  <p className="text-sm font-bold text-slate-900">{item.title}</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{item.prompt}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['Sin 50 PDFs', 'Sin 100 recomendaciones imposibles', 'Sin teoría SEO eterna', 'Sin G2 en esta versión'].map((item) => (
+                <span key={item} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                  <ListChecks className="h-3 w-3" /> {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        {sectionHeading(13, 'Re-análisis día 75 y continuidad', 'Se vuelve a medir el avance y se ofrece continuidad Premium anual.')}
+        <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-700 to-indigo-700 p-6 text-white shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
+                <TrendingUp className="h-4 w-4" />
+                Día 75
+              </div>
+              <h3 className="mt-3 text-2xl font-bold">Re-análisis y continuidad Premium</h3>
+              <p className="mt-2 text-sm leading-relaxed text-violet-50">
+                En el día 75 se vuelve a medir el avance: score inicial vs actual, nuevas apariciones, oportunidades
+                detectadas y recomendación para mantener el progreso con el plan anual.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/20 md:w-64">
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Oferta de continuidad</p>
+              <p className="mt-1 text-2xl font-black">USD 499/año</p>
+              <p className="mt-1 text-xs text-violet-100">Premium 365 días con descuento especial post-implementación.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        {sectionHeading(14, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[
+            'Definir las 5 intenciones principales donde querés ser recomendado.',
+            'Crear o mejorar una página para cada intención crítica.',
+            'Agregar FAQs claras con respuestas directas y verificables.',
+            'Publicar comparativas honestas contra competidores relevantes.',
+            'Actualizar datos de marca, rubro, ubicación y propuesta de valor.',
+            'Sumar casos, pruebas sociales y evidencia de autoridad.',
+            'Medir nuevamente las oportunidades de menor score.',
+            'Preparar la corrida de control del día 75.',
+          ].map((item) => (
+            <div key={item} className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -768,7 +1073,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mx-auto max-w-5xl space-y-5">
+        <div className="mx-auto max-w-5xl">
           <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
             <CardHeader className="space-y-1 p-4 pb-3 sm:p-5 sm:pb-3">
               <div className="flex items-start justify-between gap-4">
@@ -792,362 +1097,11 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
                 brandName={run.brand.name}
                 trendData={context?.trendData}
                 satelliteBlock={satelliteBlock}
+                afterSummarySlot={engineScoreSlot}
+                appendSlot={planSlot}
               />
             </CardContent>
           </Card>
-
-          <div className="space-y-6 border-t border-slate-200/80 pt-6">
-            {sectionHeading(
-              8,
-              'Plan Conquistar · entregable 90 días',
-              'Diagnóstico avanzado, score por motor, oportunidades priorizadas, roadmap y materiales de implementación.'
-            )}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {(() => {
-          const extraEngines: EngineKey[] = ['gemini', 'claude', 'perplexity'];
-          const isAvailable = (engine: EngineKey) => !engineData || engineData.engines.some((e) => e.engine === engine);
-          const entryOf = (engine: EngineKey) => engineData?.engines.find((e) => e.engine === engine);
-          const isDone = (engine: EngineKey) => {
-            const entry = entryOf(engine);
-            return entry?.status === 'completed' && entry.score != null;
-          };
-          const pendingTargets = extraEngines.filter(
-            (engine) => isAvailable(engine) && !isDone(engine) && !busyEngines.includes(engine)
-          );
-
-          const cards: Array<{ key: string; score: number | null; status: string }> = [
-            { key: 'chatgpt', score: engineData?.chatgpt.score ?? analysis.cleexsScore, status: 'completed' },
-          ];
-          for (const engine of extraEngines) {
-            const entry = entryOf(engine);
-            cards.push({ key: engine, score: entry?.score ?? null, status: entry?.status ?? 'not_started' });
-          }
-
-          return (
-            <>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <SectionTitle
-                  icon={Gauge}
-                  title="Cleexs Score por motor"
-                  desc="ChatGPT sale de la corrida. Elegí con qué motores generar el score real: uno, varios o todos."
-                />
-                <button
-                  type="button"
-                  onClick={() => generateEngines(pendingTargets)}
-                  disabled={pendingTargets.length === 0}
-                  className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Generar todos los pendientes
-                </button>
-              </div>
-
-              {engineError ? <p className="mb-3 text-sm text-amber-700">{engineError}</p> : null}
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {cards.map((card) => {
-                  const inProgress = card.status === 'pending' || card.status === 'running';
-                  const done = card.status === 'completed' && card.score != null;
-                  const engineKey = card.key as EngineKey;
-                  const isExtra = card.key !== 'chatgpt';
-                  const busy = isExtra && busyEngines.includes(engineKey);
-                  const available = !isExtra || isAvailable(engineKey);
-                  return (
-                    <div key={card.key} className="flex flex-col rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold text-slate-900">{ENGINE_LABEL[card.key]}</p>
-                        {inProgress || busy ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
-                        ) : done ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        ) : (
-                          <Lock className="h-4 w-4 text-slate-400" />
-                        )}
-                      </div>
-                      <p className="mt-3 text-3xl font-bold text-slate-900">{card.score ?? '—'}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {!isExtra
-                          ? 'Disponible'
-                          : !available
-                            ? 'No disponible en el servidor'
-                            : busy || inProgress
-                              ? 'Generando...'
-                              : done
-                                ? 'Disponible'
-                                : card.status === 'failed'
-                                  ? 'Falló, reintentá'
-                                  : 'Sin generar'}
-                      </p>
-                      {isExtra && available ? (
-                        <button
-                          type="button"
-                          onClick={() => generateEngines([engineKey])}
-                          disabled={busy || inProgress}
-                          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-wait disabled:opacity-60"
-                        >
-                          {busy || inProgress ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generando
-                            </>
-                          ) : done ? (
-                            'Regenerar'
-                          ) : (
-                            'Generar'
-                          )}
-                        </button>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          );
-        })()}
-            </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {sectionHeading(9, 'Top oportunidades priorizadas', 'Ordenadas por score, impacto y esfuerzo. Las que conviene ejecutar primero.')}
-        <div className="grid gap-3 md:grid-cols-2">
-          {analysis.opportunities.map((opportunity, idx) => (
-            <div key={opportunity.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-900">
-                  {idx + 1}. {opportunity.label}
-                </p>
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                  Score {opportunity.score}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Badge tone={opportunity.impact === 'Alto' ? 'rose' : opportunity.impact === 'Medio' ? 'amber' : 'emerald'}>
-                  Impacto {opportunity.impact}
-                </Badge>
-                <Badge tone={opportunity.effort === 'Bajo' ? 'emerald' : 'amber'}>Esfuerzo {opportunity.effort}</Badge>
-                <Badge>{opportunity.intention}</Badge>
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{opportunity.action}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={Layers3}
-            title="Mapa impacto / esfuerzo"
-            desc="La mejor forma de ejecutar: primero alto impacto con bajo o medio esfuerzo."
-          />
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { title: 'Hacer ahora', tone: 'emerald' as const, items: quickWins },
-              { title: 'Apostar estratégicamente', tone: 'violet' as const, items: strategicPlays },
-            ].map((group) => (
-              <div key={group.title} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900">{group.title}</h3>
-                  <Badge tone={group.tone}>{group.items.length}</Badge>
-                </div>
-                <div className="space-y-2">
-                  {group.items.slice(0, 4).map((item) => (
-                    <div key={`${group.title}-${item.id}`} className="rounded-lg bg-white p-3 text-sm text-slate-700 ring-1 ring-slate-100">
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={ExternalLink}
-            title="Mapa de autoridad externa"
-            desc="Fuentes y señales externas a revisar. No incluye G2; son oportunidades sugeridas, no claims de presencia actual."
-          />
-          <div className="grid gap-2">
-            {EXTERNAL_AUTHORITY_CHANNELS.map((channel) => (
-              <div key={channel.name} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                <p className="text-sm font-semibold text-slate-900">{channel.name}</p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-600">{channel.goal}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <SectionTitle
-          icon={CalendarCheck}
-          title="Plan de acción personalizado de 90 días"
-          desc="Una secuencia semanal para transformar diagnóstico en ejecución y llegar al re-análisis del día 75 con progreso medible."
-        />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {ROADMAP_WEEKS.map((phase) => (
-            <div key={phase.range} className="rounded-xl border border-violet-100 bg-violet-50/40 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-semibold text-slate-900">{phase.range}</h3>
-                <Flag className="h-4 w-4 text-violet-600" />
-              </div>
-              <p className="mt-1 text-sm font-semibold text-violet-700">{phase.theme}</p>
-              <ul className="mt-3 space-y-2">
-                {phase.tasks.map((item) => (
-                  <li key={item} className="flex gap-2 text-sm text-slate-700">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={Calculator}
-            title="Calculadora de oportunidad económica"
-            desc="Estimación simple para dimensionar cuánto podría valer mejorar la visibilidad. No es promesa de revenue."
-          />
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { label: 'Visitas mensuales estimadas', value: monthlyVisits, setter: setMonthlyVisits, suffix: '' },
-              { label: 'Conversión a lead (%)', value: conversionRate, setter: setConversionRate, suffix: '%' },
-              { label: 'Valor promedio por lead (USD)', value: leadValue, setter: setLeadValue, suffix: 'USD' },
-              { label: 'Mejora de visibilidad esperada (%)', value: visibilityLift, setter: setVisibilityLift, suffix: '%' },
-            ].map((field) => (
-              <label key={field.label} className="block rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                <span className="text-xs font-semibold text-slate-500">{field.label}</span>
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    value={field.value}
-                    onChange={(e) => field.setter(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
-                  />
-                  {field.suffix ? <span className="text-xs font-semibold text-slate-400">{field.suffix}</span> : null}
-                </div>
-              </label>
-            ))}
-          </div>
-          <div className="mt-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-violet-50 p-5 ring-1 ring-emerald-100">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Oportunidad aproximada</p>
-            <p className="mt-2 text-3xl font-black text-slate-900">{money(estimatedExtraRevenue)} / mes</p>
-            <p className="mt-1 text-sm text-slate-600">{money(estimatedAnnualRevenue)} estimados al año si las variables se cumplen.</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle
-            icon={BookOpen}
-            title="Curso Express de Visibilidad IA"
-            desc="10 videos cortos de 5 minutos para que el cliente entienda qué ejecutar y por qué."
-          />
-          <div className="space-y-2">
-            {COURSE_MODULES.map((module, idx) => (
-              <div key={module} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-700">
-                  {idx + 1}
-                </div>
-                <p className="text-sm font-medium text-slate-800">{module}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <SectionTitle
-            icon={Lightbulb}
-            title="AI Visibility GPT / Prompt Pack"
-            desc="Mientras el GPT privado queda configurado, estos prompts sirven como asistente de implementación para ejecutar el plan."
-          />
-          <div className="grid gap-3 md:grid-cols-3">
-            {[
-              {
-                title: 'Mejorar una intención',
-                prompt: `Actuá como consultor de AI Visibility. Para la marca ${run.brand.name}, proponé una página que responda mejor una intención débil del reporte.`,
-              },
-              {
-                title: 'Comparativa competitiva',
-                prompt: `Compará ${run.brand.name} contra sus competidores principales y redactá una sección honesta que explique cuándo elegir cada opción.`,
-              },
-              {
-                title: 'Checklist semanal',
-                prompt: `Convertí el roadmap de 90 días de ${run.brand.name} en 3 tareas concretas para ejecutar esta semana.`,
-              },
-            ].map((item) => (
-              <div key={item.title} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                <p className="text-sm font-bold text-slate-900">{item.title}</p>
-                <p className="mt-2 text-xs leading-relaxed text-slate-600">{item.prompt}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle icon={ListChecks} title="Qué NO vamos a hacer" desc="Para mantener foco y credibilidad del entregable." />
-          <div className="space-y-2 text-sm text-slate-700">
-            {['No 50 PDFs', 'No 100 recomendaciones imposibles', 'No teoría SEO eterna', 'No G2 en esta versión'].map((item) => (
-              <div key={item} className="rounded-lg bg-slate-50 px-3 py-2">
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-700 to-indigo-700 p-6 text-white shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
-              <TrendingUp className="h-4 w-4" />
-              Día 75
-            </div>
-            <h2 className="mt-3 text-2xl font-bold">Re-análisis y continuidad Premium</h2>
-            <p className="mt-2 text-sm leading-relaxed text-violet-50">
-              En el día 75 se vuelve a medir el avance: score inicial vs actual, nuevas apariciones, oportunidades
-              detectadas y recomendación para mantener el progreso con el plan anual.
-            </p>
-          </div>
-          <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/20 md:w-64">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Oferta de continuidad</p>
-            <p className="mt-1 text-2xl font-black">USD 499/año</p>
-            <p className="mt-1 text-xs text-violet-100">Premium 365 días con descuento especial post-implementación.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <SectionTitle
-          icon={ClipboardCheck}
-          title="Checklist de implementación"
-          desc="Usalo como guía operativa para ejecutar el plan sin perder tiempo."
-        />
-        <div className="grid gap-2 sm:grid-cols-2">
-          {[
-            'Definir las 5 intenciones principales donde querés ser recomendado.',
-            'Crear o mejorar una página para cada intención crítica.',
-            'Agregar FAQs claras con respuestas directas y verificables.',
-            'Publicar comparativas honestas contra competidores relevantes.',
-            'Actualizar datos de marca, rubro, ubicación y propuesta de valor.',
-            'Sumar casos, pruebas sociales y evidencia de autoridad.',
-            'Medir nuevamente las oportunidades de menor score.',
-            'Preparar la corrida de control del día 75.',
-          ].map((item) => (
-            <div key={item} className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-          </div>
         </div>
       </div>
     </div>

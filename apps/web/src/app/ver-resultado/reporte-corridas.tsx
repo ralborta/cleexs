@@ -336,12 +336,18 @@ export function ReporteCorridas({
   brandName,
   trendData,
   satelliteBlock,
+  afterSummarySlot,
+  appendSlot,
 }: {
   runResult: PublicDiagnosticRunResult;
   brandName: string;
   trendData?: PublicDiagnosticTrendPoint[];
   /** Módulo AEO / satélite (mismo contenido que en vista legacy), entre KPIs y comparativa. */
   satelliteBlock?: ReactNode;
+  /** Contenido extra inyectado justo después del resumen ejecutivo (ej: score por motor). */
+  afterSummarySlot?: ReactNode;
+  /** Contenido extra inyectado al final del reporte, manteniendo el mismo flujo (ej: roadmap, calculadora). */
+  appendSlot?: ReactNode;
 }) {
   const gaugeGradientId = useId().replace(/:/g, '');
   const [summaryTab, setSummaryTab] = useState<'score' | 'competidores'>('score');
@@ -1009,6 +1015,8 @@ export function ReporteCorridas({
         </div>
       </section>
 
+      {afterSummarySlot ?? null}
+
       {/* 2 KPIs clave */}
       <section>
         {sectionHeading(2, 'KPIs clave')}
@@ -1537,6 +1545,8 @@ export function ReporteCorridas({
           })}
         </div>
       </section>
+
+      {appendSlot ?? null}
 
       <p className="text-center text-[11px] italic leading-relaxed text-slate-400">
         La lectura pasa de análisis disperso a narrativa: estado actual → comparación → métricas → tendencias → acciones.
