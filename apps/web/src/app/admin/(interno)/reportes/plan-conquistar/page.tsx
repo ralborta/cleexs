@@ -168,49 +168,6 @@ const COURSE_MODULES = [
   'Cómo prepararte para el re-análisis del día 75',
 ];
 
-const ROADMAP_WEEKS = [
-  {
-    range: 'Semana 1',
-    theme: 'Base de claridad',
-    tasks: ['Definir 5 intenciones críticas', 'Ajustar propuesta de valor', 'Ordenar páginas principales'],
-  },
-  {
-    range: 'Semana 2',
-    theme: 'Respuestas directas',
-    tasks: ['Crear FAQs por intención', 'Responder objeciones frecuentes', 'Agregar datos verificables'],
-  },
-  {
-    range: 'Semana 3',
-    theme: 'Comparación competitiva',
-    tasks: ['Publicar comparativas honestas', 'Explicar diferencias por caso de uso', 'Nombrar alternativas relevantes'],
-  },
-  {
-    range: 'Semana 4',
-    theme: 'Autoridad en sitio',
-    tasks: ['Sumar casos y testimonios', 'Actualizar about/categoría', 'Estructurar contenido evergreen'],
-  },
-  {
-    range: 'Semanas 5-6',
-    theme: 'Autoridad externa',
-    tasks: ['Revisar perfiles externos', 'Buscar menciones sectoriales', 'Participar en comunidades relevantes'],
-  },
-  {
-    range: 'Semanas 7-8',
-    theme: 'Expansión de contenido',
-    tasks: ['Cubrir intenciones con peor score', 'Crear demos o guías cortas', 'Publicar recursos comparables'],
-  },
-  {
-    range: 'Semanas 9-10',
-    theme: 'Medición y ajuste',
-    tasks: ['Revisar prompts débiles', 'Reforzar páginas que ya aparecen', 'Cerrar gaps contra competidores'],
-  },
-  {
-    range: 'Semanas 11-12',
-    theme: 'Re-análisis día 75',
-    tasks: ['Preparar nueva corrida', 'Comparar score inicial vs actual', 'Definir continuidad Premium'],
-  },
-];
-
 function normalizeName(value: string) {
   return value
     .toLowerCase()
@@ -264,13 +221,18 @@ function priorityForScore(score: number, impact: string, effort: string) {
   return Math.min(100, Math.round(gain * 0.8 + impactBonus + effortBonus));
 }
 
-// Texto real de la consulta (sin el prefijo "Intención: ... (n%)") para etiquetar cada oportunidad.
-function extractQuestion(promptText?: string | null) {
+// Nombre legible de la consulta real (intención + tipo), tal como se generó en la corrida.
+function cleanPromptName(name?: string | null) {
+  if (!name) return '';
+  return name.replace(/\s*-\s*/g, ' · ').replace(/\s+/g, ' ').trim();
+}
+
+// Escenario real del usuario: la línea de contexto del prompt (ej: "Estoy evaluando opciones...").
+function extractScenario(promptText?: string | null) {
   if (!promptText) return '';
-  let text = promptText.replace(/Intención:\s*[^\n(]*\(\d+%\)/i, '').trim();
-  text = text.replace(/^[\s:–-]+/, '').trim();
-  const firstLine = text.split('\n').map((s) => s.trim()).filter(Boolean)[0] || '';
-  return firstLine.length > 120 ? `${firstLine.slice(0, 117)}…` : firstLine;
+  const lines = promptText.split('\n').map((s) => s.trim()).filter(Boolean);
+  const ctx = lines[1] || '';
+  return ctx.length > 160 ? `${ctx.slice(0, 157)}…` : ctx;
 }
 
 function money(value: number) {
@@ -613,11 +575,11 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
         const impact = impactForScore(score);
         const effort = effortForScore(score, hasCompetitor);
         const label =
-          extractQuestion(prompt.prompt?.promptText) ||
-          prompt.prompt?.name ||
+          cleanPromptName(prompt.prompt?.name) ||
           intention?.label ||
           prompt.prompt?.category?.name ||
           'Consulta de visibilidad';
+        const scenario = extractScenario(prompt.prompt?.promptText);
         return {
           id: prompt.id,
           score,
@@ -625,6 +587,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
           impact,
           effort,
           label,
+          scenario,
           intention: intention?.label || prompt.prompt?.category?.name || 'Intención crítica',
           action:
             score >= 70
@@ -854,6 +817,138 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
     </section>
   );
 
+  const primaryOpportunity = analysis.opportunities[0];
+  const topCompetitor = analysis.competitors[0];
+  const weeklyPriorities = analysis.opportunities.slice(0, 3);
+  const implementationPrompts = [
+    {
+      title: 'Convertir la prioridad #1 en página',
+      source: primaryOpportunity
+        ? `Basado en: ${primaryOpportunity.label} · prioridad ${primaryOpportunity.priority} · score actual ${primaryOpportunity.score}`
+        : 'Basado en la oportunidad prioritaria del reporte',
+      prompt: primaryOpportunity
+        ? `Actuá como consultor de AI Visibility para ${run.brand.name}. Necesito convertir esta oportunidad prioritaria en una página publicable: "${primaryOpportunity.label}".${primaryOpportunity.scenario ? ` Escenario del usuario: "${primaryOpportunity.scenario}".` : ''} Intención: ${primaryOpportunity.intention}. Score actual: ${primaryOpportunity.score}/100. Acción recomendada: ${primaryOpportunity.action}. Proponé estructura de página, títulos H2/H3, FAQs, evidencias a incluir y un checklist de publicación.`
+        : `Actuá como consultor de AI Visibility para ${run.brand.name}. Revisá la oportunidad prioritaria del reporte y convertíla en una página publicable con estructura, FAQs, evidencias y checklist.`,
+    },
+    {
+      title: 'Cerrar brecha contra competidor',
+      source: topCompetitor
+        ? `Basado en: ${topCompetitor.name} · ${topCompetitor.appearances} apariciones`
+        : 'Basado en el competidor principal detectado',
+      prompt: topCompetitor
+        ? `Actuá como estratega de AI Visibility. Compará ${run.brand.name} contra ${topCompetitor.name} usando un tono honesto y verificable. Explicá en qué casos conviene elegir ${run.brand.name}, qué prueba social o datos faltan para sostener esa comparación y qué contenido deberíamos crear para que ChatGPT, Claude, Gemini y Perplexity entiendan mejor la diferencia.`
+        : `Actuá como estratega de AI Visibility. Si el reporte detecta competidores relevantes, armá una comparativa honesta para ${run.brand.name}: cuándo elegir la marca, qué pruebas faltan y qué contenido crear para mejorar recomendaciones en motores de IA.`,
+    },
+    {
+      title: 'Tareas concretas de esta semana',
+      source:
+        weeklyPriorities.length > 0
+          ? `Basado en las prioridades: ${weeklyPriorities.map((o) => `#${o.priority}`).join(', ')}`
+          : 'Basado en las primeras prioridades del reporte',
+      prompt:
+        weeklyPriorities.length > 0
+          ? `Convertí estas prioridades de ${run.brand.name} en un plan de 7 días con tareas claras, responsable sugerido y entregable final: ${weeklyPriorities
+              .map((o, idx) => `${idx + 1}) ${o.label} (score ${o.score}, prioridad ${o.priority}): ${o.action}`)
+              .join(' | ')}. Evitá teoría: quiero acciones publicables o verificables.`
+          : `Convertí las primeras prioridades del reporte de ${run.brand.name} en un plan de 7 días con tareas claras, responsable sugerido y entregable final. Evitá teoría: quiero acciones publicables o verificables.`,
+    },
+  ];
+
+  const formatOpportunity = (item: (typeof analysis.opportunities)[number]) =>
+    `${item.label} (score ${item.score}, prioridad ${item.priority})`;
+
+  const personalizedRoadmap = [
+    {
+      range: 'Semana 1',
+      theme: primaryOpportunity ? `Prioridad #1: ${primaryOpportunity.label}` : 'Prioridad principal',
+      evidence: primaryOpportunity
+        ? `Sale de la oportunidad con mayor prioridad (${primaryOpportunity.priority})`
+        : 'Sin oportunidad prioritaria disponible en esta corrida',
+      tasks: primaryOpportunity
+        ? [
+            `Convertir ${formatOpportunity(primaryOpportunity)} en una página o sección nueva`,
+            primaryOpportunity.scenario
+              ? `Responder explícitamente este escenario: “${primaryOpportunity.scenario}”`
+              : `Cubrir la intención ${primaryOpportunity.intention}`,
+            primaryOpportunity.action,
+          ]
+        : ['Revisar la oportunidad principal cuando la corrida tenga datos suficientes'],
+    },
+    {
+      range: 'Semana 2',
+      theme: 'Consultas con peor score',
+      evidence: improveNow.length ? `Basado en ${improveNow.length} consultas con menor score` : 'Sin consultas débiles detectadas',
+      tasks: improveNow.length
+        ? improveNow.slice(0, 3).map((item) => `Mejorar ${formatOpportunity(item)}`)
+        : ['No se detectaron consultas débiles suficientes en esta corrida'],
+    },
+    {
+      range: 'Semana 3',
+      theme: topCompetitor ? `Brecha contra ${topCompetitor.name}` : 'Comparativa competitiva',
+      evidence: topCompetitor
+        ? `${topCompetitor.name} aparece ${topCompetitor.appearances} veces en el Top 3`
+        : 'No se detectó un competidor recurrente en esta corrida',
+      tasks: topCompetitor
+        ? [
+            `Crear una comparación honesta entre ${run.brand.name} y ${topCompetitor.name}`,
+            topCompetitor.reasons[0]
+              ? `Responder la razón detectada: ${topCompetitor.reasons[0]}`
+              : `Explicar cuándo conviene elegir ${run.brand.name}`,
+            'Agregar evidencia verificable: casos, precios, cobertura, datos o testimonios',
+          ]
+        : [
+            `Crear una comparativa base con los competidores cargados para ${run.brand.name}`,
+            'Agregar evidencia verificable: casos, precios, cobertura, datos o testimonios',
+          ],
+    },
+    {
+      range: 'Semana 4',
+      theme: 'Defender lo que ya funciona',
+      evidence: defendNow.length ? `Basado en las consultas con mayor score actual` : 'Sin consultas fuertes detectadas',
+      tasks: defendNow.length
+        ? defendNow.slice(0, 3).map((item) => `Sostener ${formatOpportunity(item)} con FAQs, casos y contenido público`)
+        : ['No se detectaron consultas fuertes suficientes en esta corrida'],
+    },
+    {
+      range: 'Semanas 5-6',
+      theme: 'Autoridad externa sugerida',
+      evidence: 'Sugerido por el tipo de señales que los motores de IA suelen usar para validar marcas',
+      tasks: EXTERNAL_AUTHORITY_CHANNELS.slice(0, 3).map((channel) => `${channel.name}: ${channel.goal}`),
+    },
+    {
+      range: 'Semanas 7-8',
+      theme: 'Segunda capa de oportunidades',
+      evidence:
+        analysis.opportunities.length > 3
+          ? `Basado en las prioridades #4 a #6 del reporte`
+          : 'Sin suficientes oportunidades adicionales',
+      tasks:
+        analysis.opportunities.length > 3
+          ? analysis.opportunities.slice(3, 6).map((item) => `Ejecutar ${formatOpportunity(item)}`)
+          : ['Revisar nuevas oportunidades cuando haya más datos o una nueva corrida'],
+    },
+    {
+      range: 'Semanas 9-10',
+      theme: 'Medición y ajuste',
+      evidence: `Basado en ${analysis.totalPrompts} prompts de la corrida actual`,
+      tasks: [
+        `Revisar si mejoraron las primeras ${Math.min(3, weeklyPriorities.length || 3)} prioridades del reporte`,
+        topCompetitor ? `Volver a comparar contra ${topCompetitor.name}` : 'Volver a revisar presencia competitiva',
+        'Actualizar acciones según nuevos scores y menciones',
+      ],
+    },
+    {
+      range: 'Semanas 11-12',
+      theme: 'Re-análisis día 75',
+      evidence: 'Incluido en el Plan Conquistar',
+      tasks: [
+        'Preparar una nueva corrida completa',
+        `Comparar Cleexs Score inicial (${analysis.cleexsScore}) vs. score nuevo`,
+        'Medir nuevas apariciones, competidores y oportunidades abiertas',
+      ],
+    },
+  ];
+
   // Resto del entregable Plan Conquistar, en el mismo flujo numerado del reporte (continúa después de la sección 7).
   const planSlot = (
     <>
@@ -873,6 +968,9 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
                   Prioridad {opportunity.priority}
                 </span>
               </div>
+              {opportunity.scenario ? (
+                <p className="mt-1.5 pl-7 text-xs italic leading-relaxed text-slate-500">“{opportunity.scenario}”</p>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <Badge tone={opportunity.impact === 'Alto' ? 'rose' : opportunity.impact === 'Medio' ? 'amber' : 'emerald'}>
                   Impacto {opportunity.impact}
@@ -948,28 +1046,29 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(10, 'Plan de acción de 90 días', 'Marco de trabajo del programa, semana a semana. Se ajusta con los hallazgos de la corrida.')}
+        {sectionHeading(10, 'Plan de acción de 90 días', 'Personalizado con las oportunidades, scores y competidores detectados en esta corrida.')}
         <div className="space-y-2.5">
-          {ROADMAP_WEEKS.map((phase) => (
+          {personalizedRoadmap.map((phase) => (
             <div
               key={phase.range}
-              className="flex flex-col gap-3 rounded-xl border border-violet-100 bg-violet-50/40 p-4 sm:flex-row sm:items-center"
+              className="flex flex-col gap-3 rounded-xl border border-violet-100 bg-violet-50/40 p-4 lg:flex-row lg:items-start"
             >
-              <div className="flex items-center gap-2 sm:w-52 sm:shrink-0">
-                <Flag className="h-4 w-4 shrink-0 text-violet-600" />
-                <div>
+              <div className="flex gap-2 lg:w-64 lg:shrink-0">
+                <Flag className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-slate-900">{phase.range}</h3>
                   <p className="text-xs font-semibold text-violet-700">{phase.theme}</p>
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-slate-500">{phase.evidence}</p>
                 </div>
               </div>
               <div className="flex flex-1 flex-wrap gap-2">
                 {phase.tasks.map((item) => (
                   <span
                     key={item}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-slate-100"
+                    className="inline-flex max-w-full items-start gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs leading-relaxed text-slate-700 ring-1 ring-slate-100"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-violet-600" />
-                    {item}
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" />
+                    <span>{item}</span>
                   </span>
                 ))}
               </div>
@@ -1037,26 +1136,24 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
             <div className="mb-3 flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-violet-600" />
-              <p className="text-sm font-bold text-slate-900">AI Visibility GPT / Prompt Pack</p>
+              <p className="text-sm font-bold text-slate-900">Kit IA de implementación</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                {
-                  title: 'Mejorar una intención',
-                  prompt: `Actuá como consultor de AI Visibility. Para la marca ${run.brand.name}, proponé una página que responda mejor una intención débil del reporte.`,
-                },
-                {
-                  title: 'Comparativa competitiva',
-                  prompt: `Compará ${run.brand.name} contra sus competidores principales y redactá una sección honesta que explique cuándo elegir cada opción.`,
-                },
-                {
-                  title: 'Checklist semanal',
-                  prompt: `Convertí el roadmap de 90 días de ${run.brand.name} en 3 tareas concretas para ejecutar esta semana.`,
-                },
-              ].map((item) => (
+            <p className="mb-3 text-xs leading-relaxed text-slate-500">
+              Prompts listos para copiar en ChatGPT o Claude. Usan datos reales del reporte y sirven como borrador de ejecución; siempre conviene validar antes de publicar.
+            </p>
+            <div className="space-y-3">
+              {implementationPrompts.map((item) => (
                 <div key={item.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
-                  <p className="text-sm font-bold text-slate-900">{item.title}</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{item.prompt}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-900">{item.title}</p>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-100">
+                      Personalizado
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] font-medium text-slate-500">{item.source}</p>
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-700 ring-1 ring-slate-100">
+                    {item.prompt}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1065,25 +1162,18 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(13, 'Re-análisis día 75 y continuidad', 'Se vuelve a medir el avance y se ofrece continuidad Premium anual.')}
+        {sectionHeading(13, 'Re-análisis a los 75 días', 'Incluido en el plan: una nueva medición para verificar tu progreso.')}
         <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-700 to-indigo-700 p-6 text-white shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
-                <TrendingUp className="h-4 w-4" />
-                Día 75
-              </div>
-              <h3 className="mt-3 text-2xl font-bold">Re-análisis y continuidad Premium</h3>
-              <p className="mt-2 text-sm leading-relaxed text-violet-50">
-                En el día 75 se vuelve a medir el avance: score inicial vs actual, nuevas apariciones, oportunidades
-                detectadas y recomendación para mantener el progreso con el plan anual.
-              </p>
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
+              <TrendingUp className="h-4 w-4" />
+              Día 75
             </div>
-            <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/20 md:w-64">
-              <p className="text-xs font-semibold uppercase tracking-wide text-violet-100">Oferta de continuidad</p>
-              <p className="mt-1 text-2xl font-black">USD 499/año</p>
-              <p className="mt-1 text-xs text-violet-100">Premium 365 días con descuento especial post-implementación.</p>
-            </div>
+            <h3 className="mt-3 text-2xl font-bold">Volvemos a medir tu progreso</h3>
+            <p className="mt-2 text-sm leading-relaxed text-violet-50">
+              A los 75 días corremos un nuevo análisis para comparar tu Cleexs Score inicial vs. el actual, las nuevas
+              apariciones en los motores de IA y las oportunidades que se hayan abierto durante la implementación.
+            </p>
           </div>
         </div>
       </section>
