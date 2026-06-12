@@ -86,7 +86,7 @@ const isBrandEntry = (entryName: string, brandName: string, aliases: string[]) =
 };
 
 const extractIntention = (promptText: string) => {
-  const match = promptText.match(/Intenci?n:\s*([^\(\n]+)\s*\((\d+)%\)/i);
+  const match = promptText.match(/Intención:\s*([^\(\n]+)\s*\((\d+)%\)/i);
   if (!match) return null;
   return { name: match[1].trim().toLowerCase(), weight: Number(match[2]) };
 };
@@ -100,15 +100,15 @@ const normalizeIntentionKey = (value: string) => {
   return null;
 };
 
-/** Etiqueta y descripci?n por intenci?n */
+/** Etiqueta y descripción por intención */
 const INTENTION_LABELS: Record<string, { label: string; description: string }> = {
   urgencia: {
     label: 'Urgencia',
-    description: 'Mide c?mo la IA te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta r?pida).',
+    description: 'Mide cómo la IA te recomienda cuando el usuario busca algo urgente o inmediato (ej. delivery, reserva, respuesta rápida).',
   },
   consideracion: {
-    label: 'Consideraci?n',
-    description: 'Mide c?mo la IA te recomienda cuando el usuario est? evaluando con tiempo (ej. educaci?n, banco, seguro, decisi?n a mediano plazo).',
+    label: 'Consideración',
+    description: 'Mide cómo la IA te recomienda cuando el usuario está evaluando con tiempo (ej. educación, banco, seguro, decisión a mediano plazo).',
   },
   calidad: {
     label: 'Calidad',
@@ -116,7 +116,7 @@ const INTENTION_LABELS: Record<string, { label: string; description: string }> =
   },
   precio: {
     label: 'Precio',
-    description: 'Mide c?mo aparec?s cuando el usuario busca buen precio y valor.',
+    description: 'Mide cómo aparecés cuando el usuario busca buen precio y valor.',
   },
 };
 
@@ -246,10 +246,10 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-xl text-foreground">
             <Lock className="h-5 w-5 text-amber-600" />
-            Desbloque? el reporte completo
+            Desbloqueá el reporte completo
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Ya hiciste una corrida gratuita para este dominio. Para ver m?tricas detalladas, comparaciones, an?lisis por intenci?n y recomendaciones, eleg? un plan de Cleexs.
+            Ya hiciste una corrida gratuita para este dominio. Para ver métricas detalladas, comparaciones, análisis por intención y recomendaciones, elegí un plan de Cleexs.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -262,7 +262,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
             </Button>
             <Button variant="outline" asChild>
               <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
-                Otro diagn?stico
+                Otro diagnóstico
               </a>
             </Button>
           </div>
@@ -273,7 +273,7 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
 }
 
 /**
- * Construye un runResult sint?tico "Consolidado" promediando los scores de los modelos
+ * Construye un runResult sintético "Consolidado" promediando los scores de los modelos
  * disponibles (ChatGPT + Gemini + Perplexity + Claude). Si hay 1 solo run, lo devuelve igual.
  */
 function buildRunResultConsolidado(
@@ -383,7 +383,7 @@ function ReporteCompleto({
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{modelLabel}</p>
           <CardTitle className="text-xl text-foreground">Cleexs Score</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            {intentionScores.length > 0 ? 'Ponderado por intenci?n' : 'Promedio de la corrida'}
+            {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -391,7 +391,7 @@ function ReporteCompleto({
             <p className="text-xs font-medium text-primary-700">Cleexs Score</p>
             <p className="text-4xl font-bold text-foreground">{(cleexsScore || runResult.cleexsScore).toFixed(0)}</p>
             <p className="text-xs text-muted-foreground">
-              {intentionScores.length > 0 ? 'Ponderado por intenci?n' : 'Promedio de la corrida'}
+              {intentionScores.length > 0 ? 'Ponderado por intención' : 'Promedio de la corrida'}
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
@@ -426,10 +426,10 @@ function ReporteCompleto({
         </CardContent>
       </Card>
 
-      {/* M?tricas del an?lisis */}
+      {/* Métricas del análisis */}
       <Card className="border-transparent bg-white shadow-md">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl text-foreground">M?tricas del an?lisis</CardTitle>
+          <CardTitle className="text-xl text-foreground">Métricas del análisis</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             Indicadores simples para evaluar coherencia, visibilidad y ranking en esta corrida.
           </CardDescription>
@@ -442,17 +442,17 @@ function ReporteCompleto({
               <p className="text-xs text-muted-foreground">{parseableCount}/{totalPrompts} con Top 3 parseable</p>
             </div>
             <div className="rounded-lg border border-border bg-primary-50/80 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Menci?n de marca</p>
+              <p className="text-xs font-medium text-muted-foreground">Mención de marca</p>
               <p className="text-2xl font-semibold text-foreground">{mentionRate}%</p>
               <p className="text-xs text-muted-foreground">{mentionCount}/{totalPrompts} respuestas la mencionan</p>
             </div>
             <div className="rounded-lg border border-border bg-primary-50/80 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Aparici?n en Top 3</p>
+              <p className="text-xs font-medium text-muted-foreground">Aparición en Top 3</p>
               <p className="text-2xl font-semibold text-foreground">{top3Rate}%</p>
               <p className="text-xs text-muted-foreground">{top3Count}/{totalPrompts} en Top 3</p>
             </div>
             <div className="rounded-lg border border-border bg-primary-50/80 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Posici?n #1</p>
+              <p className="text-xs font-medium text-muted-foreground">Posición #1</p>
               <p className="text-2xl font-semibold text-foreground">{top1Rate}%</p>
               <p className="text-xs text-muted-foreground">{top1Count}/{totalPrompts} en primer lugar</p>
             </div>
@@ -485,7 +485,7 @@ function ReporteCompleto({
                     <TableHead className="text-foreground font-semibold">Marca</TableHead>
                     <TableHead className="text-foreground font-semibold">Tipo</TableHead>
                     <TableHead className="text-right text-foreground font-semibold">Apariciones</TableHead>
-                    <TableHead className="text-right text-foreground font-semibold">Posici?n media</TableHead>
+                    <TableHead className="text-right text-foreground font-semibold">Posición media</TableHead>
                     <TableHead className="text-right text-foreground font-semibold">% del Top 3</TableHead>
                     <TableHead className="text-foreground font-semibold max-w-[200px]">Motivo (ejemplo)</TableHead>
                   </TableRow>
@@ -518,7 +518,7 @@ function ReporteCompleto({
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Defin? industria o tipo de producto en la marca para sugerencias relevantes.
+            Definí industria o tipo de producto en la marca para sugerencias relevantes.
           </p>
         </CardContent>
       </Card>
@@ -541,7 +541,7 @@ function VerResultadoContent() {
     const id = diagnosticId;
     if (!id) {
       setLoading(false);
-      setError('Falta el ID del diagn?stico.');
+      setError('Falta el ID del diagnóstico.');
       return;
     }
     let cancelled = false;
@@ -550,7 +550,7 @@ function VerResultadoContent() {
         const data = await publicDiagnosticApi.get(id, tierFromQuery);
         if (!cancelled) setDiagnostic(data);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagn?stico.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar el diagnóstico.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -558,7 +558,7 @@ function VerResultadoContent() {
     return () => { cancelled = true; };
   }, [diagnosticId, tierFromQuery]);
 
-  // Si est? completado y falta an?lisis o el m?dulo AEO sigue en `pending`, refrescar hasta que termine.
+  // Si está completado y falta análisis o el módulo AEO sigue en `pending`, refrescar hasta que termine.
   useEffect(() => {
     const id = diagnosticId;
     if (!id || !diagnostic || diagnostic.status !== 'completed' || !diagnostic.showFullReport) {
@@ -603,8 +603,8 @@ function VerResultadoContent() {
     };
   }, [diagnosticId, diagnostic, tierFromQuery]);
 
-  // Si Gemini/Perplexity/Claude fueron iniciados pero a?n no terminaron, seguir refrescando
-  // hasta que aparezcan sus runResult o el diagn?stico falle.
+  // Si Gemini/Perplexity/Claude fueron iniciados pero aún no terminaron, seguir refrescando
+  // hasta que aparezcan sus runResult o el diagnóstico falle.
   useEffect(() => {
     const id = diagnosticId;
     if (!id || !diagnostic) return;
@@ -681,9 +681,9 @@ function VerResultadoContent() {
       <main className="min-h-[calc(100vh-72px)] px-6 py-16">
         <div className="mx-auto max-w-lg text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
-          <p className="mt-4 text-muted-foreground">{error || 'Diagn?stico no encontrado.'}</p>
+          <p className="mt-4 text-muted-foreground">{error || 'Diagnóstico no encontrado.'}</p>
           <Link href="/diagnostico/crear">
-            <Button className="mt-4">Hacer un nuevo diagn?stico</Button>
+            <Button className="mt-4">Hacer un nuevo diagnóstico</Button>
           </Link>
         </div>
       </main>
@@ -749,15 +749,15 @@ function VerResultadoContent() {
   const claudeFallo = diagnostic.claudeRunStatus === 'failed';
   const claudeEnCola = Boolean(diagnostic.runClaudeId) && !runResultClaude && !claudeFallo;
   /**
-   * Motor "bloqueado por Premium": no hay resultado, no se est? generando y no fall?;
-   * simplemente nunca se corri? porque es exclusivo de planes Premium. Al clickearlo
-   * mostramos el upsell del Plan Conquistar en vez de un bot?n muerto.
+   * Motor "bloqueado por Premium": no hay resultado, no se está generando y no falló;
+   * simplemente nunca se corrió porque es exclusivo de planes Premium. Al clickearlo
+   * mostramos el upsell del Plan Conquistar en vez de un botón muerto.
    */
   const perplexityLocked = !runResultPerplexity && !perplexityEnCola && !perplexityFallo;
   const claudeLocked = !runResultClaude && !claudeEnCola && !claudeFallo;
   /**
-   * Post-proceso: la API puede guardar primero el an?lisis IA y luego fusionar el m?dulo t?cnico del sitio (AEO).
-   * Mientras el sat?lite corre, `satelliteModule.status === 'pending'`.
+   * Post-proceso: la API puede guardar primero el análisis IA y luego fusionar el módulo técnico del sitio (AEO).
+   * Mientras el satélite corre, `satelliteModule.status === 'pending'`.
    */
   const satelliteAeoPending = diagnostic.satelliteModule?.status === 'pending';
   const showSatelliteSkeleton =
@@ -786,7 +786,7 @@ function VerResultadoContent() {
               <div className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
-                  Resultado del diagn?stico
+                  Resultado del diagnóstico
                 </CardTitle>
                 <CardDescription className="mt-1 text-xs sm:text-sm">
                   <span className="font-medium">{diagnostic.brandName}</span>
@@ -804,15 +804,15 @@ function VerResultadoContent() {
             {isPending && (
               <div className="flex items-center gap-3 rounded-lg border border-primary-200 bg-primary-50 p-4 text-primary-800">
                 <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                <p>Tu diagn?stico sigue en proceso. Cuando est? listo pod?s recargar la p?gina o te enviamos el link por correo si ingres?s tu email abajo.</p>
+                <p>Tu diagnóstico sigue en proceso. Cuando esté listo podés recargar la página o te enviamos el link por correo si ingresás tu email abajo.</p>
               </div>
             )}
 
             {isFailed && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
-                <p>El an?lisis no pudo completarse. Pod?s intentar de nuevo con un nuevo diagn?stico.</p>
+                <p>El análisis no pudo completarse. Podés intentar de nuevo con un nuevo diagnóstico.</p>
 <Link href="/diagnostico/crear">
-                <Button variant="outline" className="mt-3">Nuevo diagn?stico</Button>
+                <Button variant="outline" className="mt-3">Nuevo diagnóstico</Button>
                 </Link>
               </div>
             )}
@@ -844,10 +844,10 @@ function VerResultadoContent() {
                                 disabled={!runResultGemini}
                                 title={
                                   geminiFallo
-                                    ? 'Gemini no complet? esta corrida.'
+                                    ? 'Gemini no completó esta corrida.'
                                     : geminiEnCola
                                       ? 'Generando resultados con Gemini...'
-                                      : 'Ver m?tricas seg?n respuestas de Gemini'
+                                      : 'Ver métricas según respuestas de Gemini'
                                 }
                                 onClick={() => runResultGemini && setVistaModelo('gemini')}
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
@@ -868,11 +868,11 @@ function VerResultadoContent() {
                                 disabled={!runResultPerplexity && !perplexityLocked}
                                 title={
                                   perplexityFallo
-                                    ? 'Perplexity no complet? esta corrida.'
+                                    ? 'Perplexity no completó esta corrida.'
                                     : perplexityEnCola
                                       ? 'Generando resultados con Perplexity...'
                                       : runResultPerplexity
-                                        ? 'Ver m?tricas seg?n respuestas de Perplexity'
+                                        ? 'Ver métricas según respuestas de Perplexity'
                                         : 'Disponible solo en planes Premium con OpenRouter.'
                                 }
                                 onClick={() =>
@@ -904,11 +904,11 @@ function VerResultadoContent() {
                                 disabled={!runResultClaude && !claudeLocked}
                                 title={
                                   claudeFallo
-                                    ? 'Claude no complet? esta corrida.'
+                                    ? 'Claude no completó esta corrida.'
                                     : claudeEnCola
                                       ? 'Generando resultados con Claude...'
                                       : runResultClaude
-                                        ? 'Ver m?tricas seg?n respuestas de Claude'
+                                        ? 'Ver métricas según respuestas de Claude'
                                         : 'Disponible solo en planes Premium con OpenRouter.'
                                 }
                                 onClick={() =>
@@ -959,13 +959,13 @@ function VerResultadoContent() {
                           </div>
                           {geminiEnCola && (
                             <p className="text-xs text-slate-600 pl-0 sm:pl-[11.5rem]">
-                              ChatGPT ya est? listo. Gemini y la vista consolidada se habilitan en cuanto termine el
+                              ChatGPT ya está listo. Gemini y la vista consolidada se habilitan en cuanto termine el
                               segundo modelo (normalmente menos de un minuto).
                             </p>
                           )}
                           {geminiFallo && (
                             <p className="text-xs text-amber-800 pl-0 sm:pl-[11.5rem]">
-                              El run de Gemini fall? en esta corrida. Mostramos solo resultados de ChatGPT.
+                              El run de Gemini falló en esta corrida. Mostramos solo resultados de ChatGPT.
                             </p>
                           )}
                         </div>
@@ -1017,7 +1017,7 @@ function VerResultadoContent() {
                   )
                 ) : (
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-                    <p className="font-medium">Diagn?stico listo</p>
+                    <p className="font-medium">Diagnóstico listo</p>
                     <p className="text-sm mt-1">Cargando detalle del reporte...</p>
                   </div>
                 )}
@@ -1043,15 +1043,15 @@ function VerResultadoContent() {
                                 </span>
                                 <div>
                                   <p className="text-sm font-semibold text-slate-900">Compartir resultado</p>
-                                  <p className="text-[11px] text-indigo-700/80">Difusi?n ? p?gina p?blica</p>
+                                  <p className="text-[11px] text-indigo-700/80">Difusión · página pública</p>
                                 </div>
                               </div>
                               <span className="rounded-full bg-indigo-600/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
-                                Vista p?blica ? resumida
+                                Vista pública · resumida
                               </span>
                             </div>
                             <p className="text-xs leading-relaxed text-slate-600 mb-4">
-                              Enlace a la p?gina p?blica del Cleexs Score: pensado para redes, email o difusi?n. Muestra el
+                              Enlace a la página pública del Cleexs Score: pensado para redes, email o difusión. Muestra el
                               score y un resumen; no reemplaza el informe detallado de abajo.
                             </p>
                             <ShareScoreButtons
@@ -1079,8 +1079,8 @@ function VerResultadoContent() {
                               </span>
                             </div>
                             <p className="text-xs leading-relaxed text-slate-600 mb-4">
-                              Compart? este enlace con marketing, agencia o personas internas: ver?n el mismo informe
-                              extenso que vos (m?tricas, comparativas y an?lisis). Si quieren seguir con m?s diagn?sticos,
+                              Compartí este enlace con marketing, agencia o personas internas: verán el mismo informe
+                              extenso que vos (métricas, comparativas y análisis). Si quieren seguir con más diagnósticos,
                               pueden crear cuenta en Cleexs desde la web.
                             </p>
                             <ShareScoreButtons
@@ -1097,7 +1097,7 @@ function VerResultadoContent() {
                         {diagnostic.shareSlug && (
                           <div className="flex-1 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/60">
                             <p className="mb-0.5 text-xs font-bold text-slate-900">Compartir resultado</p>
-                            <p className="mb-3 text-[11px] text-slate-500">P?gina p?blica del Cleexs Score ? redes y difusi?n</p>
+                            <p className="mb-3 text-[11px] text-slate-500">Página pública del Cleexs Score · redes y difusión</p>
                             <ShareScoreButtons
                               path={scoreSharePath || `/score/${diagnostic.shareSlug}`}
                               intent="social"
@@ -1115,7 +1115,7 @@ function VerResultadoContent() {
                               <div>
                                 <p className="text-xs font-bold text-slate-900">Invitar a tu equipo</p>
                                 <p className="mt-0.5 text-xs leading-snug text-slate-600">
-                                  Compart? el informe con tu equipo o colaboradores.
+                                  Compartí el informe con tu equipo o colaboradores.
                                 </p>
                               </div>
                             </div>
@@ -1138,16 +1138,16 @@ function VerResultadoContent() {
                       <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
                         8
                       </span>
-                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Pr?ximos pasos</p>
+                      <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Próximos pasos</p>
                     </div>
                   )}
                   {legacyView ? (
                     <div className="rounded-xl bg-gradient-to-br from-primary-50/60 to-accent-50/40 p-4">
                       <p className="text-sm font-medium text-foreground mb-2">
-                        ?Quer?s m?s corridas y reportes completos?
+                        ¿Querés más corridas y reportes completos?
                       </p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Eleg? un plan para habilitar an?lisis y reportes completos.
+                        Elegí un plan para habilitar análisis y reportes completos.
                       </p>
                       <div className="flex flex-wrap gap-3">
                         <Button asChild className="bg-primary-600 hover:bg-primary-700">
@@ -1158,7 +1158,7 @@ function VerResultadoContent() {
                         </Button>
                         <Button variant="outline" asChild>
                           <a href={CLEEXS_MARKETING_URL} target="_blank" rel="noopener noreferrer">
-                            Otro diagn?stico
+                            Otro diagnóstico
                           </a>
                         </Button>
                       </div>
@@ -1186,7 +1186,7 @@ function VerResultadoContent() {
                           className="inline-flex items-center gap-1.5"
                         >
                           <FileText className="h-3.5 w-3.5" />
-                          Otro diagn?stico
+                          Otro diagnóstico
                         </a>
                       </Button>
                     </div>

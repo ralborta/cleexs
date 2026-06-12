@@ -111,16 +111,16 @@ function formatDetailPrimitive(
 ): string | null {
   if (key !== undefined && shouldOmitDetailFieldKey(key)) return null;
   if (value === null || value === undefined) return null;
-  if (typeof value === 'boolean') return value ? 'S?' : 'No';
+  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string') {
     const t = value.trim();
     if (!t.length) return null;
     if (looksLikeRawMarkup(t)) {
-      return 'La respuesta parece HTML o XML (no es texto plano con URLs, como un sitemap o robots.txt legibles l?nea a l?nea). En este panel no mostramos el cuerpo completo por tama?o y legibilidad.';
+      return 'La respuesta parece HTML o XML (no es texto plano con URLs, como un sitemap o robots.txt legibles línea a línea). En este panel no mostramos el cuerpo completo por tamaño y legibilidad.';
     }
     if (t.length > maxStr) {
-      return `${t.slice(0, maxStr)}... [${t.length - maxStr} caracteres m?s no mostrados aqu?]`;
+      return `${t.slice(0, maxStr)}... [${t.length - maxStr} caracteres más no mostrados aquí]`;
     }
     return t;
   }
@@ -134,7 +134,7 @@ const SUGGESTION_PRIORITY_META: Record<
   critica: {
     box: 'border-red-200/80 bg-red-50/90 text-red-900',
     Icon: ShieldAlert,
-    short: 'Cr?tica',
+    short: 'Crítica',
   },
   alta: {
     box: 'border-amber-200/80 bg-amber-50/90 text-amber-900',
@@ -168,13 +168,13 @@ function SatelliteValueBlock({
   depth: number;
 }): React.ReactNode {
   if (depth > 8) {
-    return <p className="text-xs italic text-slate-400">Profundidad m?xima alcanzada.</p>;
+    return <p className="text-xs italic text-slate-400">Profundidad máxima alcanzada.</p>;
   }
   if (value === null || value === undefined) {
     return <span className="text-sm text-slate-400">...</span>;
   }
   if (typeof value === 'boolean') {
-    return <span className="text-sm">{value ? 'S?' : 'No'}</span>;
+    return <span className="text-sm">{value ? 'Sí' : 'No'}</span>;
   }
   if (typeof value === 'number' && Number.isFinite(value)) {
     return <span className="text-sm tabular-nums font-medium text-slate-800">{String(value)}</span>;
@@ -327,9 +327,9 @@ function SatelliteDetailSections({ detail }: { detail: Record<string, unknown> }
 
 const AEO_SKELETON_HINTS = [
   'Seguimos analizando tu sitio...',
-  'En sitios con mucho contenido puede demorar un poco m?s.',
-  'Pod?s usar el resto del informe arriba; esta secci?n se actualiza sola.',
-  'Estamos consolidando se?ales t?cnicas del dominio.',
+  'En sitios con mucho contenido puede demorar un poco más.',
+  'Podés usar el resto del informe arriba; esta sección se actualiza sola.',
+  'Estamos consolidando señales técnicas del dominio.',
 ] as const;
 
 export function SatelliteModuleSkeleton() {
@@ -347,11 +347,11 @@ export function SatelliteModuleSkeleton() {
       <CardHeader className="space-y-3 pb-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-xl text-foreground">
           <Sparkles className="h-5 w-5 shrink-0 animate-pulse text-primary-600" aria-hidden />
-          <span>An?lisis t?cnico del sitio (AEO)</span>
+          <span>Análisis técnico del sitio (AEO)</span>
         </CardTitle>
         <div className="space-y-2">
           <div className="aeo-progress-track" aria-hidden />
-          <p className="text-sm font-semibold text-primary-900 sm:text-base">Generando an?lisis t?cnico del sitio...</p>
+          <p className="text-sm font-semibold text-primary-900 sm:text-base">Generando análisis técnico del sitio...</p>
           <p
             key={hintIdx}
             className="text-xs leading-relaxed text-slate-600 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 sm:text-sm"
@@ -392,7 +392,7 @@ export function SatelliteModuleSkeleton() {
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-semibold leading-snug text-primary-950 sm:text-base">Proceso en curso</p>
             <p className="text-xs leading-relaxed text-primary-900/85 sm:text-sm">
-              La p?gina se actualiza sola cuando termine. No hace falta recargar manualmente.
+              La página se actualiza sola cuando termine. No hace falta recargar manualmente.
             </p>
           </div>
         </div>
@@ -416,7 +416,7 @@ function SatelliteToolDetailPanel({
     return (
       <p className="text-left text-sm leading-relaxed text-muted-foreground">
         No hay detalle guardado para <span className="font-medium text-foreground">{label}</span> en este informe.
-        Pod?s generar un diagn?stico nuevo o revisar m?s adelante si el an?lisis t?cnico a?n se est? completando.
+        Podés generar un diagnóstico nuevo o revisar más adelante si el análisis técnico aún se está completando.
       </p>
     );
   }
@@ -502,14 +502,14 @@ const ACTION_PILL_META: Record<
   string,
   { label: string; className: string }
 > = {
-  critica: { label: 'CR?TICO', className: 'border-red-400 bg-red-50 text-red-900' },
+  critica: { label: 'CRÍTICO', className: 'border-red-400 bg-red-50 text-red-900' },
   alta: { label: 'ALTA', className: 'border-amber-400 bg-amber-50 text-amber-950' },
   media: { label: 'MEDIA', className: 'border-sky-400 bg-sky-50 text-sky-950' },
   baja: { label: 'BAJA', className: 'border-slate-300 bg-slate-50 text-slate-800' },
   info: { label: 'INFO', className: 'border-emerald-400 bg-emerald-50 text-emerald-950' },
 };
 
-/** Prioridad visual del borde izquierdo en tarjetas de acci?n (orden de severidad). */
+/** Prioridad visual del borde izquierdo en tarjetas de acción (orden de severidad). */
 function actionCardBorderClass(priority: string): string {
   const p = priority.trim().toLowerCase();
   if (p === 'critica') return 'border-l-red-500';
@@ -539,20 +539,20 @@ function SatelliteAeoDegradedNotice({
     module.status === 'timeout'
       ? 'Tiempo de espera agotado'
       : module.status === 'failed'
-        ? 'No pudimos analizar el sitio desde aqu?'
+        ? 'No pudimos analizar el sitio desde aquí'
         : module.status === 'skipped'
-          ? 'An?lisis t?cnico no ejecutado'
+          ? 'Análisis técnico no ejecutado'
           : 'Sin datos de herramientas en esta corrida';
 
   const body =
     module.status === 'timeout'
-      ? 'El an?lisis t?cnico del sitio tard? m?s de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no lleg? a completarse.'
+      ? 'El análisis técnico del sitio tardó más de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no llegó a completarse.'
       : module.status === 'failed'
         ? module.error?.trim() ||
-          'El servicio de an?lisis del sitio respondi? con error. Volv? a intentar m?s tarde o gener? un diagn?stico nuevo con la misma URL.'
+          'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o generá un diagnóstico nuevo con la misma URL.'
         : module.status === 'skipped'
-          ? 'Este diagn?stico no incluye URL de sitio o el m?dulo AEO est? desactivado.'
-          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Pod?s generar un diagn?stico nuevo o revisar el sitio con tu equipo t?cnico.';
+          ? 'Este diagnóstico no incluye URL de sitio o el módulo AEO está desactivado.'
+          : 'La corrida figura como completada pero no recibimos resultados por herramienta. Podés generar un diagnóstico nuevo o revisar el sitio con tu equipo técnico.';
 
   const toolsUrl = CLEEXS_TOOLS_PUBLIC_URL;
 
@@ -581,7 +581,7 @@ function SatelliteAeoDegradedNotice({
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800"
               >
-                Ver an?lisis t?cnico ampliado
+                Ver análisis técnico ampliado
                 <ExternalLink className="h-4 w-4 opacity-90" aria-hidden />
               </a>
             ) : null}
@@ -589,15 +589,15 @@ function SatelliteAeoDegradedNotice({
               href="/diagnostico/crear"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
             >
-              Nuevo diagn?stico
+              Nuevo diagnóstico
             </Link>
           </div>
           {!toolsUrl ? (
             <p className="text-xs text-slate-500">
-              Si tu organizaci?n tiene un enlace propio al an?lisis t?cnico ampliado, puede configurarse en el
+              Si tu organización tiene un enlace propio al análisis técnico ampliado, puede configurarse en el
               despliegue:{' '}
               <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_CLEEXS_TOOLS_URL</code>{' '}
-              (solo equipo t?cnico).
+              (solo equipo técnico).
             </p>
           ) : null}
         </div>
@@ -636,13 +636,13 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
         <div className="min-w-0 flex-1">
           <span className="block text-base font-bold tracking-tight text-white sm:text-lg">Acciones a ejecutar</span>
           <span className="mt-0.5 block text-xs font-medium leading-snug text-white/90 sm:text-sm">
-            Prioridades del an?lisis t?cnico del sitio (AEO).{' '}
+            Prioridades del análisis técnico del sitio (AEO).{' '}
             <span className="text-white/85">
               {total > 0
-                ? `${total} tareas ? toc? para ${expanded ? 'ocultar' : 'ver'} p?ldoras y lista.`
+                ? `${total} tareas · tocá para ${expanded ? 'ocultar' : 'ver'} píldoras y lista.`
                 : expanded
-                  ? 'Toc? de nuevo para ocultar.'
-                  : 'Toc? para ver el mensaje cuando no hay acciones.'}
+                  ? 'Tocá de nuevo para ocultar.'
+                  : 'Tocá para ver el mensaje cuando no hay acciones.'}
             </span>
           </span>
         </div>
@@ -723,8 +723,8 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
             </>
           ) : (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-              No se generaron acciones agrupadas para este sitio en esta corrida. Revis? el detalle en cada tarjeta de
-              herramienta o consult? con tu equipo si hace falta un an?lisis m?s profundo.
+              No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
+              herramienta o consultá con tu equipo si hace falta un análisis más profundo.
             </p>
           )}
         </div>
@@ -810,7 +810,7 @@ export function SatelliteModuleCard({
                   </p>
                   {!openHasStoredDetail ? (
                     <p className="mt-1 text-xs font-medium text-amber-800/90">
-                      No hay detalle guardado para esta herramienta en el diagn?stico p?blico.
+                      No hay detalle guardado para esta herramienta en el diagnóstico público.
                     </p>
                   ) : null}
                 </div>
@@ -847,11 +847,11 @@ export function SatelliteModuleCard({
             <Sparkles className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-900">An?lisis t?cnico del sitio (AEO)</p>
+            <p className="text-sm font-bold text-slate-900">Análisis técnico del sitio (AEO)</p>
             <p className="text-xs leading-relaxed text-slate-600">
               {degraded
-                ? 'Cuando la corrida falla o hace timeout, no mostramos scores vac?os como si fueran reales.'
-                : 'Toc? una herramienta para ver el detalle. Abajo, acciones priorizadas seg?n el an?lisis t?cnico.'}
+                ? 'Cuando la corrida falla o hace timeout, no mostramos scores vacíos como si fueran reales.'
+                : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas según el análisis técnico.'}
             </p>
           </div>
         </div>
@@ -884,7 +884,7 @@ export function SatelliteModuleCard({
             {degraded ? null : (
               <>
                 {' '}
-                ? {totalTools} herramientas con datos ? Si algo aparece recortado, parte del volcado t?cnico puede no
+                · {totalTools} herramientas con datos · Si algo aparece recortado, parte del volcado técnico puede no
                 mostrarse completo en esta vista.
               </>
             )}
