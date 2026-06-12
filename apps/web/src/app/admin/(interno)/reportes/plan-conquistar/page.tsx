@@ -12,7 +12,6 @@ import {
   Gauge,
   Layers3,
   Lightbulb,
-  ListChecks,
   Loader2,
   Lock,
   Search,
@@ -255,6 +254,23 @@ function effortForScore(score: number, hasCompetitor: boolean) {
   if (score < 35 && hasCompetitor) return 'Medio';
   if (score < 55) return 'Bajo';
   return 'Bajo';
+}
+
+// Prioridad real: sube cuando hay más margen de mejora (score bajo) y el esfuerzo es bajo.
+function priorityForScore(score: number, impact: string, effort: string) {
+  const gain = Math.max(0, 100 - score);
+  const impactBonus = impact === 'Alto' ? 12 : impact === 'Medio' ? 6 : 0;
+  const effortBonus = effort === 'Bajo' ? 8 : effort === 'Medio' ? 4 : 0;
+  return Math.min(100, Math.round(gain * 0.8 + impactBonus + effortBonus));
+}
+
+// Texto real de la consulta (sin el prefijo "Intención: ... (n%)") para etiquetar cada oportunidad.
+function extractQuestion(promptText?: string | null) {
+  if (!promptText) return '';
+  let text = promptText.replace(/Intención:\s*[^\n(]*\(\d+%\)/i, '').trim();
+  text = text.replace(/^[\s:–-]+/, '').trim();
+  const firstLine = text.split('\n').map((s) => s.trim()).filter(Boolean)[0] || '';
+  return firstLine.length > 120 ? `${firstLine.slice(0, 117)}…` : firstLine;
 }
 
 function money(value: number) {
@@ -594,22 +610,31 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
           (entry) => !isBrandEntry(entry.name, run.brand.name, aliases)
         );
         const hasCompetitor = Boolean(firstCompetitor);
+        const impact = impactForScore(score);
+        const effort = effortForScore(score, hasCompetitor);
+        const label =
+          extractQuestion(prompt.prompt?.promptText) ||
+          prompt.prompt?.name ||
+          intention?.label ||
+          prompt.prompt?.category?.name ||
+          'Consulta de visibilidad';
         return {
           id: prompt.id,
           score,
-          impact: impactForScore(score),
-          effort: effortForScore(score, hasCompetitor),
-          label: prompt.prompt?.category?.name || intention?.label || prompt.prompt?.name || 'Oportunidad de visibilidad',
+          priority: priorityForScore(score, impact, effort),
+          impact,
+          effort,
+          label,
           intention: intention?.label || prompt.prompt?.category?.name || 'Intención crítica',
           action:
             score >= 70
-              ? 'Convertir esta ventaja en contenido público, casos y FAQs para sostener la posición.'
+              ? `Sostené el liderazgo en «${intention?.label || label}»: convertilo en contenido público, casos y FAQs para no perder la posición.`
               : firstCompetitor
-                ? `Crear una pieza que responda mejor esta intención y contraste contra ${firstCompetitor.name}.`
-                : 'Crear contenido claro para esta intención y reforzar señales de autoridad en el sitio.',
+                ? `Creá una pieza que responda mejor esta consulta y contraste de forma honesta contra ${firstCompetitor.name}.`
+                : 'Creá contenido claro para esta consulta y reforzá señales de autoridad en el sitio.',
         };
       })
-      .sort((a, b) => a.score - b.score)
+      .sort((a, b) => b.priority - a.priority)
       .slice(0, 20);
 
     return {
@@ -715,8 +740,8 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
   const lift = Math.max(0, Number(visibilityLift) || 0) / 100;
   const estimatedExtraRevenue = visits * lift * conv * value;
   const estimatedAnnualRevenue = estimatedExtraRevenue * 12;
-  const quickWins = analysis.opportunities.filter((o) => o.impact === 'Alto' && o.effort !== 'Alto').slice(0, 6);
-  const strategicPlays = analysis.opportunities.filter((o) => o.impact !== 'Defensivo').slice(0, 6);
+  const improveNow = [...analysis.opportunities].sort((a, b) => a.score - b.score).slice(0, 5);
+  const defendNow = [...analysis.opportunities].sort((a, b) => b.score - a.score).slice(0, 5);
   const publicRunResult = portalRunToPublicRunResult(run);
   const domain =
     context?.diagnostic?.domain && !context.diagnostic.domain.startsWith('brand-')
@@ -833,16 +858,19 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
   const planSlot = (
     <>
       <section>
-        {sectionHeading(8, 'Top oportunidades priorizadas', 'Ordenadas por score, impacto esperado y esfuerzo. Las que conviene ejecutar primero.')}
+        {sectionHeading(8, 'Oportunidades priorizadas', 'Ordenadas por prioridad (mayor a menor). La prioridad sube cuando hay más margen de mejora y el esfuerzo es bajo.')}
         <div className="grid gap-3 md:grid-cols-2">
           {analysis.opportunities.map((opportunity, idx) => (
             <div key={opportunity.id} className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-900">
-                  {idx + 1}. {opportunity.label}
+                <p className="flex min-w-0 items-start gap-2 text-sm font-semibold text-slate-900">
+                  <span className="mt-0.5 inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-violet-100 px-1.5 text-[11px] font-bold tabular-nums text-violet-700">
+                    {idx + 1}
+                  </span>
+                  <span className="min-w-0">{opportunity.label}</span>
                 </p>
-                <span className="rounded-full bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                  Score {opportunity.score}
+                <span className="shrink-0 rounded-full bg-violet-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  Prioridad {opportunity.priority}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -850,6 +878,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
                   Impacto {opportunity.impact}
                 </Badge>
                 <Badge tone={opportunity.effort === 'Bajo' ? 'emerald' : 'amber'}>Esfuerzo {opportunity.effort}</Badge>
+                <Badge>Score actual {opportunity.score}</Badge>
                 <Badge>{opportunity.intention}</Badge>
               </div>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{opportunity.action}</p>
@@ -859,29 +888,42 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(9, 'Mapa de ejecución', 'Dónde poner el foco primero y qué señales externas reforzar.')}
+        {sectionHeading(9, 'Mapa de ejecución', 'Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas).')}
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
             <div className="mb-3 flex items-center gap-2">
               <Layers3 className="h-4 w-4 text-violet-600" />
-              <p className="text-sm font-bold text-slate-900">Impacto / esfuerzo</p>
+              <p className="text-sm font-bold text-slate-900">Dónde enfocar</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { title: 'Hacer ahora', tone: 'emerald' as const, items: quickWins },
-                { title: 'Apostar estratégicamente', tone: 'violet' as const, items: strategicPlays },
+                { title: 'Mejorar ahora', hint: 'menor score = más margen', tone: 'rose' as const, items: improveNow },
+                { title: 'Defender', hint: 'mayor score = ya ganás', tone: 'emerald' as const, items: defendNow },
               ].map((group) => (
                 <div key={group.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-900">{group.title}</h4>
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">{group.title}</h4>
+                      <p className="text-[10px] text-slate-500">{group.hint}</p>
+                    </div>
                     <Badge tone={group.tone}>{group.items.length}</Badge>
                   </div>
                   <div className="space-y-1.5">
-                    {group.items.slice(0, 4).map((item) => (
-                      <div key={`${group.title}-${item.id}`} className="rounded-md bg-white p-2 text-xs text-slate-700 ring-1 ring-slate-100">
-                        {item.label}
-                      </div>
-                    ))}
+                    {group.items.length === 0 ? (
+                      <p className="rounded-md bg-white p-2 text-xs text-slate-400 ring-1 ring-slate-100">
+                        Sin datos suficientes en esta corrida.
+                      </p>
+                    ) : (
+                      group.items.map((item) => (
+                        <div
+                          key={`${group.title}-${item.id}`}
+                          className="flex items-center justify-between gap-2 rounded-md bg-white p-2 text-xs text-slate-700 ring-1 ring-slate-100"
+                        >
+                          <span className="min-w-0 truncate">{item.label}</span>
+                          <span className="shrink-0 font-semibold tabular-nums text-slate-500">{item.score}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               ))}
@@ -891,7 +933,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
             <div className="mb-3 flex items-center gap-2">
               <ExternalLink className="h-4 w-4 text-violet-600" />
-              <p className="text-sm font-bold text-slate-900">Autoridad externa</p>
+              <p className="text-sm font-bold text-slate-900">Autoridad externa (sugerida)</p>
             </div>
             <div className="grid gap-2">
               {EXTERNAL_AUTHORITY_CHANNELS.map((channel) => (
@@ -906,31 +948,42 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(10, 'Plan de acción de 90 días', 'Secuencia semanal para transformar el diagnóstico en ejecución y llegar al re-análisis del día 75.')}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {sectionHeading(10, 'Plan de acción de 90 días', 'Marco de trabajo del programa, semana a semana. Se ajusta con los hallazgos de la corrida.')}
+        <div className="space-y-2.5">
           {ROADMAP_WEEKS.map((phase) => (
-            <div key={phase.range} className="rounded-xl border border-violet-100 bg-violet-50/40 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-semibold text-slate-900">{phase.range}</h3>
-                <Flag className="h-4 w-4 text-violet-600" />
+            <div
+              key={phase.range}
+              className="flex flex-col gap-3 rounded-xl border border-violet-100 bg-violet-50/40 p-4 sm:flex-row sm:items-center"
+            >
+              <div className="flex items-center gap-2 sm:w-52 sm:shrink-0">
+                <Flag className="h-4 w-4 shrink-0 text-violet-600" />
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">{phase.range}</h3>
+                  <p className="text-xs font-semibold text-violet-700">{phase.theme}</p>
+                </div>
               </div>
-              <p className="mt-1 text-sm font-semibold text-violet-700">{phase.theme}</p>
-              <ul className="mt-3 space-y-2">
+              <div className="flex flex-1 flex-wrap gap-2">
                 {phase.tasks.map((item) => (
-                  <li key={item} className="flex gap-2 text-sm text-slate-700">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-                    <span>{item}</span>
-                  </li>
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-slate-100"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-violet-600" />
+                    {item}
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       <section>
-        {sectionHeading(11, 'Oportunidad económica estimada', 'Estimación simple para dimensionar cuánto podría valer mejorar la visibilidad. No es promesa de revenue.')}
+        {sectionHeading(11, 'Oportunidad económica estimada', 'Simulador con supuestos editables. Cargá datos reales del cliente; no es promesa de revenue.')}
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
+            <Lightbulb className="h-3.5 w-3.5" /> Valores de ejemplo · editá con datos reales del cliente
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: 'Visitas mensuales estimadas', value: monthlyVisits, setter: setMonthlyVisits, suffix: '' },
@@ -954,7 +1007,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
             ))}
           </div>
           <div className="mt-4 rounded-xl bg-gradient-to-br from-emerald-50 to-violet-50 p-4 ring-1 ring-emerald-100">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Oportunidad aproximada</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Resultado simulado (no es promesa)</p>
             <p className="mt-1 text-3xl font-black text-slate-900">{money(estimatedExtraRevenue)} / mes</p>
             <p className="mt-1 text-sm text-slate-600">{money(estimatedAnnualRevenue)} estimados al año si las variables se cumplen.</p>
           </div>
@@ -1005,13 +1058,6 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
                   <p className="text-sm font-bold text-slate-900">{item.title}</p>
                   <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{item.prompt}</p>
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {['Sin 50 PDFs', 'Sin 100 recomendaciones imposibles', 'Sin teoría SEO eterna', 'Sin G2 en esta versión'].map((item) => (
-                <span key={item} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                  <ListChecks className="h-3 w-3" /> {item}
-                </span>
               ))}
             </div>
           </div>
