@@ -61,6 +61,8 @@ import { ReporteModerno } from './reporte-moderno';
 import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-modal';
 import { SatelliteModuleCard, SatelliteModuleSkeleton } from '@/components/diagnostico/satellite-aeo-report';
 import { ReporteCorridas } from './reporte-corridas';
+import { PlanConquistarUpsellTeaser } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import { buildPlanConquistarTeaserData } from '@/lib/plan-conquistar-preview';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
@@ -1007,6 +1009,13 @@ function VerResultadoContent() {
                                     <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                                   )}
                                 </>
+                              ) : null
+                            }
+                            appendSlot={
+                              diagnostic.showPlanConquistarUpsell ? (
+                                <PlanConquistarUpsellTeaser
+                                  data={buildPlanConquistarTeaserData(runResultToShow)}
+                                />
                               ) : null
                             }
                           />

@@ -1117,6 +1117,7 @@ export interface PublicDiagnostic {
   channelView?: 'whatsapp_lite';
   isFirstRun?: boolean;
   showFullReport?: boolean;
+  showPlanConquistarUpsell?: boolean;
   runId?: string | null;
   runGeminiId?: string | null;
   runPerplexityId?: string | null;

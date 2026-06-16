@@ -11,6 +11,7 @@ import {
   Layers,
   Link2,
   Mail,
+  Megaphone,
   MessageCircle,
   MousePointerClick,
   Receipt,
@@ -91,6 +92,7 @@ const sections: NavSection[] = [
     title: 'Configuración',
     links: [
       { href: '/admin/settings', label: 'Configuración general', icon: Settings, extraPrefixes: ['/settings'] },
+      { href: '/admin/promociones', label: 'Promociones', icon: Megaphone, extraPrefixes: ['/promociones'] },
       { href: '/admin/textos', label: 'Textos editables', icon: Type },
     ],
   },

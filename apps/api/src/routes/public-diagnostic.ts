@@ -21,6 +21,7 @@ import {
   resolveCompetitorDomains,
 } from '../lib/diagnostic-ai';
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
+import { getPlanConquistarUpsellConfig, isPlanConquistarUpsellActive } from '../lib/promo-settings';
 import { countryNameFromIso, geoMarketForCountryName } from '../lib/countries';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
 import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
@@ -3445,6 +3446,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const isWaChannel = isWhatsAppSourceChannel(row.sourceChannel);
     const showFullReport = isWaChannel ? true : tier === 'gold' || isFirstRun;
 
+    // Promo controlada desde admin: el upsell "Plan Conquistar" solo se suma al reporte
+    // gratuito (freemium, no WhatsApp) cuando la promo está encendida y dentro de su ventana.
+    // Si está apagada (default), el reporte de resultados queda exactamente como siempre.
+    const showPlanConquistarUpsell =
+      showFullReport &&
+      !isWaChannel &&
+      tier !== 'gold' &&
+      isPlanConquistarUpsellActive(await getPlanConquistarUpsellConfig());
+
     const runResultShape = {
       brandId: '' as string,
       brandName: '' as string,
@@ -3476,6 +3486,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       tier: 'gold' | 'freemium';
       isFirstRun: boolean;
       showFullReport: boolean;
+      showPlanConquistarUpsell?: boolean;
       runId?: string | null;
       runGeminiId?: string | null;
       runPerplexityId?: string | null;
@@ -3516,6 +3527,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       tier,
       isFirstRun,
       showFullReport,
+      showPlanConquistarUpsell,
       runId: diagnostic.runId,
       runGeminiId: diagnostic.runGeminiId ?? null,
       runPerplexityId: diagnostic.runPerplexityId ?? null,
