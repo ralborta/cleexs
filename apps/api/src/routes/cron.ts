@@ -293,12 +293,15 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /api/cron/outreach-shadow
-  // Automatiza cold outreach en modo seguro: genera el email y lo manda en SHADOW
-  // al buzón de revisión (OUTREACH_SHADOW_TO / reply-to), nunca al competidor.
+  // Automatiza cold outreach: genera el email y lo envía.
+  // mode='shadow' (default seguro): manda al buzón de revisión (OUTREACH_SHADOW_TO / reply-to), nunca al competidor.
+  // mode='real': envía al competidor real. Requiere OUTREACH_DOMAIN_VERIFIED=true y respeta límites diarios/por dominio.
+  // El default es 'shadow' a propósito: si el endpoint se dispara sin `mode`, nunca manda real por accidente.
   fastify.post<{
     Body: {
       limit?: number;
       dryRun?: boolean;
+      mode?: 'shadow' | 'real';
     };
   }>('/outreach-shadow', async (request, reply) => {
     if (!checkCronSecret(request, reply)) return;
@@ -306,11 +309,14 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     const schema = z.object({
       limit: z.number().int().min(1).max(50).default(outreachAutoShadowLimit()),
       dryRun: z.boolean().default(false),
+      mode: z.enum(['shadow', 'real']).default('shadow'),
     });
     const parsed = schema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
     }
+
+    const mode = parsed.data.mode;
 
     const candidates = await prisma.leadContact.findMany({
       where: {
@@ -333,7 +339,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       return {
         ok: true,
         dryRun: true,
-        mode: 'shadow',
+        mode,
         candidates: candidates.map((c) => ({
           leadContactId: c.id,
           email: c.email,
@@ -357,14 +363,14 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
           leadContactId: contact.id,
           meta: {
             automated: true,
-            automation: 'cron_outreach_shadow',
+            automation: mode === 'real' ? 'cron_outreach_real' : 'cron_outreach_shadow',
           },
         });
         generated += 1;
 
         await sendLeadEmail({
           leadEmailId: email.id,
-          mode: 'shadow',
+          mode,
         });
         sent += 1;
       } catch (e) {
@@ -382,7 +388,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       ok: failed === 0,
       dryRun: false,
-      mode: 'shadow',
+      mode,
       candidates: candidates.length,
       generated,
       sent,
