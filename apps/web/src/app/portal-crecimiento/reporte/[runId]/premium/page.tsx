@@ -13,6 +13,7 @@ import {
   Rocket,
   Users,
 } from 'lucide-react';
+import { PortalAiTrafficTeaser } from '@/components/portal/portal-ai-traffic-teaser';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 import { InterpretacionAmpliadaCorridasBlock } from '@/components/report/interpretacion-ampliada-corridas-block';
 import { SemiGauge } from '@/components/portal/cleexs-semi-gauge';
@@ -516,6 +517,8 @@ export default function PortalReportePremiumInterpretacionPage() {
               )}
             </div>
           </section>
+
+          <PortalAiTrafficTeaser runId={run.id} brandId={run.brand.id} />
 
           <section id="comparacion" className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div>
