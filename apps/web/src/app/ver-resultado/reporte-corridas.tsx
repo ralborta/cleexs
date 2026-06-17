@@ -336,6 +336,7 @@ export function ReporteCorridas({
   brandName,
   trendData,
   satelliteBlock,
+  beforeSatelliteSlot,
   afterSummarySlot,
   appendSlot,
 }: {
@@ -344,6 +345,8 @@ export function ReporteCorridas({
   trendData?: PublicDiagnosticTrendPoint[];
   /** Módulo AEO / satélite (mismo contenido que en vista legacy), entre KPIs y comparativa. */
   satelliteBlock?: ReactNode;
+  /** Resumen de acceso de crawlers (J9), justo antes del bloque AEO satélite. */
+  beforeSatelliteSlot?: ReactNode;
   /** Contenido extra inyectado justo después del resumen ejecutivo (ej: score por motor). */
   afterSummarySlot?: ReactNode;
   /** Contenido extra inyectado al final del reporte, manteniendo el mismo flujo (ej: roadmap, calculadora). */
@@ -1039,6 +1042,8 @@ export function ReporteCorridas({
           })}
         </div>
       </section>
+
+      {beforeSatelliteSlot ?? null}
 
       {/* 3 Análisis técnico AEO (satélite) */}
       {satelliteBlock ? (

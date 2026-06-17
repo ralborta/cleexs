@@ -1,5 +1,6 @@
-import type { PublicDiagnosticRunResult } from '@/lib/api';
+import type { PublicDiagnosticRunResult, PublicDiagnosticSatelliteModule } from '@/lib/api';
 import type { PlanConquistarTeaserData } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import { buildCrawlerAccessReport } from '@/lib/crawler-access';
 
 /**
  * Construye los datos del reporte Plan Conquistar (versión bloqueada/upsell) a partir
@@ -75,7 +76,9 @@ const COURSE_MODULES = [
 ];
 
 export function buildPlanConquistarTeaserData(
-  runResult: PublicDiagnosticRunResult
+  runResult: PublicDiagnosticRunResult,
+  satelliteModule?: PublicDiagnosticSatelliteModule | null,
+  siteUrl?: string | null,
 ): PlanConquistarTeaserData {
   const brandName = runResult.brandName;
   const aliases = runResult.brandAliases || [];
@@ -193,5 +196,6 @@ export function buildPlanConquistarTeaserData(
     externalAuthority: EXTERNAL_AUTHORITY_CHANNELS,
     roadmap,
     courseModules: COURSE_MODULES,
+    crawlerAccess: buildCrawlerAccessReport(satelliteModule, siteUrl),
   };
 }

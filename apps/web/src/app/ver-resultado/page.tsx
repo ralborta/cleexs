@@ -62,6 +62,7 @@ import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-moda
 import { SatelliteModuleCard, SatelliteModuleSkeleton } from '@/components/diagnostico/satellite-aeo-report';
 import { ReporteCorridas } from './reporte-corridas';
 import { PlanConquistarUpsellTeaser } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
 import { buildPlanConquistarTeaserData } from '@/lib/plan-conquistar-preview';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
@@ -1009,6 +1010,11 @@ function VerResultadoContent() {
                             runResult={runResultToShow}
                             brandName={runResultToShow.brandName}
                             trendData={diagnostic.trendData}
+                            beforeSatelliteSlot={
+                              satelliteModule && satelliteModule.status !== 'pending' ? (
+                                <CrawlerAccessTeaser module={satelliteModule} siteUrl={satelliteSiteUrl} />
+                              ) : null
+                            }
                             satelliteBlock={
                               !diagnostic.domain.startsWith('brand-') &&
                               (showSatelliteSkeleton ||
@@ -1024,7 +1030,11 @@ function VerResultadoContent() {
                             appendSlot={
                               diagnostic.showPlanConquistarUpsell ? (
                                 <PlanConquistarUpsellTeaser
-                                  data={buildPlanConquistarTeaserData(runResultToShow)}
+                                  data={buildPlanConquistarTeaserData(
+                                    runResultToShow,
+                                    satelliteModule,
+                                    satelliteSiteUrl
+                                  )}
                                 />
                               ) : null
                             }

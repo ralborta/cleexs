@@ -22,6 +22,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReporteCorridas, sectionHeading } from '@/app/ver-resultado/reporte-corridas';
 import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
+import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
+import { buildCrawlerAccessReport } from '@/lib/crawler-access';
 import type {
   PublicDiagnosticRunResult,
   PublicDiagnosticSatelliteModule,
@@ -715,6 +717,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
     context?.satelliteModule && context.satelliteModule.status !== 'pending' ? (
       <SatelliteModuleCard module={context.satelliteModule} siteUrl={siteUrl} />
     ) : null;
+  const crawlerAccessReport = buildCrawlerAccessReport(context?.satelliteModule, siteUrl);
 
   // Score por los 4 motores: va pegado al resumen ejecutivo, como continuación del Cleexs Score.
   const extraEngines: EngineKey[] = ['gemini', 'claude', 'perplexity'];
@@ -952,8 +955,19 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
   // Resto del entregable Plan Conquistar, en el mismo flujo numerado del reporte (continúa después de la sección 7).
   const planSlot = (
     <>
+      {crawlerAccessReport ? (
+        <section>
+          {sectionHeading(
+            8,
+            'Acceso de crawlers de IA',
+            '¿ChatGPT y otros motores pueden rastrear tu sitio? Revisión de robots.txt, bots clave y checklist de verificación.'
+          )}
+          <CrawlerAccessPlanSection report={crawlerAccessReport} siteUrl={siteUrl} />
+        </section>
+      ) : null}
+
       <section>
-        {sectionHeading(8, 'Oportunidades priorizadas', 'Ordenadas por prioridad (mayor a menor). La prioridad sube cuando hay más margen de mejora y el esfuerzo es bajo.')}
+        {sectionHeading(9, 'Oportunidades priorizadas', 'Ordenadas por prioridad (mayor a menor). La prioridad sube cuando hay más margen de mejora y el esfuerzo es bajo.')}
         <div className="grid gap-3 md:grid-cols-2">
           {analysis.opportunities.map((opportunity, idx) => (
             <div key={opportunity.id} className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
@@ -986,7 +1000,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(9, 'Mapa de ejecución', 'Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas).')}
+        {sectionHeading(10, 'Mapa de ejecución', 'Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas).')}
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
             <div className="mb-3 flex items-center gap-2">
@@ -1046,7 +1060,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(10, 'Plan de acción de 90 días', 'Personalizado con las oportunidades, scores y competidores detectados en esta corrida.')}
+        {sectionHeading(11, 'Plan de acción de 90 días', 'Personalizado con las oportunidades, scores y competidores detectados en esta corrida.')}
         <div className="space-y-2.5">
           {personalizedRoadmap.map((phase) => (
             <div
@@ -1078,7 +1092,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(11, 'Oportunidad económica estimada', 'Simulador con supuestos editables. Cargá datos reales del cliente; no es promesa de revenue.')}
+        {sectionHeading(12, 'Oportunidad económica estimada', 'Simulador con supuestos editables. Cargá datos reales del cliente; no es promesa de revenue.')}
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
           <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
             <Lightbulb className="h-3.5 w-3.5" /> Valores de ejemplo · editá con datos reales del cliente
@@ -1114,7 +1128,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(12, 'Materiales de implementación', 'Curso express y prompts listos para ejecutar el plan.')}
+        {sectionHeading(13, 'Materiales de implementación', 'Curso express y prompts listos para ejecutar el plan.')}
         <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
             <div className="mb-3 flex items-center gap-2">
@@ -1162,7 +1176,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(13, 'Re-análisis a los 75 días', 'Incluido en el plan: una nueva medición para verificar tu progreso.')}
+        {sectionHeading(14, 'Re-análisis a los 75 días', 'Incluido en el plan: una nueva medición para verificar tu progreso.')}
         <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-700 to-indigo-700 p-6 text-white shadow-sm">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
@@ -1179,7 +1193,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(14, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
+        {sectionHeading(15, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
         <div className="grid gap-2 sm:grid-cols-2">
           {[
             'Definir las 5 intenciones principales donde querés ser recomendado.',

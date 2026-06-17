@@ -13,6 +13,7 @@ from tools.http_client import create_session
 AI_BOTS = [
     {"name": "GPTBot", "engine": "ChatGPT / OpenAI", "agent": "GPTBot"},
     {"name": "ChatGPT-User", "engine": "ChatGPT Browse", "agent": "ChatGPT-User"},
+    {"name": "OAI-SearchBot", "engine": "ChatGPT Search / OpenAI", "agent": "OAI-SearchBot"},
     {"name": "ClaudeBot", "engine": "Claude / Anthropic", "agent": "ClaudeBot"},
     {"name": "Claude-Web", "engine": "Claude Web", "agent": "Claude-Web"},
     {"name": "Google-Extended", "engine": "Google AI / Gemini", "agent": "Google-Extended"},

@@ -20,6 +20,8 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { CrawlerAccessReport } from '@/lib/crawler-access';
+import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
 
 type Opportunity = {
   title: string;
@@ -55,6 +57,7 @@ export type PlanConquistarTeaserData = {
   roadmap: RoadmapPhase[];
   courseModules: string[];
   externalAuthority: Array<{ name: string; goal: string }>;
+  crawlerAccess?: CrawlerAccessReport | null;
 };
 
 const PLAN_CONQUISTAR_PATH = '/plan-conquistar';
@@ -334,9 +337,21 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           </div>
         </LockedSection>
 
-        {/* 2 · Oportunidades priorizadas */}
+        {data.crawlerAccess ? (
+          <LockedSection
+            num={2}
+            title="Acceso de crawlers de IA"
+            subtitle="GPTBot, OAI-SearchBot, Perplexity y el resto de bots que leen tu web para recomendarte."
+            previewMaxH={320}
+            onUnlock={open}
+          >
+            <CrawlerAccessPlanSection report={data.crawlerAccess} />
+          </LockedSection>
+        ) : null}
+
+        {/* Oportunidades priorizadas */}
         <LockedSection
-          num={2}
+          num={data.crawlerAccess ? 3 : 2}
           title="Oportunidades priorizadas"
           subtitle={`Te mostramos 3 de ${data.totalOpportunities}. Ordenadas por prioridad real.`}
           previewMaxH={360}
@@ -373,9 +388,9 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           </div>
         </LockedSection>
 
-        {/* 3 · Mapa de ejecución */}
+        {/* Mapa de ejecución */}
         <LockedSection
-          num={3}
+          num={data.crawlerAccess ? 4 : 3}
           title="Mapa de ejecución"
           subtitle="Dónde enfocar primero y qué señales externas reforzar."
           previewMaxH={260}
@@ -429,9 +444,9 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           </div>
         </LockedSection>
 
-        {/* 4 · Roadmap 90 días */}
+        {/* Roadmap 90 días */}
         <LockedSection
-          num={4}
+          num={data.crawlerAccess ? 5 : 4}
           title="Plan de acción de 90 días"
           subtitle="Personalizado con tus oportunidades, scores y competidores."
           previewMaxH={250}
@@ -467,9 +482,9 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           </div>
         </LockedSection>
 
-        {/* 5 · Materiales */}
+        {/* Materiales */}
         <LockedSection
-          num={5}
+          num={data.crawlerAccess ? 6 : 5}
           title="Materiales de implementación"
           subtitle="Curso express y Kit IA de prompts listos para ejecutar."
           previewMaxH={230}
