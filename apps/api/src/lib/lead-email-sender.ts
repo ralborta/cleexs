@@ -60,6 +60,15 @@ function getReplyTo(): string | undefined {
   return process.env.OUTREACH_REPLY_TO?.trim() || process.env.SMTP_FROM_EMAIL?.trim() || undefined;
 }
 
+function getUnsubscribeUrl(emailId: string): string {
+  const baseUrl = (
+    process.env.OUTREACH_UNSUBSCRIBE_BASE_URL ||
+    process.env.PUBLIC_WEBHOOK_BASE_URL ||
+    'https://cleexsapi-production.up.railway.app'
+  ).replace(/\/+$/, '');
+  return `${baseUrl}/api/leads/email/${emailId}/unsubscribe`;
+}
+
 function domainVerified(): boolean {
   return process.env.OUTREACH_DOMAIN_VERIFIED === 'true';
 }
@@ -77,6 +86,13 @@ function assertSendableContact(contact: LeadContact, mode: LeadEmailSendMode) {
   const email = cleanEmail(contact.email);
   if (!email.includes('@')) {
     throw Object.assign(new Error('Contacto sin email válido.'), { statusCode: 400 });
+  }
+
+  if (mode === 'real' && contact.status === 'ignored') {
+    throw Object.assign(new Error(`Contacto excluido por baja o bloqueo: ${email}`), {
+      statusCode: 409,
+      code: 'excluded_recipient',
+    });
   }
 
   const local = localPart(email);
@@ -171,6 +187,8 @@ async function sendViaResend(args: {
       'X-Cleexs-Lead-Email-Id': args.email.id,
       'X-Cleexs-Outreach-Mode': args.mode,
       'X-Cleexs-Original-To': args.originalTo,
+      'List-Unsubscribe': `<${getUnsubscribeUrl(args.email.id)}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
   });
   if (error) {
@@ -197,6 +215,8 @@ async function sendViaSmtp(args: {
       'X-Cleexs-Lead-Email-Id': args.email.id,
       'X-Cleexs-Outreach-Mode': args.mode,
       'X-Cleexs-Original-To': args.originalTo,
+      'List-Unsubscribe': `<${getUnsubscribeUrl(args.email.id)}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
   });
   return info.messageId ?? null;

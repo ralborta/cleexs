@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { findBrandPosition, type Top3Entry } from '@cleexs/shared';
@@ -359,6 +359,49 @@ const leadsRoutes: FastifyPluginAsync = async (fastify) => {
         ...(code ? { code } : {}),
       });
     }
+  });
+
+  async function unsubscribeLeadEmail(id: string, reply: FastifyReply) {
+    const email = await prisma.leadEmail.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        leadContactId: true,
+        metaJson: true,
+      },
+    });
+
+    if (!email) {
+      return reply.code(404).send({ ok: false, error: 'Email no encontrado' });
+    }
+
+    await prisma.$transaction([
+      prisma.leadContact.update({
+        where: { id: email.leadContactId },
+        data: { status: 'ignored' },
+      }),
+      prisma.leadEmail.update({
+        where: { id: email.id },
+        data: {
+          metaJson: {
+            ...(email.metaJson && typeof email.metaJson === 'object' && !Array.isArray(email.metaJson) ? email.metaJson : {}),
+            unsubscribedAt: new Date().toISOString(),
+          },
+        },
+      }),
+    ]);
+
+    return { ok: true, unsubscribed: true };
+  }
+
+  // POST /leads/email/:id/unsubscribe
+  fastify.post<{ Params: { id: string } }>('/email/:id/unsubscribe', async (request, reply) => {
+    return unsubscribeLeadEmail(request.params.id, reply);
+  });
+
+  // GET /leads/email/:id/unsubscribe
+  fastify.get<{ Params: { id: string } }>('/email/:id/unsubscribe', async (request, reply) => {
+    return unsubscribeLeadEmail(request.params.id, reply);
   });
 };
 
