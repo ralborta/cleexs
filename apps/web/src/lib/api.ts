@@ -1069,6 +1069,16 @@ export interface PublicDiagnosticTrendPoint {
   date: string;
 }
 
+/** Domain Rating (Ahrefs) — autoridad SEO del dominio, complemento al Cleexs Score. */
+export interface DomainRatingSnapshot {
+  brand: { name: string; domain: string; rating: number | null };
+  competitors: Array<{ name: string; domain: string | null; rating: number | null }>;
+  leaderRating: number | null;
+  avgCompetitorRating: number | null;
+  gapVsLeader: number | null;
+  insight: string | null;
+}
+
 export interface PublicDiagnosticSatelliteModule {
   status: 'completed' | 'failed' | 'timeout' | 'skipped' | 'pending';
   targetUrl?: string;
@@ -1141,6 +1151,7 @@ export interface PublicDiagnostic {
   analysisJson?: DiagnosticAnalysisJson | null;
   trendData?: PublicDiagnosticTrendPoint[];
   satelliteModule?: PublicDiagnosticSatelliteModule | null;
+  domainRating?: DomainRatingSnapshot | null;
 }
 
 export interface PublicDiagnosticShareUnlock {

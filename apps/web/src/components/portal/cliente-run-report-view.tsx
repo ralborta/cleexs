@@ -22,6 +22,11 @@ import {
   Users,
 } from 'lucide-react';
 import { SemiGauge } from '@/components/portal/cleexs-semi-gauge';
+import {
+  DomainRatingPanel,
+  DomainRatingTableCell,
+  buildDomainRatingFromCompareRows,
+} from '@/components/report/domain-rating-block';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalReferralUpsell } from '@/components/portal/portal-referral-upsell';
@@ -75,6 +80,7 @@ type PanelRow = {
   domain: string | null;
   tag: 'mi_empresa' | 'competidor';
   score: number | null;
+  domainRating?: number | null;
 };
 
 type PanelResponse = {
@@ -597,6 +603,11 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
     leaderCompetitor != null && Number.isFinite(currentScore)
       ? Math.round((currentScore - leaderCompetitor) * 10) / 10
       : null;
+  const domainRatingSnapshot = useMemo(
+    () => buildDomainRatingFromCompareRows(sortedPanel),
+    [sortedPanel]
+  );
+  const showDrColumn = sortedPanel.some((r) => r.domainRating != null);
 
   const runNewDiagnostic = useCallback(async () => {
     if (!run?.brand?.id) {
@@ -1233,6 +1244,8 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
           />
         </div>
 
+        {domainRatingSnapshot ? <DomainRatingPanel data={domainRatingSnapshot} /> : null}
+
         <div id="competidores" className="scroll-mt-24">
           <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Ranking del panel</h3>
           {sortedPanel.length === 0 ? (
@@ -1246,6 +1259,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                     <th className="px-3 py-2">Marca</th>
                     <th className="px-3 py-2">Tipo</th>
                     <th className="px-3 py-2 text-right">Score</th>
+                    {showDrColumn ? <th className="px-3 py-2 text-right">DR</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -1267,6 +1281,9 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
                       <td className="px-3 py-2 text-right font-semibold text-slate-900">
                         {row.score == null ? '—' : Math.round(Number(row.score))}
                       </td>
+                      {showDrColumn ? (
+                        <DomainRatingTableCell rating={row.domainRating} className="px-3 py-2" />
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

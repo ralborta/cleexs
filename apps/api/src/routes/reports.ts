@@ -11,6 +11,7 @@ import {
   executeRunClaude,
 } from '../lib/run-executor';
 import { isOpenRouterConfigured } from '../lib/openrouter-runner';
+import { enrichRowsWithDomainRating } from '../lib/ahrefs-domain-rating';
 
 type EngineKey = 'gemini' | 'perplexity' | 'claude';
 
@@ -204,6 +205,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       domain: string | null;
       tag: 'mi_empresa' | 'competidor';
       score: number | null;
+      domainRating?: number | null;
     };
     const rows: Row[] = [];
 
@@ -270,7 +272,9 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     rows.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
-    const compareRows = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+    const compareRows = await enrichRowsWithDomainRating(
+      rows.map((r, i) => ({ ...r, rank: i + 1 }))
+    );
 
     return {
       primaryBrandId: primaryId || null,

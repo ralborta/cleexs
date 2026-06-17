@@ -28,6 +28,7 @@ import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModule
 import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
 import { extractSponsorRefFromWhatsAppMessage } from '@cleexs/shared';
 import { notifyWhatsAppDiagnosticCompleted } from '../lib/whatsapp-notify';
+import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 import { logIncomingWhatsApp, logOutgoingWhatsApp, sanitizeWaInboundText } from '../lib/whatsapp-message-log';
 import {
   buildWaResultUrl,
@@ -3519,6 +3520,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       sourceChannel?: string | null;
       resultUrl?: string | null;
       channelView?: 'whatsapp_lite';
+      domainRating?: import('../lib/ahrefs-domain-rating').DomainRatingSnapshot | null;
     } = {
       id: diagnostic.id,
       domain: diagnostic.domain,
@@ -3838,6 +3840,24 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
             score: scoreByRunId.get(d.runId!) ?? 0,
             date: d.createdAt.toISOString(),
           }));
+      }
+    }
+
+    if (diagnostic.status === 'completed' && diagnostic.domain && !diagnostic.domain.startsWith('brand-')) {
+      try {
+        const competitorsForDr =
+          base.runResult?.competitorDetails?.map((c) => ({
+            name: c.name,
+            domain: c.domain ?? null,
+          })) ?? [];
+        base.domainRating = await buildDomainRatingSnapshot({
+          brandName: diagnostic.brandName,
+          brandDomain: diagnostic.domain,
+          competitors: competitorsForDr,
+          includeCompetitors: showFullReport,
+        });
+      } catch {
+        base.domainRating = null;
       }
     }
 

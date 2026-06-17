@@ -66,6 +66,8 @@ import { buildPlanConquistarTeaserData } from '@/lib/plan-conquistar-preview';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
+import { DomainRatingPanel, DomainRatingTeaser } from '@/components/report/domain-rating-block';
+import type { DomainRatingSnapshot } from '@/lib/api';
 
 const normalizeName = (value: string) =>
   value
@@ -224,7 +226,13 @@ const mergeConfiguredCompetitorsWithZeroShare = (
 };
 
 /** Vista limitada Freemium: solo Cleexs Score + CTA */
-function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }) {
+function ReporteFreemium({
+  runResult,
+  domainRating,
+}: {
+  runResult: PublicDiagnosticRunResult;
+  domainRating?: DomainRatingSnapshot | null;
+}) {
   return (
     <div className="space-y-6">
       <Card className="border-transparent bg-white shadow-md">
@@ -243,6 +251,8 @@ function ReporteFreemium({ runResult }: { runResult: PublicDiagnosticRunResult }
           </div>
         </CardContent>
       </Card>
+
+      {domainRating ? <DomainRatingTeaser data={domainRating} /> : null}
 
       <Card className="border-transparent bg-gradient-to-br from-amber-50/80 to-orange-50/60 shadow-md border-amber-200/60">
         <CardHeader className="pb-3">
@@ -1018,11 +1028,21 @@ function VerResultadoContent() {
                                 />
                               ) : null
                             }
+                            afterSummarySlot={
+                              diagnostic.domainRating ? (
+                                diagnostic.showFullReport &&
+                                diagnostic.domainRating.competitors.length > 0 ? (
+                                  <DomainRatingPanel data={diagnostic.domainRating} />
+                                ) : (
+                                  <DomainRatingTeaser data={diagnostic.domainRating} />
+                                )
+                              ) : null
+                            }
                           />
                         ))}
                     </div>
                   ) : (
-                    <ReporteFreemium runResult={runResult} />
+                    <ReporteFreemium runResult={runResult} domainRating={diagnostic.domainRating} />
                   )
                 ) : (
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">

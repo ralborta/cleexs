@@ -20,6 +20,11 @@ import {
   Zap,
 } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import {
+  DomainRatingPanel,
+  DomainRatingTableCell,
+  buildDomainRatingFromCompareRows,
+} from '@/components/report/domain-rating-block';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -49,8 +54,10 @@ type ReportItem = {
 type PanelRow = {
   rank: number;
   name: string;
+  domain?: string | null;
   tag: 'mi_empresa' | 'competidor';
   score: number | null;
+  domainRating?: number | null;
 };
 type PanelResponse = { compareRows: PanelRow[] };
 
@@ -212,6 +219,11 @@ export default function ComparacionPage() {
   const compScores = competitorRows.filter(c => c.score != null).map(c => Number(c.score));
   const leaderScore = compScores.length ? Math.max(...compScores) : null;
   const gapVsLeader = leaderScore != null ? Math.round((currentScore - leaderScore) * 10) / 10 : null;
+  const domainRatingSnapshot = useMemo(
+    () => buildDomainRatingFromCompareRows(compareRows),
+    [compareRows]
+  );
+  const showDrColumn = compareRows.some((r) => r.domainRating != null);
 
   // Trend points (últimas 6 corridas con score)
   const trendPoints = useMemo(() =>
@@ -378,6 +390,10 @@ export default function ComparacionPage() {
                 <MetricCard icon={Zap} label="Intenciones evaluadas" value={String(totalPrompts)} sub={`${catStats.length} categorías`}/>
               </div>
 
+              {domainRatingSnapshot ? (
+                <DomainRatingPanel data={domainRatingSnapshot} />
+              ) : null}
+
               {/* ── Fila inferior ── */}
               <div className="grid gap-4 xl:grid-cols-[1fr_1fr_auto]">
 
@@ -397,6 +413,7 @@ export default function ComparacionPage() {
                             <th className="pb-2 text-left">#</th>
                             <th className="pb-2 text-left">Marca</th>
                             <th className="pb-2 text-right">Score actual</th>
+                            {showDrColumn ? <th className="pb-2 text-right">DR</th> : null}
                           </tr>
                         </thead>
                         <tbody>
@@ -417,6 +434,7 @@ export default function ComparacionPage() {
                               <td className="py-2 text-right font-bold text-slate-900">
                                 {row.score == null ? '—' : Math.round(Number(row.score))}
                               </td>
+                              {showDrColumn ? <DomainRatingTableCell rating={row.domainRating} /> : null}
                             </tr>
                           ))}
                         </tbody>

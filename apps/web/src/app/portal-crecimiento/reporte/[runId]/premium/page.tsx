@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 import { PortalAiTrafficTeaser } from '@/components/portal/portal-ai-traffic-teaser';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import {
+  DomainRatingPanel,
+  DomainRatingTableCell,
+  buildDomainRatingFromCompareRows,
+} from '@/components/report/domain-rating-block';
 import { InterpretacionAmpliadaCorridasBlock } from '@/components/report/interpretacion-ampliada-corridas-block';
 import { SemiGauge } from '@/components/portal/cleexs-semi-gauge';
 import {
@@ -75,6 +80,7 @@ type PanelRow = {
   domain: string | null;
   tag: 'mi_empresa' | 'competidor';
   score: number | null;
+  domainRating?: number | null;
 };
 
 type PanelResponse = {
@@ -281,6 +287,15 @@ export default function PortalReportePremiumInterpretacionPage() {
     leaderCompetitor != null && Number.isFinite(currentScore)
       ? Math.round((currentScore - leaderCompetitor) * 10) / 10
       : null;
+  const compareRowsSorted = useMemo(
+    () => [...(panel?.compareRows ?? [])].sort((a, b) => a.rank - b.rank),
+    [panel]
+  );
+  const domainRatingSnapshot = useMemo(
+    () => buildDomainRatingFromCompareRows(compareRowsSorted),
+    [compareRowsSorted]
+  );
+  const showDrColumn = compareRowsSorted.some((r) => r.domainRating != null);
   const deltaVsPrevious =
     previousComparable && Number.isFinite(currentScore)
       ? Math.round((currentScore - toPct(previousComparable.score)) * 10) / 10
@@ -576,6 +591,8 @@ export default function PortalReportePremiumInterpretacionPage() {
               />
             </div>
 
+            {domainRatingSnapshot ? <DomainRatingPanel data={domainRatingSnapshot} /> : null}
+
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Ranking del panel</h3>
               {(panel?.compareRows ?? []).length === 0 ? (
@@ -589,6 +606,7 @@ export default function PortalReportePremiumInterpretacionPage() {
                         <th className="px-3 py-2">Marca</th>
                         <th className="px-3 py-2">Tipo</th>
                         <th className="px-3 py-2 text-right">Score</th>
+                        {showDrColumn ? <th className="px-3 py-2 text-right">DR</th> : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -612,6 +630,9 @@ export default function PortalReportePremiumInterpretacionPage() {
                             <td className="px-3 py-2 text-right font-semibold text-slate-900">
                               {row.score == null ? '—' : Math.round(Number(row.score))}
                             </td>
+                            {showDrColumn ? (
+                              <DomainRatingTableCell rating={row.domainRating} className="px-3 py-2" />
+                            ) : null}
                           </tr>
                         ))}
                     </tbody>
