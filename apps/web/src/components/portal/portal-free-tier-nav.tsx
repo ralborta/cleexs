@@ -234,10 +234,13 @@ export function PortalFreeTierNav({
       </div>
 
       <div className="mt-6 flex flex-col gap-4 border-t border-slate-100/80 pt-6">
-        <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+        <Link
+          href="/contacto"
+          className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
+        >
           <Headphones className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
           <span>¿Necesitás ayuda? Contactá a nuestro equipo</span>
-        </div>
+        </Link>
         <PortalSignOutButton />
       </div>
     </aside>

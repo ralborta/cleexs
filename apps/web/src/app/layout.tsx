@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Header } from '@/components/layout/header';
+import { CleexsPublicFooter } from '@/components/layout/cleexs-public-footer';
 import { AppStringsProvider } from '@/lib/app-strings';
 import './globals.css';
 
@@ -27,6 +28,7 @@ export default function RootLayout({
         <AppStringsProvider initialLocale="es">
           <Header />
           {children}
+          <CleexsPublicFooter />
         </AppStringsProvider>
       </body>
     </html>

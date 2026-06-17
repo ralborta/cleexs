@@ -8,7 +8,11 @@ export default function PagoErrorPage() {
         <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
         <h1 className="mt-4 text-2xl font-bold text-slate-900">No se pudo confirmar el pago</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Podés volver a intentar desde la pantalla de suscripción. Si el problema sigue, contactanos y revisamos el caso.
+          Podés volver a intentar desde la pantalla de suscripción. Si el problema sigue,{' '}
+          <Link href="/contacto" className="font-medium text-violet-700 hover:underline">
+            contactanos
+          </Link>{' '}
+          y revisamos el caso.
         </p>
         <Link
           href="/portal-cliente"

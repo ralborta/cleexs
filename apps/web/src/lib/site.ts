@@ -28,8 +28,16 @@ export const CLEEXS_TOOLS_PUBLIC_URL = (
   process.env.NEXT_PUBLIC_CLEEXS_TOOLS_URL?.trim().replace(/\/$/, '') || ''
 ) as string;
 
-/**
- * Número WhatsApp Business de Cleexs (solo dígitos E.164, ej. 54911…).
+/** Número WhatsApp Business de Cleexs (solo dígitos E.164, ej. 54911…).
  * Usado en QR de auspiciadores (wa.me).
  */
 export const CLEEXS_WHATSAPP_PHONE_E164 = '541153866372' as const;
+
+/** Contacto general (soporte, ventas, consultas). */
+export const CLEEXS_CONTACT_EMAIL = 'info@cleexs.net' as const;
+
+export const CLEEXS_SOCIAL_LINKS = {
+  instagram: 'https://www.instagram.com/cleexsnet/',
+  youtube: 'https://www.youtube.com/@cleexsnet',
+  twitter: 'https://x.com/cleexsnet',
+} as const;

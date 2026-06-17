@@ -477,13 +477,13 @@ export default function HerramientasPage() {
                 <p className="text-xs text-slate-500">Desarrollamos soluciones a medida para tus necesidades específicas.</p>
               </div>
             </div>
-            <a
-              href="mailto:hola@cleexs.com"
+            <Link
+              href="/contacto"
               className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50"
             >
               Hablar con un experto
               <ArrowUpRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         </div>
       </div>

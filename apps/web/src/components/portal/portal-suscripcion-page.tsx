@@ -475,9 +475,9 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
             </div>
             <p className="mt-5 text-center text-sm text-slate-500">
               ¿Necesitás ayuda para elegir?{' '}
-              <a href="mailto:hola@cleexs.com" className="font-semibold text-violet-700 hover:underline">
+              <Link href="/contacto" className="font-semibold text-violet-700 hover:underline">
                 Hablar con un experto →
-              </a>
+              </Link>
             </p>
           </div>
 

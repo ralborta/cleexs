@@ -5,91 +5,22 @@ import { usePathname } from 'next/navigation';
 import { Upload, Bell, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-
-/** Rutas con header mínimo: solo logo, sin menú completo. */
-const MINIMAL_HEADER_PATHS = [
-  '/diagnostico/crear',
-  '/ver-resultado',
-  '/prueba-gratuita',
-  '/plan-conquistar',
-  '/planes',
-  '/dashboard',
-  '/runs',
-  '/outreach',
-  '/settings',
-  '/facturas',
-  '/configuracion',
-];
-const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
-const WA_RESULT_PATH_PREFIX = '/r/wa';
-const TOOLS_PATH_PREFIX = '/tools';
-
-function pathMatchesPrefix(pathname: string, prefix: string): boolean {
-  return pathname === prefix || pathname.startsWith(`${prefix}/`);
-}
-
-/** Canal WhatsApp: sin header global; la página define su propio encabezado. */
-function isWhatsAppResultPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return pathMatchesPrefix(pathname, WA_RESULT_PATH_PREFIX);
-}
-
-function isPublicDiagnosticPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  if (pathname === '/' || pathname === '/diagnostico') return true;
-  if (pathname.startsWith('/planes')) return true;
-  if (pathname.startsWith('/score')) return true;
-  if (MINIMAL_HEADER_PATHS.some((p) => pathMatchesPrefix(pathname, p))) return true;
-  if (pathname.startsWith(VERIFYING_PATH_PREFIX)) return true;
-  return false;
-}
-
-/** Portales usuario final: mismo header mínimo que diagnóstico (solo logo), sin menú interno Cleexs */
-function isStandalonePortalPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return pathname.startsWith('/portal-crecimiento') || pathname.startsWith('/portal-cliente');
-}
-
-/** Páginas legales públicas: el cliente no debe ver el menú interno (Diagnóstico, Planes, etc.). */
-function isPublicLegalPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  if (pathname.startsWith('/legal/')) return true;
-  if (pathname === '/terminos' || pathname === '/privacidad') return true;
-  return false;
-}
-
-function isAdminPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return pathname.startsWith('/admin');
-}
-
-/** Herramientas internas (ej. links de auspiciador): sin menú global. */
-function isToolsPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return pathMatchesPrefix(pathname, TOOLS_PATH_PREFIX);
-}
-
-/** Logo lleva al inicio coherente con la zona (portales ≠ app interna). */
-function logoHrefForPath(pathname: string | null): string {
-  if (!pathname) return '/';
-  if (pathname.startsWith('/portal-cliente')) return '/portal-cliente';
-  if (pathname.startsWith('/portal-crecimiento')) return '/portal-crecimiento';
-  return '/';
-}
+import {
+  logoHrefForPath,
+  shouldHidePublicChrome,
+  usesMinimalPublicHeader,
+} from '@/lib/public-chrome';
 
 export function Header() {
   const pathname = usePathname();
-  if (isAdminPath(pathname)) return null;
-  if (isToolsPath(pathname)) return null;
-  if (isWhatsAppResultPath(pathname)) return null;
-  const minimal =
-    isPublicDiagnosticPath(pathname) || isStandalonePortalPath(pathname) || isPublicLegalPath(pathname);
+  if (shouldHidePublicChrome(pathname)) return null;
+  const minimal = usesMinimalPublicHeader(pathname);
   const logoHref = logoHrefForPath(pathname);
 
   if (minimal) {
     return (
       <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
-        <div className="container mx-auto flex h-full items-center px-6">
+        <div className="container mx-auto flex h-full items-center justify-between px-6">
           <Link
             href={logoHref}
             className="flex items-center text-foreground no-underline hover:opacity-90"
@@ -98,6 +29,16 @@ export function Header() {
             <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
               <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
             </div>
+          </Link>
+          <Link
+            href="/contacto"
+            className={
+              pathname === '/contacto'
+                ? 'text-sm font-semibold text-violet-700'
+                : 'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+            }
+          >
+            Contacto
           </Link>
         </div>
       </header>
@@ -157,6 +98,12 @@ export function Header() {
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Facturas
+            </Link>
+            <Link
+              href="/contacto"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Contacto
             </Link>
           </nav>
 

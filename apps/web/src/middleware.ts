@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   '/terminos',
   '/privacidad',
   '/legal/cleexs',
+  '/contacto',
   '/tools/auspiciadores',
 ];
 
@@ -48,7 +49,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname.startsWith('/score')) return true;
   if (pathname.startsWith('/r/wa')) return true;
   if (pathname.startsWith('/legal/')) return true;
-  if (pathname === '/terminos' || pathname === '/privacidad') return true;
+  if (pathname === '/terminos' || pathname === '/privacidad' || pathname === '/contacto') return true;
   if (pathname.startsWith('/admin')) return true;
   if (pathname.startsWith('/tools/auspiciadores')) return true;
   return false;
@@ -62,7 +63,7 @@ function isPublicPath(pathname: string): boolean {
   if (path.startsWith('/score')) return true;
   if (path.startsWith('/r/wa')) return true;
   if (path.startsWith('/legal/')) return true;
-  if (path === '/terminos' || path === '/privacidad') return true;
+  if (path === '/terminos' || path === '/privacidad' || path === '/contacto') return true;
   return false;
 }
 
@@ -86,6 +87,7 @@ export function middleware(request: NextRequest) {
       pathname.startsWith('/legal/') ||
       pathname === '/terminos' ||
       pathname === '/privacidad' ||
+      pathname === '/contacto' ||
       pathname.startsWith('/admin');
     if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
