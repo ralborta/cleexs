@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
-  BookOpen,
   CheckCircle2,
   ExternalLink,
   FileCheck,
@@ -147,19 +146,6 @@ const EXTERNAL_AUTHORITY_CHANNELS = [
     name: 'Directorios de industria',
     goal: 'Alinear categoría, ubicación, casos de uso y público objetivo en fuentes verificables.',
   },
-];
-
-const COURSE_MODULES = [
-  'Cómo funcionan las respuestas de ChatGPT y otros LLMs',
-  'Qué señales hacen que una marca sea recomendada',
-  'Cómo leer tu Cleexs Score sin perderte en métricas',
-  'Cómo convertir intenciones débiles en páginas útiles',
-  'Cómo construir comparativas que los modelos entienden',
-  'Cómo usar FAQs y schema para responder mejor',
-  'Cómo generar autoridad externa sin depender de SEO clásico',
-  'Cómo monitorear competidores en el portal',
-  'Cómo ejecutar 3 quick wins por semana',
-  'Cómo priorizar el siguiente paso según tu score',
 ];
 
 function normalizeName(value: string) {
@@ -633,12 +619,7 @@ export function PlanConquistarReportView({
     domainRating &&
     (domainRating.brand.rating != null || domainRating.competitors.some((c) => c.rating != null));
 
-  const premiumAfterSummarySlot = (
-    <div className="space-y-4">
-      {engineScoreSlot}
-      {showDomainRatingPanel ? <DomainRatingPanel data={domainRating} /> : null}
-    </div>
-  );
+  const premiumAfterSummarySlot = engineScoreSlot;
 
   const premiumBeforeSatelliteSlot =
     context?.satelliteModule && context.satelliteModule.status !== 'pending' && siteUrl ? (
@@ -693,13 +674,15 @@ export function PlanConquistarReportView({
     formatOpportunity,
   });
 
-  // Resto del entregable (Premium + Plan Conquistar), en el mismo flujo numerado del reporte (continúa después de la sección 7).
+  // Resto del entregable (Premium + Plan Conquistar), numeración continúa desde la sección 8.
+  let planSectionNum = 8;
+
   const planSlot = (
     <>
       {crawlerAccessReport ? (
         <section>
           {sectionHeading(
-            8,
+            planSectionNum++,
             'Acceso de crawlers de IA',
             '¿ChatGPT y otros motores pueden rastrear tu sitio? Revisión de robots.txt, bots clave y checklist de verificación.'
           )}
@@ -707,8 +690,19 @@ export function PlanConquistarReportView({
         </section>
       ) : null}
 
+      {showDomainRatingPanel ? (
+        <section>
+          {sectionHeading(
+            planSectionNum++,
+            'Autoridad del dominio (SEO)',
+            'Domain Rating (Ahrefs) de tu dominio vs competidores. Mide autoridad por backlinks; no es lo mismo que tu Cleexs Score en IA.'
+          )}
+          <DomainRatingPanel data={domainRating} />
+        </section>
+      ) : null}
+
       <section>
-        {sectionHeading(9, 'Oportunidades priorizadas', 'Ordenadas por prioridad (mayor a menor). La prioridad sube cuando hay más margen de mejora y el esfuerzo es bajo.')}
+        {sectionHeading(planSectionNum++, 'Oportunidades priorizadas', 'Ordenadas por prioridad (mayor a menor). La prioridad sube cuando hay más margen de mejora y el esfuerzo es bajo.')}
         <div className="grid gap-3 md:grid-cols-2">
           {analysis.opportunities.map((opportunity, idx) => (
             <div key={opportunity.id} className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
@@ -741,39 +735,45 @@ export function PlanConquistarReportView({
       </section>
 
       <section>
-        {sectionHeading(10, 'Mapa de ejecución', 'Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas).')}
-        <div className="grid gap-3 lg:grid-cols-2">
+        {sectionHeading(
+          planSectionNum++,
+          'Mapa de ejecución',
+          'Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas).'
+        )}
+        <div className="space-y-4">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-4 flex items-center gap-2">
               <Layers3 className="h-4 w-4 text-violet-600" />
               <p className="text-sm font-bold text-slate-900">Dónde enfocar</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
               {[
                 { title: 'Mejorar ahora', hint: 'menor score = más margen', tone: 'rose' as const, items: improveNow },
                 { title: 'Defender', hint: 'mayor score = ya ganás', tone: 'emerald' as const, items: defendNow },
               ].map((group) => (
-                <div key={group.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
-                  <div className="mb-2 flex items-start justify-between gap-2">
+                <div key={group.title} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">{group.title}</h4>
-                      <p className="text-[10px] text-slate-500">{group.hint}</p>
+                      <h4 className="text-sm font-bold text-slate-900">{group.title}</h4>
+                      <p className="text-xs text-slate-500">{group.hint}</p>
                     </div>
                     <Badge tone={group.tone}>{group.items.length}</Badge>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {group.items.length === 0 ? (
-                      <p className="rounded-md bg-white p-2 text-xs text-slate-400 ring-1 ring-slate-100">
+                      <p className="rounded-lg bg-white p-3 text-sm text-slate-400 ring-1 ring-slate-100">
                         Sin datos suficientes en esta corrida.
                       </p>
                     ) : (
                       group.items.map((item) => (
                         <div
                           key={`${group.title}-${item.id}`}
-                          className="flex items-center justify-between gap-2 rounded-md bg-white p-2 text-xs text-slate-700 ring-1 ring-slate-100"
+                          className="flex items-center justify-between gap-4 rounded-lg bg-white px-4 py-3 text-sm text-slate-700 ring-1 ring-slate-100"
                         >
-                          <span className="min-w-0 truncate">{item.label}</span>
-                          <span className="shrink-0 font-semibold tabular-nums text-slate-500">{item.score}</span>
+                          <span className="min-w-0 flex-1 leading-snug">{item.label}</span>
+                          <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-slate-600">
+                            {item.score}
+                          </span>
                         </div>
                       ))
                     )}
@@ -788,7 +788,7 @@ export function PlanConquistarReportView({
               <ExternalLink className="h-4 w-4 text-violet-600" />
               <p className="text-sm font-bold text-slate-900">Autoridad externa (sugerida)</p>
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {EXTERNAL_AUTHORITY_CHANNELS.map((channel) => (
                 <div key={channel.name} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
                   <p className="text-sm font-semibold text-slate-900">{channel.name}</p>
@@ -801,7 +801,7 @@ export function PlanConquistarReportView({
       </section>
 
       <section>
-        {sectionHeading(11, 'Plan de acción inmediato', 'Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso.')}
+        {sectionHeading(planSectionNum++, 'Plan de acción inmediato', 'Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso.')}
         <div className="space-y-2.5">
           {personalizedRoadmap.map((phase) => (
             <div
@@ -834,7 +834,7 @@ export function PlanConquistarReportView({
 
       <section>
         {sectionHeading(
-          12,
+          planSectionNum++,
           'Escenario económico (hipótesis)',
           'Calculadora con supuestos editables. Úsala para conversar con el cliente; no es proyección garantizada.'
         )}
@@ -878,55 +878,36 @@ export function PlanConquistarReportView({
       </section>
 
       <section>
-        {sectionHeading(13, 'Materiales de implementación', 'Curso express y prompts listos para ejecutar el plan.')}
-        <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
-            <div className="mb-3 flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-violet-600" />
-              <p className="text-sm font-bold text-slate-900">Curso Express de Visibilidad IA</p>
-            </div>
-            <div className="space-y-2">
-              {COURSE_MODULES.map((module, idx) => (
-                <div key={module} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-700">
-                    {idx + 1}
-                  </div>
-                  <p className="text-sm font-medium text-slate-800">{module}</p>
-                </div>
-              ))}
-            </div>
+        {sectionHeading(planSectionNum++, 'Kit IA de implementación', 'Prompts listos para copiar en ChatGPT o Claude, basados en los datos de esta corrida.')}
+        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+          <div className="mb-3 flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-violet-600" />
+            <p className="text-sm font-bold text-slate-900">Prompts personalizados</p>
           </div>
-
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
-            <div className="mb-3 flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-violet-600" />
-              <p className="text-sm font-bold text-slate-900">Kit IA de implementación</p>
-            </div>
-            <p className="mb-3 text-xs leading-relaxed text-slate-500">
-              Prompts listos para copiar en ChatGPT o Claude. Usan datos reales del reporte y sirven como borrador de ejecución; siempre conviene validar antes de publicar.
-            </p>
-            <div className="space-y-3">
-              {implementationPrompts.map((item) => (
-                <div key={item.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="text-sm font-bold text-slate-900">{item.title}</p>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-100">
-                      Personalizado
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[11px] font-medium text-slate-500">{item.source}</p>
-                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-700 ring-1 ring-slate-100">
-                    {item.prompt}
-                  </p>
+          <p className="mb-3 text-xs leading-relaxed text-slate-500">
+            Borradores de ejecución con datos reales del reporte. Siempre conviene validar antes de publicar.
+          </p>
+          <div className="space-y-3">
+            {implementationPrompts.map((item) => (
+              <div key={item.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="text-sm font-bold text-slate-900">{item.title}</p>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-100">
+                    Personalizado
+                  </span>
                 </div>
-              ))}
-            </div>
+                <p className="mt-1 text-[11px] font-medium text-slate-500">{item.source}</p>
+                <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-700 ring-1 ring-slate-100">
+                  {item.prompt}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       <section>
-        {sectionHeading(14, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
+        {sectionHeading(planSectionNum++, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
         <div className="grid gap-2 sm:grid-cols-2">
           {[
             'Definir las 5 intenciones principales donde querés ser recomendado.',
