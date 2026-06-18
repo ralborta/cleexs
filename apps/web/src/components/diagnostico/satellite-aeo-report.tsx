@@ -162,10 +162,12 @@ function SatelliteValueBlock({
   label,
   value,
   depth,
+  fullExpand = false,
 }: {
   label?: string;
   value: unknown;
   depth: number;
+  fullExpand?: boolean;
 }): React.ReactNode {
   if (depth > 8) {
     return <p className="text-xs italic text-slate-400">Profundidad máxima alcanzada.</p>;
@@ -189,10 +191,15 @@ function SatelliteValueBlock({
         </p>
       );
     }
-    const max = MAX_DETAIL_STRING_EXPANDED;
+    const max = fullExpand ? 50_000 : MAX_DETAIL_STRING_EXPANDED;
     const shown = t.length > max ? `${t.slice(0, max)}...` : t;
     return (
-      <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words max-h-72 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+      <p
+        className={cn(
+          'text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2',
+          !fullExpand && 'max-h-72 overflow-y-auto'
+        )}
+      >
         {shown}
         {t.length > max ? (
           <span className="mt-2 block text-xs font-medium text-slate-500">
@@ -233,13 +240,13 @@ function SatelliteValueBlock({
                       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                         {humanizeDetailKey(ik)}
                       </p>
-                      <div className="mt-0.5">{SatelliteValueBlock({ value: iv, depth: depth + 1 })}</div>
+                      <div className="mt-0.5">{SatelliteValueBlock({ value: iv, depth: depth + 1, fullExpand })}</div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              SatelliteValueBlock({ value: item, depth: depth + 1 })
+              SatelliteValueBlock({ value: item, depth: depth + 1, fullExpand })
             )}
           </li>
         ))}
@@ -264,7 +271,7 @@ function SatelliteValueBlock({
           return (
             <div key={k}>
               <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{humanizeDetailKey(k)}</p>
-              <div className="mt-1">{SatelliteValueBlock({ value: v, depth: depth + 1 })}</div>
+              <div className="mt-1">{SatelliteValueBlock({ value: v, depth: depth + 1, fullExpand })}</div>
             </div>
           );
         })}
@@ -275,15 +282,22 @@ function SatelliteValueBlock({
 }
 
 /** Detalle estructurado (similar densidad al panel del Tools): campos simples + listas + objetos anidados. */
-function SatelliteDetailSections({ detail }: { detail: Record<string, unknown> }) {
+function SatelliteDetailSections({
+  detail,
+  fullExpand = false,
+}: {
+  detail: Record<string, unknown>;
+  fullExpand?: boolean;
+}) {
   const skip = new Set(['_truncated', '_note', 'error', 'suggestions', 'score']);
   const rows: { label: string; value: string }[] = [];
   const complex: { key: string; label: string; value: unknown }[] = [];
+  const maxStr = fullExpand ? 50_000 : MAX_DETAIL_STRING_LEN;
 
   for (const [k, v] of Object.entries(detail)) {
     if (skip.has(k)) continue;
     if (shouldOmitDetailFieldKey(k)) continue;
-    const prim = formatDetailPrimitive(k, v, MAX_DETAIL_STRING_LEN);
+    const prim = formatDetailPrimitive(k, v, maxStr);
     if (prim !== null) {
       rows.push({ label: humanizeDetailKey(k), value: prim });
       continue;
@@ -317,7 +331,7 @@ function SatelliteDetailSections({ detail }: { detail: Record<string, unknown> }
         <div key={key} className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
           <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-3">
-            {SatelliteValueBlock({ label, value, depth: 0 })}
+            {SatelliteValueBlock({ label, value, depth: 0, fullExpand })}
           </div>
         </div>
       ))}
@@ -405,10 +419,12 @@ function SatelliteToolDetailPanel({
   label,
   toolError,
   detail,
+  fullExpand = false,
 }: {
   label: string;
   toolError?: string;
   detail?: Record<string, unknown>;
+  fullExpand?: boolean;
 }) {
   const err = toolError || (typeof detail?.error === 'string' ? detail.error : null);
 
@@ -472,7 +488,7 @@ function SatelliteToolDetailPanel({
         </div>
       )}
 
-      {detail && <SatelliteDetailSections detail={detail} />}
+      {detail && <SatelliteDetailSections detail={detail} fullExpand={fullExpand} />}
 
       {truncated && note ? (
         <div className="flex gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
@@ -606,13 +622,126 @@ function SatelliteAeoDegradedNotice({
   );
 }
 
-function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSatelliteModule }) {
+function SatelliteActionsExecuteBlock({
+  module,
+  alwaysExpanded = false,
+}: {
+  module: PublicDiagnosticSatelliteModule;
+  alwaysExpanded?: boolean;
+}) {
   const actions = module.actions ?? [];
   const counts = countByActionPriority(actions);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(alwaysExpanded);
   const panelId = useId();
   const headingId = useId();
   const total = actions.length;
+  const isOpen = alwaysExpanded || expanded;
+
+  const panelContent = (
+    <div
+      id={panelId}
+      role="region"
+      aria-labelledby={headingId}
+      className={cn(
+        'space-y-4 bg-white px-4 py-4 sm:px-5 sm:py-5',
+        !alwaysExpanded && 'border-t border-teal-900/20'
+      )}
+    >
+      {actions.length > 0 ? (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {(['critica', 'alta', 'media', 'baja', 'info'] as const).map((pk) => {
+              const n = counts[pk];
+              if (n <= 0) return null;
+              const meta = ACTION_PILL_META[pk];
+              return (
+                <span
+                  key={pk}
+                  className={cn(
+                    'inline-flex items-center rounded-full border-2 px-3 py-1 text-xs font-bold tabular-nums',
+                    meta.className
+                  )}
+                >
+                  {meta.label}: {n}
+                </span>
+              );
+            })}
+          </div>
+
+          <ul className="space-y-3">
+            {actions.map((action, idx) => {
+              const p = (action.priority || 'info').trim().toLowerCase();
+              const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
+              const PriIcon = meta.Icon;
+              const src = toolLabelFromSatelliteSource(action.source);
+              return (
+                <li
+                  key={`${action.source}-${idx}-${action.message.slice(0, 24)}`}
+                  className={cn(
+                    'rounded-xl border border-slate-200 bg-white pl-4 pr-4 py-4 shadow-sm sm:pl-5',
+                    'border-l-[5px]',
+                    actionCardBorderClass(p)
+                  )}
+                >
+                  <div className="flex flex-wrap items-center gap-2 gap-y-1">
+                    <PriIcon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                    <span
+                      className={cn(
+                        'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                        meta.box
+                      )}
+                    >
+                      {meta.short}
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                      {src}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-bold leading-snug text-slate-900">{action.message}</p>
+                  {action.detail ? (
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{action.detail}</p>
+                  ) : null}
+                  {action.action ? (
+                    <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-indigo-800">
+                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                      <span>{action.action}</span>
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : (
+        <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+          No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada herramienta o
+          consultá con tu equipo si hace falta un análisis más profundo.
+        </p>
+      )}
+    </div>
+  );
+
+  if (alwaysExpanded) {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-teal-800/25 shadow-md shadow-teal-900/10 ring-1 ring-teal-900/10">
+        <div
+          id={headingId}
+          className="flex flex-wrap items-center gap-3 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 px-4 py-3.5 sm:px-5"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25">
+            <ListChecks className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block text-base font-bold tracking-tight text-white sm:text-lg">Acciones a ejecutar</span>
+            <span className="mt-0.5 block text-xs font-medium leading-snug text-white/90 sm:text-sm">
+              Prioridades del análisis técnico del sitio (AEO). {total > 0 ? `${total} tareas.` : 'Sin tareas en esta corrida.'}
+            </span>
+          </div>
+        </div>
+        {panelContent}
+      </section>
+    );
+  }
 
   return (
     <section
@@ -623,13 +752,13 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
         type="button"
         id={headingId}
         className="flex w-full flex-wrap items-center gap-3 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 px-4 py-3.5 text-left transition hover:brightness-[1.03] sm:px-5"
-        aria-expanded={expanded}
+        aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={() => setExpanded((v) => !v)}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25">
           <ChevronDown
-            className={cn('h-5 w-5 transition-transform duration-200', expanded && 'rotate-180')}
+            className={cn('h-5 w-5 transition-transform duration-200', isOpen && 'rotate-180')}
             aria-hidden
           />
         </span>
@@ -639,8 +768,8 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
             Prioridades del análisis técnico del sitio (AEO).{' '}
             <span className="text-white/85">
               {total > 0
-                ? `${total} tareas · tocá para ${expanded ? 'ocultar' : 'ver'} píldoras y lista.`
-                : expanded
+                ? `${total} tareas · tocá para ${isOpen ? 'ocultar' : 'ver'} píldoras y lista.`
+                : isOpen
                   ? 'Tocá de nuevo para ocultar.'
                   : 'Tocá para ver el mensaje cuando no hay acciones.'}
             </span>
@@ -649,86 +778,7 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
         <ListChecks className="hidden h-7 w-7 shrink-0 text-white/85 sm:block" aria-hidden />
       </button>
 
-      {expanded ? (
-        <div
-          id={panelId}
-          role="region"
-          aria-labelledby={headingId}
-          className="space-y-4 border-t border-teal-900/20 bg-white px-4 py-4 sm:px-5 sm:py-5"
-        >
-          {actions.length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {(['critica', 'alta', 'media', 'baja', 'info'] as const).map((pk) => {
-                  const n = counts[pk];
-                  if (n <= 0) return null;
-                  const meta = ACTION_PILL_META[pk];
-                  return (
-                    <span
-                      key={pk}
-                      className={cn(
-                        'inline-flex items-center rounded-full border-2 px-3 py-1 text-xs font-bold tabular-nums',
-                        meta.className
-                      )}
-                    >
-                      {meta.label}: {n}
-                    </span>
-                  );
-                })}
-              </div>
-
-              <ul className="space-y-3">
-                {actions.map((action, idx) => {
-                  const p = (action.priority || 'info').trim().toLowerCase();
-                  const meta = SUGGESTION_PRIORITY_META[p] || SUGGESTION_PRIORITY_META.info;
-                  const PriIcon = meta.Icon;
-                  const src = toolLabelFromSatelliteSource(action.source);
-                  return (
-                    <li
-                      key={`${action.source}-${idx}-${action.message.slice(0, 24)}`}
-                      className={cn(
-                        'rounded-xl border border-slate-200 bg-white pl-4 pr-4 py-4 shadow-sm sm:pl-5',
-                        'border-l-[5px]',
-                        actionCardBorderClass(p)
-                      )}
-                    >
-                      <div className="flex flex-wrap items-center gap-2 gap-y-1">
-                        <PriIcon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-                        <span
-                          className={cn(
-                            'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                            meta.box
-                          )}
-                        >
-                          {meta.short}
-                        </span>
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                          {src}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm font-bold leading-snug text-slate-900">{action.message}</p>
-                      {action.detail ? (
-                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{action.detail}</p>
-                      ) : null}
-                      {action.action ? (
-                        <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-indigo-800">
-                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                          <span>{action.action}</span>
-                        </p>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : (
-            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-              No se generaron acciones agrupadas para este sitio en esta corrida. Revisá el detalle en cada tarjeta de
-              herramienta o consultá con tu equipo si hace falta un análisis más profundo.
-            </p>
-          )}
-        </div>
-      ) : null}
+      {isOpen ? panelContent : null}
     </section>
   );
 }
@@ -736,31 +786,32 @@ function SatelliteActionsExecuteBlock({ module }: { module: PublicDiagnosticSate
 export function SatelliteModuleCard({
   module,
   siteUrl,
+  inlineExpanded = false,
 }: {
   module: PublicDiagnosticSatelliteModule;
   siteUrl: string;
+  /** Informe completo: todo el detalle AEO desplegado, sin clics ni modales. */
+  inlineExpanded?: boolean;
 }) {
   const [openToolKey, setOpenToolKey] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!openToolKey) return;
+    if (inlineExpanded || !openToolKey) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpenToolKey(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [openToolKey]);
+  }, [openToolKey, inlineExpanded]);
 
   useEffect(() => {
-    if (openToolKey) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
-    return undefined;
-  }, [openToolKey]);
+    if (inlineExpanded || !openToolKey) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [openToolKey, inlineExpanded]);
 
   const statusLabel =
     module.status === 'completed' ? 'Completado'
@@ -785,7 +836,7 @@ export function SatelliteModuleCard({
       Object.keys(openTool.detail).length > 0);
 
   const toolModal =
-    openRow && openToolKey
+    !inlineExpanded && openRow && openToolKey
       ? createPortal(
           <div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4">
             <button
@@ -851,7 +902,9 @@ export function SatelliteModuleCard({
             <p className="text-xs leading-relaxed text-slate-600">
               {degraded
                 ? 'Cuando la corrida falla o hace timeout, no mostramos scores vacíos como si fueran reales.'
-                : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas según el análisis técnico.'}
+                : inlineExpanded
+                  ? 'Detalle completo de las 10 herramientas y acciones priorizadas, desplegado en este informe.'
+                  : 'Tocá una herramienta para ver el detalle. Abajo, acciones priorizadas según el análisis técnico.'}
             </p>
           </div>
         </div>
@@ -893,6 +946,53 @@ export function SatelliteModuleCard({
 
         {degraded ? (
           <SatelliteAeoDegradedNotice module={module} siteUrl={siteUrl} />
+        ) : inlineExpanded ? (
+          <div className="space-y-5">
+            {SATELLITE_TOOL_ROWS.map(({ key, label, Icon: ToolIcon }, idx) => {
+              const t = module.tools[key];
+              const score = t?.score ?? 0;
+              const hasErr = Boolean(t?.error);
+              const colors = satelliteScoreColor(score, hasErr);
+
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    'overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100/80',
+                    colors.border,
+                    'border-l-4'
+                  )}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-3 sm:px-5">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+                        {idx + 1}
+                      </span>
+                      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', colors.icon)}>
+                        <ToolIcon className="h-4 w-4" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900">{label}</p>
+                        {hasErr ? (
+                          <p className="text-xs font-medium text-red-600">Error en esta herramienta</p>
+                        ) : (
+                          <p className="text-xs text-slate-500">Score {Math.round(score)}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 py-4 sm:px-5 sm:py-5">
+                    <SatelliteToolDetailPanel
+                      label={label}
+                      toolError={t?.error}
+                      detail={t?.detail}
+                      fullExpand
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -951,8 +1051,10 @@ export function SatelliteModuleCard({
           </div>
         )}
 
-        {!degraded && <SatelliteActionsExecuteBlock module={module} />}
-        {degraded && (module.actions?.length ?? 0) > 0 ? <SatelliteActionsExecuteBlock module={module} /> : null}
+        {!degraded && <SatelliteActionsExecuteBlock module={module} alwaysExpanded={inlineExpanded} />}
+        {degraded && (module.actions?.length ?? 0) > 0 ? (
+          <SatelliteActionsExecuteBlock module={module} alwaysExpanded={inlineExpanded} />
+        ) : null}
       </div>
     </div>
   );

@@ -507,7 +507,7 @@ export function PlanConquistarReportView({
   const siteUrl = domain ? (domain.startsWith('http') ? domain : `https://${domain}`) : '';
   const satelliteBlock: ReactNode =
     context?.satelliteModule && context.satelliteModule.status !== 'pending' ? (
-      <SatelliteModuleCard module={context.satelliteModule} siteUrl={siteUrl} />
+      <SatelliteModuleCard module={context.satelliteModule} siteUrl={siteUrl} inlineExpanded />
     ) : null;
   const crawlerAccessReport = buildCrawlerAccessReport(context?.satelliteModule, siteUrl);
 
