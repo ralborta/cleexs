@@ -57,13 +57,13 @@ export function CrawlerAccessTeaser({
       {hasBlockedTeaser ? (
         <p className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-          Si un crawler está bloqueado, la IA no puede leer tu sitio para recomendarte. El Plan Conquistar incluye el
-          diagnóstico completo y un robots.txt sugerido.
+          Si un crawler está bloqueado, la IA no puede leer tu sitio para recomendarte. Revisá el checklist y el robots.txt
+          sugerido en el informe completo de acceso de crawlers.
         </p>
       ) : (
         <p className="mt-3 text-[11px] text-slate-500">
-          Esto revisa robots.txt (acceso permitido). Para ver visitas reales del bot en tu servidor, el Plan Conquistar
-          trae el checklist de verificación.
+          Esto revisa robots.txt (acceso permitido). Para ver visitas reales del bot en tu servidor, usá el checklist de
+          verificación del informe.
         </p>
       )}
     </section>

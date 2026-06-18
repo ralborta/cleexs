@@ -635,8 +635,8 @@ export function PlanConquistarReportView({
 
   const premiumAfterSummarySlot = (
     <div className="space-y-4">
-      {showDomainRatingPanel ? <DomainRatingPanel data={domainRating} /> : null}
       {engineScoreSlot}
+      {showDomainRatingPanel ? <DomainRatingPanel data={domainRating} /> : null}
     </div>
   );
 
