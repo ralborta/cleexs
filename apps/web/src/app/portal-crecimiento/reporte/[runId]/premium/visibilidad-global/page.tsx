@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Globe, Loader2, Lock, Sparkles } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { CountryPicker, CountryFlag } from '@/components/country/country-picker';
 import { findCountryByIso, findCountryByName, DEFAULT_COUNTRY_ISO } from '@/lib/countries';
 
@@ -147,9 +148,10 @@ export default function VisibilidadGlobalPage() {
 
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-
+      <PortalResponsiveShell
+        mobileTitle="Visibilidad global"
+        sidebar={<PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />}
+      >
         <div className="space-y-4">
           {/* Hero */}
           <section className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-5 shadow-sm md:p-6">
@@ -225,7 +227,7 @@ export default function VisibilidadGlobalPage() {
             </div>
           )}
         </div>
-      </div>
+      </PortalResponsiveShell>
     </main>
   );
 }

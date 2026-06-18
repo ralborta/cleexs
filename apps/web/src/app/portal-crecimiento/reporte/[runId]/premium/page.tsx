@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { PortalAiTrafficTeaser } from '@/components/portal/portal-ai-traffic-teaser';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import {
   DomainRatingPanel,
   DomainRatingTableCell,
@@ -432,9 +433,10 @@ export default function PortalReportePremiumInterpretacionPage() {
         onClose={() => setCountryModalOpen(false)}
         onConfirm={confirmCountryAndRun}
       />
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-
+      <PortalResponsiveShell
+        mobileTitle={run.brand.name}
+        sidebar={<PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />}
+      >
         <div className="space-y-4">
           <div id="portal-cliente" className="scroll-mt-24 space-y-4">
           <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -816,7 +818,7 @@ export default function PortalReportePremiumInterpretacionPage() {
           </section>
 
         </div>
-      </div>
+      </PortalResponsiveShell>
     </main>
   );
 }

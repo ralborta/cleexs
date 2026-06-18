@@ -492,6 +492,7 @@ function ReporteCompleto({
           <div>
             <p className="text-sm font-medium text-foreground mb-2">Resumen de apariciones en Top 3</p>
             {results.length > 0 ? (
+              <div className="-mx-1 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-primary-50/80 border-b border-border">
@@ -526,6 +527,7 @@ function ReporteCompleto({
                   )}
                 </TableBody>
               </Table>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">No hay resultados de prompts para comparar.</p>
             )}

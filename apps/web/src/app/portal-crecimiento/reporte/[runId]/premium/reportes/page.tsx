@@ -29,6 +29,7 @@ import {
   YAxis,
 } from 'recharts';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -522,9 +523,7 @@ export default function ReportesClientePage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        {sidebar}
-
+      <PortalResponsiveShell mobileTitle="Reportes" sidebar={sidebar}>
         <div className="min-w-0 space-y-4">
           {loading ? (
             <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-14 text-sm text-slate-500 shadow-sm">
@@ -933,7 +932,7 @@ export default function ReportesClientePage() {
             </>
           )}
         </div>
-      </div>
+      </PortalResponsiveShell>
     </main>
   );
 }

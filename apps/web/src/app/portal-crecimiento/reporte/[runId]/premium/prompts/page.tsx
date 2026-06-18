@@ -34,6 +34,7 @@ import {
   YAxis,
 } from 'recharts';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -853,9 +854,10 @@ export default function PromptsCorridaPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-
+      <PortalResponsiveShell
+        mobileTitle="Prompts"
+        sidebar={<PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />}
+      >
         <div className="min-w-0 space-y-4">
           {loading ? (
             <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">
@@ -1277,7 +1279,7 @@ export default function PromptsCorridaPage() {
             </>
           )}
         </div>
-      </div>
+      </PortalResponsiveShell>
 
       {customPromptOpen && (
         <div

@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -386,25 +387,28 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
 
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        {shell === 'portal-cliente' ? (
-          <PortalFreeTierNav
-            basePath={base}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        ) : (
-          <PortalCrecimientoTierNav
-            basePath={base}
-            runId={runId}
-            planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        )}
-
+      <PortalResponsiveShell
+        mobileTitle="Equipo"
+        sidebar={
+          shell === 'portal-cliente' ? (
+            <PortalFreeTierNav
+              basePath={base}
+              analysesUsed={analysesUsed}
+              analysesLimit={analysesLimitForNav}
+              renewalLabel={nextRenewalLabel()}
+            />
+          ) : (
+            <PortalCrecimientoTierNav
+              basePath={base}
+              runId={runId}
+              planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+              analysesUsed={analysesUsed}
+              analysesLimit={analysesLimitForNav}
+              renewalLabel={nextRenewalLabel()}
+            />
+          )
+        }
+      >
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm sm:p-6">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
@@ -658,7 +662,7 @@ export function EquipoPortalFreePage({ shell }: { shell: EquipoPortalFreeShell }
             </Link>
           </p>
         </div>
-      </div>
+      </PortalResponsiveShell>
 
       {inviteOpen && (
         <InviteModalFree

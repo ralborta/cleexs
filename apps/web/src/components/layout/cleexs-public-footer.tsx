@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CleexsContactLinks } from '@/components/layout/cleexs-contact-links';
-import { shouldHidePublicChrome } from '@/lib/public-chrome';
+import { shouldHidePublicFooter } from '@/lib/public-chrome';
 
 export function CleexsPublicFooter() {
   const pathname = usePathname();
-  if (shouldHidePublicChrome(pathname)) return null;
+  if (shouldHidePublicFooter(pathname)) return null;
 
   return (
     <footer className="border-t border-slate-200/90 bg-white/95">

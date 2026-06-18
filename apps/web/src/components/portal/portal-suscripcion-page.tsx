@@ -8,6 +8,7 @@ import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -169,27 +170,30 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
 
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        {shell === 'premium' ? (
-          <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-        ) : shell === 'portal-cliente' ? (
-          <PortalFreeTierNav
-            basePath={baseCliente}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        ) : (
-          <PortalCrecimientoTierNav
-            basePath={baseCliente}
-            runId={runId}
-            planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        )}
-
+      <PortalResponsiveShell
+        mobileTitle="Suscripción"
+        sidebar={
+          shell === 'premium' ? (
+            <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
+          ) : shell === 'portal-cliente' ? (
+            <PortalFreeTierNav
+              basePath={baseCliente}
+              analysesUsed={analysesUsed}
+              analysesLimit={analysesLimitForNav}
+              renewalLabel={nextRenewalLabel()}
+            />
+          ) : (
+            <PortalCrecimientoTierNav
+              basePath={baseCliente}
+              runId={runId}
+              planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+              analysesUsed={analysesUsed}
+              analysesLimit={analysesLimitForNav}
+              renewalLabel={nextRenewalLabel()}
+            />
+          )
+        }
+      >
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -489,7 +493,7 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
             </p>
           )}
         </div>
-      </div>
+      </PortalResponsiveShell>
 
       <PlanPaymentModal
         open={pagoOpen}

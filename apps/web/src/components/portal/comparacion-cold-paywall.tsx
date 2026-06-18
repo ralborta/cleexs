@@ -27,6 +27,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -272,25 +273,29 @@ export function ComparacionColdPaywallPage({
       />
       <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-slate-50/80 via-slate-50/70 to-slate-100/90" aria-hidden />
 
-      <div className="relative z-[1] mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        {shell === 'portal-cliente' ? (
-          <PortalFreeTierNav
-            basePath={base}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        ) : (
-          <PortalCrecimientoTierNav
-            basePath={base}
-            runId={runId}
-            planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        )}
-
+      <PortalResponsiveShell
+        className="relative z-[1]"
+        mobileTitle={pageContext === 'competidores' ? 'Competidores' : 'Comparación'}
+        sidebar={
+          shell === 'portal-cliente' ? (
+            <PortalFreeTierNav
+              basePath={base}
+              analysesUsed={analysesUsed}
+              analysesLimit={analysesLimitForNav}
+              renewalLabel={nextRenewalLabel()}
+            />
+          ) : (
+            <PortalCrecimientoTierNav
+              basePath={base}
+              runId={runId}
+              planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+              analysesUsed={analysesUsed}
+              analysesLimit={analysesLimitForNav}
+              renewalLabel={nextRenewalLabel()}
+            />
+          )
+        }
+      >
         <div className="relative min-w-0 space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -468,7 +473,7 @@ export function ComparacionColdPaywallPage({
             </Link>
           </p>
         </div>
-      </div>
+      </PortalResponsiveShell>
 
       <div className="fixed inset-0 z-40 bg-slate-900/55 backdrop-blur-[2px]" aria-hidden />
 

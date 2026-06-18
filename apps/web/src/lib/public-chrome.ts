@@ -29,6 +29,16 @@ export function shouldHidePublicChrome(pathname: string | null): boolean {
   return false;
 }
 
+/** Footer global: oculto en flujos de producto largos (portales, resultado, diagnóstico). */
+export function shouldHidePublicFooter(pathname: string | null): boolean {
+  if (shouldHidePublicChrome(pathname)) return true;
+  if (!pathname) return false;
+  if (pathname.startsWith('/portal-crecimiento') || pathname.startsWith('/portal-cliente')) return true;
+  if (pathname.startsWith('/ver-resultado')) return true;
+  if (pathname.startsWith('/diagnostico')) return true;
+  return false;
+}
+
 export function isPublicDiagnosticPath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname === '/' || pathname === '/diagnostico') return true;

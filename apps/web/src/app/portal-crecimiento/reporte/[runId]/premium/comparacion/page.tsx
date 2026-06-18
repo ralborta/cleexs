@@ -20,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import {
   DomainRatingPanel,
   DomainRatingTableCell,
@@ -282,11 +283,10 @@ export default function ComparacionPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-
-        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-
-        {/* ── Contenido ────────────────────────────────────────────── */}
+      <PortalResponsiveShell
+        mobileTitle="Comparación"
+        sidebar={<PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />}
+      >
         <div className="min-w-0 space-y-4">
 
           {/* Header */}
@@ -556,7 +556,7 @@ export default function ComparacionPage() {
             </>
           )}
         </div>
-      </div>
+      </PortalResponsiveShell>
     </main>
   );
 }

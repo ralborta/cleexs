@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -322,11 +323,10 @@ export default function HerramientasPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/30 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-
-        <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
-
-        {/* ── Contenido ────────────────────────────────────────────── */}
+      <PortalResponsiveShell
+        mobileTitle="Herramientas"
+        sidebar={<PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />}
+      >
         <div className="space-y-5">
 
           {/* Header */}
@@ -486,7 +486,7 @@ export default function HerramientasPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </PortalResponsiveShell>
 
       {/* Mensaje de qué herramienta se está agregando */}
       {pagoOpen && pagoLabel && (

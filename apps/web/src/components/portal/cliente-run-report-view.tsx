@@ -29,6 +29,7 @@ import {
 } from '@/components/report/domain-rating-block';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
+import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalReferralUpsell } from '@/components/portal/portal-referral-upsell';
 import { capturePortalReferralFromLocation } from '@/lib/portal-referral-client';
 
@@ -1333,28 +1334,30 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const mainColumn = shell === 'portal-cliente' ? freeMainColumn : hubMainColumn;
 
+  const portalSidebar =
+    shell === 'portal-cliente' ? (
+      <PortalFreeTierNav
+        basePath={base}
+        analysesUsed={analysesUsed}
+        analysesLimit={analysesLimitForNav}
+        renewalLabel={nextRenewalLabel()}
+      />
+    ) : (
+      <PortalCrecimientoTierNav
+        basePath={base}
+        runId={runId}
+        planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+        analysesUsed={analysesUsed}
+        analysesLimit={analysesLimitForNav}
+        renewalLabel={nextRenewalLabel()}
+      />
+    );
+
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
-        {shell === 'portal-cliente' ? (
-          <PortalFreeTierNav
-            basePath={base}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        ) : (
-          <PortalCrecimientoTierNav
-            basePath={base}
-            runId={runId}
-            planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
-            analysesUsed={analysesUsed}
-            analysesLimit={analysesLimitForNav}
-            renewalLabel={nextRenewalLabel()}
-          />
-        )}
+      <PortalResponsiveShell sidebar={portalSidebar} mobileTitle={run.brand.name}>
         {mainColumn}
-      </div>
+      </PortalResponsiveShell>
     </main>
   );
 }
