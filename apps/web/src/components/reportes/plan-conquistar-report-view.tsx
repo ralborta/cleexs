@@ -22,9 +22,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ReporteCorridas, sectionHeading } from '@/app/ver-resultado/reporte-corridas';
 import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
 import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
+import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
+import { DomainRatingPanel } from '@/components/report/domain-rating-block';
 import { buildCrawlerAccessReport } from '@/lib/crawler-access';
 import { buildImmediateActionPlan } from '@/lib/plan-immediate-action';
 import type {
+  DomainRatingSnapshot,
   PublicDiagnosticRunResult,
   PublicDiagnosticSatelliteModule,
   PublicDiagnosticTrendPoint,
@@ -80,6 +83,7 @@ type PlanConquistarContext = {
   } | null;
   satelliteModule: PublicDiagnosticSatelliteModule | null;
   trendData: PublicDiagnosticTrendPoint[];
+  domainRating?: DomainRatingSnapshot | null;
 };
 
 function normalizePromptScore(score: number) {
@@ -624,6 +628,23 @@ export function PlanConquistarReportView({
     </section>
   );
 
+  const domainRating = context?.domainRating ?? null;
+  const showDomainRatingPanel =
+    domainRating &&
+    (domainRating.brand.rating != null || domainRating.competitors.some((c) => c.rating != null));
+
+  const premiumAfterSummarySlot = (
+    <div className="space-y-4">
+      {showDomainRatingPanel ? <DomainRatingPanel data={domainRating} /> : null}
+      {engineScoreSlot}
+    </div>
+  );
+
+  const premiumBeforeSatelliteSlot =
+    context?.satelliteModule && context.satelliteModule.status !== 'pending' && siteUrl ? (
+      <CrawlerAccessTeaser module={context.satelliteModule} siteUrl={siteUrl} />
+    ) : null;
+
   const primaryOpportunity = analysis.opportunities[0];
   const topCompetitor = analysis.competitors[0];
   const weeklyPriorities = analysis.opportunities.slice(0, 3);
@@ -982,7 +1003,8 @@ export function PlanConquistarReportView({
                 brandName={run.brand.name}
                 trendData={context?.trendData}
                 satelliteBlock={satelliteBlock}
-                afterSummarySlot={engineScoreSlot}
+                beforeSatelliteSlot={premiumBeforeSatelliteSlot}
+                afterSummarySlot={premiumAfterSummarySlot}
                 appendSlot={planSlot}
               />
             </CardContent>

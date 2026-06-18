@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { executeRunGemini, executeRunPerplexity, executeRunClaude } from '../lib/run-executor';
 import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import type { SatelliteModuleResult } from '../lib/satellite-client';
+import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
 
@@ -2058,7 +2059,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
-  // Contexto del diagnóstico público vinculado (AEO satélite + tendencia), si existe.
+  // Contexto del diagnóstico público vinculado (AEO satélite + tendencia + DR Ahrefs), si existe.
   fastify.get<{ Params: { id: string } }>(
     '/internal/plan-conquistar/runs/:id/context',
     async (request, reply) => {
@@ -2066,7 +2067,21 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
 
       const runId = idParsed.data.id;
-      const diagnostic = await prisma.publicDiagnostic.findFirst({
+
+      const run = await prisma.run.findUnique({
+        where: { id: runId },
+        select: {
+          brand: {
+            select: {
+              name: true,
+              domain: true,
+              competitors: { select: { name: true, domain: true } },
+            },
+          },
+        },
+      });
+
+      let diagnostic = await prisma.publicDiagnostic.findFirst({
         where: {
           OR: [
             { runId },
@@ -2084,12 +2099,27 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (!diagnostic) {
-        return { ok: true, diagnostic: null, satelliteModule: null, trendData: [] };
+      const brandDomain = diagnostic?.domain ?? run?.brand?.domain ?? '';
+      if (!diagnostic && brandDomain) {
+        diagnostic = await prisma.publicDiagnostic.findFirst({
+          where: { domain: brandDomain, status: 'completed' },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            domain: true,
+            brandName: true,
+            status: true,
+            runId: true,
+          },
+        });
+      }
+
+      if (!diagnostic && !run) {
+        return { ok: true, diagnostic: null, satelliteModule: null, trendData: [], domainRating: null };
       }
 
       let analysisJson: unknown = null;
-      if (diagnostic.status === 'completed') {
+      if (diagnostic?.status === 'completed') {
         const jsonRow = await prisma.publicDiagnostic.findUnique({
           where: { id: diagnostic.id },
           select: { analysisJson: true },
@@ -2102,7 +2132,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         : null;
 
       let trendData: Array<{ label: string; score: number; date: string }> = [];
-      if (diagnostic.status === 'completed' && diagnostic.domain) {
+      if (diagnostic?.status === 'completed' && diagnostic.domain) {
         const lastDiagnostics = await prisma.publicDiagnostic.findMany({
           where: { domain: diagnostic.domain, status: 'completed', runId: { not: null } },
           orderBy: { createdAt: 'desc' },
@@ -2131,16 +2161,37 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      const brandName = diagnostic?.brandName ?? run?.brand?.name ?? 'Marca';
+      const competitorsForDr =
+        run?.brand?.competitors?.map((c) => ({ name: c.name, domain: c.domain ?? null })) ?? [];
+
+      let domainRating = null;
+      if (brandDomain && !brandDomain.startsWith('brand-')) {
+        try {
+          domainRating = await buildDomainRatingSnapshot({
+            brandName,
+            brandDomain,
+            competitors: competitorsForDr,
+            includeCompetitors: true,
+          });
+        } catch {
+          domainRating = null;
+        }
+      }
+
       return {
         ok: true,
-        diagnostic: {
-          id: diagnostic.id,
-          domain: diagnostic.domain,
-          brandName: diagnostic.brandName,
-          primaryRunId: diagnostic.runId,
-        },
+        diagnostic: diagnostic
+          ? {
+              id: diagnostic.id,
+              domain: diagnostic.domain,
+              brandName: diagnostic.brandName,
+              primaryRunId: diagnostic.runId,
+            }
+          : null,
         satelliteModule,
         trendData,
+        domainRating,
       };
     }
   );
