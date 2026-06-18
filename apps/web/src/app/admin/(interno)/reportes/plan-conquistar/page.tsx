@@ -16,7 +16,6 @@ import {
   Lock,
   Search,
   Sparkles,
-  TrendingUp,
   Trophy,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +23,7 @@ import { ReporteCorridas, sectionHeading } from '@/app/ver-resultado/reporte-cor
 import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
 import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
 import { buildCrawlerAccessReport } from '@/lib/crawler-access';
+import { buildImmediateActionPlan } from '@/lib/plan-immediate-action';
 import type {
   PublicDiagnosticRunResult,
   PublicDiagnosticSatelliteModule,
@@ -165,9 +165,9 @@ const COURSE_MODULES = [
   'Cómo construir comparativas que los modelos entienden',
   'Cómo usar FAQs y schema para responder mejor',
   'Cómo generar autoridad externa sin depender de SEO clásico',
-  'Cómo monitorear competidores durante 90 días',
+  'Cómo monitorear competidores en el portal',
   'Cómo ejecutar 3 quick wins por semana',
-  'Cómo prepararte para el re-análisis del día 75',
+  'Cómo priorizar el siguiente paso según tu score',
 ];
 
 function normalizeName(value: string) {
@@ -365,7 +365,7 @@ function RunPicker({ onSelect }: { onSelect: (runId: string) => void }) {
           <Trophy className="h-4 w-4" />
           AI Visibility Accelerator · Plan Conquistar
         </div>
-        <h1 className="mt-3 text-2xl font-bold">Generá el reporte de 90 días desde admin</h1>
+        <h1 className="mt-3 text-2xl font-bold">Generá el informe completo desde admin</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-violet-50">
           Elegí una corrida de un cliente para abrir su entregable completo, o pegá un runId / URL para probar el reporte.
         </p>
@@ -472,7 +472,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
   const [monthlyVisits, setMonthlyVisits] = useState('1000');
   const [conversionRate, setConversionRate] = useState('2');
   const [leadValue, setLeadValue] = useState('250');
-  const [visibilityLift, setVisibilityLift] = useState('20');
+  const [visibilityLift, setVisibilityLift] = useState('10');
 
   useEffect(() => {
     let cancelled = false;
@@ -857,102 +857,18 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
     },
   ];
 
-  const formatOpportunity = (item: (typeof analysis.opportunities)[number]) =>
+  const formatOpportunity = (item: { label: string; score: number; priority: number }) =>
     `${item.label} (score ${item.score}, prioridad ${item.priority})`;
 
-  const personalizedRoadmap = [
-    {
-      range: 'Semana 1',
-      theme: primaryOpportunity ? `Prioridad #1: ${primaryOpportunity.label}` : 'Prioridad principal',
-      evidence: primaryOpportunity
-        ? `Sale de la oportunidad con mayor prioridad (${primaryOpportunity.priority})`
-        : 'Sin oportunidad prioritaria disponible en esta corrida',
-      tasks: primaryOpportunity
-        ? [
-            `Convertir ${formatOpportunity(primaryOpportunity)} en una página o sección nueva`,
-            primaryOpportunity.scenario
-              ? `Responder explícitamente este escenario: “${primaryOpportunity.scenario}”`
-              : `Cubrir la intención ${primaryOpportunity.intention}`,
-            primaryOpportunity.action,
-          ]
-        : ['Revisar la oportunidad principal cuando la corrida tenga datos suficientes'],
-    },
-    {
-      range: 'Semana 2',
-      theme: 'Consultas con peor score',
-      evidence: improveNow.length ? `Basado en ${improveNow.length} consultas con menor score` : 'Sin consultas débiles detectadas',
-      tasks: improveNow.length
-        ? improveNow.slice(0, 3).map((item) => `Mejorar ${formatOpportunity(item)}`)
-        : ['No se detectaron consultas débiles suficientes en esta corrida'],
-    },
-    {
-      range: 'Semana 3',
-      theme: topCompetitor ? `Brecha contra ${topCompetitor.name}` : 'Comparativa competitiva',
-      evidence: topCompetitor
-        ? `${topCompetitor.name} aparece ${topCompetitor.appearances} veces en el Top 3`
-        : 'No se detectó un competidor recurrente en esta corrida',
-      tasks: topCompetitor
-        ? [
-            `Crear una comparación honesta entre ${run.brand.name} y ${topCompetitor.name}`,
-            topCompetitor.reasons[0]
-              ? `Responder la razón detectada: ${topCompetitor.reasons[0]}`
-              : `Explicar cuándo conviene elegir ${run.brand.name}`,
-            'Agregar evidencia verificable: casos, precios, cobertura, datos o testimonios',
-          ]
-        : [
-            `Crear una comparativa base con los competidores cargados para ${run.brand.name}`,
-            'Agregar evidencia verificable: casos, precios, cobertura, datos o testimonios',
-          ],
-    },
-    {
-      range: 'Semana 4',
-      theme: 'Defender lo que ya funciona',
-      evidence: defendNow.length ? `Basado en las consultas con mayor score actual` : 'Sin consultas fuertes detectadas',
-      tasks: defendNow.length
-        ? defendNow.slice(0, 3).map((item) => `Sostener ${formatOpportunity(item)} con FAQs, casos y contenido público`)
-        : ['No se detectaron consultas fuertes suficientes en esta corrida'],
-    },
-    {
-      range: 'Semanas 5-6',
-      theme: 'Autoridad externa sugerida',
-      evidence: 'Sugerido por el tipo de señales que los motores de IA suelen usar para validar marcas',
-      tasks: EXTERNAL_AUTHORITY_CHANNELS.slice(0, 3).map((channel) => `${channel.name}: ${channel.goal}`),
-    },
-    {
-      range: 'Semanas 7-8',
-      theme: 'Segunda capa de oportunidades',
-      evidence:
-        analysis.opportunities.length > 3
-          ? `Basado en las prioridades #4 a #6 del reporte`
-          : 'Sin suficientes oportunidades adicionales',
-      tasks:
-        analysis.opportunities.length > 3
-          ? analysis.opportunities.slice(3, 6).map((item) => `Ejecutar ${formatOpportunity(item)}`)
-          : ['Revisar nuevas oportunidades cuando haya más datos o una nueva corrida'],
-    },
-    {
-      range: 'Semanas 9-10',
-      theme: 'Medición y ajuste',
-      evidence: `Basado en ${analysis.totalPrompts} prompts de la corrida actual`,
-      tasks: [
-        `Revisar si mejoraron las primeras ${Math.min(3, weeklyPriorities.length || 3)} prioridades del reporte`,
-        topCompetitor ? `Volver a comparar contra ${topCompetitor.name}` : 'Volver a revisar presencia competitiva',
-        'Actualizar acciones según nuevos scores y menciones',
-      ],
-    },
-    {
-      range: 'Semanas 11-12',
-      theme: 'Re-análisis día 75',
-      evidence: 'Incluido en el Plan Conquistar',
-      tasks: [
-        'Preparar una nueva corrida completa',
-        `Comparar Cleexs Score inicial (${analysis.cleexsScore}) vs. score nuevo`,
-        'Medir nuevas apariciones, competidores y oportunidades abiertas',
-      ],
-    },
-  ];
+  const personalizedRoadmap = buildImmediateActionPlan({
+    brandName: run.brand.name,
+    primaryOpportunity,
+    improveNow,
+    topCompetitor,
+    formatOpportunity,
+  });
 
-  // Resto del entregable Plan Conquistar, en el mismo flujo numerado del reporte (continúa después de la sección 7).
+  // Resto del entregable (Premium + Plan Conquistar), en el mismo flujo numerado del reporte (continúa después de la sección 7).
   const planSlot = (
     <>
       {crawlerAccessReport ? (
@@ -1060,7 +976,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(11, 'Plan de acción de 90 días', 'Personalizado con las oportunidades, scores y competidores detectados en esta corrida.')}
+        {sectionHeading(11, 'Plan de acción inmediato', 'Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso.')}
         <div className="space-y-2.5">
           {personalizedRoadmap.map((phase) => (
             <div
@@ -1092,11 +1008,17 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(12, 'Oportunidad económica estimada', 'Simulador con supuestos editables. Cargá datos reales del cliente; no es promesa de revenue.')}
+        {sectionHeading(
+          12,
+          'Escenario económico (hipótesis)',
+          'Calculadora con supuestos editables. Úsala para conversar con el cliente; no es proyección garantizada.'
+        )}
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
-            <Lightbulb className="h-3.5 w-3.5" /> Valores de ejemplo · editá con datos reales del cliente
-          </div>
+          <p className="mb-3 text-xs leading-relaxed text-slate-600">
+            Completá con datos reales del cliente si los tenés. El resultado es{' '}
+            <strong className="font-semibold text-slate-800">visitas × conversión × valor × mejora de visibilidad</strong> — una
+            hipótesis de leads o ingreso incremental, no un compromiso de Cleexs.
+          </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: 'Visitas mensuales estimadas', value: monthlyVisits, setter: setMonthlyVisits, suffix: '' },
@@ -1119,10 +1041,13 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
               </label>
             ))}
           </div>
-          <div className="mt-4 rounded-xl bg-gradient-to-br from-emerald-50 to-violet-50 p-4 ring-1 ring-emerald-100">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Resultado simulado (no es promesa)</p>
-            <p className="mt-1 text-3xl font-black text-slate-900">{money(estimatedExtraRevenue)} / mes</p>
-            <p className="mt-1 text-sm text-slate-600">{money(estimatedAnnualRevenue)} estimados al año si las variables se cumplen.</p>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Hipótesis mensual</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-slate-900">{money(estimatedExtraRevenue)} / mes</p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600">
+              {money(estimatedAnnualRevenue)} al año si se cumplen los supuestos ({monthlyVisits || 0} visitas ·{' '}
+              {conversionRate || 0}% conv. · {visibilityLift || 0}% mejora visibilidad).
+            </p>
           </div>
         </div>
       </section>
@@ -1176,24 +1101,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
       </section>
 
       <section>
-        {sectionHeading(14, 'Re-análisis a los 75 días', 'Incluido en el plan: una nueva medición para verificar tu progreso.')}
-        <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-700 to-indigo-700 p-6 text-white shadow-sm">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
-              <TrendingUp className="h-4 w-4" />
-              Día 75
-            </div>
-            <h3 className="mt-3 text-2xl font-bold">Volvemos a medir tu progreso</h3>
-            <p className="mt-2 text-sm leading-relaxed text-violet-50">
-              A los 75 días corremos un nuevo análisis para comparar tu Cleexs Score inicial vs. el actual, las nuevas
-              apariciones en los motores de IA y las oportunidades que se hayan abierto durante la implementación.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        {sectionHeading(15, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
+        {sectionHeading(14, 'Checklist de implementación', 'Guía operativa para ejecutar el plan sin perder tiempo.')}
         <div className="grid gap-2 sm:grid-cols-2">
           {[
             'Definir las 5 intenciones principales donde querés ser recomendado.',
@@ -1203,7 +1111,7 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
             'Actualizar datos de marca, rubro, ubicación y propuesta de valor.',
             'Sumar casos, pruebas sociales y evidencia de autoridad.',
             'Medir nuevamente las oportunidades de menor score.',
-            'Preparar la corrida de control del día 75.',
+            'Correr un nuevo diagnóstico cuando ejecutes las acciones principales.',
           ].map((item) => (
             <div key={item} className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
@@ -1230,9 +1138,10 @@ function ReportView({ runId, onBack }: { runId: string; onBack: () => void }) {
                 <div className="min-w-0">
                   <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                     <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
-                    AI Visibility Accelerator · Plan Conquistar
+                    AI Visibility Accelerator · Informe completo
                   </CardTitle>
                   <CardDescription className="mt-1 text-xs sm:text-sm">
+                    Premium + Plan Conquistar ·{' '}
                     <span className="font-medium">{run.brand.name}</span>
                     {domain ? ` · ${domain}` : null}
                     {context?.diagnostic ? ` · diagnóstico ${context.diagnostic.id.slice(0, 8)}…` : ' · corrida de portal'}

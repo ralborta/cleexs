@@ -35,8 +35,8 @@ const REPORTS = [
     href: '/admin/reportes/plan-conquistar',
     title: 'Plan Conquistar (AI Visibility Accelerator)',
     description:
-      'Genera el entregable de 90 dias para un cliente. Elegi una corrida o pega un runId/URL para probar el reporte completo.',
-    metrics: ['Score real por motor', 'Top oportunidades priorizadas', 'Roadmap 90 dias', 'Competitor gap analysis'],
+      'Genera el informe completo Premium + Conquistar para un cliente. Elegí una corrida o pegá un runId/URL.',
+    metrics: ['Reporte premium + satélite', 'Score por motor', 'Plan de acción inmediato', 'Oportunidades priorizadas'],
     icon: Rocket,
     tone: 'bg-emerald-100 text-emerald-700',
   },

@@ -65,10 +65,9 @@ const PLAN_CONQUISTAR_PATH = '/plan-conquistar';
 const MODAL_FEATURES = [
   { Icon: Gauge, title: 'Score por los 4 motores', desc: 'ChatGPT, Gemini, Claude y Perplexity en una sola lectura.' },
   { Icon: Target, title: '20 oportunidades priorizadas', desc: 'Ordenadas por impacto, esfuerzo y prioridad.' },
-  { Icon: CalendarCheck, title: 'Roadmap personalizado 90 días', desc: 'Plan semanal basado en tu diagnóstico.' },
+  { Icon: CalendarCheck, title: 'Plan de acción inmediato', desc: 'Qué hacer primero según tu diagnóstico.' },
   { Icon: Lightbulb, title: 'Kit IA de implementación', desc: 'Prompts accionables para ejecutar el plan.' },
-  { Icon: TrendingUp, title: 'Re-análisis día 75', desc: 'Nueva medición para verificar tu avance.' },
-  { Icon: Crown, title: 'Premium 90 días incluido', desc: 'Acceso total durante la implementación.' },
+  { Icon: Crown, title: 'Premium incluido', desc: 'Acceso al portal durante la implementación.' },
 ] as const;
 
 function fmtScore(value?: number | null) {
@@ -123,7 +122,7 @@ function PlanConquistarPaywallModal({
               <Sparkles className="h-7 w-7 text-violet-600" />
             </div>
             <h2 className="mt-4 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
-              Tu plan de 90 días está listo para activarse
+              Tu informe completo está listo para activarse
             </h2>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
               Desbloqueá el <strong>AI Visibility Accelerator</strong> para {brandName || 'tu marca'}: score por
@@ -174,7 +173,7 @@ function PlanConquistarPaywallModal({
 
           <p className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11px] text-slate-500">
             <Lock className="h-3.5 w-3.5" />
-            Pago único USD 99 · Acceso Premium incluido por 90 días
+            Pago único USD 99 · Reporte Premium + plan de acción incluido
           </p>
         </div>
       </div>
@@ -287,7 +286,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
             AI Visibility Accelerator · bloqueado
           </div>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-            Tu Plan Conquistar de 90 días está listo
+            Tu Plan Conquistar está listo
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
             Detectamos <strong>{data.totalOpportunities} oportunidades</strong> en tu análisis. Abajo podés ver una
@@ -444,11 +443,11 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           </div>
         </LockedSection>
 
-        {/* Roadmap 90 días */}
+        {/* Plan de acción inmediato */}
         <LockedSection
           num={data.crawlerAccess ? 5 : 4}
-          title="Plan de acción de 90 días"
-          subtitle="Personalizado con tus oportunidades, scores y competidores."
+          title="Plan de acción inmediato"
+          subtitle="Prioridad inmediata, quick wins y siguiente paso — basado en tu corrida."
           previewMaxH={250}
           onUnlock={open}
         >
@@ -532,10 +531,10 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
       {/* CTA final */}
       <div className="border-t border-slate-100 bg-gradient-to-br from-violet-50/80 to-white px-5 py-6 text-center sm:px-7">
         <h3 className="text-lg font-black tracking-tight text-slate-950">
-          Desbloqueá todo tu plan de 90 días
+          Desbloqueá tu informe completo
         </h3>
         <p className="mx-auto mt-1 max-w-xl text-sm text-slate-600">
-          Pago único de USD 99 · Incluye acceso Premium por 90 días y el re-análisis del día 75.
+          Pago único de USD 99 · Incluye reporte Premium + plan de acción y acceso al portal.
         </p>
         <button
           type="button"

@@ -1,6 +1,7 @@
 import type { PublicDiagnosticRunResult, PublicDiagnosticSatelliteModule } from '@/lib/api';
 import type { PlanConquistarTeaserData } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { buildCrawlerAccessReport } from '@/lib/crawler-access';
+import { buildImmediateActionPlan } from '@/lib/plan-immediate-action';
 
 /**
  * Construye los datos del reporte Plan Conquistar (versión bloqueada/upsell) a partir
@@ -141,44 +142,33 @@ export function buildPlanConquistarTeaserData(
 
   const topCompetitor = Array.from(competitors.values()).sort((a, b) => b.appearances - a.appearances)[0];
   const primary = opportunities[0];
-  const weak = improveNow;
+  const improveNowForPlan = [...opportunities].sort((a, b) => a.score - b.score).slice(0, 5);
 
-  const roadmap = [
-    {
-      range: 'Semana 1',
-      theme: primary ? `Prioridad #1: ${primary.title}` : 'Prioridad principal',
-      evidence: primary ? `Sale de la oportunidad con mayor prioridad (${primary.priority})` : 'Según la corrida actual',
-      tasks: primary
-        ? [
-            `Convertir ${primary.title} (score ${primary.score}, prioridad ${primary.priority}) en una página nueva`,
-            primary.scenario ? `Responder explícitamente: "${primary.scenario}"` : `Cubrir la intención ${primary.intention}`,
-            primary.action,
-          ]
-        : ['Revisar la oportunidad principal con más datos'],
-    },
-    {
-      range: 'Semana 2',
-      theme: 'Consultas con peor score',
-      evidence: weak.length ? `Basado en ${weak.length} consultas con menor score` : 'Sin consultas débiles detectadas',
-      tasks: weak.length
-        ? weak.slice(0, 3).map((item) => `Mejorar ${item.label} (score ${item.score})`)
-        : ['Sin consultas débiles suficientes en esta corrida'],
-    },
-    {
-      range: 'Semana 3',
-      theme: topCompetitor ? `Brecha contra ${topCompetitor.name}` : 'Comparativa competitiva',
-      evidence: topCompetitor
-        ? `${topCompetitor.name} aparece ${topCompetitor.appearances} veces en el Top 3`
-        : 'Sin competidor recurrente detectado',
-      tasks: topCompetitor
-        ? [
-            `Crear una comparación honesta entre ${brandName} y ${topCompetitor.name}`,
-            `Explicar cuándo conviene elegir ${brandName}`,
-            'Agregar evidencia verificable: casos, precios, cobertura, datos o testimonios',
-          ]
-        : ['Crear una comparativa base con los competidores cargados', 'Agregar evidencia verificable'],
-    },
-  ];
+  const roadmap = buildImmediateActionPlan({
+    brandName,
+    primaryOpportunity: primary
+      ? {
+          label: primary.title,
+          score: primary.score,
+          priority: primary.priority,
+          intention: primary.intention,
+          scenario: primary.scenario,
+          action: primary.action,
+        }
+      : null,
+    improveNow: improveNowForPlan.map((o) => ({
+      label: o.title,
+      score: o.score,
+      priority: o.priority,
+      intention: o.intention,
+      scenario: o.scenario,
+      action: o.action,
+    })),
+    topCompetitor: topCompetitor
+      ? { name: topCompetitor.name, appearances: topCompetitor.appearances }
+      : null,
+    formatOpportunity: (item) => `${item.label} (score ${item.score})`,
+  });
 
   return {
     brandName,
