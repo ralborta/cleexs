@@ -1,4 +1,9 @@
-import type { PublicDiagnosticRunResult, PublicDiagnosticSatelliteModule } from '@/lib/api';
+import type {
+  DomainRatingSnapshot,
+  PublicDiagnosticRunResult,
+  PublicDiagnosticSatelliteModule,
+  PublicDiagnosticTrendPoint,
+} from '@/lib/api';
 import type { PlanConquistarTeaserData } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { buildCrawlerAccessReport } from '@/lib/crawler-access';
 import { buildImmediateActionPlan } from '@/lib/plan-immediate-action';
@@ -76,10 +81,60 @@ const COURSE_MODULES = [
   'Cómo usar FAQs y schema para responder mejor',
 ];
 
+function buildImplementationPrompts(
+  brandName: string,
+  opportunities: Array<{
+    title: string;
+    intention: string;
+    score: number;
+    priority: number;
+    scenario?: string;
+    action: string;
+  }>,
+  topCompetitor?: { name: string; appearances: number } | null,
+) {
+  const primary = opportunities[0];
+  const weekly = opportunities.slice(0, 3);
+  return [
+    {
+      title: 'Convertir la prioridad #1 en página',
+      source: primary
+        ? `Basado en: ${primary.title} · prioridad ${primary.priority} · score actual ${primary.score}`
+        : 'Basado en la oportunidad prioritaria del reporte',
+      prompt: primary
+        ? `Actuá como consultor de AI Visibility para ${brandName}. Necesito convertir esta oportunidad prioritaria en una página publicable: "${primary.title}".${primary.scenario ? ` Escenario del usuario: "${primary.scenario}".` : ''} Intención: ${primary.intention}. Score actual: ${primary.score}/100. Acción recomendada: ${primary.action}. Proponé estructura de página, títulos H2/H3, FAQs, evidencias a incluir y un checklist de publicación.`
+        : `Actuá como consultor de AI Visibility para ${brandName}. Revisá la oportunidad prioritaria del reporte y convertíla en una página publicable con estructura, FAQs, evidencias y checklist.`,
+    },
+    {
+      title: 'Cerrar brecha contra competidor',
+      source: topCompetitor
+        ? `Basado en: ${topCompetitor.name} · ${topCompetitor.appearances} apariciones`
+        : 'Basado en el competidor principal detectado',
+      prompt: topCompetitor
+        ? `Actuá como estratega de AI Visibility. Compará ${brandName} contra ${topCompetitor.name} usando un tono honesto y verificable. Explicá en qué casos conviene elegir ${brandName}, qué prueba social o datos faltan para sostener esa comparación y qué contenido deberíamos crear para que ChatGPT, Claude, Gemini y Perplexity entiendan mejor la diferencia.`
+        : `Actuá como estratega de AI Visibility. Si el reporte detecta competidores relevantes, armá una comparativa honesta para ${brandName}: cuándo elegir la marca, qué pruebas faltan y qué contenido crear para mejorar recomendaciones en motores de IA.`,
+    },
+    {
+      title: 'Tareas concretas de esta semana',
+      source:
+        weekly.length > 0
+          ? `Basado en las prioridades: ${weekly.map((o) => `#${o.priority}`).join(', ')}`
+          : 'Basado en las primeras prioridades del reporte',
+      prompt:
+        weekly.length > 0
+          ? `Convertí estas prioridades de ${brandName} en un plan de 7 días con tareas claras, responsable sugerido y entregable final: ${weekly
+              .map((o, idx) => `${idx + 1}) ${o.title} (score ${o.score}, prioridad ${o.priority}): ${o.action}`)
+              .join(' | ')}. Evitá teoría: quiero acciones publicables o verificables.`
+          : `Convertí las primeras prioridades del reporte de ${brandName} en un plan de 7 días con tareas claras, responsable sugerido y entregable final. Evitá teoría: quiero acciones publicables o verificables.`,
+    },
+  ];
+}
+
 export function buildPlanConquistarTeaserData(
   runResult: PublicDiagnosticRunResult,
   satelliteModule?: PublicDiagnosticSatelliteModule | null,
   siteUrl?: string | null,
+  domainRating?: DomainRatingSnapshot | null,
 ): PlanConquistarTeaserData {
   const brandName = runResult.brandName;
   const aliases = runResult.brandAliases || [];
@@ -187,8 +242,20 @@ export function buildPlanConquistarTeaserData(
     roadmap,
     courseModules: COURSE_MODULES,
     crawlerAccess: buildCrawlerAccessReport(satelliteModule, siteUrl),
+    domainRating: domainRating ?? null,
+    siteUrl: siteUrl ?? null,
+    implementationPrompts: buildImplementationPrompts(brandName, opportunities, topCompetitor),
   };
 }
+
+export type PlanConquistarUpsellPreviewBundle = {
+  data: PlanConquistarTeaserData;
+  meta: PlanConquistarTeaserPreviewMeta;
+  runResult: PublicDiagnosticRunResult;
+  trendData: PublicDiagnosticTrendPoint[];
+  satelliteModule: PublicDiagnosticSatelliteModule | null;
+  siteUrl: string;
+};
 
 /** Datos de ejemplo para vista previa en admin (sin diagnóstico real). */
 export function buildPlanConquistarTeaserDemoData(): PlanConquistarTeaserData {
@@ -306,6 +373,8 @@ type PlanConquistarAdminContext = {
   ok: boolean;
   diagnostic: { id: string; domain: string; brandName: string } | null;
   satelliteModule: PublicDiagnosticSatelliteModule | null;
+  trendData?: PublicDiagnosticTrendPoint[];
+  domainRating?: DomainRatingSnapshot | null;
 };
 
 function normalizePromptScore(score: number) {
@@ -348,10 +417,7 @@ export type PlanConquistarTeaserPreviewMeta = {
   runId: string;
 };
 
-export async function loadPlanConquistarTeaserFromAdminRun(runId: string): Promise<{
-  data: PlanConquistarTeaserData;
-  meta: PlanConquistarTeaserPreviewMeta;
-}> {
+export async function loadPlanConquistarUpsellPreviewBundle(runId: string): Promise<PlanConquistarUpsellPreviewBundle> {
   const [runRes, contextRes] = await Promise.all([
     fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}`, { cache: 'no-store' }),
     fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}/context`, { cache: 'no-store' }),
@@ -363,14 +429,17 @@ export async function loadPlanConquistarTeaserFromAdminRun(runId: string): Promi
   const run = (await runRes.json()) as PlanConquistarAdminRunDetail;
   const context = contextRes.ok ? ((await contextRes.json()) as PlanConquistarAdminContext) : null;
   const domain = context?.diagnostic?.domain ?? run.brand.domain ?? null;
-  const siteUrl = context?.satelliteModule?.targetUrl
-    || (domain && !domain.startsWith('brand-') ? `https://${domain.replace(/^https?:\/\//, '')}` : null);
+  const siteUrl =
+    context?.satelliteModule?.targetUrl ||
+    (domain && !domain.startsWith('brand-') ? `https://${domain.replace(/^https?:\/\//, '')}` : '');
+  const runResult = adminRunToPublicRunResult(run);
 
   return {
     data: buildPlanConquistarTeaserData(
-      adminRunToPublicRunResult(run),
+      runResult,
       context?.satelliteModule,
       siteUrl,
+      context?.domainRating,
     ),
     meta: {
       brandName: run.brand.name,
@@ -378,5 +447,15 @@ export async function loadPlanConquistarTeaserFromAdminRun(runId: string): Promi
       diagnosticId: context?.diagnostic?.id ?? null,
       runId,
     },
+    runResult,
+    trendData: context?.trendData ?? [],
+    satelliteModule: context?.satelliteModule ?? null,
+    siteUrl,
   };
+}
+
+/** @deprecated Usar loadPlanConquistarUpsellPreviewBundle */
+export async function loadPlanConquistarTeaserFromAdminRun(runId: string) {
+  const bundle = await loadPlanConquistarUpsellPreviewBundle(runId);
+  return { data: bundle.data, meta: bundle.meta };
 }

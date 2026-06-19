@@ -1,13 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, ExternalLink, Loader2, Search, UserRound } from 'lucide-react';
+import { Eye, ExternalLink, FileCheck, Loader2, Search, UserRound } from 'lucide-react';
+import { ReporteCorridas } from '@/app/ver-resultado/reporte-corridas';
 import { PlanConquistarUpsellTeaser } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
+import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
+import { DomainRatingTeaser } from '@/components/report/domain-rating-block';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  loadPlanConquistarTeaserFromAdminRun,
+  loadPlanConquistarUpsellPreviewBundle,
   type PlanConquistarTeaserPreviewMeta,
+  type PlanConquistarUpsellPreviewBundle,
 } from '@/lib/plan-conquistar-preview';
-import type { PlanConquistarTeaserData } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 
 type RunListItem = {
   id: string;
@@ -30,6 +35,54 @@ function termFromInput(raw: string): string {
   return term.replace(/^www\./i, '').replace(/\/.*$/, '').trim();
 }
 
+function UpsellFullPreview({ bundle }: { bundle: PlanConquistarUpsellPreviewBundle }) {
+  const { data, meta, runResult, trendData, satelliteModule, siteUrl } = bundle;
+  const domain = meta.domain;
+  const showSatellite =
+    satelliteModule &&
+    satelliteModule.status !== 'pending' &&
+    domain &&
+    !domain.startsWith('brand-');
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-5xl">
+        <Card className="border-0 bg-white shadow-md shadow-slate-200/50">
+          <CardHeader className="space-y-1 p-4 pb-3 sm:p-5 sm:pb-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <FileCheck className="h-5 w-5 shrink-0 text-primary-600 sm:h-6 sm:w-6" />
+                  Vista previa · como lo verá el cliente
+                </CardTitle>
+                <CardDescription className="mt-1 text-xs sm:text-sm">
+                  Puntos 1–7 visibles · Plan Conquistar bloqueado desde el 8 ·{' '}
+                  <span className="font-medium">{meta.brandName}</span>
+                  {domain ? ` · ${domain}` : null}
+                </CardDescription>
+              </div>
+              <img src="/CleexsLogo.png" alt="Cleexs" className="h-14 w-auto shrink-0 object-contain sm:h-16" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+            <ReporteCorridas
+              runResult={runResult}
+              brandName={meta.brandName}
+              trendData={trendData}
+              beforeSatelliteSlot={
+                showSatellite ? <CrawlerAccessTeaser module={satelliteModule} siteUrl={siteUrl} /> : null
+              }
+              satelliteBlock={showSatellite ? <SatelliteModuleCard module={satelliteModule} siteUrl={siteUrl} /> : null}
+              afterSummarySlot={data.domainRating ? <DomainRatingTeaser data={data.domainRating} /> : null}
+              appendSlot={<PlanConquistarUpsellTeaser data={data} />}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export function PlanConquistarUpsellClientPreview() {
   const [query, setQuery] = useState('');
   const [manual, setManual] = useState('');
@@ -42,7 +95,7 @@ export function PlanConquistarUpsellClientPreview() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<PlanConquistarTeaserData | null>(null);
+  const [previewBundle, setPreviewBundle] = useState<PlanConquistarUpsellPreviewBundle | null>(null);
   const [previewMeta, setPreviewMeta] = useState<PlanConquistarTeaserPreviewMeta | null>(null);
 
   const loadRuns = useCallback(async (q: string) => {
@@ -70,12 +123,12 @@ export function PlanConquistarUpsellClientPreview() {
     setSelectedRunId(runId);
     setPreviewLoading(true);
     setPreviewError(null);
-    setPreviewData(null);
+    setPreviewBundle(null);
     setPreviewMeta(null);
     try {
-      const { data, meta } = await loadPlanConquistarTeaserFromAdminRun(runId);
-      setPreviewData(data);
-      setPreviewMeta(meta);
+      const bundle = await loadPlanConquistarUpsellPreviewBundle(runId);
+      setPreviewBundle(bundle);
+      setPreviewMeta(bundle.meta);
     } catch (e) {
       setPreviewError(e instanceof Error ? e.message : 'No se pudo generar la vista previa.');
     } finally {
@@ -138,8 +191,8 @@ export function PlanConquistarUpsellClientPreview() {
           </div>
           <h2 className="mt-2 text-lg font-bold text-slate-900">Probá cómo lo verá un cliente</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600">
-            Elegí un cliente o pegá su dominio. Generamos el upsell bloqueado con sus datos reales, igual que al final de{' '}
-            <code className="rounded bg-slate-100 px-1 text-xs">/ver-resultado</code>. Solo vos lo ves hasta que actives la promo.
+            Elegí un cliente: verás el reporte free completo (puntos 1–7) y el Plan Conquistar bloqueado desde el
+            punto 8, igual que en <code className="rounded bg-slate-100 px-1 text-xs">/ver-resultado</code>.
           </p>
         </div>
       </div>
@@ -151,7 +204,7 @@ export function PlanConquistarUpsellClientPreview() {
           <input
             value={manual}
             onChange={(e) => setManual(e.target.value)}
-            placeholder="ej: mailberry.com  ·  Nivea  ·  runId"
+            placeholder="ej: nivea.com.ar  ·  Nardiherrero  ·  runId"
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
             onKeyDown={(e) => {
               if (e.key === 'Enter') searchClient();
@@ -219,31 +272,31 @@ export function PlanConquistarUpsellClientPreview() {
       </div>
 
       {selectedRunId ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-violet-200 bg-slate-50/50 p-4 sm:p-6">
+        <div className="mt-6 space-y-4">
           {previewLoading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-200 bg-slate-50/50 py-16 text-sm text-slate-500">
               <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
               Generando preview con datos del cliente...
             </div>
           ) : previewError ? (
-            <p className="py-8 text-center text-sm text-rose-600">{previewError}</p>
-          ) : previewData && previewMeta ? (
+            <p className="rounded-2xl border border-rose-100 bg-rose-50 py-8 text-center text-sm text-rose-600">
+              {previewError}
+            </p>
+          ) : previewBundle && previewMeta ? (
             <>
-              <div className="mb-5 flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
                     <UserRound className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900">
-                      Preview interno · {previewMeta.brandName}
-                    </p>
+                    <p className="text-sm font-bold text-slate-900">Preview interno · {previewMeta.brandName}</p>
                     <p className="text-xs text-slate-600">
-                      {previewMeta.domain || 'sin dominio'} · score {previewData.cleexsScore} ·{' '}
-                      {previewData.totalOpportunities} oportunidades
+                      {previewMeta.domain || 'sin dominio'} · score {previewBundle.data.cleexsScore} · puntos 1–7
+                      visibles, 8+ bloqueados
                     </p>
                     <p className="mt-1 text-[11px] text-violet-700">
-                      El cliente no ve esto hasta que actives la promo arriba.
+                      El cliente no ve el Plan Conquistar hasta que actives la promo arriba.
                     </p>
                   </div>
                 </div>
@@ -259,7 +312,7 @@ export function PlanConquistarUpsellClientPreview() {
                   </a>
                 ) : null}
               </div>
-              <PlanConquistarUpsellTeaser data={previewData} />
+              <UpsellFullPreview bundle={previewBundle} />
             </>
           ) : null}
         </div>

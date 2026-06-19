@@ -1035,7 +1035,8 @@ function VerResultadoContent() {
                                   data={buildPlanConquistarTeaserData(
                                     runResultToShow,
                                     satelliteModule,
-                                    satelliteSiteUrl
+                                    satelliteSiteUrl,
+                                    diagnostic.domainRating
                                   )}
                                 />
                               ) : null
