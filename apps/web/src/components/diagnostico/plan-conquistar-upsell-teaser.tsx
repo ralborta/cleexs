@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { type ReactNode } from 'react';
 import {
   CheckCircle2,
   Crown,
@@ -11,14 +10,13 @@ import {
   Lightbulb,
   Lock,
   Sparkles,
-  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CrawlerAccessReport } from '@/lib/crawler-access';
 import type { DomainRatingSnapshot } from '@/lib/api';
 import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
 import { DomainRatingPanel } from '@/components/report/domain-rating-block';
-import { PlanConquistarCheckoutButton } from '@/components/planes/plan-conquistar-checkout-button';
+import { PlanConquistarCheckoutButton, PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
 import {
   CleexsEngineScoresPanel,
   type EngineCardKey,
@@ -100,124 +98,18 @@ function showDomainRatingPanel(domainRating?: DomainRatingSnapshot | null) {
   );
 }
 
-// ── Modal de compra ───────────────────────────────────────────────────────────
-
-function PlanConquistarPaywallModal({
-  open,
-  brandName,
-  totalOpportunities,
-  onClose,
-}: {
-  open: boolean;
-  brandName: string;
-  totalOpportunities: number;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  if (!open || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <>
-      <div className="fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-[2px]" aria-hidden onClick={onClose} />
-      <div className="fixed inset-0 z-[71] flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Plan Conquistar disponible"
-          className="relative my-4 w-full max-w-2xl rounded-3xl border border-slate-200/80 bg-white shadow-2xl sm:my-0"
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          <div className="px-6 pb-5 pt-9 text-center sm:px-8">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-100">
-              <Sparkles className="h-7 w-7 text-violet-600" />
-            </div>
-            <h2 className="mt-4 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
-              Tu informe completo está listo para activarse
-            </h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
-              Desbloqueá el <strong>AI Visibility Accelerator</strong> para {brandName || 'tu marca'}: score por
-              motores, oportunidades priorizadas y un roadmap concreto para mejorar tu presencia en ChatGPT, Claude,
-              Gemini y Perplexity.
-            </p>
-          </div>
-
-          <div className="border-y border-slate-100 px-5 py-4 sm:px-8">
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {MODAL_FEATURES.map(({ title, desc }) => (
-                <li key={title} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
-                    <Sparkles className="h-5 w-5 text-violet-700" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900">{title}</p>
-                    <p className="mt-0.5 text-xs leading-snug text-slate-500">{desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="rounded-b-3xl bg-violet-50/95 px-5 py-5 sm:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-2">
-                <Crown className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
-                <p className="text-sm leading-snug text-violet-950">
-                  <span className="font-black">Detectamos {Math.max(totalOpportunities, 0)} oportunidades.</span>{' '}
-                  Convertí este diagnóstico en un plan de acción listo para ejecutar.
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-                <PlanConquistarCheckoutButton
-                  variant="compact"
-                  sourceChannel="ver_resultado_upsell_modal"
-                  className="w-full sm:w-auto"
-                />
-                <button type="button" onClick={onClose} className="text-center text-xs font-semibold text-violet-800/80">
-                  No, por ahora no
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <p className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11px] text-slate-500">
-            <Lock className="h-3.5 w-3.5" />
-            Pago único USD 99 · Reporte Premium + plan de acción incluido
-          </p>
-        </div>
-      </div>
-    </>,
-    document.body
-  );
-}
-
 // ── Sección bloqueada (continúa numeración desde el punto 7 del reporte free) ──
 
 function LockedSectionHeading({
   num,
   title,
   subtitle,
-  onUnlock,
+  checkoutSlot,
 }: {
   num: number;
   title: string;
   subtitle?: string;
-  onUnlock: () => void;
+  checkoutSlot: ReactNode;
 }) {
   return (
     <div className="mb-2 flex items-start justify-between gap-2">
@@ -229,14 +121,7 @@ function LockedSectionHeading({
           <div className="min-w-0">
             <h2 className="flex flex-wrap items-center gap-2 text-base font-bold tracking-tight text-slate-900 sm:text-lg">
               {title}
-              <button
-                type="button"
-                onClick={onUnlock}
-                aria-label={`Desbloquear ${title}`}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700 transition hover:bg-violet-200"
-              >
-                <Lock className="h-3.5 w-3.5" />
-              </button>
+              {checkoutSlot}
             </h2>
             {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
           </div>
@@ -246,39 +131,52 @@ function LockedSectionHeading({
   );
 }
 
+function LockedSectionUnlockButton({ sourceChannel }: { sourceChannel: string }) {
+  return (
+    <PlanConquistarCheckoutButton
+      variant="overlay"
+      label="Desbloquear ahora"
+      sourceChannel={sourceChannel}
+      className="!rounded-full !px-4 !py-2 !text-xs"
+    />
+  );
+}
+
 function LockedSection({
   num,
   title,
   subtitle,
   previewMaxH,
-  onUnlock,
+  sourceChannel,
   children,
 }: {
   num: number;
   title: string;
   subtitle?: string;
   previewMaxH: number;
-  onUnlock: () => void;
+  sourceChannel: string;
   children: ReactNode;
 }) {
+  const unlockButton = <LockedSectionUnlockButton sourceChannel={sourceChannel} />;
+
   return (
     <section>
-      <LockedSectionHeading num={num} title={title} subtitle={subtitle} onUnlock={onUnlock} />
+      <LockedSectionHeading
+        num={num}
+        title={title}
+        subtitle={subtitle}
+        checkoutSlot={
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+            <Lock className="h-3.5 w-3.5" />
+          </span>
+        }
+      />
       <div className="relative">
         <div className="overflow-hidden" style={{ maxHeight: previewMaxH }}>
           {children}
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white via-white/85 to-transparent" />
-        <div className="absolute inset-x-0 bottom-3 flex justify-center">
-          <button
-            type="button"
-            onClick={onUnlock}
-            className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/95 px-4 py-2 text-xs font-bold text-violet-700 shadow-md backdrop-blur transition hover:bg-violet-50"
-          >
-            <Lock className="h-3.5 w-3.5" />
-            Desbloquear esta sección
-          </button>
-        </div>
+        <div className="absolute inset-x-0 bottom-3 flex justify-center">{unlockButton}</div>
       </div>
     </section>
   );
@@ -374,11 +272,88 @@ export function PlanConquistarEnginesAfterSummary({
   );
 }
 
+// ── Panel CTA final (estilo modal, checkout directo) ───────────────────────────
+
+function PlanConquistarUpsellCtaPanel({
+  brandName,
+  totalOpportunities,
+  hiddenCount,
+  sourceChannel,
+}: {
+  brandName: string;
+  totalOpportunities: number;
+  hiddenCount: number;
+  sourceChannel: string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-xl shadow-violet-900/5">
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 px-5 py-6 text-center sm:px-8">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur-sm">
+          <Sparkles className="h-7 w-7 text-white" />
+        </div>
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white ring-1 ring-white/20">
+          Promo · 3 meses
+        </p>
+        <h3 className="mt-3 text-xl font-black tracking-tight text-white sm:text-2xl">
+          Tu informe completo está listo para activarse
+        </h3>
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-violet-100">
+          Desbloqueá el <strong className="font-semibold text-white">AI Visibility Accelerator</strong> para{' '}
+          {brandName}: score por motores, oportunidades priorizadas y un roadmap concreto para mejorar tu presencia en
+          ChatGPT, Claude, Gemini y Perplexity.
+        </p>
+      </div>
+
+      <div className="border-b border-slate-100 px-5 py-4 sm:px-8">
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {MODAL_FEATURES.map(({ title, desc }) => (
+            <li key={title} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
+                <Sparkles className="h-5 w-5 text-violet-700" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900">{title}</p>
+                <p className="mt-0.5 text-xs leading-snug text-slate-500">{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="bg-violet-50/95 px-5 py-5 sm:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <Crown className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
+            <div>
+              <p className="text-sm leading-snug text-violet-950">
+                <span className="font-black">Detectamos {Math.max(totalOpportunities, 0)} oportunidades.</span>{' '}
+                {hiddenCount > 0 ? `Incluye ${hiddenCount} más en el plan completo. ` : null}
+                Convertí este diagnóstico en un plan de acción listo para ejecutar.
+              </p>
+              <div className="mt-2">
+                <PlanConquistarPromoPrice size="md" />
+              </div>
+            </div>
+          </div>
+          <PlanConquistarCheckoutButton
+            variant="promo"
+            sourceChannel={sourceChannel}
+            className="w-full shrink-0 sm:w-auto"
+          />
+        </div>
+      </div>
+
+      <p className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11px] text-slate-500">
+        <Lock className="h-3.5 w-3.5" />
+        Pago seguro con Mercado Pago · Reporte Premium + plan de acción incluido
+      </p>
+    </div>
+  );
+}
+
 // ── Continuación Plan Conquistar (secciones 8+) ────────────────────────────────
 
 export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTeaserData }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const open = () => setModalOpen(true);
   const hiddenCount = Math.max(data.totalOpportunities - 3, 0);
   const implementationPrompts = data.implementationPrompts ?? [];
   const showDr = showDomainRatingPanel(data.domainRating);
@@ -388,7 +363,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
   return (
     <div className="space-y-5 border-t border-violet-100 pt-5">
       <div className="rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/90 via-white to-white px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-bold text-violet-700 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
@@ -399,10 +374,13 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
               <strong>{data.totalOpportunities} oportunidades</strong> más en el plan completo — desbloqueá desde el punto{' '}
               {sectionNum} para ver el roadmap personalizado de {data.brandName}.
             </p>
+            <div className="mt-2">
+              <PlanConquistarPromoPrice size="md" />
+            </div>
           </div>
           <PlanConquistarCheckoutButton
             variant="compact"
-            label="Desbloquear USD 99"
+            label="Desbloquear"
             sourceChannel="ver_resultado_upsell_banner"
             className="shrink-0"
           />
@@ -415,7 +393,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           title="Acceso de crawlers de IA"
           subtitle="¿ChatGPT y otros motores pueden rastrear tu sitio? Revisión de robots.txt, bots clave y checklist de verificación."
           previewMaxH={320}
-          onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
         >
           <CrawlerAccessPlanSection report={data.crawlerAccess} siteUrl={data.siteUrl ?? undefined} />
         </LockedSection>
@@ -427,7 +405,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           title="Autoridad del dominio (SEO)"
           subtitle="Domain Rating (Ahrefs) de tu dominio vs competidores. Mide autoridad por backlinks; no es lo mismo que tu Cleexs Score en IA."
           previewMaxH={280}
-          onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
         >
           <DomainRatingPanel data={data.domainRating} />
         </LockedSection>
@@ -438,7 +416,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Oportunidades priorizadas"
         subtitle={`Te mostramos 3 de ${data.totalOpportunities}. Ordenadas por prioridad (mayor a menor).`}
         previewMaxH={380}
-        onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
       >
         <div className="grid gap-3 md:grid-cols-2">
           {data.opportunities.map((op, idx) => (
@@ -476,7 +454,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Mapa de ejecución"
         subtitle="Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas)."
         previewMaxH={300}
-        onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
       >
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
@@ -536,7 +514,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Plan de acción inmediato"
         subtitle="Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso."
         previewMaxH={260}
-        onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
       >
         <div className="space-y-2.5">
           {data.roadmap.map((phase) => (
@@ -573,7 +551,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Escenario económico (hipótesis)"
         subtitle="Calculadora con supuestos editables. Úsala para conversar con el cliente; no es proyección garantizada."
         previewMaxH={260}
-        onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
       >
         <EconomicScenarioPreview />
       </LockedSection>
@@ -583,7 +561,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Kit IA de implementación"
         subtitle="Prompts listos para copiar en ChatGPT o Claude, basados en los datos de esta corrida."
         previewMaxH={280}
-        onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
       >
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
           <div className="mb-3 flex items-center gap-2">
@@ -616,7 +594,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Checklist de implementación"
         subtitle="Guía operativa para ejecutar el plan sin perder tiempo."
         previewMaxH={220}
-        onUnlock={open}
+          sourceChannel="ver_resultado_upsell_section"
       >
         <div className="grid gap-2 sm:grid-cols-2">
           {CHECKLIST_ITEMS.map((item) => (
@@ -628,26 +606,11 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         </div>
       </LockedSection>
 
-      <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white px-4 py-5 text-center sm:px-5">
-        <h3 className="text-lg font-black tracking-tight text-slate-950">Desbloqueá tu informe completo</h3>
-        <p className="mx-auto mt-1 max-w-xl text-sm text-slate-600">
-          {hiddenCount > 0
-            ? `Incluye ${hiddenCount} oportunidades más, plan de acción, Kit IA y checklist. `
-            : null}
-          Pago único de USD 99 · Reporte Premium + plan de acción incluido.
-        </p>
-          <PlanConquistarCheckoutButton
-            variant="compact"
-            sourceChannel="ver_resultado_upsell"
-            className="mt-4"
-          />
-      </div>
-
-      <PlanConquistarPaywallModal
-        open={modalOpen}
+      <PlanConquistarUpsellCtaPanel
         brandName={data.brandName}
         totalOpportunities={data.totalOpportunities}
-        onClose={() => setModalOpen(false)}
+        hiddenCount={hiddenCount}
+        sourceChannel="ver_resultado_upsell"
       />
     </div>
   );
