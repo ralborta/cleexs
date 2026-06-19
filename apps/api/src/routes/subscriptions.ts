@@ -9,7 +9,7 @@ import {
   getPlanBillingAmountUsd,
   usdToArs,
 } from '../lib/billing';
-import { getPreApprovalClient, getPreferenceClient, getPublicAppUrl } from '../lib/mercadopago';
+import { getPreApprovalClient, getPreferenceClient, getPublicAppUrl, resolveMercadoPagoCheckoutUrl } from '../lib/mercadopago';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 
@@ -58,7 +58,7 @@ function checkoutErrorMessage(error: unknown): string {
 }
 
 function mercadoPagoCheckoutUrl(preapproval: { init_point?: string | null; sandbox_init_point?: string | null }) {
-  return preapproval.sandbox_init_point ?? preapproval.init_point ?? null;
+  return resolveMercadoPagoCheckoutUrl(preapproval);
 }
 
 const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
@@ -267,7 +267,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
             init_point?: string | null;
             sandbox_init_point?: string | null;
           };
-          const checkoutUrl = links.sandbox_init_point ?? links.init_point ?? null;
+          const checkoutUrl = resolveMercadoPagoCheckoutUrl(links);
           if (!checkoutUrl) throw new Error('Mercado Pago no devolvió URL de checkout.');
 
           await prisma.payment.update({

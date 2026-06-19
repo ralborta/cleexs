@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
 import {
   CheckCircle2,
   Crown,
@@ -19,6 +18,7 @@ import type { CrawlerAccessReport } from '@/lib/crawler-access';
 import type { DomainRatingSnapshot } from '@/lib/api';
 import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
 import { DomainRatingPanel } from '@/components/report/domain-rating-block';
+import { PlanConquistarCheckoutButton } from '@/components/planes/plan-conquistar-checkout-button';
 
 type Opportunity = {
   title: string;
@@ -65,8 +65,6 @@ export type PlanConquistarTeaserData = {
   siteUrl?: string | null;
   implementationPrompts?: ImplementationPrompt[];
 };
-
-const PLAN_CONQUISTAR_PATH = '/plan-conquistar';
 
 const CHECKLIST_ITEMS = [
   'Definir las 5 intenciones principales donde querés ser recomendado.',
@@ -185,13 +183,11 @@ function PlanConquistarPaywallModal({
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-                <Link
-                  href={PLAN_CONQUISTAR_PATH}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700 active:scale-[0.98]"
-                >
-                  <Crown className="h-4 w-4" />
-                  Quiero ser el favorito de ChatGPT
-                </Link>
+                <PlanConquistarCheckoutButton
+                  variant="compact"
+                  sourceChannel="ver_resultado_upsell_modal"
+                  className="w-full sm:w-auto"
+                />
                 <button type="button" onClick={onClose} className="text-center text-xs font-semibold text-violet-800/80">
                   No, por ahora no
                 </button>
@@ -380,14 +376,12 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
               {sectionNum} para ver el roadmap personalizado de {data.brandName}.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={open}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700 active:scale-[0.98]"
-          >
-            <Crown className="h-4 w-4" />
-            Desbloquear USD 99
-          </button>
+          <PlanConquistarCheckoutButton
+            variant="compact"
+            label="Desbloquear USD 99"
+            sourceChannel="ver_resultado_upsell_banner"
+            className="shrink-0"
+          />
         </div>
       </div>
 
@@ -618,14 +612,11 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
             : null}
           Pago único de USD 99 · Reporte Premium + plan de acción incluido.
         </p>
-        <button
-          type="button"
-          onClick={open}
-          className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700 active:scale-[0.98]"
-        >
-          <Crown className="h-4 w-4" />
-          Quiero ser el favorito de ChatGPT
-        </button>
+          <PlanConquistarCheckoutButton
+            variant="compact"
+            sourceChannel="ver_resultado_upsell"
+            className="mt-4"
+          />
       </div>
 
       <PlanConquistarPaywallModal

@@ -37,6 +37,25 @@ export function getPublicAppUrl() {
   ).replace(/\/+$/, '');
 }
 
+/** Credenciales TEST de MP usan token `TEST-…`; producción usa `APP_USR-…`. */
+export function isMercadoPagoTestMode() {
+  const token = process.env.MP_ACCESS_TOKEN?.trim() ?? '';
+  return token.startsWith('TEST-');
+}
+
+/** En producción prioriza `init_point`; en sandbox, `sandbox_init_point`. */
+export function resolveMercadoPagoCheckoutUrl(links: {
+  init_point?: string | null;
+  sandbox_init_point?: string | null;
+}) {
+  const initPoint = links.init_point?.trim() || null;
+  const sandboxInitPoint = links.sandbox_init_point?.trim() || null;
+  if (isMercadoPagoTestMode()) {
+    return sandboxInitPoint ?? initPoint;
+  }
+  return initPoint ?? sandboxInitPoint;
+}
+
 function header(request: FastifyRequest, name: string): string | undefined {
   const value = request.headers[name.toLowerCase()];
   return typeof value === 'string' ? value : undefined;
