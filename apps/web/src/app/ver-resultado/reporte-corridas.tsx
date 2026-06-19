@@ -1018,7 +1018,7 @@ export function ReporteCorridas({
         </div>
       </section>
 
-      {afterSummarySlot ?? null}
+      {afterSummarySlot ? <div className="space-y-5">{afterSummarySlot}</div> : null}
 
       {/* 2 KPIs clave */}
       <section>

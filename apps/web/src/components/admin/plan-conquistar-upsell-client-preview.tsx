@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Eye, ExternalLink, FileCheck, Loader2, Search, UserRound } from 'lucide-react';
 import { ReporteCorridas } from '@/app/ver-resultado/reporte-corridas';
-import { PlanConquistarUpsellTeaser } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import {
+  PlanConquistarEnginesAfterSummary,
+  PlanConquistarUpsellTeaser,
+} from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
 import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
-import {
-  CleexsEngineScoresPanel,
-  buildEngineScoresFromDiagnostic,
-} from '@/components/diagnostico/cleexs-engine-scores-panel';
+import { buildEngineScoresFromDiagnostic } from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   loadPlanConquistarUpsellPreviewBundle,
@@ -82,12 +82,7 @@ function UpsellFullPreview({ bundle }: { bundle: PlanConquistarUpsellPreviewBund
               }
               satelliteBlock={showSatellite ? <SatelliteModuleCard module={satelliteModule} siteUrl={siteUrl} /> : null}
               afterSummarySlot={
-                <>
-                  <CleexsEngineScoresPanel
-                    engines={engineScores}
-                    subtitle="ChatGPT sale de tu corrida. Gemini, Claude y Perplexity se desbloquean con Plan Conquistar."
-                  />
-                </>
+                <PlanConquistarEnginesAfterSummary engines={engineScores} upsell />
               }
               appendSlot={<PlanConquistarUpsellTeaser data={data} />}
             />

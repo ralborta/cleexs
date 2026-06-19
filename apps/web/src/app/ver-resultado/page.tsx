@@ -61,18 +61,17 @@ import { ReporteModerno } from './reporte-moderno';
 import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-modal';
 import { SatelliteModuleCard, SatelliteModuleSkeleton } from '@/components/diagnostico/satellite-aeo-report';
 import { ReporteCorridas } from './reporte-corridas';
-import { PlanConquistarUpsellTeaser } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import {
+  PlanConquistarEnginesAfterSummary,
+  PlanConquistarUpsellTeaser,
+} from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
 import { buildPlanConquistarTeaserData } from '@/lib/plan-conquistar-preview';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
 import { DomainRatingPanel, DomainRatingTeaser } from '@/components/report/domain-rating-block';
-import {
-  CleexsEngineScoresPanel,
-  buildEngineScoresFromDiagnostic,
-  type EngineCardKey,
-} from '@/components/diagnostico/cleexs-engine-scores-panel';
+import { buildEngineScoresFromDiagnostic, type EngineCardKey } from '@/components/diagnostico/cleexs-engine-scores-panel';
 import type { DomainRatingSnapshot } from '@/lib/api';
 
 const normalizeName = (value: string) =>
@@ -819,15 +818,22 @@ function VerResultadoContent() {
       })
     : null;
 
+  const planConquistarTeaserData =
+    diagnostic.showPlanConquistarUpsell && runResult
+      ? buildPlanConquistarTeaserData(
+          runResult,
+          satelliteModule,
+          satelliteSiteUrl,
+          diagnostic.domainRating,
+          engineScoresForPanel ?? undefined,
+        )
+      : null;
+
   const afterSummaryEnginesSlot =
     engineScoresForPanel && diagnostic.showFullReport ? (
-      <CleexsEngineScoresPanel
+      <PlanConquistarEnginesAfterSummary
         engines={engineScoresForPanel}
-        subtitle={
-          diagnostic.showPlanConquistarUpsell
-            ? 'ChatGPT sale de tu corrida. Gemini, Claude y Perplexity se desbloquean con Plan Conquistar.'
-            : 'ChatGPT sale de la corrida. Gemini, Claude y Perplexity según disponibilidad de tu plan.'
-        }
+        upsell={Boolean(diagnostic.showPlanConquistarUpsell)}
         onLockedClick={(engine) => {
           const label = enginePaywallLabel[engine];
           if (label) setPaywallEngine(label);
@@ -1074,15 +1080,8 @@ function VerResultadoContent() {
                               ) : null
                             }
                             appendSlot={
-                              diagnostic.showPlanConquistarUpsell ? (
-                                <PlanConquistarUpsellTeaser
-                                  data={buildPlanConquistarTeaserData(
-                                    runResultToShow,
-                                    satelliteModule,
-                                    satelliteSiteUrl,
-                                    diagnostic.domainRating
-                                  )}
-                                />
+                              planConquistarTeaserData ? (
+                                <PlanConquistarUpsellTeaser data={planConquistarTeaserData} />
                               ) : null
                             }
                             afterSummarySlot={

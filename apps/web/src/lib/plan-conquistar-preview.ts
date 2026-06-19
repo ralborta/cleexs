@@ -5,6 +5,11 @@ import type {
   PublicDiagnosticTrendPoint,
 } from '@/lib/api';
 import type { PlanConquistarTeaserData } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
+import {
+  buildEngineScoresFromDiagnostic,
+  type EngineCardKey,
+  type EngineCardState,
+} from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { buildCrawlerAccessReport } from '@/lib/crawler-access';
 import { buildImmediateActionPlan } from '@/lib/plan-immediate-action';
 
@@ -135,6 +140,7 @@ export function buildPlanConquistarTeaserData(
   satelliteModule?: PublicDiagnosticSatelliteModule | null,
   siteUrl?: string | null,
   domainRating?: DomainRatingSnapshot | null,
+  engines?: Record<EngineCardKey, EngineCardState>,
 ): PlanConquistarTeaserData {
   const brandName = runResult.brandName;
   const aliases = runResult.brandAliases || [];
@@ -225,16 +231,18 @@ export function buildPlanConquistarTeaserData(
     formatOpportunity: (item) => `${item.label} (score ${item.score})`,
   });
 
+  const resolvedEngines =
+    engines ??
+    buildEngineScoresFromDiagnostic({
+      chatgptScore: runResult.cleexsScore,
+      lockUnavailableEngines: true,
+    });
+
   return {
     brandName,
     cleexsScore,
     totalOpportunities: opportunities.length,
-    engineScores: {
-      chatgpt: cleexsScore,
-      gemini: null,
-      claude: null,
-      perplexity: null,
-    },
+    engines: resolvedEngines,
     opportunities,
     improveNow,
     defendNow,
@@ -297,7 +305,7 @@ export function buildPlanConquistarTeaserDemoData(): PlanConquistarTeaserData {
     brandName,
     cleexsScore: 47,
     totalOpportunities: 18,
-    engineScores: { chatgpt: 47, gemini: null, claude: null, perplexity: null },
+    engines: buildEngineScoresFromDiagnostic({ chatgptScore: 47, lockUnavailableEngines: true }),
     opportunities,
     improveNow: opportunities.map((o) => ({ label: o.title, score: o.score })),
     defendNow: [{ label: 'Precio (30%) · Consulta directa', score: 91 }],

@@ -19,6 +19,11 @@ import type { DomainRatingSnapshot } from '@/lib/api';
 import { CrawlerAccessPlanSection } from '@/components/diagnostico/crawler-access-plan-section';
 import { DomainRatingPanel } from '@/components/report/domain-rating-block';
 import { PlanConquistarCheckoutButton } from '@/components/planes/plan-conquistar-checkout-button';
+import {
+  CleexsEngineScoresPanel,
+  type EngineCardKey,
+  type EngineCardState,
+} from '@/components/diagnostico/cleexs-engine-scores-panel';
 
 type Opportunity = {
   title: string;
@@ -48,12 +53,7 @@ export type PlanConquistarTeaserData = {
   brandName: string;
   cleexsScore: number;
   totalOpportunities: number;
-  engineScores?: {
-    chatgpt?: number | null;
-    gemini?: number | null;
-    claude?: number | null;
-    perplexity?: number | null;
-  };
+  engines: Record<EngineCardKey, EngineCardState>;
   opportunities: Opportunity[];
   improveNow: Array<{ label: string; score: number }>;
   defendNow: Array<{ label: string; score: number }>;
@@ -350,6 +350,30 @@ function EconomicScenarioPreview() {
   );
 }
 
+// ── Motores LLM (entre punto 1 y 2, igual que Plan Conquistar completo) ─────────
+
+export function PlanConquistarEnginesAfterSummary({
+  engines,
+  upsell = false,
+  onLockedClick,
+}: {
+  engines: Record<EngineCardKey, EngineCardState>;
+  upsell?: boolean;
+  onLockedClick?: (engine: EngineCardKey) => void;
+}) {
+  return (
+    <CleexsEngineScoresPanel
+      engines={engines}
+      subtitle={
+        upsell
+          ? 'ChatGPT sale de tu corrida. Gemini, Claude y Perplexity se desbloquean con Plan Conquistar.'
+          : 'ChatGPT sale de la corrida. Gemini, Claude y Perplexity según disponibilidad de tu plan.'
+      }
+      onLockedClick={onLockedClick}
+    />
+  );
+}
+
 // ── Continuación Plan Conquistar (secciones 8+) ────────────────────────────────
 
 export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTeaserData }) {
@@ -371,7 +395,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
               AI Visibility Accelerator · Plan Conquistar
             </div>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Ya viste tu diagnóstico (puntos 1–7). Detectamos{' '}
+              Ya viste tu diagnóstico (resumen, score por motores y puntos 2–7). Detectamos{' '}
               <strong>{data.totalOpportunities} oportunidades</strong> más en el plan completo — desbloqueá desde el punto{' '}
               {sectionNum} para ver el roadmap personalizado de {data.brandName}.
             </p>
