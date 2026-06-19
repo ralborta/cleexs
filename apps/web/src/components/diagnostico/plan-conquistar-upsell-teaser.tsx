@@ -1,6 +1,7 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Crown,
@@ -10,6 +11,8 @@ import {
   Lightbulb,
   Lock,
   Sparkles,
+  Trophy,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CrawlerAccessReport } from '@/lib/crawler-access';
@@ -131,14 +134,16 @@ function LockedSectionHeading({
   );
 }
 
-function LockedSectionUnlockButton({ sourceChannel }: { sourceChannel: string }) {
+function LockedSectionUnlockButton({ onUnlock }: { onUnlock: () => void }) {
   return (
-    <PlanConquistarCheckoutButton
-      variant="overlay"
-      label="Desbloquear ahora"
-      sourceChannel={sourceChannel}
-      className="!rounded-full !px-4 !py-2 !text-xs"
-    />
+    <button
+      type="button"
+      onClick={onUnlock}
+      className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/95 px-5 py-2.5 text-xs font-bold text-violet-800 shadow-lg shadow-violet-900/10 backdrop-blur transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
+    >
+      <Trophy className="h-3.5 w-3.5 text-violet-600" />
+      Desbloquear ahora
+    </button>
   );
 }
 
@@ -147,17 +152,17 @@ function LockedSection({
   title,
   subtitle,
   previewMaxH,
-  sourceChannel,
+  onUnlock,
   children,
 }: {
   num: number;
   title: string;
   subtitle?: string;
   previewMaxH: number;
-  sourceChannel: string;
+  onUnlock: () => void;
   children: ReactNode;
 }) {
-  const unlockButton = <LockedSectionUnlockButton sourceChannel={sourceChannel} />;
+  const unlockButton = <LockedSectionUnlockButton onUnlock={onUnlock} />;
 
   return (
     <section>
@@ -166,9 +171,14 @@ function LockedSection({
         title={title}
         subtitle={subtitle}
         checkoutSlot={
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+          <button
+            type="button"
+            onClick={onUnlock}
+            aria-label={`Desbloquear ${title}`}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700 transition hover:bg-violet-200"
+          >
             <Lock className="h-3.5 w-3.5" />
-          </span>
+          </button>
         }
       />
       <div className="relative">
@@ -272,39 +282,76 @@ export function PlanConquistarEnginesAfterSummary({
   );
 }
 
-// ── Panel CTA final (estilo modal, checkout directo) ───────────────────────────
+// ── Contenido compartido del upsell (modal + panel final) ─────────────────────
 
-function PlanConquistarUpsellCtaPanel({
+function PlanConquistarUpsellOfferContent({
   brandName,
   totalOpportunities,
   hiddenCount,
   sourceChannel,
+  onDismiss,
+  layout = 'inline',
 }: {
   brandName: string;
   totalOpportunities: number;
   hiddenCount: number;
   sourceChannel: string;
+  onDismiss?: () => void;
+  layout?: 'inline' | 'modal';
 }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-xl shadow-violet-900/5">
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 px-5 py-6 text-center sm:px-8">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur-sm">
-          <Sparkles className="h-7 w-7 text-white" />
+    <>
+      <div
+        className={cn(
+          'text-center',
+          layout === 'modal' ? 'px-6 pb-5 pt-9 sm:px-8' : 'bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 px-5 py-6 sm:px-8'
+        )}
+      >
+        <div
+          className={cn(
+            'mx-auto flex h-14 w-14 items-center justify-center rounded-2xl',
+            layout === 'modal' ? 'rounded-full bg-violet-100' : 'bg-white/15 ring-1 ring-white/25 backdrop-blur-sm'
+          )}
+        >
+          <Sparkles className={cn('h-7 w-7', layout === 'modal' ? 'text-violet-600' : 'text-white')} />
         </div>
-        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white ring-1 ring-white/20">
+        <p
+          className={cn(
+            'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ring-1',
+            layout === 'modal'
+              ? 'bg-violet-50 text-violet-700 ring-violet-100'
+              : 'bg-white/15 text-white ring-white/20'
+          )}
+        >
           Promo · 3 meses
         </p>
-        <h3 className="mt-3 text-xl font-black tracking-tight text-white sm:text-2xl">
+        <h3
+          className={cn(
+            'mt-3 font-black tracking-tight',
+            layout === 'modal' ? 'text-xl text-slate-950 sm:text-2xl' : 'text-xl text-white sm:text-2xl'
+          )}
+        >
           Tu informe completo está listo para activarse
         </h3>
-        <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-violet-100">
-          Desbloqueá el <strong className="font-semibold text-white">AI Visibility Accelerator</strong> para{' '}
-          {brandName}: score por motores, oportunidades priorizadas y un roadmap concreto para mejorar tu presencia en
-          ChatGPT, Claude, Gemini y Perplexity.
+        <p
+          className={cn(
+            'mx-auto mt-2 max-w-xl text-sm leading-relaxed',
+            layout === 'modal' ? 'text-slate-600' : 'max-w-lg text-violet-100'
+          )}
+        >
+          Desbloqueá el{' '}
+          <strong className={layout === 'modal' ? 'text-slate-900' : 'font-semibold text-white'}>
+            AI Visibility Accelerator
+          </strong>{' '}
+          para {brandName}: score por motores, oportunidades priorizadas y un roadmap concreto para mejorar tu presencia
+          en ChatGPT, Claude, Gemini y Perplexity.
         </p>
+        <div className={cn('mt-3 flex justify-center', layout === 'modal' ? '' : '')}>
+          <PlanConquistarPromoPrice size="md" inverted={layout !== 'modal'} />
+        </div>
       </div>
 
-      <div className="border-b border-slate-100 px-5 py-4 sm:px-8">
+      <div className={cn('border-slate-100 px-5 py-4 sm:px-8', layout === 'modal' ? 'border-y' : 'border-b bg-white')}>
         <ul className="grid gap-3 sm:grid-cols-2">
           {MODAL_FEATURES.map(({ title, desc }) => (
             <li key={title} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
@@ -330,23 +377,116 @@ function PlanConquistarUpsellCtaPanel({
                 {hiddenCount > 0 ? `Incluye ${hiddenCount} más en el plan completo. ` : null}
                 Convertí este diagnóstico en un plan de acción listo para ejecutar.
               </p>
-              <div className="mt-2">
-                <PlanConquistarPromoPrice size="md" />
-              </div>
             </div>
           </div>
-          <PlanConquistarCheckoutButton
-            variant="promo"
-            sourceChannel={sourceChannel}
-            className="w-full shrink-0 sm:w-auto"
-          />
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+            <PlanConquistarCheckoutButton
+              variant="promo"
+              sourceChannel={sourceChannel}
+              className="w-full sm:w-auto"
+            />
+            {onDismiss ? (
+              <button
+                type="button"
+                onClick={onDismiss}
+                className="text-center text-xs font-semibold text-violet-800/80 transition hover:text-violet-950"
+              >
+                No, por ahora no
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
       <p className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11px] text-slate-500">
         <Lock className="h-3.5 w-3.5" />
-        Pago seguro con Mercado Pago · Reporte Premium + plan de acción incluido
+        <PlanConquistarPromoPrice size="sm" />
+        <span className="text-slate-300">·</span>
+        Pago seguro con Mercado Pago · Reporte Premium incluido
       </p>
+    </>
+  );
+}
+
+function PlanConquistarPaywallModal({
+  open,
+  brandName,
+  totalOpportunities,
+  hiddenCount,
+  onClose,
+}: {
+  open: boolean;
+  brandName: string;
+  totalOpportunities: number;
+  hiddenCount: number;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-[2px]" aria-hidden onClick={onClose} />
+      <div className="fixed inset-0 z-[71] flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Plan Conquistar disponible"
+          className="relative my-4 w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl sm:my-0"
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <PlanConquistarUpsellOfferContent
+            brandName={brandName}
+            totalOpportunities={totalOpportunities}
+            hiddenCount={hiddenCount}
+            sourceChannel="ver_resultado_upsell_modal"
+            onDismiss={onClose}
+            layout="modal"
+          />
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
+// ── Panel CTA final (inline, checkout directo) ────────────────────────────────
+
+function PlanConquistarUpsellCtaPanel({
+  brandName,
+  totalOpportunities,
+  hiddenCount,
+  sourceChannel,
+}: {
+  brandName: string;
+  totalOpportunities: number;
+  hiddenCount: number;
+  sourceChannel: string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-xl shadow-violet-900/5">
+      <PlanConquistarUpsellOfferContent
+        brandName={brandName}
+        totalOpportunities={totalOpportunities}
+        hiddenCount={hiddenCount}
+        sourceChannel={sourceChannel}
+        layout="inline"
+      />
     </div>
   );
 }
@@ -354,6 +494,8 @@ function PlanConquistarUpsellCtaPanel({
 // ── Continuación Plan Conquistar (secciones 8+) ────────────────────────────────
 
 export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTeaserData }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const openModal = () => setModalOpen(true);
   const hiddenCount = Math.max(data.totalOpportunities - 3, 0);
   const implementationPrompts = data.implementationPrompts ?? [];
   const showDr = showDomainRatingPanel(data.domainRating);
@@ -374,16 +516,18 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
               <strong>{data.totalOpportunities} oportunidades</strong> más en el plan completo — desbloqueá desde el punto{' '}
               {sectionNum} para ver el roadmap personalizado de {data.brandName}.
             </p>
-            <div className="mt-2">
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
               <PlanConquistarPromoPrice size="md" />
             </div>
           </div>
-          <PlanConquistarCheckoutButton
-            variant="compact"
-            label="Desbloquear"
-            sourceChannel="ver_resultado_upsell_banner"
-            className="shrink-0"
-          />
+          <button
+            type="button"
+            onClick={openModal}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:shadow-md active:scale-[0.98]"
+          >
+            <Lock className="h-4 w-4 text-violet-500" />
+            Desbloquear
+          </button>
         </div>
       </div>
 
@@ -393,7 +537,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           title="Acceso de crawlers de IA"
           subtitle="¿ChatGPT y otros motores pueden rastrear tu sitio? Revisión de robots.txt, bots clave y checklist de verificación."
           previewMaxH={320}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
         >
           <CrawlerAccessPlanSection report={data.crawlerAccess} siteUrl={data.siteUrl ?? undefined} />
         </LockedSection>
@@ -405,7 +549,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
           title="Autoridad del dominio (SEO)"
           subtitle="Domain Rating (Ahrefs) de tu dominio vs competidores. Mide autoridad por backlinks; no es lo mismo que tu Cleexs Score en IA."
           previewMaxH={280}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
         >
           <DomainRatingPanel data={data.domainRating} />
         </LockedSection>
@@ -416,7 +560,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Oportunidades priorizadas"
         subtitle={`Te mostramos 3 de ${data.totalOpportunities}. Ordenadas por prioridad (mayor a menor).`}
         previewMaxH={380}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
       >
         <div className="grid gap-3 md:grid-cols-2">
           {data.opportunities.map((op, idx) => (
@@ -454,7 +598,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Mapa de ejecución"
         subtitle="Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas)."
         previewMaxH={300}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
       >
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
@@ -514,7 +658,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Plan de acción inmediato"
         subtitle="Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso."
         previewMaxH={260}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
       >
         <div className="space-y-2.5">
           {data.roadmap.map((phase) => (
@@ -551,7 +695,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Escenario económico (hipótesis)"
         subtitle="Calculadora con supuestos editables. Úsala para conversar con el cliente; no es proyección garantizada."
         previewMaxH={260}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
       >
         <EconomicScenarioPreview />
       </LockedSection>
@@ -561,7 +705,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Kit IA de implementación"
         subtitle="Prompts listos para copiar en ChatGPT o Claude, basados en los datos de esta corrida."
         previewMaxH={280}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
       >
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
           <div className="mb-3 flex items-center gap-2">
@@ -594,7 +738,7 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         title="Checklist de implementación"
         subtitle="Guía operativa para ejecutar el plan sin perder tiempo."
         previewMaxH={220}
-          sourceChannel="ver_resultado_upsell_section"
+          onUnlock={openModal}
       >
         <div className="grid gap-2 sm:grid-cols-2">
           {CHECKLIST_ITEMS.map((item) => (
@@ -611,6 +755,14 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         totalOpportunities={data.totalOpportunities}
         hiddenCount={hiddenCount}
         sourceChannel="ver_resultado_upsell"
+      />
+
+      <PlanConquistarPaywallModal
+        open={modalOpen}
+        brandName={data.brandName}
+        totalOpportunities={data.totalOpportunities}
+        hiddenCount={hiddenCount}
+        onClose={() => setModalOpen(false)}
       />
     </div>
   );

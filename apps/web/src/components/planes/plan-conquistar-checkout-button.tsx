@@ -109,9 +109,9 @@ const VARIANT_CLASSES = {
   sidebar:
     'flex w-full items-center justify-center gap-1.5 rounded-lg bg-white py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-50 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
   compact:
-    'inline-flex min-w-[9.5rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/30 ring-1 ring-white/20 transition hover:from-violet-500 hover:via-violet-600 hover:to-indigo-500 hover:shadow-violet-500/40 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
+    'inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:shadow-md active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
   promo:
-    'inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 px-6 py-3.5 text-white shadow-xl shadow-violet-600/30 ring-1 ring-white/20 transition hover:from-violet-500 hover:via-violet-600 hover:to-indigo-500 hover:shadow-violet-500/40 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
+    'inline-flex items-center justify-center gap-2.5 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-violet-600/20 transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
   overlay:
     'inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/95 px-5 py-2.5 text-xs font-bold text-violet-800 shadow-lg shadow-violet-900/10 backdrop-blur transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
 } as const;
@@ -145,7 +145,7 @@ export function PlanConquistarCheckoutButton({
     variant === 'sidebar' ? 'Quiero conquistar ChatGPT' : 'Quiero ser el favorito de ChatGPT';
   const buttonLabel = label ?? defaultLabel;
   const Icon = icon === 'sparkles' || variant === 'sidebar' ? Sparkles : Trophy;
-  const showPriceBlock = showPromoPrice || variant === 'compact' || variant === 'promo';
+  const showPriceBlock = showPromoPrice;
 
   async function handleCheckout() {
     setLoading(true);
