@@ -6,7 +6,10 @@ import { ReporteCorridas } from '@/app/ver-resultado/reporte-corridas';
 import { PlanConquistarUpsellTeaser } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
 import { SatelliteModuleCard } from '@/components/diagnostico/satellite-aeo-report';
-import { DomainRatingTeaser } from '@/components/report/domain-rating-block';
+import {
+  CleexsEngineScoresPanel,
+  buildEngineScoresFromDiagnostic,
+} from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   loadPlanConquistarUpsellPreviewBundle,
@@ -44,6 +47,11 @@ function UpsellFullPreview({ bundle }: { bundle: PlanConquistarUpsellPreviewBund
     domain &&
     !domain.startsWith('brand-');
 
+  const engineScores = buildEngineScoresFromDiagnostic({
+    chatgptScore: runResult.cleexsScore,
+    lockUnavailableEngines: true,
+  });
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
@@ -73,7 +81,14 @@ function UpsellFullPreview({ bundle }: { bundle: PlanConquistarUpsellPreviewBund
                 showSatellite ? <CrawlerAccessTeaser module={satelliteModule} siteUrl={siteUrl} /> : null
               }
               satelliteBlock={showSatellite ? <SatelliteModuleCard module={satelliteModule} siteUrl={siteUrl} /> : null}
-              afterSummarySlot={data.domainRating ? <DomainRatingTeaser data={data.domainRating} /> : null}
+              afterSummarySlot={
+                <>
+                  <CleexsEngineScoresPanel
+                    engines={engineScores}
+                    subtitle="ChatGPT sale de tu corrida. Gemini, Claude y Perplexity se desbloquean con Plan Conquistar."
+                  />
+                </>
+              }
               appendSlot={<PlanConquistarUpsellTeaser data={data} />}
             />
           </CardContent>

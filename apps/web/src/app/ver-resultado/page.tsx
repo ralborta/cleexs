@@ -68,6 +68,11 @@ import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
 import { DomainRatingPanel, DomainRatingTeaser } from '@/components/report/domain-rating-block';
+import {
+  CleexsEngineScoresPanel,
+  buildEngineScoresFromDiagnostic,
+  type EngineCardKey,
+} from '@/components/diagnostico/cleexs-engine-scores-panel';
 import type { DomainRatingSnapshot } from '@/lib/api';
 
 const normalizeName = (value: string) =>
@@ -791,6 +796,45 @@ function VerResultadoContent() {
     return runResult;
   })();
 
+  const enginePaywallLabel: Record<EngineCardKey, string | null> = {
+    chatgpt: null,
+    gemini: 'Gemini',
+    claude: 'Claude',
+    perplexity: 'Perplexity',
+  };
+
+  const engineScoresForPanel = runResult
+    ? buildEngineScoresFromDiagnostic({
+        chatgptScore: runResult.cleexsScore,
+        runResultGemini,
+        runResultPerplexity,
+        runResultClaude,
+        geminiRunStatus: diagnostic.geminiRunStatus,
+        perplexityRunStatus: diagnostic.perplexityRunStatus,
+        claudeRunStatus: diagnostic.claudeRunStatus,
+        runGeminiId: diagnostic.runGeminiId,
+        runPerplexityId: diagnostic.runPerplexityId,
+        runClaudeId: diagnostic.runClaudeId,
+        lockUnavailableEngines: Boolean(diagnostic.showPlanConquistarUpsell),
+      })
+    : null;
+
+  const afterSummaryEnginesSlot =
+    engineScoresForPanel && diagnostic.showFullReport ? (
+      <CleexsEngineScoresPanel
+        engines={engineScoresForPanel}
+        subtitle={
+          diagnostic.showPlanConquistarUpsell
+            ? 'ChatGPT sale de tu corrida. Gemini, Claude y Perplexity se desbloquean con Plan Conquistar.'
+            : 'ChatGPT sale de la corrida. Gemini, Claude y Perplexity según disponibilidad de tu plan.'
+        }
+        onLockedClick={(engine) => {
+          const label = enginePaywallLabel[engine];
+          if (label) setPaywallEngine(label);
+        }}
+      />
+    ) : null;
+
   return (
     <div>
       <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-4 py-10 sm:px-6 sm:py-12">
@@ -1042,14 +1086,17 @@ function VerResultadoContent() {
                               ) : null
                             }
                             afterSummarySlot={
-                              diagnostic.domainRating ? (
-                                diagnostic.showFullReport &&
-                                diagnostic.domainRating.competitors.length > 0 ? (
-                                  <DomainRatingPanel data={diagnostic.domainRating} />
-                                ) : (
-                                  <DomainRatingTeaser data={diagnostic.domainRating} />
-                                )
-                              ) : null
+                              <>
+                                {afterSummaryEnginesSlot}
+                                {!diagnostic.showPlanConquistarUpsell && diagnostic.domainRating ? (
+                                  diagnostic.showFullReport &&
+                                  diagnostic.domainRating.competitors.length > 0 ? (
+                                    <DomainRatingPanel data={diagnostic.domainRating} />
+                                  ) : (
+                                    <DomainRatingTeaser data={diagnostic.domainRating} />
+                                  )
+                                ) : null}
+                              </>
                             }
                           />
                         ))}
