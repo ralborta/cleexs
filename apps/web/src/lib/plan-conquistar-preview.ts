@@ -189,3 +189,194 @@ export function buildPlanConquistarTeaserData(
     crawlerAccess: buildCrawlerAccessReport(satelliteModule, siteUrl),
   };
 }
+
+/** Datos de ejemplo para vista previa en admin (sin diagnóstico real). */
+export function buildPlanConquistarTeaserDemoData(): PlanConquistarTeaserData {
+  const brandName = 'Mailberry';
+  const opportunities = [
+    {
+      title: 'Consideración (30%) · Comparativo',
+      intention: 'Consideración',
+      score: 12,
+      priority: 88,
+      impact: 'Alto' as const,
+      effort: 'Bajo' as const,
+      scenario: 'Estoy evaluando opciones de email marketing para mi pyme.',
+      action: 'Creá una comparativa honesta contra el competidor que más aparece en ChatGPT.',
+    },
+    {
+      title: 'Precio (30%) · Consulta directa',
+      intention: 'Precio',
+      score: 34,
+      priority: 72,
+      impact: 'Medio' as const,
+      effort: 'Bajo' as const,
+      scenario: '¿Cuánto cuesta una plataforma de email marketing en Argentina?',
+      action: 'Publicá precios claros y FAQs sobre planes en el sitio.',
+    },
+    {
+      title: 'Calidad (40%) · Recomendación',
+      intention: 'Calidad',
+      score: 58,
+      priority: 55,
+      impact: 'Medio' as const,
+      effort: 'Bajo' as const,
+      scenario: '¿Qué herramienta de email marketing recomiendan para ecommerce?',
+      action: 'Sumá casos de uso y testimonios verificables por rubro.',
+    },
+  ];
+
+  return {
+    brandName,
+    cleexsScore: 47,
+    totalOpportunities: 18,
+    engineScores: { chatgpt: 47, gemini: null, claude: null, perplexity: null },
+    opportunities,
+    improveNow: opportunities.map((o) => ({ label: o.title, score: o.score })),
+    defendNow: [{ label: 'Precio (30%) · Consulta directa', score: 91 }],
+    externalAuthority: EXTERNAL_AUTHORITY_CHANNELS,
+    roadmap: buildImmediateActionPlan({
+      brandName,
+      primaryOpportunity: {
+        label: opportunities[0].title,
+        score: opportunities[0].score,
+        priority: opportunities[0].priority,
+        intention: opportunities[0].intention,
+        scenario: opportunities[0].scenario,
+        action: opportunities[0].action,
+      },
+      improveNow: opportunities.map((o) => ({
+        label: o.title,
+        score: o.score,
+        priority: o.priority,
+        intention: o.intention,
+        scenario: o.scenario,
+        action: o.action,
+      })),
+      topCompetitor: { name: 'Doppler', appearances: 9 },
+    }),
+    courseModules: COURSE_MODULES,
+    crawlerAccess: {
+      robotsFound: true,
+      robotsUrl: 'https://mailberry.com/robots.txt',
+      blockedCount: 1,
+      recommendedRobots: 'User-agent: GPTBot\nAllow: /\n\nUser-agent: OAI-SearchBot\nAllow: /',
+      verificationChecklist: [
+        'Revisá GPTBot y OAI-SearchBot en logs del servidor.',
+        'Validá robots.txt sin bloqueos accidentales.',
+      ],
+      teaserBots: [
+        { name: 'GPTBot', engine: 'ChatGPT', allowed: true },
+        { name: 'OAI-SearchBot', engine: 'OpenAI Search', allowed: false },
+        { name: 'PerplexityBot', engine: 'Perplexity', allowed: true },
+      ],
+      bots: [
+        { name: 'GPTBot', engine: 'ChatGPT', allowed: true },
+        { name: 'OAI-SearchBot', engine: 'OpenAI Search', allowed: false },
+        { name: 'PerplexityBot', engine: 'Perplexity', allowed: true },
+      ],
+    },
+  };
+}
+
+type Top3Entry = { position: number; name: string; type: string; reason?: string };
+
+export type PlanConquistarAdminRunDetail = {
+  id: string;
+  brand: {
+    id?: string;
+    name: string;
+    domain?: string | null;
+    competitors?: Array<{ id: string; name: string; domain?: string | null }>;
+    aliases?: Array<{ id: string; alias: string }>;
+  };
+  promptResults: Array<{
+    score: number;
+    responseText: string;
+    top3Json: unknown;
+    prompt?: {
+      promptText?: string;
+      category?: { name?: string } | null;
+    };
+  }>;
+  priaReports?: Array<{ priaTotal: number }>;
+};
+
+type PlanConquistarAdminContext = {
+  ok: boolean;
+  diagnostic: { id: string; domain: string; brandName: string } | null;
+  satelliteModule: PublicDiagnosticSatelliteModule | null;
+};
+
+function normalizePromptScore(score: number) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 0;
+  return n <= 1 ? n : n / 100;
+}
+
+function top3Entries(value: unknown): Top3Entry[] {
+  return Array.isArray(value) ? (value as Top3Entry[]) : [];
+}
+
+export function adminRunToPublicRunResult(run: PlanConquistarAdminRunDetail): PublicDiagnosticRunResult {
+  const prompts = run.promptResults || [];
+  const cleexsScore =
+    run.priaReports?.[0]?.priaTotal ??
+    (prompts.length ? prompts.reduce((sum, p) => sum + scoreToPct(p.score), 0) / prompts.length : 0);
+
+  return {
+    brandId: run.brand.id,
+    brandName: run.brand.name,
+    cleexsScore: Math.round(cleexsScore),
+    competitors: run.brand.competitors?.map((c) => c.name) ?? [],
+    competitorDetails: run.brand.competitors?.map((c) => ({ name: c.name, domain: c.domain })) ?? [],
+    brandAliases: run.brand.aliases?.map((a) => a.alias) ?? [],
+    promptResults: prompts.map((pr) => ({
+      category: pr.prompt?.category?.name ?? 'General',
+      score: normalizePromptScore(pr.score),
+      promptText: pr.prompt?.promptText ?? '',
+      responseText: pr.responseText ?? '',
+      top3Json: top3Entries(pr.top3Json),
+    })),
+  };
+}
+
+export type PlanConquistarTeaserPreviewMeta = {
+  brandName: string;
+  domain: string | null;
+  diagnosticId: string | null;
+  runId: string;
+};
+
+export async function loadPlanConquistarTeaserFromAdminRun(runId: string): Promise<{
+  data: PlanConquistarTeaserData;
+  meta: PlanConquistarTeaserPreviewMeta;
+}> {
+  const [runRes, contextRes] = await Promise.all([
+    fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}`, { cache: 'no-store' }),
+    fetch(`/api/admin-ui/plan-conquistar/runs/${encodeURIComponent(runId)}/context`, { cache: 'no-store' }),
+  ]);
+  if (!runRes.ok) {
+    const body = await runRes.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error || `Error ${runRes.status}`);
+  }
+  const run = (await runRes.json()) as PlanConquistarAdminRunDetail;
+  const context = contextRes.ok ? ((await contextRes.json()) as PlanConquistarAdminContext) : null;
+  const domain = context?.diagnostic?.domain ?? run.brand.domain ?? null;
+  const siteUrl = context?.satelliteModule?.targetUrl
+    || (domain && !domain.startsWith('brand-') ? `https://${domain.replace(/^https?:\/\//, '')}` : null);
+
+  return {
+    data: buildPlanConquistarTeaserData(
+      adminRunToPublicRunResult(run),
+      context?.satelliteModule,
+      siteUrl,
+    ),
+    meta: {
+      brandName: run.brand.name,
+      domain,
+      diagnosticId: context?.diagnostic?.id ?? null,
+      runId,
+    },
+  };
+}

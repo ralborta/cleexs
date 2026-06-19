@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, Lock, Megaphone, Unlock } from 'lucide-react';
+import { PlanConquistarUpsellClientPreview } from '@/components/admin/plan-conquistar-upsell-client-preview';
 
 type PromoConfig = {
   enabled: boolean;
@@ -220,6 +221,8 @@ export default function AdminPromocionesPage() {
           </div>
         </div>
       )}
+
+      <PlanConquistarUpsellClientPreview />
     </div>
   );
 }
