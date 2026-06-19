@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { Check, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { APP_PLANS, getAnnualPrice, type BillingMode } from '@/lib/plans';
 
 const TOKEN_KEY = 'cleexs_portal_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 function formatMoney(amount: number | null): string {
   if (amount == null) return '—';

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { Loader2, Sparkles, Trophy } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 const TOKEN_KEY = 'cleexs_portal_token';
 
 type CheckoutAttribution = {
