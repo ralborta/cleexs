@@ -1,14 +1,6 @@
-# Configuración para el servicio API en Railway.
-# Root Directory: raíz del repo (para Prisma y workspaces).
-#
-# Pre-deploy: no-op (evita que @cleexs/web ejecute migraciones con DATABASE_URL local).
-# Migraciones: en el start de la API vía `npm run deploy:api`.
+# Config compartida de build (monorepo). Deploy por servicio:
+# - API: apps/api/railway.toml (o Settings del dashboard)
+# - Web: apps/web/railway.toml (o Settings del dashboard)
 
 [build]
 builder = "RAILPACK"
-
-[deploy]
-preDeployCommand = "/bin/true"
-startCommand = "npm run deploy:api"
-healthcheckPath = "/health"
-healthcheckTimeout = 120
