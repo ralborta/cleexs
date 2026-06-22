@@ -9,6 +9,9 @@ import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
 
+/** Runs auxiliares por motor en diagnósticos públicos; no cuentan como corrida de producto. */
+const DIAGNOSTIC_ENGINE_RUN_TYPES = ['diagnostic_gemini', 'diagnostic_perplexity', 'diagnostic_claude'] as const;
+
 function planConquistarGeminiConfigured(): boolean {
   return Boolean(
     process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
@@ -771,7 +774,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         prisma.tenant.count(),
         prisma.user.count(),
         prisma.brand.count(),
-        prisma.run.count(),
+        prisma.run.count({ where: { runType: { notIn: [...DIAGNOSTIC_ENGINE_RUN_TYPES] } } }),
         prisma.payment.count(),
         prisma.subscription.count(),
         prisma.leadContact.count(),

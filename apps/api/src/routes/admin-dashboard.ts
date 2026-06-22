@@ -7,6 +7,9 @@ import {
 } from '../lib/email-outbound-status';
 import { prisma } from '../lib/prisma';
 
+/** Runs auxiliares por motor (Gemini/Perplexity/Claude); no cuentan como corrida de producto. */
+const DIAGNOSTIC_ENGINE_RUN_TYPES = ['diagnostic_gemini', 'diagnostic_perplexity', 'diagnostic_claude'] as const;
+
 function requireAdminSecret(request: FastifyRequest): boolean {
   const secret = process.env.ADMIN_API_SECRET?.trim();
   if (!secret) return false;
@@ -38,7 +41,12 @@ const adminDashboardRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.user.count(),
       prisma.user.count({ where: { passwordHash: { not: null } } }),
       prisma.brand.count(),
-      prisma.run.count({ where: { createdAt: { gte: since30 } } }),
+      prisma.run.count({
+        where: {
+          createdAt: { gte: since30 },
+          runType: { notIn: [...DIAGNOSTIC_ENGINE_RUN_TYPES] },
+        },
+      }),
       prisma.entitlementOverride.count({ where: { active: true } }),
       prisma.tenant.count({ where: { referralRewardAt: { not: null } } }),
     ]);
