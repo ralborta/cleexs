@@ -85,3 +85,16 @@ export function trackShare(
     ...opts,
   });
 }
+
+export function trackUnlockClick(opts: {
+  unlockKey: string;
+  label: string;
+  diagnosticId?: string;
+}): void {
+  post('/api/public/track/unlock-click', {
+    unlockKey: opts.unlockKey,
+    label: opts.label,
+    visitorId: getVisitorId(),
+    ...(opts.diagnosticId ? { diagnosticId: opts.diagnosticId } : {}),
+  });
+}

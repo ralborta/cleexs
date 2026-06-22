@@ -1689,6 +1689,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         referredRows,
         purchases,
         sentEmails,
+        unlockClickGroups,
       ] = await Promise.all([
         prisma.pageView.count({ where }),
         prisma.pageView.groupBy({
@@ -1709,6 +1710,11 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         prisma.leadEmail.findMany({
           where: { status: 'sent', sentAt: { gte: from, lte: to } },
           select: { leadSource: { select: { competitorDomain: true } } },
+        }),
+        prisma.unlockClickEvent.groupBy({
+          by: ['unlockKey'],
+          where,
+          _count: { _all: true },
         }),
       ]);
 
@@ -1749,6 +1755,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         .sort((a, b) => b.count - a.count);
       const purchasedTotal = purchases.length;
 
+      const unlockClickTotal = unlockClickGroups.reduce((acc, g) => acc + g._count._all, 0);
+
       // Cold outreach: dominios contactados (email enviado) que luego entraron al diagnóstico.
       const contactedDomains = new Set<string>();
       for (const e of sentEmails) {
@@ -1783,6 +1791,10 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
             pct: pct(referredTotal, urlSubmitted),
             byCode: referredByCode,
           },
+          unlockClicks: {
+            count: unlockClickTotal,
+            pct: pct(unlockClickTotal, emailLeft),
+          },
           purchased: {
             count: purchasedTotal,
             pct: pct(purchasedTotal, urlSubmitted),
@@ -1795,6 +1807,64 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           domainsReturned: returnedDomains,
           returnPct: pct(returnedDomains, contactedDomains.size),
         },
+      };
+    }
+  );
+
+  // Detalle de clics en "Desbloquear" (upsell Plan Conquistar).
+  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+    '/internal/conversion-metrics/unlock-clicks',
+    async (request) => {
+      const now = new Date();
+      const parseDay = (value: string | undefined, fallback: Date): Date => {
+        if (!value) return fallback;
+        const d = new Date(`${value}T00:00:00.000Z`);
+        return Number.isNaN(d.getTime()) ? fallback : d;
+      };
+      const defaultFrom = new Date(now);
+      defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 6);
+      defaultFrom.setUTCHours(0, 0, 0, 0);
+      const from = parseDay(request.query.from, defaultFrom);
+      const toRaw = parseDay(request.query.to, now);
+      const to = new Date(toRaw);
+      to.setUTCHours(23, 59, 59, 999);
+
+      const where = { createdAt: { gte: from, lte: to } };
+
+      const grouped = await prisma.unlockClickEvent.groupBy({
+        by: ['unlockKey'],
+        where,
+        _count: { _all: true },
+      });
+
+      const labelRows =
+        grouped.length > 0
+          ? await prisma.unlockClickEvent.findMany({
+              where: { unlockKey: { in: grouped.map((g) => g.unlockKey) } },
+              distinct: ['unlockKey'],
+              select: { unlockKey: true, label: true },
+            })
+          : [];
+      const labelByKey = new Map(labelRows.map((r) => [r.unlockKey, r.label]));
+
+      const items = grouped
+        .map((g) => ({
+          unlockKey: g.unlockKey,
+          label: labelByKey.get(g.unlockKey) || g.unlockKey,
+          count: g._count._all,
+        }))
+        .sort((a, b) => {
+          if (b.count !== a.count) return b.count - a.count;
+          return a.unlockKey.localeCompare(b.unlockKey);
+        });
+
+      const total = items.reduce((acc, r) => acc + r.count, 0);
+
+      return {
+        ok: true,
+        range: { from: from.toISOString(), to: to.toISOString() },
+        total,
+        items,
       };
     }
   );

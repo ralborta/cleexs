@@ -9,6 +9,7 @@ import {
   Eye,
   Globe,
   Loader2,
+  Lock,
   Mail,
   RefreshCw,
   Share2,
@@ -29,6 +30,7 @@ type Metrics = {
     emailLeft: FunnelStep;
     shared: FunnelStep & { byChannel: { channel: string; count: number }[] };
     referred: FunnelStep & { byCode: { refCode: string; count: number }[] };
+    unlockClicks: FunnelStep;
     purchased: FunnelStep & { bySource: { source: string; count: number; usd: number }[] };
   };
   outreach: {
@@ -37,6 +39,18 @@ type Metrics = {
     domainsReturned: number;
     returnPct: number | null;
   };
+};
+
+type UnlockClickBreakdown = {
+  unlockKey: string;
+  label: string;
+  count: number;
+};
+
+type UnlockClicksResponse = {
+  ok: boolean;
+  total: number;
+  items: UnlockClickBreakdown[];
 };
 
 type EmailLead = {
@@ -122,6 +136,11 @@ export default function AdminConversionPage() {
   const [emailLeadsLoading, setEmailLeadsLoading] = useState(false);
   const [emailLeadsError, setEmailLeadsError] = useState<string | null>(null);
 
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [unlockBreakdown, setUnlockBreakdown] = useState<UnlockClickBreakdown[] | null>(null);
+  const [unlockLoading, setUnlockLoading] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+
   const openEmailDetail = useCallback(async () => {
     setEmailModalOpen(true);
     setEmailLeadsLoading(true);
@@ -136,6 +155,23 @@ export default function AdminConversionPage() {
       setEmailLeadsError(e instanceof Error ? e.message : 'Error');
     } finally {
       setEmailLeadsLoading(false);
+    }
+  }, [from, to]);
+
+  const openUnlockDetail = useCallback(async () => {
+    setUnlockModalOpen(true);
+    setUnlockLoading(true);
+    setUnlockError(null);
+    try {
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const res = await adminUiFetch(`/api/admin-ui/conversion/unlock-clicks${qs}`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
+      setUnlockBreakdown((json as UnlockClicksResponse).items ?? []);
+    } catch (e) {
+      setUnlockError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setUnlockLoading(false);
     }
   }, [from, to]);
 
@@ -257,7 +293,7 @@ export default function AdminConversionPage() {
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <FunnelCard
           icon={<Eye className="h-4 w-4 text-slate-600" />}
           label="Visitantes"
@@ -294,6 +330,15 @@ export default function AdminConversionPage() {
           value={fmt(f?.referred.count ?? 0)}
           pct={pctLabel(f?.referred.pct ?? null)}
           pctHint="vinieron por un link"
+        />
+        <FunnelCard
+          icon={<Lock className="h-4 w-4 text-violet-600" />}
+          label="Clics desbloquear"
+          value={fmt(f?.unlockClicks.count ?? 0)}
+          pct={pctLabel(f?.unlockClicks.pct ?? null)}
+          pctHint="de los que dejaron email"
+          onClick={openUnlockDetail}
+          actionHint="Ver detalle"
         />
         <FunnelCard
           icon={<DollarSign className="h-4 w-4 text-rose-600" />}
@@ -346,6 +391,17 @@ export default function AdminConversionPage() {
           rangeFrom={from}
           rangeTo={to}
           onClose={() => setEmailModalOpen(false)}
+        />
+      ) : null}
+
+      {unlockModalOpen ? (
+        <UnlockClicksModal
+          loading={unlockLoading}
+          error={unlockError}
+          items={unlockBreakdown}
+          rangeFrom={from}
+          rangeTo={to}
+          onClose={() => setUnlockModalOpen(false)}
         />
       ) : null}
     </div>
@@ -483,6 +539,98 @@ function EmailLeadsModal({
                   </div>
                   <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
                     {fmtDateTime(lead.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnlockClicksModal({
+  loading,
+  error,
+  items,
+  rangeFrom,
+  rangeTo,
+  onClose,
+}: {
+  loading: boolean;
+  error: string | null;
+  items: UnlockClickBreakdown[] | null;
+  rangeFrom: string;
+  rangeTo: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const total = items?.reduce((acc, r) => acc + r.count, 0) ?? 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px] sm:items-center sm:p-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalle de clics en desbloquear"
+        className="relative my-4 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Clics desbloquear</h2>
+              <p className="text-xs text-slate-500">
+                {rangeFrom} → {rangeTo}
+                {!loading && !error ? ` · ${fmt(total)} ${total === 1 ? 'clic' : 'clics'}` : ''}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando detalle...
+            </div>
+          ) : error ? (
+            <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          ) : !items?.length ? (
+            <div className="py-12 text-center text-sm text-slate-400">
+              No hay clics de desbloquear en este rango de fechas.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((row) => (
+                <li
+                  key={row.unlockKey}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
+                >
+                  <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
+                  <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
+                    {fmt(row.count)}
                   </span>
                 </li>
               ))}

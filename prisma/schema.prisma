@@ -668,6 +668,20 @@ model ShareEvent {
   @@map("share_events")
 }
 
+// Clics en "Desbloquear" del upsell Plan Conquistar (métricas de conversión admin).
+model UnlockClickEvent {
+  id           String   @id @default(uuid())
+  unlockKey    String   @map("unlock_key")
+  label        String
+  diagnosticId String?  @map("diagnostic_id")
+  visitorId    String?  @map("visitor_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([unlockKey, createdAt])
+  @@map("unlock_click_events")
+}
+
 // Campañas internas de referidores / auspiciadores para links de tráfico a Cleexs.
 model ReferralCampaign {
   id          String   @id @default(uuid())

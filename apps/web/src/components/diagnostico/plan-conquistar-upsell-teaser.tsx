@@ -25,6 +25,7 @@ import {
   type EngineCardKey,
   type EngineCardState,
 } from '@/components/diagnostico/cleexs-engine-scores-panel';
+import { trackUnlockClick } from '@/lib/track';
 
 type Opportunity = {
   title: string;
@@ -571,13 +572,40 @@ export function PlanConquistarUpsellTeaser({
   customerEmail?: string | null;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const openModal = () => setModalOpen(true);
+  const openUnlockModal = (unlockKey: string, label: string) => {
+    trackUnlockClick({
+      unlockKey,
+      label,
+      ...(diagnosticId ? { diagnosticId } : {}),
+    });
+    setModalOpen(true);
+  };
   const hiddenCount = Math.max(data.totalOpportunities - FREE_OPPORTUNITIES_PREVIEW, 0);
   const previewOpportunities = data.opportunities.slice(0, FREE_OPPORTUNITIES_PREVIEW);
   const implementationPrompts = data.implementationPrompts ?? [];
   const showDr = showDomainRatingPanel(data.domainRating);
 
   let sectionNum = 9;
+
+  const renderLockedSection = (
+    title: string,
+    subtitle: string,
+    previewMaxH: number,
+    children: ReactNode
+  ) => {
+    const num = sectionNum++;
+    return (
+      <LockedSection
+        num={num}
+        title={title}
+        subtitle={subtitle}
+        previewMaxH={previewMaxH}
+        onUnlock={() => openUnlockModal(`desbloqueo_${num}`, `Desbloqueo ${num} · ${title}`)}
+      >
+        {children}
+      </LockedSection>
+    );
+  };
 
   return (
     <div className="space-y-5 border-t border-violet-100 pt-5">
@@ -599,7 +627,7 @@ export function PlanConquistarUpsellTeaser({
           </div>
           <button
             type="button"
-            onClick={openModal}
+            onClick={() => openUnlockModal('desbloqueo_banner', 'Cartel Plan Conquistar')}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:shadow-md active:scale-[0.98]"
           >
             <Lock className="h-4 w-4 text-violet-500" />
@@ -608,37 +636,28 @@ export function PlanConquistarUpsellTeaser({
         </div>
       </div>
 
-      {data.crawlerAccess ? (
-        <LockedSection
-          num={sectionNum++}
-          title="Acceso de crawlers de IA"
-          subtitle="¿ChatGPT y otros motores pueden rastrear tu sitio? Revisión de robots.txt, bots clave y checklist de verificación."
-          previewMaxH={320}
-          onUnlock={openModal}
-        >
-          <CrawlerAccessPlanSection report={data.crawlerAccess} siteUrl={data.siteUrl ?? undefined} />
-        </LockedSection>
-      ) : null}
+      {data.crawlerAccess
+        ? renderLockedSection(
+            'Acceso de crawlers de IA',
+            '¿ChatGPT y otros motores pueden rastrear tu sitio? Revisión de robots.txt, bots clave y checklist de verificación.',
+            320,
+            <CrawlerAccessPlanSection report={data.crawlerAccess} siteUrl={data.siteUrl ?? undefined} />
+          )
+        : null}
 
-      {showDr && data.domainRating ? (
-        <LockedSection
-          num={sectionNum++}
-          title="Autoridad del dominio (SEO)"
-          subtitle="Domain Rating (Ahrefs) de tu dominio vs competidores. Mide autoridad por backlinks; no es lo mismo que tu Cleexs Score en IA."
-          previewMaxH={280}
-          onUnlock={openModal}
-        >
-          <DomainRatingPanel data={data.domainRating} />
-        </LockedSection>
-      ) : null}
+      {showDr && data.domainRating
+        ? renderLockedSection(
+            'Autoridad del dominio (SEO)',
+            'Domain Rating (Ahrefs) de tu dominio vs competidores. Mide autoridad por backlinks; no es lo mismo que tu Cleexs Score en IA.',
+            280,
+            <DomainRatingPanel data={data.domainRating} />
+          )
+        : null}
 
-      <LockedSection
-        num={sectionNum++}
-        title="Oportunidades priorizadas"
-        subtitle={`Te mostramos ${FREE_OPPORTUNITIES_PREVIEW} de ${data.totalOpportunities}. Ordenadas por prioridad (mayor a menor).`}
-        previewMaxH={260}
-          onUnlock={openModal}
-      >
+      {renderLockedSection(
+        'Oportunidades priorizadas',
+        `Te mostramos ${FREE_OPPORTUNITIES_PREVIEW} de ${data.totalOpportunities}. Ordenadas por prioridad (mayor a menor).`,
+        260,
         <div className="grid gap-3 md:grid-cols-2">
           {previewOpportunities.map((op, idx) => (
             <div key={`${op.title}-${idx}`} className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
@@ -668,15 +687,12 @@ export function PlanConquistarUpsellTeaser({
             </div>
           ))}
         </div>
-      </LockedSection>
+      )}
 
-      <LockedSection
-        num={sectionNum++}
-        title="Mapa de ejecución"
-        subtitle="Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas)."
-        previewMaxH={300}
-          onUnlock={openModal}
-      >
+      {renderLockedSection(
+        'Mapa de ejecución',
+        'Dónde enfocar primero según el score real de cada consulta y qué señales externas reforzar (sugeridas).',
+        300,
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
             <div className="mb-4 flex items-center gap-2">
@@ -728,15 +744,12 @@ export function PlanConquistarUpsellTeaser({
             </div>
           </div>
         </div>
-      </LockedSection>
+      )}
 
-      <LockedSection
-        num={sectionNum++}
-        title="Plan de acción inmediato"
-        subtitle="Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso."
-        previewMaxH={260}
-          onUnlock={openModal}
-      >
+      {renderLockedSection(
+        'Plan de acción inmediato',
+        'Tres bloques concretos basados en esta corrida: qué hacer primero, esta semana y el siguiente paso.',
+        260,
         <div className="space-y-2.5">
           {data.roadmap.map((phase) => (
             <div
@@ -765,15 +778,12 @@ export function PlanConquistarUpsellTeaser({
             </div>
           ))}
         </div>
-      </LockedSection>
+      )}
 
-      <LockedSection
-        num={sectionNum++}
-        title="Kit IA de implementación"
-        subtitle="Prompts listos para copiar en ChatGPT o Claude, basados en los datos de esta corrida."
-        previewMaxH={280}
-          onUnlock={openModal}
-      >
+      {renderLockedSection(
+        'Kit IA de implementación',
+        'Prompts listos para copiar en ChatGPT o Claude, basados en los datos de esta corrida.',
+        280,
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
           <div className="mb-3 flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-violet-600" />
@@ -798,15 +808,12 @@ export function PlanConquistarUpsellTeaser({
             ))}
           </div>
         </div>
-      </LockedSection>
+      )}
 
-      <LockedSection
-        num={sectionNum++}
-        title="Checklist de implementación"
-        subtitle="Guía operativa para ejecutar el plan sin perder tiempo."
-        previewMaxH={220}
-          onUnlock={openModal}
-      >
+      {renderLockedSection(
+        'Checklist de implementación',
+        'Guía operativa para ejecutar el plan sin perder tiempo.',
+        220,
         <div className="grid gap-2 sm:grid-cols-2">
           {CHECKLIST_ITEMS.map((item) => (
             <div key={item} className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
@@ -815,7 +822,7 @@ export function PlanConquistarUpsellTeaser({
             </div>
           ))}
         </div>
-      </LockedSection>
+      )}
 
       <PlanConquistarUpsellCtaPanel
         brandName={data.brandName}

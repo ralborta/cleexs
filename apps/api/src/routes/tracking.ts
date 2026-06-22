@@ -21,6 +21,13 @@ const shareSchema = z.object({
   visitorId: z.string().trim().max(64).optional(),
 });
 
+const unlockClickSchema = z.object({
+  unlockKey: z.string().trim().min(1).max(80),
+  label: z.string().trim().min(1).max(200),
+  diagnosticId: z.string().trim().max(64).optional(),
+  visitorId: z.string().trim().max(64).optional(),
+});
+
 const emptyToUndefined = (v?: string) => {
   const t = (v || '').trim();
   return t ? t : undefined;
@@ -68,6 +75,26 @@ const trackingRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(204).send();
     } catch (err) {
       fastify.log.warn({ err }, 'track/share failed');
+      return reply.code(204).send();
+    }
+  });
+
+  fastify.post<{ Body: unknown }>('/track/unlock-click', async (request, reply) => {
+    try {
+      const parsed = unlockClickSchema.safeParse(request.body ?? {});
+      if (!parsed.success) return reply.code(204).send();
+      const d = parsed.data;
+      await prisma.unlockClickEvent.create({
+        data: {
+          unlockKey: d.unlockKey,
+          label: d.label,
+          diagnosticId: emptyToUndefined(d.diagnosticId),
+          visitorId: emptyToUndefined(d.visitorId),
+        },
+      });
+      return reply.code(204).send();
+    } catch (err) {
+      fastify.log.warn({ err }, 'track/unlock-click failed');
       return reply.code(204).send();
     }
   });
