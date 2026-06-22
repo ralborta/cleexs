@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import { addDaysToDayString, formatDayInArgentina } from '@cleexs/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,25 +93,17 @@ function pctLabel(p: number | null) {
   return p == null ? '—' : `${p}%`;
 }
 
-function toDayString(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-function rangeForPreset(preset: 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
-  const today = new Date();
-  const to = new Date(today);
-  const from = new Date(today);
-  if (preset === 'ayer') {
-    from.setDate(from.getDate() - 1);
-    to.setDate(to.getDate() - 1);
-  } else if (preset === '7') {
-    from.setDate(from.getDate() - 6);
-  } else if (preset === '15') {
-    from.setDate(from.getDate() - 14);
-  } else {
-    from.setDate(from.getDate() - 29);
+function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
+  const today = formatDayInArgentina();
+  if (preset === 'hoy') {
+    return { from: today, to: today };
   }
-  return { from: toDayString(from), to: toDayString(to) };
+  if (preset === 'ayer') {
+    const yesterday = addDaysToDayString(today, -1);
+    return { from: yesterday, to: yesterday };
+  }
+  const span = preset === '7' ? 6 : preset === '15' ? 14 : 29;
+  return { from: addDaysToDayString(today, -span), to: today };
 }
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -123,10 +116,10 @@ const CHANNEL_LABEL: Record<string, string> = {
 };
 
 export default function AdminConversionPage() {
-  const initial = useMemo(() => rangeForPreset('7'), []);
+  const initial = useMemo(() => rangeForPreset('hoy'), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [activePreset, setActivePreset] = useState<string | null>('7');
+  const [activePreset, setActivePreset] = useState<string | null>('hoy');
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,7 +188,7 @@ export default function AdminConversionPage() {
     void load();
   }, [load]);
 
-  function applyPreset(preset: 'ayer' | '7' | '15' | '30') {
+  function applyPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30') {
     const r = rangeForPreset(preset);
     setFrom(r.from);
     setTo(r.to);
@@ -218,7 +211,8 @@ export default function AdminConversionPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Métricas de Conversión</h1>
             <p className="text-sm text-slate-600">
-              Embudo de adquisición de Cleexs. Elegí el rango de fechas para ver cómo venimos.
+              Embudo de adquisición de Cleexs. Elegí el rango de fechas para ver cómo venimos. Los días cierran a
+              medianoche hora Argentina.
             </p>
           </div>
         </div>
@@ -236,6 +230,7 @@ export default function AdminConversionPage() {
       <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-wrap gap-2">
           {([
+            ['hoy', 'Hoy'],
             ['ayer', 'Ayer'],
             ['7', 'Últimos 7 días'],
             ['15', 'Últimos 15 días'],
@@ -275,7 +270,7 @@ export default function AdminConversionPage() {
               type="date"
               value={to}
               min={from}
-              max={toDayString(new Date())}
+              max={formatDayInArgentina()}
               onChange={(e) => {
                 setTo(e.target.value);
                 setActivePreset(null);

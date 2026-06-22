@@ -6,6 +6,7 @@ import { executeRunGemini, executeRunPerplexity, executeRunClaude } from '../lib
 import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import type { SatelliteModuleResult } from '../lib/satellite-client';
 import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
+import { resolveConversionRange } from '@cleexs/shared';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
 
@@ -1660,21 +1661,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { from?: string; to?: string } }>(
     '/internal/conversion-metrics',
     async (request) => {
-      // Rango de fechas: default últimos 7 días. `from`/`to` en YYYY-MM-DD (inclusive).
-      const now = new Date();
-      const parseDay = (value: string | undefined, fallback: Date): Date => {
-        if (!value) return fallback;
-        const d = new Date(`${value}T00:00:00.000Z`);
-        return Number.isNaN(d.getTime()) ? fallback : d;
-      };
-      const defaultFrom = new Date(now);
-      defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 6);
-      defaultFrom.setUTCHours(0, 0, 0, 0);
-      const from = parseDay(request.query.from, defaultFrom);
-      const toRaw = parseDay(request.query.to, now);
-      // `to` inclusive: llevamos al final del día.
-      const to = new Date(toRaw);
-      to.setUTCHours(23, 59, 59, 999);
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
 
       const where = { createdAt: { gte: from, lte: to } };
       const pct = (num: number, den: number): number | null =>
@@ -1776,7 +1763,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         ok: true,
-        range: { from: from.toISOString(), to: to.toISOString() },
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
         funnel: {
           homeVisitors: { count: homeVisitors, pageViews: pageViewsTotal },
           urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
@@ -1815,19 +1802,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { from?: string; to?: string } }>(
     '/internal/conversion-metrics/unlock-clicks',
     async (request) => {
-      const now = new Date();
-      const parseDay = (value: string | undefined, fallback: Date): Date => {
-        if (!value) return fallback;
-        const d = new Date(`${value}T00:00:00.000Z`);
-        return Number.isNaN(d.getTime()) ? fallback : d;
-      };
-      const defaultFrom = new Date(now);
-      defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 6);
-      defaultFrom.setUTCHours(0, 0, 0, 0);
-      const from = parseDay(request.query.from, defaultFrom);
-      const toRaw = parseDay(request.query.to, now);
-      const to = new Date(toRaw);
-      to.setUTCHours(23, 59, 59, 999);
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
 
       const where = { createdAt: { gte: from, lte: to } };
 
@@ -1862,7 +1837,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         ok: true,
-        range: { from: from.toISOString(), to: to.toISOString() },
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
         total,
         items,
       };
@@ -1873,19 +1848,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { from?: string; to?: string } }>(
     '/internal/conversion-metrics/emails',
     async (request) => {
-      const now = new Date();
-      const parseDay = (value: string | undefined, fallback: Date): Date => {
-        if (!value) return fallback;
-        const d = new Date(`${value}T00:00:00.000Z`);
-        return Number.isNaN(d.getTime()) ? fallback : d;
-      };
-      const defaultFrom = new Date(now);
-      defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 6);
-      defaultFrom.setUTCHours(0, 0, 0, 0);
-      const from = parseDay(request.query.from, defaultFrom);
-      const toRaw = parseDay(request.query.to, now);
-      const to = new Date(toRaw);
-      to.setUTCHours(23, 59, 59, 999);
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
 
       const rows = await prisma.publicDiagnostic.findMany({
         where: { createdAt: { gte: from, lte: to }, email: { not: null } },
@@ -1907,7 +1870,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         ok: true,
-        range: { from: from.toISOString(), to: to.toISOString() },
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
         total: rows.length,
         items: rows,
       };
