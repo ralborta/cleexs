@@ -5,6 +5,7 @@ import { Eye, ExternalLink, FileCheck, Loader2, Search, UserRound } from 'lucide
 import { ReporteCorridas } from '@/app/ver-resultado/reporte-corridas';
 import {
   PlanConquistarEnginesAfterSummary,
+  PlanConquistarEconomicSection,
   PlanConquistarUpsellTeaser,
 } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
@@ -64,7 +65,7 @@ function UpsellFullPreview({ bundle }: { bundle: PlanConquistarUpsellPreviewBund
                   Vista previa · como lo verá el cliente
                 </CardTitle>
                 <CardDescription className="mt-1 text-xs sm:text-sm">
-                  Puntos 1–7 visibles · Plan Conquistar bloqueado desde el 8 ·{' '}
+                  Puntos 1–8 visibles (calculadora libre en 8) · Plan Conquistar bloqueado desde el 9 ·{' '}
                   <span className="font-medium">{meta.brandName}</span>
                   {domain ? ` · ${domain}` : null}
                 </CardDescription>
@@ -84,7 +85,12 @@ function UpsellFullPreview({ bundle }: { bundle: PlanConquistarUpsellPreviewBund
               afterSummarySlot={
                 <PlanConquistarEnginesAfterSummary engines={engineScores} upsell />
               }
-              appendSlot={<PlanConquistarUpsellTeaser data={data} />}
+              appendSlot={
+                <>
+                  <PlanConquistarEconomicSection />
+                  <PlanConquistarUpsellTeaser data={data} />
+                </>
+              }
             />
           </CardContent>
         </Card>
@@ -201,8 +207,9 @@ export function PlanConquistarUpsellClientPreview() {
           </div>
           <h2 className="mt-2 text-lg font-bold text-slate-900">Probá cómo lo verá un cliente</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600">
-            Elegí un cliente: verás el reporte free completo (puntos 1–7) y el Plan Conquistar bloqueado desde el
-            punto 8, igual que en <code className="rounded bg-slate-100 px-1 text-xs">/ver-resultado</code>.
+            Elegí un cliente: verás el reporte free completo (puntos 1–8, con calculadora libre en el 8) y el Plan
+            Conquistar bloqueado desde el 9, igual que en{' '}
+            <code className="rounded bg-slate-100 px-1 text-xs">/ver-resultado</code>.
           </p>
         </div>
       </div>

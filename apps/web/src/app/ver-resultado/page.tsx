@@ -63,6 +63,7 @@ import { SatelliteModuleCard, SatelliteModuleSkeleton } from '@/components/diagn
 import { ReporteCorridas } from './reporte-corridas';
 import {
   PlanConquistarEnginesAfterSummary,
+  PlanConquistarEconomicSection,
   PlanConquistarUpsellTeaser,
 } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import { CrawlerAccessTeaser } from '@/components/diagnostico/crawler-access-teaser';
@@ -1081,11 +1082,14 @@ function VerResultadoContent() {
                             }
                             appendSlot={
                               planConquistarTeaserData ? (
-                                <PlanConquistarUpsellTeaser
-                                  data={planConquistarTeaserData}
-                                  diagnosticId={diagnostic.id}
-                                  customerEmail={diagnostic.email}
-                                />
+                                <>
+                                  <PlanConquistarEconomicSection />
+                                  <PlanConquistarUpsellTeaser
+                                    data={planConquistarTeaserData}
+                                    diagnosticId={diagnostic.id}
+                                    customerEmail={diagnostic.email}
+                                  />
+                                </>
                               ) : null
                             }
                             afterSummarySlot={

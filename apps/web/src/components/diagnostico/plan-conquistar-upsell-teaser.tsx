@@ -104,7 +104,7 @@ function showDomainRatingPanel(domainRating?: DomainRatingSnapshot | null) {
   );
 }
 
-// ── Sección bloqueada (continúa numeración desde el punto 7 del reporte free) ──
+// ── Sección bloqueada (continúa numeración desde el punto 9 del reporte free) ──
 
 function LockedSectionHeading({
   num,
@@ -546,7 +546,20 @@ function PlanConquistarUpsellCtaPanel({
   );
 }
 
-// ── Continuación Plan Conquistar (secciones 8+) ────────────────────────────────
+/** Punto 8 del reporte free: calculadora libre, antes del cartel Plan Conquistar. */
+export function PlanConquistarEconomicSection() {
+  return (
+    <FreeSection
+      num={8}
+      title="Escenario económico (hipótesis)"
+      subtitle="Calculadora libre con supuestos editables. Úsala para conversar con el cliente; no es proyección garantizada."
+    >
+      <EconomicScenarioCalculator />
+    </FreeSection>
+  );
+}
+
+// ── Continuación Plan Conquistar (secciones 9+) ────────────────────────────────
 
 export function PlanConquistarUpsellTeaser({
   data,
@@ -564,7 +577,7 @@ export function PlanConquistarUpsellTeaser({
   const implementationPrompts = data.implementationPrompts ?? [];
   const showDr = showDomainRatingPanel(data.domainRating);
 
-  let sectionNum = 8;
+  let sectionNum = 9;
 
   return (
     <div className="space-y-5 border-t border-violet-100 pt-5">
@@ -576,7 +589,7 @@ export function PlanConquistarUpsellTeaser({
               AI Visibility Accelerator · Plan Conquistar
             </div>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Ya viste tu diagnóstico (resumen, score por motores y puntos 2–7). Detectamos{' '}
+              Ya viste tu diagnóstico (resumen, score por motores y puntos 2–8). Detectamos{' '}
               <strong>{data.totalOpportunities} oportunidades</strong> más en el plan completo — desbloqueá desde el punto{' '}
               {sectionNum} para ver el roadmap personalizado de {data.brandName}.
             </p>
@@ -753,14 +766,6 @@ export function PlanConquistarUpsellTeaser({
           ))}
         </div>
       </LockedSection>
-
-      <FreeSection
-        num={sectionNum++}
-        title="Escenario económico (hipótesis)"
-        subtitle="Calculadora libre con supuestos editables. Úsala para conversar con el cliente; no es proyección garantizada."
-      >
-        <EconomicScenarioCalculator />
-      </FreeSection>
 
       <LockedSection
         num={sectionNum++}
