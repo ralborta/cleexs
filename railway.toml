@@ -1,14 +1,14 @@
 # Configuración para el servicio API en Railway.
 # Root Directory: raíz del repo (para Prisma y workspaces).
 #
-# Flujo: Build → Pre-deploy (migraciones) → Start (solo Node) → Healthcheck.
-# Así /health responde en segundos y "Deploying" no se alarga esperando migraciones.
+# Pre-deploy: no-op (evita que @cleexs/web ejecute migraciones con DATABASE_URL local).
+# Migraciones: en el start de la API vía `npm run deploy:api`.
 
 [build]
 builder = "RAILPACK"
 
 [deploy]
-preDeployCommand = "npx prisma migrate deploy"
-startCommand = "node apps/api/dist/index.js"
+preDeployCommand = "/bin/true"
+startCommand = "npm run deploy:api"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
