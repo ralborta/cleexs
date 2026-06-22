@@ -13,7 +13,10 @@ import {
   RefreshCw,
   Gift,
 } from 'lucide-react';
-import { PlanConquistarCheckoutButton } from '@/components/planes/plan-conquistar-checkout-button';
+import {
+  PlanConquistarCheckoutButton,
+  PlanConquistarPromoPrice,
+} from '@/components/planes/plan-conquistar-checkout-button';
 
 export const metadata: Metadata = {
   title: 'Plan Conquistar ChatGPT en 90 Días | Cleexs',
@@ -88,9 +91,7 @@ export default function PlanConquistarPage() {
 
           <div className="mt-8 flex flex-col items-center gap-3">
             <PlanConquistarCheckoutButton />
-            <p className="text-sm text-slate-500">
-              Pago único de <strong className="font-semibold text-slate-700">USD 99</strong> · acceso por 90 días
-            </p>
+            <PlanConquistarPromoPrice size="md" className="justify-center" />
           </div>
         </div>
       </section>
@@ -156,10 +157,9 @@ export default function PlanConquistarPage() {
       {/* CTA final */}
       <section className="px-6 pb-20 pt-8">
         <div className="mx-auto max-w-2xl rounded-3xl border border-violet-200 bg-white p-9 text-center shadow-xl">
-          <p className="text-sm font-medium uppercase tracking-wide text-violet-600">Una sola vez</p>
-          <div className="mt-3 flex items-baseline justify-center gap-2">
-            <span className="text-5xl font-bold text-slate-900">USD 99</span>
-            <span className="text-slate-500">pago único</span>
+          <p className="text-sm font-medium uppercase tracking-wide text-violet-600">Pago único</p>
+          <div className="mt-3 flex justify-center">
+            <PlanConquistarPromoPrice size="md" className="text-lg [&>span:last-child]:text-3xl [&>span:last-child]:font-bold" />
           </div>
           <p className="mx-auto mt-4 max-w-md text-base text-slate-600">
             Sumate al Plan Conquistar ChatGPT en 90 días y empezá a construir tu ventaja antes de que tus

@@ -17,7 +17,10 @@ import {
   Wrench,
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-import { PlanConquistarCheckoutButton } from '@/components/planes/plan-conquistar-checkout-button';
+import {
+  PlanConquistarCheckoutButton,
+  PlanConquistarPromoPrice,
+} from '@/components/planes/plan-conquistar-checkout-button';
 import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
 
 export type PortalFreeTierNavProps = {
@@ -188,9 +191,7 @@ export function PortalFreeTierNav({
         <div className="flex items-center gap-2">
           <Trophy className="h-4 w-4 shrink-0" aria-hidden />
           <span className="text-sm font-bold leading-tight">Plan Conquistar</span>
-          <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide">
-            USD 99
-          </span>
+          <PlanConquistarPromoPrice size="sm" inverted className="ml-auto" />
         </div>
         <p className="mt-2 text-[11px] leading-snug text-violet-50">
           Sé la marca favorita de ChatGPT, Claude, Gemini y Perplexity en 90 días. Plan de acción + Premium incluido.

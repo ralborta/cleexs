@@ -291,6 +291,8 @@ function PlanConquistarUpsellOfferContent({
   sourceChannel,
   onDismiss,
   layout = 'inline',
+  diagnosticId,
+  customerEmail,
 }: {
   brandName: string;
   totalOpportunities: number;
@@ -298,6 +300,8 @@ function PlanConquistarUpsellOfferContent({
   sourceChannel: string;
   onDismiss?: () => void;
   layout?: 'inline' | 'modal';
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
 }) {
   return (
     <>
@@ -323,7 +327,7 @@ function PlanConquistarUpsellOfferContent({
               : 'bg-white/15 text-white ring-white/20'
           )}
         >
-          Promo · 3 meses
+          Pago único
         </p>
         <h3
           className={cn(
@@ -383,6 +387,8 @@ function PlanConquistarUpsellOfferContent({
             <PlanConquistarCheckoutButton
               variant="promo"
               sourceChannel={sourceChannel}
+              diagnosticId={diagnosticId}
+              customerEmail={customerEmail}
               className="w-full sm:w-auto"
             />
             {onDismiss ? (
@@ -398,11 +404,17 @@ function PlanConquistarUpsellOfferContent({
         </div>
       </div>
 
-      <p className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11px] text-slate-500">
+      <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 px-5 py-3 text-[11px] text-slate-500">
         <Lock className="h-3.5 w-3.5" />
         <PlanConquistarPromoPrice size="sm" />
         <span className="text-slate-300">·</span>
         Pago seguro con Mercado Pago · Reporte Premium incluido
+        {customerEmail ? (
+          <>
+            <span className="text-slate-300">·</span>
+            <span>Activación en {customerEmail}</span>
+          </>
+        ) : null}
       </p>
     </>
   );
@@ -414,12 +426,16 @@ function PlanConquistarPaywallModal({
   totalOpportunities,
   hiddenCount,
   onClose,
+  diagnosticId,
+  customerEmail,
 }: {
   open: boolean;
   brandName: string;
   totalOpportunities: number;
   hiddenCount: number;
   onClose: () => void;
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -457,6 +473,8 @@ function PlanConquistarPaywallModal({
             sourceChannel="ver_resultado_upsell_modal"
             onDismiss={onClose}
             layout="modal"
+            diagnosticId={diagnosticId}
+            customerEmail={customerEmail}
           />
         </div>
       </div>
@@ -472,11 +490,15 @@ function PlanConquistarUpsellCtaPanel({
   totalOpportunities,
   hiddenCount,
   sourceChannel,
+  diagnosticId,
+  customerEmail,
 }: {
   brandName: string;
   totalOpportunities: number;
   hiddenCount: number;
   sourceChannel: string;
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-xl shadow-violet-900/5">
@@ -486,6 +508,8 @@ function PlanConquistarUpsellCtaPanel({
         hiddenCount={hiddenCount}
         sourceChannel={sourceChannel}
         layout="inline"
+        diagnosticId={diagnosticId}
+        customerEmail={customerEmail}
       />
     </div>
   );
@@ -493,7 +517,15 @@ function PlanConquistarUpsellCtaPanel({
 
 // ── Continuación Plan Conquistar (secciones 8+) ────────────────────────────────
 
-export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTeaserData }) {
+export function PlanConquistarUpsellTeaser({
+  data,
+  diagnosticId,
+  customerEmail,
+}: {
+  data: PlanConquistarTeaserData;
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
+}) {
   const [modalOpen, setModalOpen] = useState(false);
   const openModal = () => setModalOpen(true);
   const hiddenCount = Math.max(data.totalOpportunities - 3, 0);
@@ -755,6 +787,8 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         totalOpportunities={data.totalOpportunities}
         hiddenCount={hiddenCount}
         sourceChannel="ver_resultado_upsell"
+        diagnosticId={diagnosticId}
+        customerEmail={customerEmail}
       />
 
       <PlanConquistarPaywallModal
@@ -763,6 +797,8 @@ export function PlanConquistarUpsellTeaser({ data }: { data: PlanConquistarTease
         totalOpportunities={data.totalOpportunities}
         hiddenCount={hiddenCount}
         onClose={() => setModalOpen(false)}
+        diagnosticId={diagnosticId}
+        customerEmail={customerEmail}
       />
     </div>
   );

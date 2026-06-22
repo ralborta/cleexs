@@ -1081,7 +1081,11 @@ function VerResultadoContent() {
                             }
                             appendSlot={
                               planConquistarTeaserData ? (
-                                <PlanConquistarUpsellTeaser data={planConquistarTeaserData} />
+                                <PlanConquistarUpsellTeaser
+                                  data={planConquistarTeaserData}
+                                  diagnosticId={diagnostic.id}
+                                  customerEmail={diagnostic.email}
+                                />
                               ) : null
                             }
                             afterSummarySlot={

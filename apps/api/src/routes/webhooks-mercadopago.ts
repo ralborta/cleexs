@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { getPaymentClient, getPreApprovalClient, verifyMercadoPagoWebhookSignature } from '../lib/mercadopago';
+import { activatePlanConquistarPremiumAfterPayment } from '../lib/plan-conquistar-activation';
 import { prisma } from '../lib/prisma';
 
 type MercadoPagoWebhookBody = {
@@ -278,31 +279,15 @@ async function processPlanConquistarPayment(payment: RawPayment, status: Payment
 
   if (status !== PaymentStatus.approved) return { processed: true, product: 'plan_conquistar_90d' };
 
-  const reason = `Plan Conquistar ChatGPT 90 días - MP ${payment.id ?? localPayment.id}`;
-  const existingOverride = await prisma.entitlementOverride.findFirst({
-    where: {
-      tenantId: localPayment.tenantId,
-      active: true,
-      reason,
-    },
-    select: { id: true },
+  const activation = await activatePlanConquistarPremiumAfterPayment({
+    tenantId: localPayment.tenantId,
+    paymentId: localPayment.id,
+    mpPaymentId: payment.id ? String(payment.id) : localPayment.mpPaymentId,
+    approvedAt,
+    payerEmail: payment.payer?.email ?? localPayment.payerEmail,
   });
 
-  if (!existingOverride) {
-    await prisma.entitlementOverride.create({
-      data: {
-        tenantId: localPayment.tenantId,
-        grantPlan: 'crecimiento',
-        reason,
-        startsAt: approvedAt,
-        endsAt: addDays(approvedAt, 90),
-        active: true,
-        createdBy: 'mercadopago-webhook',
-      },
-    });
-  }
-
-  return { processed: true, product: 'plan_conquistar_90d', premiumDays: 90 };
+  return { processed: true, product: 'plan_conquistar_90d', ...activation };
 }
 
 async function processPayment(resourceId: string) {

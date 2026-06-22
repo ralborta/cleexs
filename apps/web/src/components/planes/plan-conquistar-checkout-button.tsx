@@ -9,8 +9,10 @@ import { Loader2, Sparkles, Trophy } from 'lucide-react';
 const API_URL = resolveApiBaseUrl();
 const TOKEN_KEY = 'cleexs_portal_token';
 
-export const PLAN_CONQUISTAR_OLD_PRICE = 'USD 99 / mes';
-export const PLAN_CONQUISTAR_PROMO_PRICE = 'USD 99 × 3 meses';
+export const PLAN_CONQUISTAR_OLD_PRICE = 'USD 199';
+export const PLAN_CONQUISTAR_PRICE = 'USD 99 pago único';
+/** @deprecated usar PLAN_CONQUISTAR_PRICE */
+export const PLAN_CONQUISTAR_PROMO_PRICE = PLAN_CONQUISTAR_PRICE;
 
 type CheckoutAttribution = {
   refCode?: string;
@@ -18,6 +20,8 @@ type CheckoutAttribution = {
   utmMedium?: string;
   utmCampaign?: string;
   sourceChannel?: string;
+  diagnosticId?: string;
+  customerEmail?: string;
 };
 
 function readAttribution(): CheckoutAttribution {
@@ -44,16 +48,13 @@ function readAttribution(): CheckoutAttribution {
 
 export async function startPlanConquistarCheckout(attribution: CheckoutAttribution = {}) {
   const token = typeof window !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null;
-  if (!token) {
-    throw new Error('Para pagar y activar tus 90 días, primero iniciá sesión en el portal.');
-  }
+
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_URL}/api/subscriptions/plan-conquistar/checkout`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify({
       sourceChannel: 'plan_conquistar_landing',
       utmSource: 'cleexs',
@@ -63,10 +64,20 @@ export async function startPlanConquistarCheckout(attribution: CheckoutAttributi
       ...attribution,
     }),
   });
-  const body = (await res.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string };
+  const body = (await res.json().catch(() => ({}))) as {
+    checkoutUrl?: string;
+    error?: string;
+    portalToken?: string;
+    portalEmail?: string;
+  };
   if (!res.ok || !body.checkoutUrl) {
     throw new Error(body.error || 'No se pudo iniciar el pago.');
   }
+
+  if (body.portalToken && typeof window !== 'undefined') {
+    sessionStorage.setItem(TOKEN_KEY, body.portalToken);
+  }
+
   window.location.href = body.checkoutUrl;
 }
 
@@ -97,7 +108,7 @@ export function PlanConquistarPromoPrice({
           inverted ? 'text-white' : 'text-violet-700'
         )}
       >
-        {PLAN_CONQUISTAR_PROMO_PRICE}
+        {PLAN_CONQUISTAR_PRICE}
       </span>
     </span>
   );
@@ -126,6 +137,8 @@ export function PlanConquistarCheckoutButton({
   loading: externalLoading,
   onCheckoutStart,
   onCheckoutError,
+  diagnosticId,
+  customerEmail,
 }: {
   className?: string;
   variant?: keyof typeof VARIANT_CLASSES;
@@ -136,6 +149,8 @@ export function PlanConquistarCheckoutButton({
   loading?: boolean;
   onCheckoutStart?: () => void;
   onCheckoutError?: (message: string) => void;
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -152,7 +167,11 @@ export function PlanConquistarCheckoutButton({
     setError(null);
     onCheckoutStart?.();
     try {
-      await startPlanConquistarCheckout(sourceChannel ? { sourceChannel } : {});
+      await startPlanConquistarCheckout({
+        ...(sourceChannel ? { sourceChannel } : {}),
+        ...(diagnosticId ? { diagnosticId } : {}),
+        ...(customerEmail ? { customerEmail } : {}),
+      });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'No se pudo iniciar el pago.';
       setError(message);

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Lock, Sparkles, X } from 'lucide-react';
+import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
 
 const PLAN_CONQUISTAR_PATH = '/plan-conquistar';
 
@@ -68,7 +69,8 @@ export function EnginePaywallModal({
               <strong className="font-semibold text-slate-800">
                 Plan Conquistar ChatGPT en 90 días
               </strong>{' '}
-              por un único pago de <strong className="font-semibold text-slate-800">USD&nbsp;99</strong>.
+              por un pago único de{' '}
+              <PlanConquistarPromoPrice size="sm" className="inline-flex align-baseline" />.
             </p>
 
             <ul className="mt-4 space-y-2 text-sm text-slate-700">

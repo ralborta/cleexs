@@ -10,6 +10,12 @@ import {
   usdToArs,
 } from '../lib/billing';
 import { getPreApprovalClient, getPreferenceClient, getPublicAppUrl, resolveMercadoPagoCheckoutUrl } from '../lib/mercadopago';
+import {
+  activatePlanConquistarPremiumAfterPayment,
+  ensurePortalUserForDiagnosticCheckout,
+} from '../lib/plan-conquistar-activation';
+import { resolvePlanKey } from '../lib/entitlements';
+import { signPortalToken } from '../lib/portal-jwt';
 import { prisma } from '../lib/prisma';
 import { resolvePortalUserFromRequest } from '../lib/portal-user';
 
@@ -31,6 +37,8 @@ const planConquistarCheckoutSchema = z.object({
   utmMedium: attributionField,
   utmCampaign: attributionField,
   sourceChannel: attributionField,
+  diagnosticId: z.string().uuid().optional(),
+  customerEmail: z.string().email().optional(),
 });
 
 const cleanAttr = (v?: string) => {
@@ -182,10 +190,38 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
     '/subscriptions/plan-conquistar/checkout',
     async (request, reply) => {
       try {
-        const portalUser = await resolvePortalUserFromRequest(request);
+        const parsed = planConquistarCheckoutSchema.safeParse(request.body ?? {});
+        if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear el checkout.' });
+
+        let portalUser = await resolvePortalUserFromRequest(request);
+        let generatedPassword: string | undefined;
+
+        if (!portalUser && parsed.data.diagnosticId) {
+          const ensured = await ensurePortalUserForDiagnosticCheckout(prisma, parsed.data.diagnosticId);
+          if (!ensured) {
+            return reply.code(400).send({
+              error:
+                'No encontramos el email de tu diagnóstico. En la web el reporte solo se genera después de registrar tu correo.',
+            });
+          }
+          if (
+            parsed.data.customerEmail &&
+            parsed.data.customerEmail.trim().toLowerCase() !== ensured.email.toLowerCase()
+          ) {
+            return reply.code(400).send({ error: 'El email del checkout no coincide con el del diagnóstico.' });
+          }
+          portalUser = {
+            userId: ensured.userId,
+            tenantId: ensured.tenantId,
+            email: ensured.email,
+          };
+          generatedPassword = ensured.generatedPassword;
+        }
+
         if (!portalUser) {
           return reply.code(401).send({
-            error: 'Para comprar el Plan Conquistar necesitás iniciar sesión en el portal.',
+            error:
+              'Para comprar el Plan Conquistar iniciá sesión en el portal o abrí el checkout desde tu reporte (con el email que usaste al crear el diagnóstico).',
           });
         }
 
@@ -196,9 +232,6 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         if (actor?.role !== UserRole.owner) {
           return reply.code(403).send({ error: 'Solo el administrador de la cuenta puede contratar el plan.' });
         }
-
-        const parsed = planConquistarCheckoutSchema.safeParse(request.body ?? {});
-        if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear el checkout.' });
 
         if (!process.env.MP_ACCESS_TOKEN?.trim()) {
           return reply.code(503).send({ error: 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).' });
@@ -221,6 +254,8 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
             rawPayload: {
               product: 'plan_conquistar_90d',
               source: 'checkout_created',
+              diagnosticId: parsed.data.diagnosticId ?? null,
+              generatedPassword: generatedPassword ?? null,
               refCode: cleanAttr(parsed.data.refCode),
               utmSource: cleanAttr(parsed.data.utmSource),
               utmMedium: cleanAttr(parsed.data.utmMedium),
@@ -252,8 +287,8 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
               items: [
                 {
                   id: 'plan_conquistar_90d',
-                  title: 'Plan Conquistar ChatGPT en 90 días',
-                  description: 'Plan de acción personalizado + Cleexs Premium por 90 días',
+                  title: 'Plan Conquistar ChatGPT',
+                  description: 'Pago único USD 99 — plan de acción personalizado + Cleexs Premium',
                   quantity: 1,
                   unit_price: amountArs,
                   currency_id: 'ARS',
@@ -290,10 +325,19 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
             },
           });
 
+          let portalToken: string | undefined;
+          try {
+            portalToken = signPortalToken(portalUser.userId);
+          } catch {
+            portalToken = undefined;
+          }
+
           return {
             ok: true,
             paymentId: localPayment.id,
             checkoutUrl,
+            portalToken,
+            portalEmail: portalUser.email,
             amount: {
               usd: amountUsd,
               ars: amountArs,
@@ -321,6 +365,47 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(500).send({ error: checkoutErrorMessage(error) });
       }
     }
+  );
+
+  fastify.get<{ Params: { paymentId: string } }>(
+    '/subscriptions/plan-conquistar/payment/:paymentId/status',
+    async (request, reply) => {
+      const payment = await prisma.payment.findUnique({
+        where: { id: request.params.paymentId },
+        select: {
+          id: true,
+          status: true,
+          tenantId: true,
+          payerEmail: true,
+          paidAt: true,
+          rawPayload: true,
+        },
+      });
+      if (!payment) return reply.code(404).send({ error: 'Pago no encontrado.' });
+
+      const raw = (payment.rawPayload ?? {}) as Record<string, unknown>;
+      if (raw.product !== 'plan_conquistar_90d') {
+        return reply.code(404).send({ error: 'Pago no corresponde al Plan Conquistar.' });
+      }
+
+      const planKey = await resolvePlanKey(prisma, { tenantId: payment.tenantId });
+      const owner = await prisma.user.findFirst({
+        where: { tenantId: payment.tenantId, role: UserRole.owner },
+        orderBy: { createdAt: 'asc' },
+        select: { email: true },
+      });
+
+      return {
+        ok: true,
+        paymentId: payment.id,
+        status: payment.status,
+        planKey,
+        premiumActive: planKey === 'crecimiento' || planKey === 'enterprise',
+        portalEmail: owner?.email ?? payment.payerEmail,
+        paidAt: payment.paidAt,
+        portalUrl: `${getPublicAppUrl()}/portal-crecimiento`,
+      };
+    },
   );
 
   fastify.get('/me/subscription', async (request, reply) => {

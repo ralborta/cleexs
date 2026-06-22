@@ -3447,13 +3447,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     const isWaChannel = isWhatsAppSourceChannel(row.sourceChannel);
     const showFullReport = isWaChannel ? true : tier === 'gold' || isFirstRun;
 
+    const diagnosticEmail =
+      row.email?.trim() && !row.email.endsWith('@whatsapp.cleexs.net')
+        ? row.email.trim().toLowerCase()
+        : null;
+
     // Promo controlada desde admin: el upsell "Plan Conquistar" solo se suma al reporte
     // gratuito (freemium, no WhatsApp) cuando la promo está encendida y dentro de su ventana.
-    // Si está apagada (default), el reporte de resultados queda exactamente como siempre.
+    // En la web el reporte solo se genera con email (POST /start); sin email no mostramos upsell.
     const showPlanConquistarUpsell =
       showFullReport &&
       !isWaChannel &&
       tier !== 'gold' &&
+      Boolean(diagnosticEmail) &&
       isPlanConquistarUpsellActive(await getPlanConquistarUpsellConfig());
 
     const runResultShape = {
@@ -3536,8 +3542,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       runClaudeId: diagnostic.runClaudeId ?? null,
       shareSlug: shareSlugOut,
       setupDraft: setupDraft ?? null,
-      email:
-        row.email && !row.email.endsWith('@whatsapp.cleexs.net') ? row.email : null,
+      email: diagnosticEmail,
       sourceChannel: row.sourceChannel ?? null,
       ...(isWaChannel
         ? {
