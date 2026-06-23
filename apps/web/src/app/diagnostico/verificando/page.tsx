@@ -25,6 +25,7 @@ import { AnalysisProgressDial } from '@/components/diagnostico/analysis-progress
 import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
+import { OnboardingEmailCountdown } from '@/components/diagnostico/onboarding-email-countdown';
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -802,6 +803,33 @@ function VerificandoContent() {
   const setupDataReady = normalizedDiagnosticStatus === 'awaiting_user';
   const setupShowProcessing = !setupDataReady && !captchaVerified;
 
+  const showEmailCountdown = useMemo(() => {
+    if (handoff !== 'no') return false;
+    if (diagnosticEmailTrimmed) return false;
+    if (startAnalysisLoading || emailLoading) return false;
+    if (isPreRunBackdrop && setupDataReady && publicSetupStep === 6) return true;
+    if (needsLegacyEmailCaptchaModal && legacyPublicStep === 2) return true;
+    if (showLegacyEmail && !emailSent) return true;
+    return false;
+  }, [
+    handoff,
+    diagnosticEmailTrimmed,
+    startAnalysisLoading,
+    emailLoading,
+    isPreRunBackdrop,
+    setupDataReady,
+    publicSetupStep,
+    needsLegacyEmailCaptchaModal,
+    legacyPublicStep,
+    showLegacyEmail,
+    emailSent,
+  ]);
+
+  const handleEmailCountdownExpire = useCallback(() => {
+    if (diagnosticId) trackOnboarding('onboarding_email_countdown_expired', { diagnosticId });
+    exitPublicFunnelToMarketingSite();
+  }, [diagnosticId]);
+
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
@@ -1074,6 +1102,8 @@ function VerificandoContent() {
           informe.
         </p>
       </div>
+
+      <OnboardingEmailCountdown active={showEmailCountdown} onExpire={handleEmailCountdownExpire} />
 
       {portalRoot &&
         needsLegacyEmailCaptchaModal &&
