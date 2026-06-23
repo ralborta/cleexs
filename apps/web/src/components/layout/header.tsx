@@ -6,6 +6,7 @@ import { Upload, Bell, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import {
+  isPublicMarketingExitPath,
   logoHrefForPath,
   shouldHidePublicChrome,
   usesMinimalPublicHeader,
@@ -16,20 +17,33 @@ export function Header() {
   if (shouldHidePublicChrome(pathname)) return null;
   const minimal = usesMinimalPublicHeader(pathname);
   const logoHref = logoHrefForPath(pathname);
+  const logoExitsToMarketing = isPublicMarketingExitPath(pathname);
 
   if (minimal) {
     return (
       <header className="flex h-14 shrink-0 items-center border-b border-border bg-card">
         <div className="container mx-auto flex h-full items-center justify-between px-6">
-          <Link
-            href={logoHref}
-            className="flex items-center text-foreground no-underline hover:opacity-90"
-            aria-label="Cleexs"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
-              <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
-            </div>
-          </Link>
+          {logoExitsToMarketing ? (
+            <a
+              href={logoHref}
+              className="flex items-center text-foreground no-underline hover:opacity-90"
+              aria-label="Volver a cleexs.net"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
+                <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
+              </div>
+            </a>
+          ) : (
+            <Link
+              href={logoHref}
+              className="flex items-center text-foreground no-underline hover:opacity-90"
+              aria-label="Cleexs"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
+                <CleexsMark className="h-9 w-9 sm:h-10 sm:w-10" />
+              </div>
+            </Link>
+          )}
           <Link
             href="/contacto"
             className={

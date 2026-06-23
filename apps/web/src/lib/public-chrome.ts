@@ -1,3 +1,5 @@
+import { CLEEXS_MARKETING_URL } from './site';
+
 export const WA_RESULT_PATH_PREFIX = '/r/wa';
 export const TOOLS_PATH_PREFIX = '/tools';
 export const VERIFYING_PATH_PREFIX = '/diagnostico/verificando';
@@ -61,8 +63,18 @@ export function isPublicLegalPath(pathname: string | null): boolean {
   return false;
 }
 
+/** Funnel público (crear / verificando): logo y «atrás» del navegador vuelven a cleexs.net. */
+export function isPublicMarketingExitPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathMatchesPrefix(pathname, '/diagnostico/crear')) return true;
+  if (pathMatchesPrefix(pathname, '/prueba-gratuita')) return true;
+  if (pathMatchesPrefix(pathname, VERIFYING_PATH_PREFIX)) return true;
+  return false;
+}
+
 export function logoHrefForPath(pathname: string | null): string {
   if (!pathname) return '/';
+  if (isPublicMarketingExitPath(pathname)) return CLEEXS_MARKETING_URL;
   if (pathname.startsWith('/portal-cliente')) return '/portal-cliente';
   if (pathname.startsWith('/portal-crecimiento')) return '/portal-crecimiento';
   return '/';

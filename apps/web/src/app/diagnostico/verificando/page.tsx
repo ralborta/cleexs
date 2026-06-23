@@ -5,6 +5,10 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, us
 import { createPortal } from 'react-dom';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
+import {
+  exitPublicFunnelToMarketingSite,
+  usePublicFunnelBackToMarketing,
+} from '@/lib/public-funnel-exit';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -27,11 +31,6 @@ function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
-}
-
-/** Salida explícita del flujo público: marketing (cleexs.net), nunca a rutas internas de la app. */
-function exitPublicSetupToMarketingSite() {
-  window.location.assign(CLEEXS_MARKETING_URL);
 }
 
 function PulsingDots() {
@@ -89,6 +88,7 @@ function VerificandoContent() {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
   const tierQParam = searchParams.get('tier');
+  usePublicFunnelBackToMarketing(Boolean(diagnosticId));
   const [diagnostic, setDiagnostic] = useState<Awaited<ReturnType<typeof publicDiagnosticApi.get>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -813,11 +813,17 @@ function VerificandoContent() {
                 {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
               </h1>
             </div>
-            <img
-              src="/CleexsLogo.png"
-              alt="Cleexs"
-              className="h-14 w-auto shrink-0 object-contain sm:h-16"
-            />
+            <a
+              href={CLEEXS_MARKETING_URL}
+              className="shrink-0 rounded-lg transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
+              aria-label="Volver a cleexs.net"
+            >
+              <img
+                src="/CleexsLogo.png"
+                alt="Cleexs"
+                className="h-14 w-auto object-contain sm:h-16"
+              />
+            </a>
           </div>
         </div>
 
@@ -985,7 +991,7 @@ function VerificandoContent() {
                   onEmail={setSetupEmail}
                   onStepNext={handleWizardNext}
                   onBack={handleWizardBack}
-                  onExit={exitPublicSetupToMarketingSite}
+                  onExit={exitPublicFunnelToMarketingSite}
                   contextLoading={contextLoading}
                   finalizeLoading={startAnalysisLoading}
                   error={startAnalysisError}

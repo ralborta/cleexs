@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
+import { usePublicFunnelBackToMarketing } from '@/lib/public-funnel-exit';
 import { trackPageview } from '@/lib/track';
 import { Search, Globe, Loader2 } from 'lucide-react';
 
@@ -60,6 +61,8 @@ export default function CrearDiagnosticoPage() {
   const [error, setError] = useState<string | null>(null);
   const [autoStartRunning, setAutoStartRunning] = useState(false);
   const autoStartTriggered = useRef(false);
+
+  usePublicFunnelBackToMarketing();
 
   // Pageview para el funnel de conversión interno (anónimo). Una vez por sesión/ruta.
   useEffect(() => {
