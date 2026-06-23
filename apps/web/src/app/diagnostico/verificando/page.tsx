@@ -10,6 +10,8 @@ import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save, Sparkles } from 'lucide-re
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { openLegalPopup } from '@/lib/open-legal-popup';
+import { useSmoothProgress } from '@/lib/use-smooth-progress';
 import { cn } from '@/lib/utils';
 import {
   OnboardingSetupWizard,
@@ -91,6 +93,7 @@ function VerificandoContent() {
   const [error, setError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startTimeRef = useRef<number | null>(null);
+  const runningStartElapsedRef = useRef<number | null>(null);
 
   const [email, setEmail] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
@@ -179,7 +182,6 @@ function VerificandoContent() {
   const allStepsDone = stepsList.length > 0 && stepsList.every((s) => s.completed);
   const isFinalizing = isRunning && allStepsDone;
   const finalizingWave = 92 + ((elapsedSeconds % 7) / 6) * 6;
-  const barPct = isFinalizing ? finalizingWave : Math.min(progress, 100);
   const diagnosticEmailTrimmed = diagnostic?.email?.trim() ?? '';
   const hasServerEmailAfterStart = isRunning && Boolean(diagnosticEmailTrimmed);
   const needsLegacyEmailCaptchaModal =
@@ -194,14 +196,57 @@ function VerificandoContent() {
     displayCaptchaVerified &&
     normalizedDiagnosticStatus !== 'completed' &&
     normalizedDiagnosticStatus !== 'failed';
-  const displayActiveIndex = usingFakeProgress ? backdropStep : activeIndex;
-  const displayCardLabel = usingFakeProgress
+  const fakeBarPct = Math.round((backdropStep / ONBOARDING_STEP_LABELS.length) * 100);
+  const showFakeSteps = usingFakeProgress && !isRunning;
+  const displayActiveIndex = showFakeSteps ? backdropStep : activeIndex;
+  const displayCardLabel = showFakeSteps
     ? ANALYSIS_STEP_CARD_LABELS[backdropStep] ?? ''
     : ANALYSIS_STEP_CARD_LABELS[activeIndex] ?? currentLabel;
-  const displayCompletedCount = usingFakeProgress ? backdropStep : completedCount;
-  const displayBarPct = usingFakeProgress
-    ? Math.round((backdropStep / ONBOARDING_STEP_LABELS.length) * 100)
-    : barPct;
+  const displayCompletedCount = showFakeSteps ? backdropStep : completedCount;
+
+  useEffect(() => {
+    if (isRunning && runningStartElapsedRef.current == null) {
+      runningStartElapsedRef.current = elapsedSeconds;
+    }
+    if (!isRunning) runningStartElapsedRef.current = null;
+  }, [isRunning, elapsedSeconds]);
+
+  const runningElapsed =
+    runningStartElapsedRef.current != null
+      ? Math.max(0, elapsedSeconds - runningStartElapsedRef.current)
+      : 0;
+
+  const progressTarget = useMemo(() => {
+    if (!displayCaptchaVerified) return 0;
+    if (normalizedDiagnosticStatus === 'completed') return 100;
+    if (normalizedDiagnosticStatus === 'failed') return 0;
+
+    if (isRunning) {
+      if (isFinalizing) return finalizingWave;
+      const api = Math.min(progress, 100);
+      const fromApi = api <= 18 ? 55 : 55 + ((api - 18) / 82) * 41;
+      const fromTime = Math.min(94, 55 + Math.floor(runningElapsed / 4));
+      return Math.max(fromApi, fromTime);
+    }
+
+    if (usingFakeProgress) return fakeBarPct;
+
+    return Math.min(progress, 100);
+  }, [
+    displayCaptchaVerified,
+    normalizedDiagnosticStatus,
+    isRunning,
+    isFinalizing,
+    finalizingWave,
+    progress,
+    runningElapsed,
+    usingFakeProgress,
+    fakeBarPct,
+  ]);
+
+  const smoothProgressEnabled =
+    displayCaptchaVerified && normalizedDiagnosticStatus !== 'failed' && handoff === 'no';
+  const displayBarPct = useSmoothProgress(progressTarget, smoothProgressEnabled);
   const showLegacyEmail =
     analysisRunningPhase &&
     captchaVerified &&
@@ -210,12 +255,12 @@ function VerificandoContent() {
     progress >= 50;
 
   const activeStepForCards = useMemo(() => {
-    if (usingFakeProgress) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
+    if (showFakeSteps) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
     const firstPending = stepsList.findIndex((s) => !s.completed);
     if (firstPending >= 0) return firstPending;
     if (normalizedDiagnosticStatus === 'running') return ANALYSIS_STEP_CARD_LABELS.length - 1;
     return Math.max(activeIndex, 0);
-  }, [stepsList, normalizedDiagnosticStatus, activeIndex, usingFakeProgress, backdropStep]);
+  }, [stepsList, normalizedDiagnosticStatus, activeIndex, showFakeSteps, backdropStep]);
 
   // Solo saltar el captcha del onboarding clásico cuando el análisis ya arrancó CON email
   // (flujo nuevo POST /start). Si está `running` sin email, el usuario debe ver el modal.
@@ -236,6 +281,7 @@ function VerificandoContent() {
     setSetupIndustry('');
     setSetupEngines(['chatgpt']);
     contextConfirmedRef.current = false;
+    runningStartElapsedRef.current = null;
   }, [diagnosticId]);
 
   // Hidrata país/rubro sugeridos cuando llegan del backend (si el usuario aún no tocó).
@@ -383,14 +429,17 @@ function VerificandoContent() {
 
   // Avance fake del checklist izquierdo durante el setup: uno por uno, por tiempo,
   // independiente del proceso real. Arranca al confirmar país+rubro (displayCaptchaVerified)
-  // y se frena en el último paso (queda "en proceso"), sin marcar todo completo.
+  // y se frena antes del último paso (~73%) hasta que arranque el análisis real.
   useEffect(() => {
     if (!usingFakeProgress) {
       if (normalizedDiagnosticStatus === 'completed' || normalizedDiagnosticStatus === 'failed') return;
       setFakeBackdropStep(0);
       return;
     }
-    const maxStep = ONBOARDING_STEP_LABELS.length - 1;
+    const maxStep =
+      normalizedDiagnosticStatus === 'running'
+        ? ONBOARDING_STEP_LABELS.length - 1
+        : ONBOARDING_STEP_LABELS.length - 3;
     setFakeBackdropStep((s) => (s > 0 ? s : 1));
     const id = setInterval(() => {
       setFakeBackdropStep((s) => Math.min(maxStep, s + 1));
@@ -638,7 +687,7 @@ function VerificandoContent() {
     diagnostic.analysisJson == null;
   const waitingFinalReady = waitingSecondModel || waitingConsolidation;
   const analysisSteps: AnalysisStepItem[] = ANALYSIS_STEP_CARD_LABELS.map((label, i) => {
-    if (usingFakeProgress) {
+    if (showFakeSteps) {
       const isCompleted = i < backdropStep;
       const isActive = i === backdropStep;
       const state: AnalysisStepItem['state'] = isCompleted ? 'completed' : isActive ? 'active' : 'pending';
@@ -831,6 +880,12 @@ function VerificandoContent() {
                         </span>
                       </div>
                     </div>
+                    {isRunning && displayBarPct >= 85 && elapsedSeconds >= 90 && !isFinalizing && (
+                      <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                        Cerrando las consultas con ChatGPT. Suele tardar 1–2 minutos; en algunos sitios puede llegar a
+                        5.
+                      </p>
+                    )}
                     {isRunning && elapsedSeconds >= 360 && (
                       <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
                         Tarda más de lo usual. Si no avanzá, podés crear un diagnóstico más tarde.
@@ -1126,11 +1181,25 @@ function VerificandoContent() {
               </div>
               <p className="mt-6 text-center text-[11px] text-slate-500">
                 Al guardar aceptás los{' '}
-                <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline hover:text-violet-700">
+                <a
+                  href="/legal/cleexs#terminos-de-servicio"
+                  className="text-violet-600 underline hover:text-violet-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLegalPopup('/legal/cleexs#terminos-de-servicio');
+                  }}
+                >
                   Términos
                 </a>{' '}
                 y la{' '}
-                <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline hover:text-violet-700">
+                <a
+                  href="/legal/cleexs#politica-de-privacidad"
+                  className="text-violet-600 underline hover:text-violet-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLegalPopup('/legal/cleexs#politica-de-privacidad');
+                  }}
+                >
                   Privacidad
                 </a>
                 .

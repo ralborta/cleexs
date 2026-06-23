@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { COUNTRIES } from '@/lib/countries';
+import { openLegalPopup } from '@/lib/open-legal-popup';
 
 export type SetupStep = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -416,11 +417,25 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
               </div>
               <p className="mt-4 text-[11px] text-slate-500">
                 Al iniciar aceptás los{' '}
-                <a href="/legal/cleexs#terminos-de-servicio" className="text-violet-600 underline">
+                <a
+                  href="/legal/cleexs#terminos-de-servicio"
+                  className="text-violet-600 underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLegalPopup('/legal/cleexs#terminos-de-servicio');
+                  }}
+                >
                   Términos
                 </a>{' '}
                 y la{' '}
-                <a href="/legal/cleexs#politica-de-privacidad" className="text-violet-600 underline">
+                <a
+                  href="/legal/cleexs#politica-de-privacidad"
+                  className="text-violet-600 underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLegalPopup('/legal/cleexs#politica-de-privacidad');
+                  }}
+                >
                   Privacidad
                 </a>
                 .
