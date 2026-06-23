@@ -52,6 +52,7 @@ export type SatelliteModuleResult = {
  * El POST largo a /api/analyze-all suele cortarlo el proxy (~60s); el satélite expone /start + GET /jobs.
  */
 const DEFAULT_SATELLITE_TIMEOUT_MS = 900_000;
+const SATELLITE_FETCH_MAX_ATTEMPTS = 4;
 
 function parseSatelliteTimeoutMs(): number {
   const raw = process.env.SATELLITE_TIMEOUT_MS?.trim();
@@ -171,6 +172,105 @@ function buildActions(payload: SatelliteAnalyzeAllResponse): SatelliteModuleResu
   return actions;
 }
 
+function isRetryableFetchError(err: unknown): boolean {
+  if (!(err instanceof Error)) return true;
+  if (err.name === 'AbortError') return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes('fetch failed') ||
+    msg.includes('econnrefused') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout') ||
+    msg.includes('enotfound') ||
+    msg.includes('socket hang up') ||
+    msg.includes('network') ||
+    msg.includes('temporarily unavailable')
+  );
+}
+
+function isRetryableHttpStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+async function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    throw new DOMException('Aborted', 'AbortError');
+  }
+  await new Promise<void>((resolve, reject) => {
+    const t = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal.addEventListener('abort', onAbort);
+  });
+}
+
+async function fetchSatelliteWithRetry(
+  url: string,
+  init: RequestInit,
+  signal: AbortSignal,
+  maxAttempts = SATELLITE_FETCH_MAX_ATTEMPTS
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const resp = await fetch(url, { ...init, signal });
+      if (isRetryableHttpStatus(resp.status) && attempt < maxAttempts - 1) {
+        await sleepWithAbort(800 * 2 ** attempt, signal);
+        continue;
+      }
+      return resp;
+    } catch (err) {
+      lastErr = err;
+      if (err instanceof Error && err.name === 'AbortError') throw err;
+      if (!isRetryableFetchError(err) || attempt >= maxAttempts - 1) throw err;
+      await sleepWithAbort(800 * 2 ** attempt, signal);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('fetch failed');
+}
+
+/** Fallos de red / satélite ocupado: conviene reintentar en segundo plano en vez de mostrar error al usuario. */
+export function isTransientSatelliteFailure(result: SatelliteModuleResult | null | undefined): boolean {
+  if (!result) return true;
+  if (result.status === 'completed' || result.status === 'skipped' || result.status === 'pending') {
+    return false;
+  }
+  if (result.status === 'timeout') return true;
+  const err = (result.error ?? '').trim().toLowerCase();
+  if (!err) return result.status === 'failed';
+  if (err.includes('satellite_base_url no configurado')) return false;
+  if (err.includes('sin job_id')) return false;
+  if (/satellite http 4\d\d/.test(err) && !err.includes('408') && !err.includes('429')) {
+    return false;
+  }
+  return (
+    err.includes('fetch failed') ||
+    err.includes('econnrefused') ||
+    err.includes('econnreset') ||
+    err.includes('etimedout') ||
+    err.includes('socket hang up') ||
+    err.includes('timeout en análisis satélite') ||
+    err.includes('satellite http 5') ||
+    err.includes('satellite http 408') ||
+    err.includes('satellite http 429')
+  );
+}
+
+export function createPendingSatelliteModule(url: string): SatelliteModuleResult {
+  return {
+    status: 'pending',
+    targetUrl: url,
+    overallScore: 0,
+    tools: {},
+    actions: [],
+  };
+}
+
 export async function runSatelliteAnalysis(
   url: string
 ): Promise<SatelliteModuleResult> {
@@ -214,12 +314,15 @@ export async function runSatelliteAnalysis(
     });
 
   try {
-    const startResp = await fetch(`${base}/api/analyze-all/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-      signal: controller.signal,
-    });
+    const startResp = await fetchSatelliteWithRetry(
+      `${base}/api/analyze-all/start`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      },
+      controller.signal
+    );
 
     let payload: SatelliteAnalyzeAllResponse;
 
@@ -236,12 +339,15 @@ export async function runSatelliteAnalysis(
         };
       }
       for (;;) {
-        const jobResp = await fetch(`${base}/api/analyze-all/jobs/${jobId}`, {
-          signal: controller.signal,
-        });
+        const jobResp = await fetchSatelliteWithRetry(
+          `${base}/api/analyze-all/jobs/${jobId}`,
+          { method: 'GET' },
+          controller.signal
+        );
         if (!jobResp.ok) {
+          const retryable = isRetryableHttpStatus(jobResp.status);
           return {
-            status: 'failed',
+            status: retryable ? 'timeout' : 'failed',
             overallScore: 0,
             tools: {},
             actions: [],
@@ -272,12 +378,15 @@ export async function runSatelliteAnalysis(
       }
     } else if (startResp.status === 404) {
       // Satélite antiguo sin /start: un solo POST (puede cortar el proxy si tarda mucho).
-      const response = await fetch(`${base}/api/analyze-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-        signal: controller.signal,
-      });
+      const response = await fetchSatelliteWithRetry(
+        `${base}/api/analyze-all`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        },
+        controller.signal
+      );
 
       if (!response.ok) {
         return {

@@ -586,7 +586,12 @@ function VerResultadoContent() {
     }
     const awaitingAnalysis = diagnostic.analysisJson == null;
     const awaitingSatellite =
-      !diagnostic.domain.startsWith('brand-') && diagnostic.satelliteModule?.status === 'pending';
+      !diagnostic.domain.startsWith('brand-') &&
+      (diagnostic.satelliteModule?.status === 'pending' ||
+        (diagnostic.satelliteModule?.status === 'failed' &&
+          Object.keys(diagnostic.satelliteModule.tools || {}).length === 0) ||
+        (diagnostic.satelliteModule?.status === 'timeout' &&
+          Object.keys(diagnostic.satelliteModule.tools || {}).length === 0));
     if (!awaitingAnalysis && !awaitingSatellite) {
       return;
     }
@@ -606,7 +611,12 @@ function VerResultadoContent() {
         if (data.status === 'failed') return;
         const stillAwaitingAnalysis = data.analysisJson == null;
         const stillAwaitingSat =
-          !data.domain.startsWith('brand-') && data.satelliteModule?.status === 'pending';
+          !data.domain.startsWith('brand-') &&
+          (data.satelliteModule?.status === 'pending' ||
+            (data.satelliteModule?.status === 'failed' &&
+              Object.keys(data.satelliteModule.tools || {}).length === 0) ||
+            (data.satelliteModule?.status === 'timeout' &&
+              Object.keys(data.satelliteModule.tools || {}).length === 0));
         if (!stillAwaitingAnalysis && !stillAwaitingSat) {
           return;
         }
@@ -780,11 +790,16 @@ function VerResultadoContent() {
    * Mientras el satélite corre, `satelliteModule.status === 'pending'`.
    */
   const satelliteAeoPending = diagnostic.satelliteModule?.status === 'pending';
+  const satelliteAeoRecovering =
+    Boolean(diagnostic.satelliteModule) &&
+    (diagnostic.satelliteModule?.status === 'failed' ||
+      diagnostic.satelliteModule?.status === 'timeout') &&
+    Object.keys(diagnostic.satelliteModule?.tools || {}).length === 0;
   const showSatelliteSkeleton =
     isCompleted &&
     diagnostic.showFullReport &&
     !diagnostic.domain.startsWith('brand-') &&
-    (diagnostic.analysisJson == null || satelliteAeoPending);
+    (diagnostic.analysisJson == null || satelliteAeoPending || satelliteAeoRecovering);
   const runResultToShow: PublicDiagnosticRunResult | null = (() => {
     if (!runResult) return null;
     if (vistaModelo === 'gemini' && runResultGemini) return runResultGemini;
@@ -1052,7 +1067,9 @@ function VerResultadoContent() {
                             satelliteBlock={
                               <>
                                 {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
-                                {satelliteModule && satelliteModule.status !== 'pending' && (
+                                {satelliteModule &&
+                                  satelliteModule.status !== 'pending' &&
+                                  !satelliteAeoRecovering && (
                                   <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                                 )}
                               </>
@@ -1064,17 +1081,23 @@ function VerResultadoContent() {
                             brandName={runResultToShow.brandName}
                             trendData={diagnostic.trendData}
                             beforeSatelliteSlot={
-                              satelliteModule && satelliteModule.status !== 'pending' ? (
+                              satelliteModule &&
+                              satelliteModule.status !== 'pending' &&
+                              !satelliteAeoRecovering ? (
                                 <CrawlerAccessTeaser module={satelliteModule} siteUrl={satelliteSiteUrl} />
                               ) : null
                             }
                             satelliteBlock={
                               !diagnostic.domain.startsWith('brand-') &&
                               (showSatelliteSkeleton ||
-                                (satelliteModule && satelliteModule.status !== 'pending')) ? (
+                                (satelliteModule &&
+                                  satelliteModule.status !== 'pending' &&
+                                  !satelliteAeoRecovering)) ? (
                                 <>
                                   {showSatelliteSkeleton && <SatelliteModuleSkeleton />}
-                                  {satelliteModule && satelliteModule.status !== 'pending' && (
+                                  {satelliteModule &&
+                                    satelliteModule.status !== 'pending' &&
+                                    !satelliteAeoRecovering && (
                                     <SatelliteModuleCard module={satelliteModule} siteUrl={satelliteSiteUrl} />
                                   )}
                                 </>

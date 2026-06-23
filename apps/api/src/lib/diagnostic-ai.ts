@@ -314,8 +314,26 @@ function extractBodyTextExcerpt(html: string): string | undefined {
   return text.slice(0, 2400);
 }
 
+const WEBSITE_EVIDENCE_CACHE_TTL_MS = 12 * 60 * 1000;
+const websiteEvidenceCache = new Map<string, { at: number; value: WebsiteEvidence | null }>();
+
+function websiteEvidenceCacheKey(url: string): string {
+  try {
+    const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return new URL(normalized).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
 async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | null> {
   if (!url) return null;
+  const cacheKey = websiteEvidenceCacheKey(url);
+  const cached = websiteEvidenceCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < WEBSITE_EVIDENCE_CACHE_TTL_MS) {
+    return cached.value;
+  }
+
   const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8_000);
@@ -329,7 +347,10 @@ async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | nul
         Accept: 'text/html,application/xhtml+xml',
       },
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      websiteEvidenceCache.set(cacheKey, { at: Date.now(), value: null });
+      return null;
+    }
     const html = await response.text();
     const title = extractFirstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
     const metaDescription =
@@ -338,12 +359,71 @@ async function fetchWebsiteEvidence(url?: string): Promise<WebsiteEvidence | nul
     const h1 = extractFirstMatch(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i);
     const h2 = extractFirstMatch(html, /<h2[^>]*>([\s\S]*?)<\/h2>/i);
     const bodyTextExcerpt = extractBodyTextExcerpt(html);
-    return { title, metaDescription, h1, h2, bodyTextExcerpt, sourceUrl: normalized };
+    const value = { title, metaDescription, h1, h2, bodyTextExcerpt, sourceUrl: normalized };
+    websiteEvidenceCache.set(cacheKey, { at: Date.now(), value });
+    if (websiteEvidenceCache.size > 400) {
+      const cutoff = Date.now() - WEBSITE_EVIDENCE_CACHE_TTL_MS;
+      for (const [key, entry] of websiteEvidenceCache) {
+        if (entry.at < cutoff) websiteEvidenceCache.delete(key);
+      }
+    }
+    return value;
   } catch {
+    websiteEvidenceCache.set(cacheKey, { at: Date.now(), value: null });
     return null;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+const MARKET_PROFILE_CACHE_TTL_MS = 10 * 60 * 1000;
+const marketProfileCache = new Map<string, { at: number; profile: MarketProfileResult }>();
+
+function marketProfileCacheKey(websiteUrl: string, knownCountry?: string): string {
+  return `${websiteEvidenceCacheKey(websiteUrl)}|${(knownCountry || '').trim().toLowerCase()}`;
+}
+
+/**
+ * País + rubro para el wizard público (sin competidores).
+ * Reutiliza scrape del sitio y, si hace falta, Serper para dominios genéricos (.com).
+ * Cache por dominio para picos de tráfico repetido.
+ */
+export async function inferWizardMarketProfile(input: {
+  brandName: string;
+  websiteUrl: string;
+  fallbackCountry: string;
+  knownCountry?: string;
+  useSearchEvidence?: boolean;
+}): Promise<MarketProfileResult> {
+  const cacheKey = marketProfileCacheKey(input.websiteUrl, input.knownCountry);
+  const cached = marketProfileCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < MARKET_PROFILE_CACHE_TTL_MS) {
+    return cached.profile;
+  }
+
+  const searchEvidence =
+    !input.knownCountry?.trim() && input.useSearchEvidence !== false
+      ? await fetchSearchEvidence(input.brandName, input.websiteUrl, input.fallbackCountry)
+      : '';
+
+  const profile = await determineMarketProfileForBrand(
+    input.brandName,
+    input.fallbackCountry,
+    'General',
+    input.websiteUrl,
+    searchEvidence || undefined,
+    input.knownCountry
+  );
+
+  marketProfileCache.set(cacheKey, { at: Date.now(), profile });
+  if (marketProfileCache.size > 300) {
+    const cutoff = Date.now() - MARKET_PROFILE_CACHE_TTL_MS;
+    for (const [key, entry] of marketProfileCache) {
+      if (entry.at < cutoff) marketProfileCache.delete(key);
+    }
+  }
+
+  return profile;
 }
 
 /**

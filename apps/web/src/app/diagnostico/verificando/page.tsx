@@ -337,7 +337,7 @@ function VerificandoContent() {
       if (cancelled) return;
       const keep = await poll();
       if (!keep) clearInterval(interval);
-    }, 1500);
+    }, 3000);
     poll();
     return () => {
       cancelled = true;

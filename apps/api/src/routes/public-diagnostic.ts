@@ -17,14 +17,22 @@ import { runOutreachForRun } from '../lib/outreach';
 import {
   determineIndustry,
   getTop5Competitors,
+  inferWizardMarketProfile,
   resolveBrandAnalysisContext,
   resolveCompetitorDomains,
 } from '../lib/diagnostic-ai';
+import { createAsyncSlotQueue } from '../lib/async-slot-queue';
 import { getDefaultDiagnosticIntention, buildDiagnosticPrompts } from '../lib/diagnostic-prompts';
 import { getPlanConquistarUpsellConfig, isPlanConquistarUpsellActive } from '../lib/promo-settings';
 import { countryNameFromIso, geoMarketForCountryName } from '../lib/countries';
 import { buildRunContext, generateDiagnosticAnalysis } from '../lib/diagnostic-analysis';
-import { runSatelliteAnalysis, deepTruncateSatelliteDetail, type SatelliteModuleResult } from '../lib/satellite-client';
+import {
+  runSatelliteAnalysis,
+  deepTruncateSatelliteDetail,
+  createPendingSatelliteModule,
+  isTransientSatelliteFailure,
+  type SatelliteModuleResult,
+} from '../lib/satellite-client';
 import { isBuilderBotSendConfigured, sendWhatsAppMessage } from '../lib/builderbot';
 import { extractSponsorRefFromWhatsAppMessage } from '@cleexs/shared';
 import { notifyWhatsAppDiagnosticCompleted } from '../lib/whatsapp-notify';
@@ -644,6 +652,137 @@ async function ensureShareSlug(diagnosticId: string): Promise<string | null> {
 
 type PublicDiagLog = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>;
 
+/** Evita disparar rescates de competidores en paralelo (p. ej. muchos polls GET simultáneos). */
+const competitorRescueInFlight = new Set<string>();
+const satelliteCompletionInFlight = new Set<string>();
+
+async function mergeSatelliteIntoDiagnosticDb(
+  diagnosticId: string,
+  satellite: SatelliteModuleResult
+): Promise<void> {
+  const row = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: { analysisJson: true },
+  });
+  const existing =
+    row?.analysisJson && typeof row.analysisJson === 'object' && !Array.isArray(row.analysisJson)
+      ? (row.analysisJson as object)
+      : null;
+  const merged = buildAnalysisWithSatellite(existing, satellite);
+  if (!merged) return;
+  const safe = shrinkAnalysisJsonForPersistence(merged);
+  await prisma.publicDiagnostic.update({
+    where: { id: diagnosticId },
+    data: { analysisJson: safe as Prisma.InputJsonValue },
+  });
+}
+
+async function completeSatelliteAnalysisInBackground(
+  diagnosticId: string,
+  siteUrl: string,
+  log?: PublicDiagLog
+): Promise<void> {
+  const maxRounds = 3;
+  for (let round = 0; round < maxRounds; round++) {
+    const result = await runSatelliteAnalysis(siteUrl);
+    if (result.status === 'completed' || result.status === 'skipped') {
+      await mergeSatelliteIntoDiagnosticDb(diagnosticId, result);
+      log?.info({ diagnosticId, round }, 'Análisis técnico del sitio completado en segundo plano');
+      return;
+    }
+    if (!isTransientSatelliteFailure(result)) {
+      await mergeSatelliteIntoDiagnosticDb(diagnosticId, result);
+      log?.warn({ diagnosticId, error: result.error }, 'Análisis técnico del sitio falló de forma definitiva');
+      return;
+    }
+    if (round < maxRounds - 1) {
+      await new Promise((r) => setTimeout(r, 4000 * (round + 1)));
+    }
+  }
+  log?.warn({ diagnosticId }, 'Análisis técnico del sitio sigue indisponible; se mantiene pendiente para reintento');
+  await mergeSatelliteIntoDiagnosticDb(diagnosticId, createPendingSatelliteModule(siteUrl));
+}
+
+function scheduleSatelliteCompletionIfNeeded(params: {
+  diagnosticId: string;
+  siteUrl: string;
+  analysisJson: unknown;
+  log?: PublicDiagLog;
+}): void {
+  const url = params.siteUrl.trim();
+  if (!url) return;
+
+  const sat = extractSatelliteModuleFromAnalysis(params.analysisJson);
+  if (sat?.status === 'completed' || sat?.status === 'skipped') return;
+  if (sat?.status === 'failed' && !isTransientSatelliteFailure(sat)) return;
+  if (satelliteCompletionInFlight.has(params.diagnosticId)) return;
+
+  satelliteCompletionInFlight.add(params.diagnosticId);
+  setImmediate(async () => {
+    try {
+      if (!sat || sat.status !== 'pending') {
+        await mergeSatelliteIntoDiagnosticDb(params.diagnosticId, createPendingSatelliteModule(url));
+      }
+      await completeSatelliteAnalysisInBackground(params.diagnosticId, url, params.log);
+    } catch (err) {
+      params.log?.warn({ err, diagnosticId: params.diagnosticId }, 'Reintento análisis técnico del sitio falló');
+    } finally {
+      satelliteCompletionInFlight.delete(params.diagnosticId);
+    }
+  });
+}
+
+function resolveSatellitePrefetchResult(
+  trimmedUrl: string,
+  result: SatelliteModuleResult | null
+): SatelliteModuleResult {
+  if (!result) return createPendingSatelliteModule(trimmedUrl);
+  if (result.status === 'completed' || result.status === 'skipped') return result;
+  if (isTransientSatelliteFailure(result)) return createPendingSatelliteModule(trimmedUrl);
+  return result;
+}
+
+/** Colas en memoria: bajo pico de tráfico no lanzamos IA ilimitada en paralelo. */
+const contextInferenceQueue = createAsyncSlotQueue(
+  Number(process.env.PUBLIC_DIAG_CONTEXT_CONCURRENCY || 10)
+);
+const competitorDetectionQueue = createAsyncSlotQueue(
+  Number(process.env.PUBLIC_DIAG_COMPETITOR_CONCURRENCY || 8)
+);
+
+function scheduleCompetitorRescueIfNeeded(params: {
+  diagnosticId: string;
+  brandName: string;
+  domain: string;
+  setupDraftJson: unknown;
+}): void {
+  const draft = parsePublicSetupDraft(params.setupDraftJson);
+  if ((draft?.suggestedCompetitorUrls?.length ?? 0) > 0) return;
+
+  const domain = params.domain.trim().toLowerCase();
+  if (!domain || domain.startsWith('brand-')) return;
+
+  const attemptedAt = draft?.competitorRescueAttemptedAt;
+  const attemptedMs = attemptedAt ? Date.parse(attemptedAt) : 0;
+  const minGap = 30_000;
+  if (attemptedMs && !Number.isNaN(attemptedMs) && Date.now() - attemptedMs < minGap) return;
+  if (competitorRescueInFlight.has(params.diagnosticId)) return;
+
+  competitorRescueInFlight.add(params.diagnosticId);
+  setImmediate(async () => {
+    try {
+      await refillSuggestedCompetitorsIfEmpty({
+        ...params,
+        minRetryGapMs: minGap,
+      });
+    } catch {
+      // El siguiente poll o confirm-context puede reintentar.
+    } finally {
+      competitorRescueInFlight.delete(params.diagnosticId);
+    }
+  });
+}
+
 async function isFirstRunForDomain(diagnosticId: string, domain: string): Promise<boolean> {
   const firstCompleted = await prisma.publicDiagnostic.findFirst({
     where: { domain, status: 'completed' },
@@ -826,10 +965,11 @@ async function executePublicDiagnosticPipeline(params: {
     : (async () => {
         if (!trimmedUrl) return;
         try {
-          satellitePrefetch = await runSatelliteAnalysis(trimmedUrl);
+          const raw = await runSatelliteAnalysis(trimmedUrl);
+          satellitePrefetch = resolveSatellitePrefetchResult(trimmedUrl, raw);
         } catch (satErr) {
-          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible');
-          satellitePrefetch = null;
+          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible; queda pendiente');
+          satellitePrefetch = createPendingSatelliteModule(trimmedUrl);
         }
       })();
 
@@ -1026,6 +1166,21 @@ async function executePublicDiagnosticPipeline(params: {
     runAnalysisSatelliteBranch(),
   ]);
 
+  if (!skipSatellite && trimmedUrl) {
+    const satForSchedule =
+      extractSatelliteModuleFromAnalysis(analysisJson) ?? satellitePrefetch ?? null;
+    const satPending =
+      satForSchedule?.status === 'pending' || isTransientSatelliteFailure(satForSchedule);
+    if (satPending) {
+      scheduleSatelliteCompletionIfNeeded({
+        diagnosticId,
+        siteUrl: trimmedUrl,
+        analysisJson,
+        log,
+      });
+    }
+  }
+
   void ensureShareSlug(diagnosticId).catch((err) =>
     log.warn({ err, diagnosticId }, 'No se pudo asignar share_slug')
   );
@@ -1136,7 +1291,7 @@ async function refillSuggestedCompetitorsIfEmpty(params: {
 
   const attemptedAt = draft?.competitorRescueAttemptedAt;
   const attemptedMs = attemptedAt ? Date.parse(attemptedAt) : 0;
-  const minGap = params.minRetryGapMs ?? 12_000;
+  const minGap = params.minRetryGapMs ?? 30_000;
   if (attemptedMs && !Number.isNaN(attemptedMs) && Date.now() - attemptedMs < minGap) {
     return draft;
   }
@@ -1347,24 +1502,24 @@ async function runContextInferenceJob(params: {
 
   try {
     const countryFromTld = getCountryFromDomain(trimmedUrl);
-    const analysisContext = await resolveBrandAnalysisContext({
+    const knownCountry = countryFromTld || undefined;
+
+    const marketProfile = await inferWizardMarketProfile({
       brandName: brandForRun,
       websiteUrl: trimmedUrl,
       fallbackCountry: defaultCountry,
-      fallbackIndustry: 'General',
-      knownCountry: countryFromTld || undefined,
+      knownCountry,
       useSearchEvidence: serp,
     });
+
     const marketCountry =
-      countryFromTld ??
-      (analysisContext.confidence >= marketConfidenceMin
-        ? analysisContext.country || defaultCountry
+      knownCountry ||
+      (marketProfile.confidence >= marketConfidenceMin
+        ? marketProfile.country || defaultCountry
         : defaultCountry);
 
-    let suggestedIndustry: string | undefined;
-    const ctxIndustry = (analysisContext.industry || '').trim();
-    if (ctxIndustry && ctxIndustry.toLowerCase() !== 'general') suggestedIndustry = ctxIndustry;
-    if (!suggestedIndustry) {
+    let suggestedIndustry = (marketProfile.industry || '').trim();
+    if (!suggestedIndustry || suggestedIndustry.toLowerCase() === 'general') {
       try {
         const ind = await determineIndustry(brandForRun, trimmedUrl, marketCountry);
         const val = (ind.industry || '').trim();
@@ -1868,7 +2023,7 @@ async function startWhatsAppChannelDiagnostic(params: {
   const diagId = diagnostic.id;
   const resultUrl = buildWaResultUrl(diagId, baseUrl);
 
-  setImmediate(async () => {
+  competitorDetectionQueue(async () => {
     try {
       await runCompetitorDetectionJob({
         log,
@@ -2158,8 +2313,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const serp = useSerp !== false;
 
       // Solo país + rubro al crear; competidores después de confirm-context.
-      setImmediate(async () => {
-        await runContextInferenceJob({
+      contextInferenceQueue(() =>
+        runContextInferenceJob({
           log: fastify.log,
           diagnosticId: diagId,
           brandForRun,
@@ -2168,8 +2323,8 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           serp,
           defaultCountry,
           marketConfidenceMin,
-        });
-      });
+        })
+      );
 
       return reply.code(201).send({ diagnosticId: diagnostic.id });
     } catch (err) {
@@ -2399,7 +2554,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const trimmedUrl =
         diagnostic.domain && !diagnostic.domain.startsWith('brand-') ? `https://${diagnostic.domain}` : '';
       if (trimmedUrl) {
-        setImmediate(async () => {
+        competitorDetectionQueue(async () => {
           try {
             await runCompetitorDetectionJob({
               log: fastify.log,
@@ -3419,15 +3574,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
     }
 
-    let setupDraft = parsePublicSetupDraft(row.setupDraftJson);
+    const setupDraft = parsePublicSetupDraft(row.setupDraftJson);
     if (row.status === 'awaiting_user') {
-      setupDraft =
-        (await refillSuggestedCompetitorsIfEmpty({
-          diagnosticId: id,
-          brandName: row.brandName,
-          domain: row.domain,
-          setupDraftJson: row.setupDraftJson,
-        })) ?? setupDraft;
+      // No bloquear el poll: el rescate de competidores corre en background.
+      scheduleCompetitorRescueIfNeeded({
+        diagnosticId: id,
+        brandName: row.brandName,
+        domain: row.domain,
+        setupDraftJson: row.setupDraftJson,
+      });
     }
 
     let analysisJson: unknown = null;
@@ -3437,13 +3592,31 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         select: { analysisJson: true },
       });
       analysisJson = jsonOnly?.analysisJson ?? null;
+
+      if (!row.domain.startsWith('brand-')) {
+        const sat = extractSatelliteModuleFromAnalysis(analysisJson);
+        const needsSatellite =
+          !sat ||
+          sat.status === 'pending' ||
+          isTransientSatelliteFailure(sat);
+        if (needsSatellite) {
+          scheduleSatelliteCompletionIfNeeded({
+            diagnosticId: id,
+            siteUrl: `https://${row.domain.replace(/^www\./, '')}`,
+            analysisJson,
+          });
+        }
+      }
     }
 
     const diagnostic = { ...row, analysisJson };
 
     const tier =
       request.query?.tier === 'gold' || (diagnostic.tier ?? 'freemium') === 'gold' ? 'gold' : 'freemium';
-    const isFirstRun = await isFirstRunForDomain(diagnostic.id, diagnostic.domain);
+    const isFirstRun =
+      row.status === 'completed' || row.status === 'running'
+        ? await isFirstRunForDomain(diagnostic.id, diagnostic.domain)
+        : true;
     const isWaChannel = isWhatsAppSourceChannel(row.sourceChannel);
     const showFullReport = isWaChannel ? true : tier === 'gold' || isFirstRun;
 

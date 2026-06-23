@@ -544,6 +544,19 @@ function isSatelliteModuleDegraded(module: PublicDiagnosticSatelliteModule): boo
   return false;
 }
 
+function isTechnicalSatelliteError(message: string | undefined): boolean {
+  if (!message?.trim()) return false;
+  const e = message.trim().toLowerCase();
+  return (
+    e.includes('fetch failed') ||
+    e.includes('econnrefused') ||
+    e.includes('econnreset') ||
+    e.includes('etimedout') ||
+    e.includes('socket hang up') ||
+    e.includes('satellite http')
+  );
+}
+
 function SatelliteAeoDegradedNotice({
   module,
   siteUrl,
@@ -555,7 +568,9 @@ function SatelliteAeoDegradedNotice({
     module.status === 'timeout'
       ? 'Tiempo de espera agotado'
       : module.status === 'failed'
-        ? 'No pudimos analizar el sitio desde aquí'
+        ? isTechnicalSatelliteError(module.error)
+          ? 'Análisis técnico en proceso'
+          : 'No pudimos analizar el sitio desde aquí'
         : module.status === 'skipped'
           ? 'Análisis técnico no ejecutado'
           : 'Sin datos de herramientas en esta corrida';
@@ -564,8 +579,10 @@ function SatelliteAeoDegradedNotice({
     module.status === 'timeout'
       ? 'El análisis técnico del sitio tardó más de lo que el servidor pudo esperar. No guardamos scores ni detalle: no es que el sitio saque cero, es que la corrida no llegó a completarse.'
       : module.status === 'failed'
-        ? module.error?.trim() ||
-          'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o generá un diagnóstico nuevo con la misma URL.'
+        ? isTechnicalSatelliteError(module.error)
+          ? 'Estamos terminando el análisis técnico del sitio. Si no aparece en unos minutos, generá un diagnóstico nuevo con la misma URL.'
+          : module.error?.trim() ||
+            'El servicio de análisis del sitio respondió con error. Volvé a intentar más tarde o generá un diagnóstico nuevo con la misma URL.'
         : module.status === 'skipped'
           ? 'Este diagnóstico no incluye URL de sitio o el módulo AEO está desactivado.'
           : 'La corrida figura como completada pero no recibimos resultados por herramienta. Podés generar un diagnóstico nuevo o revisar el sitio con tu equipo técnico.';
