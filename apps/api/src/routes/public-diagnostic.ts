@@ -652,6 +652,14 @@ async function ensureShareSlug(diagnosticId: string): Promise<string | null> {
 
 type PublicDiagLog = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>;
 
+function isGeminiConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_API_KEY?.trim() ||
+      process.env.GEMINI_API_KEY?.trim() ||
+      process.env.GOOGLE_AI_API_KEY?.trim()
+  );
+}
+
 /** Evita disparar rescates de competidores en paralelo (p. ej. muchos polls GET simultáneos). */
 const competitorRescueInFlight = new Set<string>();
 const satelliteCompletionInFlight = new Set<string>();
@@ -808,7 +816,7 @@ async function executePublicDiagnosticPipeline(params: {
   competitorRows: Array<{ name: string; domain: string; aliases: string[] }>;
   /** Canal WhatsApp: no ejecutar módulo satélite externo. */
   skipSatellite?: boolean;
-  /** Canal WhatsApp: solo Cleexs core (OpenAI), sin corrida Gemini. */
+  /** Fuerza omitir corrida Gemini (p. ej. canal WhatsApp). En web, Gemini solo corre con tier gold. */
   skipGemini?: boolean;
   /** Canal WhatsApp / freemium-only: omitir corridas Perplexity y Claude vía OpenRouter. */
   skipOpenRouter?: boolean;
@@ -1157,10 +1165,11 @@ async function executePublicDiagnosticPipeline(params: {
     select: { tier: true },
   });
   const isGoldRun = diagnosticTierRow?.tier === 'gold';
+  const shouldRunGemini = !skipGemini && isGoldRun && isGeminiConfigured();
   const shouldRunOpenRouter = !skipOpenRouter && isGoldRun && isOpenRouterConfigured();
 
   await Promise.all([
-    skipGemini ? Promise.resolve() : runGeminiBranch(),
+    shouldRunGemini ? runGeminiBranch() : Promise.resolve(),
     shouldRunOpenRouter ? runPerplexityBranch() : Promise.resolve(),
     shouldRunOpenRouter ? runClaudeBranch() : Promise.resolve(),
     runAnalysisSatelliteBranch(),

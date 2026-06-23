@@ -266,7 +266,10 @@ function VerificandoContent() {
     const draft = d.setupDraft;
     setSetupCountry((prev) => prev || draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '');
     setSetupIndustry((prev) => prev || draft?.confirmedIndustry || draft?.suggestedIndustry || '');
-    if (draft?.selectedEngines?.length) setSetupEngines(draft.selectedEngines);
+    if (draft?.selectedEngines?.length) {
+      const fromDraft = draft.selectedEngines.filter(Boolean);
+      setSetupEngines(fromDraft.includes('chatgpt') ? fromDraft : ['chatgpt', ...fromDraft]);
+    }
     // Las URLs de competidores las hidrata el efecto que sigue el setupDraft (evita quedar en blanco si el primer poll llega sin borrador).
   }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft]);
 
@@ -429,7 +432,13 @@ function VerificandoContent() {
   }, [diagnosticId, setupCountry, setupIndustry, setupEngines]);
 
   const handleToggleEngine = useCallback((id: string) => {
-    setSetupEngines((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]));
+    if (id === 'chatgpt') return;
+    setSetupEngines((prev) => {
+      const withChatgpt = prev.includes('chatgpt') ? prev : ['chatgpt', ...prev];
+      return withChatgpt.includes(id)
+        ? withChatgpt.filter((e) => e !== id)
+        : [...withChatgpt, id];
+    });
   }, []);
 
   const handleCompetitorChange = useCallback(

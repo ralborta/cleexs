@@ -7,6 +7,7 @@ import {
   Check,
   Globe,
   Loader2,
+  Lock,
   Mail,
   Pencil,
   Plus,
@@ -22,7 +23,7 @@ import { COUNTRIES } from '@/lib/countries';
 
 export type SetupStep = 1 | 2 | 3 | 4 | 5 | 6;
 
-/** Motores de IA. En free todos disponibles; la selección queda registrada para plan pago. */
+/** Motores de IA. En free solo corre ChatGPT; el resto queda registrado para Plan Conquistar. */
 export const ENGINE_OPTIONS: Array<{ id: string; label: string; sub: string }> = [
   { id: 'chatgpt', label: 'ChatGPT', sub: 'OpenAI' },
   { id: 'gemini', label: 'Gemini', sub: 'Google' },
@@ -285,35 +286,48 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
           {step === 4 && (
             <div className="flex flex-col">
               <p className="text-sm leading-relaxed text-slate-600">
-                Hoy el análisis es gratis con ChatGPT. Elegí qué motores querés medir: dejamos registrada tu selección
-                para cuando sumes el plan pago.
+                Hoy medimos gratis con ChatGPT. Marcá qué otros motores te interesan: Gemini, Claude y Perplexity se
+                desbloquean con Plan Conquistar.
               </p>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 {ENGINE_OPTIONS.map((eng) => {
                   const selected = engines.includes(eng.id);
+                  const isChatgpt = eng.id === 'chatgpt';
+                  const isPremium = !isChatgpt;
                   return (
                     <button
                       key={eng.id}
                       type="button"
-                      onClick={() => onToggleEngine(eng.id)}
+                      onClick={() => !isChatgpt && onToggleEngine(eng.id)}
+                      disabled={isChatgpt}
                       className={cn(
                         'flex items-center gap-2.5 rounded-xl border p-3 text-left transition',
-                        selected
-                          ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-100'
-                          : 'border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40'
+                        isChatgpt
+                          ? 'cursor-default border-violet-400 bg-violet-50 ring-2 ring-violet-100'
+                          : selected
+                            ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-100'
+                            : 'border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40'
                       )}
                     >
                       <span
                         className={cn(
                           'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
-                          selected ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-300 bg-white'
+                          selected || isChatgpt
+                            ? 'border-violet-600 bg-violet-600 text-white'
+                            : 'border-slate-300 bg-white'
                         )}
                       >
-                        {selected && <Check className="h-3 w-3" />}
+                        {isPremium && !selected ? (
+                          <Lock className="h-3 w-3" />
+                        ) : (
+                          (selected || isChatgpt) && <Check className="h-3 w-3" />
+                        )}
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold text-slate-800">{eng.label}</span>
-                        <span className="block truncate text-[11px] text-slate-500">{eng.sub}</span>
+                        <span className="block truncate text-[11px] text-slate-500">
+                          {isChatgpt ? 'Incluido en tu corrida' : isPremium ? 'Plan Conquistar' : eng.sub}
+                        </span>
                       </span>
                     </button>
                   );

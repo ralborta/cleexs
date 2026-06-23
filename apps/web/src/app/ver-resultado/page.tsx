@@ -762,10 +762,11 @@ function VerResultadoContent() {
   if (runResultPerplexity) runsParaConsolidado.push(runResultPerplexity);
   if (runResultClaude) runsParaConsolidado.push(runResultClaude);
 
-  /** Hubo segundo run (Gemini/Perplexity/Claude) o ya hay datos: mostramos el selector de modelo. */
+  /** Selector por motor: siempre en reporte completo (motores extra con candado en free). */
   const mostrarTabsPorModelo =
     diagnostic.showFullReport &&
-    (Boolean(diagnostic.runGeminiId) ||
+    (Boolean(diagnostic.showPlanConquistarUpsell) ||
+      Boolean(diagnostic.runGeminiId) ||
       Boolean(diagnostic.runPerplexityId) ||
       Boolean(diagnostic.runClaudeId) ||
       tieneGemini ||
@@ -783,6 +784,7 @@ function VerResultadoContent() {
    * simplemente nunca se corrió porque es exclusivo de planes Premium. Al clickearlo
    * mostramos el upsell del Plan Conquistar en vez de un botón muerto.
    */
+  const geminiLocked = !runResultGemini && !geminiEnCola && !geminiFallo;
   const perplexityLocked = !runResultPerplexity && !perplexityEnCola && !perplexityFallo;
   const claudeLocked = !runResultClaude && !claudeEnCola && !claudeFallo;
   /**
@@ -922,23 +924,35 @@ function VerResultadoContent() {
                               </button>
                               <button
                                 type="button"
-                                disabled={!runResultGemini}
+                                disabled={!runResultGemini && !geminiLocked}
                                 title={
                                   geminiFallo
                                     ? 'Gemini no completó esta corrida.'
                                     : geminiEnCola
                                       ? 'Generando resultados con Gemini...'
-                                      : 'Ver métricas según respuestas de Gemini'
+                                      : runResultGemini
+                                        ? 'Ver métricas según respuestas de Gemini'
+                                        : 'Disponible con Plan Conquistar (Premium).'
                                 }
-                                onClick={() => runResultGemini && setVistaModelo('gemini')}
+                                onClick={() =>
+                                  runResultGemini
+                                    ? setVistaModelo('gemini')
+                                    : geminiLocked
+                                      ? setPaywallEngine('Gemini')
+                                      : undefined
+                                }
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 ${
                                   vistaModelo === 'gemini' && runResultGemini
                                     ? 'bg-primary-600 text-white shadow-md ring-2 ring-primary-300 ring-offset-1'
-                                    : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
+                                    : geminiLocked
+                                      ? 'bg-white text-slate-500 shadow-sm ring-1 ring-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:ring-violet-300'
+                                      : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:shadow hover:ring-slate-300'
                                 }`}
                               >
                                 {geminiEnCola ? (
                                   <Loader2 className="h-[18px] w-[18px] shrink-0 animate-spin text-primary-600" />
+                                ) : geminiLocked ? (
+                                  <Lock className="h-[14px] w-[14px] shrink-0 text-violet-500" />
                                 ) : (
                                   <CleexsMark className="h-[18px] w-[18px] shrink-0" />
                                 )}
