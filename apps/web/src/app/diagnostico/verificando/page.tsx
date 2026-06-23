@@ -71,8 +71,10 @@ function isReportReadyForRedirect(
   if (!diagnostic.runResult) return false;
   if (!diagnostic.showFullReport) return true;
 
-  // Esperamos a que exista consolidado técnico (analysisJson) para no abrir un reporte incompleto.
-  if (diagnostic.analysisJson == null) return false;
+  // En free el texto IA puede llegar unos segundos después; el reporte hace poll.
+  if (diagnostic.analysisJson == null) {
+    return diagnostic.tier !== 'gold';
+  }
 
   // Si hubo segundo modelo, esperamos su run o un fallo explícito.
   if (!diagnostic.runGeminiId) return true;
@@ -811,8 +813,8 @@ function VerificandoContent() {
                     {waitingFinalReady && (
                       <p className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-2 text-xs text-primary-800">
                         {waitingSecondModel
-                          ? 'Score base listo. Terminando el segundo modelo (Gemini) para habilitar consolidado…'
-                          : 'Score base listo. Cerrando consolidado técnico del informe…'}
+                          ? 'Score base listo. Terminando un motor adicional del plan premium…'
+                          : 'Score listo. Cerrando el informe (texto IA)…'}
                       </p>
                     )}
                     <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">

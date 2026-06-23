@@ -963,32 +963,41 @@ async function executePublicDiagnosticPipeline(params: {
     data: { runId: run.id },
   });
 
+  const diagnosticTierRow = await prisma.publicDiagnostic.findUnique({
+    where: { id: diagnosticId },
+    select: { tier: true },
+  });
+  const isGoldRun = diagnosticTierRow?.tier === 'gold';
+  const shouldRunGemini = !skipGemini && isGoldRun && isGeminiConfigured();
+  const shouldRunOpenRouter = !skipOpenRouter && isGoldRun && isOpenRouterConfigured();
+
   /**
-   * El análisis técnico del sitio solo necesita la URL; la corrida OpenAI necesita prompts + API.
-   * Ejecutar ambas en paralelo reduce el tiempo total antes de análisis IA + Gemini.
+   * Solo ChatGPT bloquea el "completado". El análisis técnico del sitio (satélite) corre en
+   * segundo plano: puede tardar varios minutos y no debe dejar la pantalla de verificando al 91%.
    */
   let satellitePrefetch: SatelliteModuleResult | null = null;
-  const satelliteDuringRunPromise = skipSatellite
-    ? Promise.resolve()
-    : (async () => {
-        if (!trimmedUrl) return;
+  if (!skipSatellite && trimmedUrl) {
+    void mergeSatelliteIntoDiagnosticDb(diagnosticId, createPendingSatelliteModule(trimmedUrl)).catch(
+      (err) => log.warn({ err, diagnosticId }, 'No se pudo marcar AEO pendiente al iniciar corrida')
+    );
+    setImmediate(() => {
+      void (async () => {
         try {
           const raw = await runSatelliteAnalysis(trimmedUrl);
           satellitePrefetch = resolveSatellitePrefetchResult(trimmedUrl, raw);
         } catch (satErr) {
-          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite no disponible; queda pendiente');
+          log.warn({ err: satErr, diagnosticId }, 'Módulo satélite en background no disponible');
           satellitePrefetch = createPendingSatelliteModule(trimmedUrl);
         }
       })();
+    });
+  }
 
-  await Promise.all([
-    executeRun(run.id, { promptVersionId: promptVersion.id }),
-    satelliteDuringRunPromise,
-  ]);
+  await executeRun(run.id, { promptVersionId: promptVersion.id });
 
   log.info(
     { diagnosticId, satelliteStarted: !skipSatellite && Boolean(trimmedUrl) },
-    'executeRun y análisis técnico del sitio (si hubo URL) completados en paralelo'
+    'executeRun completado; análisis técnico del sitio sigue en background si aplica'
   );
 
   await prisma.publicDiagnostic.update({
@@ -1087,8 +1096,10 @@ async function executePublicDiagnosticPipeline(params: {
   const runAnalysisSatelliteBranch = async (): Promise<void> => {
     let analysisDone: object | null = null;
     let analysisSettled = false;
-    /** Ya terminó en paralelo con `executeRun` (o null si no hubo URL / error). */
-    const satelliteDone = satellitePrefetch;
+    /** Resultado del satélite si ya terminó; si no, placeholder pending (sigue en background). */
+    const satelliteDone =
+      satellitePrefetch ??
+      (!skipSatellite && trimmedUrl ? createPendingSatelliteModule(trimmedUrl) : null);
 
     let persistChain = Promise.resolve();
     const schedulePersist = () => {
@@ -1130,13 +1141,12 @@ async function executePublicDiagnosticPipeline(params: {
           priaReport,
           businessContext: analysisContext.verticalSummary,
         });
-        const isFirstRun = await isFirstRunForDomain(diagnosticId, diagnosticDomain);
-        const analysis = await generateDiagnosticAnalysis(ctx, isFirstRun ? 'gold' : 'freemium');
+        const analysis = await generateDiagnosticAnalysis(ctx, isGoldRun ? 'gold' : 'freemium');
         if (analysis) {
-          if ((analysis as { tier?: string }).tier !== 'gold') {
+          if (isGoldRun && (analysis as { tier?: string }).tier !== 'gold') {
             log.warn(
               { diagnosticId },
-              'Gemini no disponible: solo se guardó análisis OpenAI. Configurá GEMINI_API_KEY en la API.'
+              'Tier gold: no se generó análisis multi-motor completo (revisá keys de IA en la API).'
             );
           }
           return analysis as object;
@@ -1159,14 +1169,6 @@ async function executePublicDiagnosticPipeline(params: {
       log.warn({ err: analysisErr, diagnosticId }, 'Análisis IA / satélite: error inesperado');
     }
   };
-
-  const diagnosticTierRow = await prisma.publicDiagnostic.findUnique({
-    where: { id: diagnosticId },
-    select: { tier: true },
-  });
-  const isGoldRun = diagnosticTierRow?.tier === 'gold';
-  const shouldRunGemini = !skipGemini && isGoldRun && isGeminiConfigured();
-  const shouldRunOpenRouter = !skipOpenRouter && isGoldRun && isOpenRouterConfigured();
 
   await Promise.all([
     shouldRunGemini ? runGeminiBranch() : Promise.resolve(),
