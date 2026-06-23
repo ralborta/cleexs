@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** 3 minutos y medio para completar el correo antes de volver a cleexs.net. */
+/** 3 minutos y medio para completar el correo antes de cancelar el análisis. */
 export const ONBOARDING_EMAIL_COUNTDOWN_SEC = 210;
 
 function formatCountdown(totalSeconds: number): string {
@@ -62,7 +62,7 @@ export function OnboardingEmailCountdown({
       role="status"
       aria-live="polite"
       className={cn(
-        'pointer-events-none fixed bottom-4 left-4 z-[120] w-[min(100%,18.5rem)]',
+        'pointer-events-none fixed bottom-4 right-4 z-[120] w-[min(100%,18.5rem)]',
         className
       )}
     >
@@ -87,7 +87,7 @@ export function OnboardingEmailCountdown({
                 Ingresá tu correo para continuar con el análisis
               </p>
               <p className="mt-1 text-[11px] leading-relaxed text-red-50/95">
-                Si no lo completás, volvés a cleexs.net cuando termine el tiempo.
+                Si no lo completás a tiempo, este análisis se cancela.
               </p>
             </div>
           </div>
