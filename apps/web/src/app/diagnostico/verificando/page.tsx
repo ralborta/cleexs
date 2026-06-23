@@ -255,6 +255,35 @@ function VerificandoContent() {
     !diagnosticEmailTrimmed &&
     progress >= 50;
 
+  const setupDataReady = normalizedDiagnosticStatus === 'awaiting_user';
+
+  const showEmailCountdown = useMemo(() => {
+    if (handoff !== 'no') return false;
+    if (diagnosticEmailTrimmed) return false;
+    if (startAnalysisLoading || emailLoading) return false;
+    if (isPreRunBackdrop && setupDataReady && publicSetupStep === 6) return true;
+    if (needsLegacyEmailCaptchaModal && legacyPublicStep === 2) return true;
+    if (showLegacyEmail && !emailSent) return true;
+    return false;
+  }, [
+    handoff,
+    diagnosticEmailTrimmed,
+    startAnalysisLoading,
+    emailLoading,
+    isPreRunBackdrop,
+    setupDataReady,
+    publicSetupStep,
+    needsLegacyEmailCaptchaModal,
+    legacyPublicStep,
+    showLegacyEmail,
+    emailSent,
+  ]);
+
+  const handleEmailCountdownExpire = useCallback(() => {
+    if (diagnosticId) trackOnboarding('onboarding_email_countdown_expired', { diagnosticId });
+    exitPublicFunnelToMarketingSite();
+  }, [diagnosticId]);
+
   const activeStepForCards = useMemo(() => {
     if (showFakeSteps) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
     const firstPending = stepsList.findIndex((s) => !s.completed);
@@ -800,35 +829,7 @@ function VerificandoContent() {
   // El captcha + wizard aparecen recién cuando la detección terminó (awaiting_user).
   // Antes mostramos un "remolino procesando". Tras confirmar país+rubro (captchaVerified)
   // ya no volvemos a tapar con el spinner aunque se re-detecten competidores.
-  const setupDataReady = normalizedDiagnosticStatus === 'awaiting_user';
   const setupShowProcessing = !setupDataReady && !captchaVerified;
-
-  const showEmailCountdown = useMemo(() => {
-    if (handoff !== 'no') return false;
-    if (diagnosticEmailTrimmed) return false;
-    if (startAnalysisLoading || emailLoading) return false;
-    if (isPreRunBackdrop && setupDataReady && publicSetupStep === 6) return true;
-    if (needsLegacyEmailCaptchaModal && legacyPublicStep === 2) return true;
-    if (showLegacyEmail && !emailSent) return true;
-    return false;
-  }, [
-    handoff,
-    diagnosticEmailTrimmed,
-    startAnalysisLoading,
-    emailLoading,
-    isPreRunBackdrop,
-    setupDataReady,
-    publicSetupStep,
-    needsLegacyEmailCaptchaModal,
-    legacyPublicStep,
-    showLegacyEmail,
-    emailSent,
-  ]);
-
-  const handleEmailCountdownExpire = useCallback(() => {
-    if (diagnosticId) trackOnboarding('onboarding_email_countdown_expired', { diagnosticId });
-    exitPublicFunnelToMarketingSite();
-  }, [diagnosticId]);
 
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
