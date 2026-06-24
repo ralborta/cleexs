@@ -260,10 +260,14 @@ export const promptsApi = {
 };
 
 export const runsApi = {
-  list: (tenantId?: string, brandId?: string) =>
-    api<Run[]>(
-      `/api/runs${tenantId || brandId ? `?${tenantId ? `tenantId=${tenantId}` : ''}${brandId ? `&brandId=${brandId}` : ''}` : ''}`
-    ),
+  list: (tenantId?: string, brandId?: string, primaryOnly?: boolean) => {
+    const params = new URLSearchParams();
+    if (tenantId) params.set('tenantId', tenantId);
+    if (brandId) params.set('brandId', brandId);
+    if (primaryOnly) params.set('primaryOnly', '1');
+    const qs = params.toString();
+    return api<Run[]>(`/api/runs${qs ? `?${qs}` : ''}`);
+  },
   get: (id: string) => api<Run>(`/api/runs/${id}`, { cache: 'no-store' }),
   getDebug: (runId: string) =>
     api<{

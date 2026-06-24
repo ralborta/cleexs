@@ -7,11 +7,9 @@ import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import type { SatelliteModuleResult } from '../lib/satellite-client';
 import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 import { resolveConversionRange } from '@cleexs/shared';
+import { primaryRunWhere } from '../lib/run-type-filters';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
-
-/** Runs auxiliares por motor en diagnósticos públicos; no cuentan como corrida de producto. */
-const DIAGNOSTIC_ENGINE_RUN_TYPES = ['diagnostic_gemini', 'diagnostic_perplexity', 'diagnostic_claude'] as const;
 
 function planConquistarGeminiConfigured(): boolean {
   return Boolean(
@@ -265,7 +263,10 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     fromDate.setDate(fromDate.getDate() - (windowDays - 1));
 
     const reports = await prisma.pRIAReport.findMany({
-      where: { createdAt: { gte: fromDate } },
+      where: {
+        createdAt: { gte: fromDate },
+        run: primaryRunWhere(),
+      },
       include: {
         brand: {
           select: { id: true, name: true, domain: true, industry: true },
@@ -775,7 +776,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         prisma.tenant.count(),
         prisma.user.count(),
         prisma.brand.count(),
-        prisma.run.count({ where: { runType: { notIn: [...DIAGNOSTIC_ENGINE_RUN_TYPES] } } }),
+        prisma.run.count({ where: primaryRunWhere() }),
         prisma.payment.count(),
         prisma.subscription.count(),
         prisma.leadContact.count(),
@@ -1890,12 +1891,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const and: Prisma.RunWhereInput[] = [
         { promptResults: { some: {} } },
-        // Excluir las sub-corridas auxiliares por motor (engine_*, *_gemini/_perplexity/_claude);
-        // solo queremos las corridas principales (diagnostic / monthly / deep_report).
-        { NOT: { runType: { startsWith: 'engine_' } } },
-        { NOT: { runType: { endsWith: '_gemini' } } },
-        { NOT: { runType: { endsWith: '_perplexity' } } },
-        { NOT: { runType: { endsWith: '_claude' } } },
+        primaryRunWhere(),
       ];
       if (q) {
         and.push({
@@ -2178,7 +2174,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         const runIds = lastDiagnostics.map((d) => d.runId).filter(Boolean) as string[];
         if (runIds.length > 0) {
           const runs = await prisma.run.findMany({
-            where: { id: { in: runIds } },
+            where: { id: { in: runIds }, ...primaryRunWhere() },
             include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
           });
           const scoreByRunId = new Map<string, number>();

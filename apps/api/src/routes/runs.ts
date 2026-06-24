@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { EntitlementAction, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { primaryRunWhere } from '../lib/run-type-filters';
 import { canCreateRun } from '../lib/tenant';
 import { parseTop3 } from '../lib/parsing';
 import { calculateScore } from '@cleexs/shared';
@@ -182,11 +183,14 @@ const runRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // GET /runs?tenantId=...&brandId=...
-  fastify.get<{ Querystring: { tenantId?: string; brandId?: string } }>('/', async (request) => {
+  // GET /runs?tenantId=...&brandId=...&primaryOnly=1
+  fastify.get<{ Querystring: { tenantId?: string; brandId?: string; primaryOnly?: string } }>('/', async (request) => {
     const where: any = {};
     if (request.query.tenantId) where.tenantId = request.query.tenantId;
     if (request.query.brandId) where.brandId = request.query.brandId;
+    if (request.query.primaryOnly === '1' || request.query.primaryOnly === 'true') {
+      Object.assign(where, primaryRunWhere());
+    }
 
     const runs = await prisma.run.findMany({
       where,

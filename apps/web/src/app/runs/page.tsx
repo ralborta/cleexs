@@ -29,6 +29,8 @@ export default function RunsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pathname = usePathname();
 
+  const isAdminRuns = pathname?.startsWith('/admin/runs') ?? false;
+
   useEffect(() => {
     // Permitimos cargar desde la ruta canónica /runs y también desde /admin/runs (wrapper interno).
     if (pathname !== '/runs' && !pathname?.startsWith('/admin/runs')) return;
@@ -39,7 +41,7 @@ export default function RunsPage() {
         if (cancelled) return;
         setTenantId(tenant.id);
         const [runsData, rankingData, brandsData] = await Promise.all([
-          runsApi.list(tenant.id),
+          runsApi.list(tenant.id, undefined, isAdminRuns),
           reportsApi.getRanking(tenant.id),
           brandsApi.list(tenant.id),
         ]);
@@ -58,7 +60,7 @@ export default function RunsPage() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, isAdminRuns]);
 
   const handleExecuteRun = async (runId: string) => {
     if (!tenantId) return;
@@ -66,7 +68,7 @@ export default function RunsPage() {
     setNotice(null);
     try {
       await runsApi.execute(runId, { model: 'gpt-4o-mini' });
-      const data = await runsApi.list(tenantId);
+      const data = await runsApi.list(tenantId, undefined, isAdminRuns);
       setRuns(data);
       setNotice({ type: 'success', message: 'Run ejecutado y Cleexs Score actualizado.' });
     } catch (error: any) {
