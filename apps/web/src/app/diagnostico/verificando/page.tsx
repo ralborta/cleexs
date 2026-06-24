@@ -94,7 +94,6 @@ function VerificandoContent() {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
   const tierQParam = searchParams.get('tier');
-  usePublicFunnelBackToMarketing(Boolean(diagnosticId));
   const [diagnostic, setDiagnostic] = useState<Awaited<ReturnType<typeof publicDiagnosticApi.get>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryLoading, setRetryLoading] = useState(false);
@@ -153,6 +152,11 @@ function VerificandoContent() {
     }, 5000);
     return () => clearInterval(id);
   }, []);
+
+  const reportGenerationFailed =
+    Boolean(error) || String(diagnostic?.status ?? '').trim().toLowerCase() === 'failed';
+  /** Solo en pantalla de error: atrás del navegador → cleexs.net (no `/diagnostico/crear`). */
+  usePublicFunnelBackToMarketing(reportGenerationFailed || !diagnosticId);
 
   const [handoff, setHandoff] = useState<'no' | 'preview' | 'leaving'>('no');
   const [visibleStepCards, setVisibleStepCards] = useState(3);
@@ -854,9 +858,6 @@ function VerificandoContent() {
       />
     );
   }
-
-  const diagnosticStatusLower = String(diagnostic?.status ?? '').trim().toLowerCase();
-  const reportGenerationFailed = Boolean(error) || diagnosticStatusLower === 'failed';
 
   if (!diagnostic && !reportGenerationFailed) {
     return (

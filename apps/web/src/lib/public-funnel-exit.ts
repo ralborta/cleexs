@@ -9,7 +9,7 @@ export function exitPublicFunnelToMarketingSite(): void {
   window.location.assign(CLEEXS_MARKETING_URL);
 }
 
-/** Botón «atrás» del navegador: siempre vuelve a cleexs.net en el funnel de diagnóstico. */
+/** Botón «atrás» del navegador en pantalla de error del funnel → cleexs.net (no `/diagnostico/crear`). */
 export function usePublicFunnelBackToMarketing(enabled = true): void {
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;

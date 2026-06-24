@@ -220,7 +220,7 @@ export default function CrearDiagnosticoPage() {
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );
       const { diagnosticId } = await Promise.race([createPromise, timeoutPromise]);
-      router.push(`/diagnostico/verificando?diagnosticId=${diagnosticId}${tier ? `&tier=${tier}` : ''}`);
+      router.replace(`/diagnostico/verificando?diagnosticId=${diagnosticId}${tier ? `&tier=${tier}` : ''}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       setError(
