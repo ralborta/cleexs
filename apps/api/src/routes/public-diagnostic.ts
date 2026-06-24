@@ -2388,7 +2388,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       if (!diagnostic) {
         return reply.code(404).send({ error: 'Diagnóstico no encontrado' });
       }
-      if (diagnostic.status !== 'awaiting_user') {
+      if (diagnostic.status !== 'awaiting_user' && diagnostic.status !== 'failed') {
         return reply.code(409).send({
           error:
             diagnostic.status === 'running'

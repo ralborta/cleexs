@@ -1103,6 +1103,8 @@ export interface PublicDiagnosticSetupDraft {
   confirmedIndustry?: string;
   /** Motores de IA elegidos (registrados para plan pago). */
   selectedEngines?: string[];
+  /** URLs de competidor confirmadas al iniciar el análisis. */
+  confirmedCompetitorUrls?: string[];
 }
 
 export interface PublicDiagnostic {

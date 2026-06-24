@@ -13,6 +13,7 @@ export type OnboardingAnalyticName =
   | 'onboarding_email_submitted'
   | 'onboarding_email_failed'
   | 'onboarding_email_countdown_expired'
+  | 'onboarding_report_retry'
   | 'onboarding_preview_viewed'
   | 'onboarding_report_opened'
   | 'onboarding_abandon'

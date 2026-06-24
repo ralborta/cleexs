@@ -29,6 +29,8 @@ import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
 import { OnboardingEmailCountdown } from '@/components/diagnostico/onboarding-email-countdown';
+import { DiagnosticReportErrorPanel } from '@/components/diagnostico/diagnostic-report-error-panel';
+import { diagnosticReportErrorDetail } from '@/lib/diagnostic-report-error';
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -95,6 +97,9 @@ function VerificandoContent() {
   usePublicFunnelBackToMarketing(Boolean(diagnosticId));
   const [diagnostic, setDiagnostic] = useState<Awaited<ReturnType<typeof publicDiagnosticApi.get>> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryLoading, setRetryLoading] = useState(false);
+  const [pollRetryToken, setPollRetryToken] = useState(0);
+  const pollFailCountRef = useRef(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const runningStartElapsedRef = useRef<number | null>(null);
@@ -389,9 +394,12 @@ function VerificandoContent() {
   useEffect(() => {
     if (!diagnosticId) return;
     const id = diagnosticId;
+    pollFailCountRef.current = 0;
     const poll = async () => {
       try {
         const data = await publicDiagnosticApi.get(id, tierQParam === 'gold' ? 'gold' : undefined);
+        pollFailCountRef.current = 0;
+        setError(null);
         setDiagnostic(data);
         if (isReportReadyForRedirect(data)) {
           waitingCompletedSinceRef.current = null;
@@ -412,8 +420,12 @@ function VerificandoContent() {
         }
         if (data.status === 'failed') return false;
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar el diagnóstico');
-        return false;
+        pollFailCountRef.current += 1;
+        if (pollFailCountRef.current >= 3) {
+          setError(err instanceof Error ? err.message : 'Error al cargar el diagnóstico');
+          return false;
+        }
+        return true;
       }
       return true;
     };
@@ -428,7 +440,7 @@ function VerificandoContent() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [diagnosticId, tierQParam]);
+  }, [diagnosticId, tierQParam, pollRetryToken]);
 
   useEffect(() => {
     if (handoff !== 'preview' || !diagnosticId) return;
@@ -619,6 +631,95 @@ function VerificandoContent() {
     }
   };
 
+  const handleRetryReport = useCallback(async () => {
+    if (!diagnosticId) {
+      exitPublicFunnelToMarketingSite();
+      return;
+    }
+    setRetryLoading(true);
+    setError(null);
+    pollFailCountRef.current = 0;
+    try {
+      let current = diagnostic;
+      if (!current) {
+        current = await publicDiagnosticApi.get(diagnosticId, tierQParam === 'gold' ? 'gold' : undefined);
+        setDiagnostic(current);
+      }
+
+      const status = String(current.status ?? '').trim().toLowerCase();
+      if (status === 'failed') {
+        const draft = current.setupDraft;
+        const em = setupEmail.trim() || current.email?.trim() || '';
+        const urlsFromUi = competitorUrls.map((u) => u.trim()).filter(Boolean);
+        const urls =
+          urlsFromUi.length > 0
+            ? urlsFromUi
+            : (draft?.confirmedCompetitorUrls ?? draft?.suggestedCompetitorUrls ?? []).filter(Boolean);
+
+        if (em.includes('@') && urls.length >= 1) {
+          const vid = getOrCreateCleexsVisitorId();
+          await publicDiagnosticApi.start(
+            diagnosticId,
+            {
+              email: em,
+              competitorUrls: urls,
+              ...(typeof draft?.useSerp === 'boolean' ? { useSerp: draft.useSerp } : {}),
+              ...(setupCountry.trim() || draft?.confirmedCountry
+                ? { country: setupCountry.trim() || draft?.confirmedCountry }
+                : {}),
+              ...(setupIndustry.trim() || draft?.confirmedIndustry
+                ? { industry: setupIndustry.trim() || draft?.confirmedIndustry }
+                : {}),
+              ...(setupEngines.length
+                ? { engines: setupEngines }
+                : draft?.selectedEngines?.length
+                  ? { engines: draft.selectedEngines }
+                  : {}),
+            },
+            { visitorId: vid }
+          );
+          setCaptchaVerified(true);
+          setPublicSetupStep(6);
+          const refreshed = await publicDiagnosticApi.get(
+            diagnosticId,
+            tierQParam === 'gold' ? 'gold' : undefined
+          );
+          setDiagnostic(refreshed);
+          trackOnboarding('onboarding_report_retry', { diagnosticId, mode: 'restart_pipeline' });
+          setPollRetryToken((t) => t + 1);
+          return;
+        }
+
+        setPublicSetupStep(6);
+        if (em) setSetupEmail(em);
+        if (urls.length) {
+          const padded = [...urls];
+          while (padded.length < 5) padded.push('');
+          setCompetitorUrls(padded.slice(0, 5));
+        }
+        trackOnboarding('onboarding_report_retry', { diagnosticId, mode: 'wizard_email' });
+        setPollRetryToken((t) => t + 1);
+        return;
+      }
+
+      trackOnboarding('onboarding_report_retry', { diagnosticId, mode: 'poll' });
+      setPollRetryToken((t) => t + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el diagnóstico');
+    } finally {
+      setRetryLoading(false);
+    }
+  }, [
+    diagnosticId,
+    diagnostic,
+    tierQParam,
+    setupEmail,
+    competitorUrls,
+    setupCountry,
+    setupIndustry,
+    setupEngines,
+  ]);
+
   const handleWizardNext = () => {
     setStartAnalysisError(null);
     switch (publicSetupStep) {
@@ -747,31 +848,17 @@ function VerificandoContent() {
 
   if (!diagnosticId) {
     return (
-      <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
-        <div className="text-center space-y-3">
-          <p className="text-sm text-muted-foreground">Faltan datos del diagnóstico.</p>
-          <Link href="/diagnostico/crear">
-            <Button variant="outline" size="sm">Volver al diagnóstico</Button>
-          </Link>
-        </div>
-      </main>
+      <DiagnosticReportErrorPanel
+        detail="No encontramos el identificador del diagnóstico."
+        onRetry={exitPublicFunnelToMarketingSite}
+      />
     );
   }
 
-  if (error) {
-    return (
-      <main className="min-h-[calc(100vh-72px)] flex items-center justify-center px-6">
-        <div className="text-center space-y-3">
-          <p className="text-sm text-destructive">{error}</p>
-          <Link href="/diagnostico/crear">
-            <Button variant="outline" size="sm">Volver al diagnóstico</Button>
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const diagnosticStatusLower = String(diagnostic?.status ?? '').trim().toLowerCase();
+  const reportGenerationFailed = Boolean(error) || diagnosticStatusLower === 'failed';
 
-  if (!diagnostic) {
+  if (!diagnostic && !reportGenerationFailed) {
     return (
       <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center gap-3 bg-slate-50 px-6">
         <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
@@ -780,22 +867,13 @@ function VerificandoContent() {
     );
   }
 
-  const statusLowerEarly = String(diagnostic.status ?? '').trim().toLowerCase();
-  if (statusLowerEarly === 'failed' && !diagnostic.runId) {
+  if (reportGenerationFailed) {
     return (
-      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center bg-slate-50 px-6 py-10">
-        <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50/90 p-6 text-center shadow-sm">
-          <p className="text-lg font-bold text-amber-950">No pudimos preparar el diagnóstico</p>
-          <p className="mt-3 text-sm leading-relaxed text-amber-900/95">
-            Ocurrió un error en la etapa automática (detección de competidores o un fallo temporal del servicio). No es
-            por la cantidad de URLs que vos cargás: eso viene después.
-          </p>
-          <p className="mt-2 text-sm text-amber-900/85">Reintentá o probá con otra URL o más tarde.</p>
-          <Button asChild className="mt-6 rounded-xl">
-            <Link href="/diagnostico/crear">Volver al diagnóstico</Link>
-          </Button>
-        </div>
-      </main>
+      <DiagnosticReportErrorPanel
+        detail={diagnosticReportErrorDetail(error)}
+        loading={retryLoading}
+        onRetry={handleRetryReport}
+      />
     );
   }
 
@@ -818,6 +896,15 @@ function VerificandoContent() {
           </p>
           {handoff === 'leaving' && <p className="mt-4 text-xs text-slate-500">Redirigiendo…</p>}
         </div>
+      </main>
+    );
+  }
+
+  if (!diagnostic) {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] flex-col items-center justify-center gap-3 bg-slate-50 px-6">
+        <Loader2 className="h-10 w-10 animate-spin text-primary-600" aria-hidden />
+        <p className="text-sm text-slate-600">Cargando diagnóstico…</p>
       </main>
     );
   }
