@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,12 @@ export function LegalAcceptanceModal({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const scrollToSection = useCallback((targetSection: LegalSectionId) => {
+    const root = scrollRef.current;
+    const target = root?.querySelector(`#${targetSection}`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -35,13 +41,9 @@ export function LegalAcceptanceModal({
 
   useEffect(() => {
     if (!open) return;
-    const t = window.setTimeout(() => {
-      const root = scrollRef.current;
-      const target = root?.querySelector(`#${section}`);
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
+    const t = window.setTimeout(() => scrollToSection(section), 80);
     return () => window.clearTimeout(t);
-  }, [open, section]);
+  }, [open, section, scrollToSection]);
 
   if (!open || typeof document === 'undefined') return null;
 
@@ -75,7 +77,7 @@ export function LegalAcceptanceModal({
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-50/90">
-            <CleexsLegalDocument embedded />
+            <CleexsLegalDocument embedded onSectionJump={scrollToSection} />
           </div>
 
           <div className="shrink-0 border-t border-slate-200/90 bg-white/95 px-4 py-4 backdrop-blur sm:px-5">

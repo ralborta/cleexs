@@ -9,7 +9,31 @@ const h3 = 'mt-5 text-[14px] font-semibold text-slate-900';
 const ul = 'mb-3 list-disc space-y-1.5 pl-5 text-[14px] leading-[1.65] text-slate-700 marker:text-slate-400';
 const lead = 'mb-5 text-[14px] leading-relaxed text-slate-600';
 
-export function CleexsLegalDocument({ embedded = false }: { embedded?: boolean }) {
+export type LegalDocumentSectionId = 'terminos-de-servicio' | 'politica-de-privacidad';
+
+const SECTION_NAV: Array<{ id: LegalDocumentSectionId; label: string; className: string }> = [
+  {
+    id: 'terminos-de-servicio',
+    label: 'Ir a Términos de servicio',
+    className:
+      'rounded-full bg-white px-3 py-1.5 text-violet-800 shadow-sm ring-1 ring-violet-200/80 transition hover:bg-violet-50',
+  },
+  {
+    id: 'politica-de-privacidad',
+    label: 'Ir a Política de privacidad',
+    className:
+      'rounded-full bg-white px-3 py-1.5 text-indigo-800 shadow-sm ring-1 ring-indigo-200/80 transition hover:bg-indigo-50',
+  },
+];
+
+export function CleexsLegalDocument({
+  embedded = false,
+  onSectionJump,
+}: {
+  embedded?: boolean;
+  /** En modal: scroll interno sin cambiar URL (evita salir del funnel). */
+  onSectionJump?: (section: LegalDocumentSectionId) => void;
+}) {
   return (
     <article
       className={cn(
@@ -24,18 +48,17 @@ export function CleexsLegalDocument({ embedded = false }: { embedded?: boolean }
           Texto completo para el flujo de diagnóstico y el uso de la plataforma.
         </p>
         <nav className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
-          <a
-            href="#terminos-de-servicio"
-            className="rounded-full bg-white px-3 py-1.5 text-violet-800 shadow-sm ring-1 ring-violet-200/80 transition hover:bg-violet-50"
-          >
-            Ir a Términos de servicio
-          </a>
-          <a
-            href="#politica-de-privacidad"
-            className="rounded-full bg-white px-3 py-1.5 text-indigo-800 shadow-sm ring-1 ring-indigo-200/80 transition hover:bg-indigo-50"
-          >
-            Ir a Política de privacidad
-          </a>
+          {SECTION_NAV.map(({ id, label, className }) =>
+            onSectionJump ? (
+              <button key={id} type="button" className={className} onClick={() => onSectionJump(id)}>
+                {label}
+              </button>
+            ) : (
+              <a key={id} href={`#${id}`} className={className}>
+                {label}
+              </a>
+            )
+          )}
         </nav>
       </header>
 
