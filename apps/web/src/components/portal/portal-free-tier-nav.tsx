@@ -22,6 +22,7 @@ import {
   PlanConquistarPromoPrice,
 } from '@/components/planes/plan-conquistar-checkout-button';
 import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
+import { PortalLegalLink } from '@/components/portal/portal-legal-link';
 
 export type PortalFreeTierNavProps = {
   /** Ruta base para anclas (#portal-cliente, #comparacion, …). Sin barra final. */
@@ -236,6 +237,7 @@ export function PortalFreeTierNav({
           <Headphones className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
           <span>¿Necesitás ayuda? Contactá a nuestro equipo</span>
         </Link>
+        <PortalLegalLink />
         <PortalSignOutButton />
       </div>
     </aside>

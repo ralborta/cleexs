@@ -492,6 +492,13 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
               </Link>
             </p>
           )}
+          {shell === 'premium' && (
+            <p className="text-center text-[11px] text-slate-400">
+              <Link href={`/portal-crecimiento/reporte/${runId}/premium`} className="text-violet-600 hover:underline">
+                ← Volver a Interpretación
+              </Link>
+            </p>
+          )}
         </div>
       </PortalResponsiveShell>
 

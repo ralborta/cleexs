@@ -3,10 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { consumeLegalReturnUrl, exitPublicFunnelToMarketingSite } from '@/lib/public-funnel-exit';
 
-/**
- * Vuelve al paso anterior del onboarding (misma pestaña). Si no hay historial, va al inicio del diagnóstico.
- */
+/** Vuelve al paso anterior del onboarding o a la URL guardada al abrir legales. */
 export function CleexsLegalBackFooter() {
   const router = useRouter();
 
@@ -18,18 +17,23 @@ export function CleexsLegalBackFooter() {
           size="default"
           className="min-h-11 w-full max-w-md rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-sm font-semibold shadow-md shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700 sm:w-auto"
           onClick={() => {
+            const returnUrl = consumeLegalReturnUrl();
+            if (returnUrl) {
+              window.location.assign(returnUrl);
+              return;
+            }
             if (typeof window !== 'undefined' && window.history.length > 1) {
               router.back();
               return;
             }
-            router.push('/diagnostico/crear');
+            exitPublicFunnelToMarketingSite();
           }}
         >
           <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
-          Acepto y vuelvo
+          Atrás
         </Button>
         <p className="text-center text-xs text-slate-500 sm:max-w-xs sm:text-left">
-          Cerrás este aviso y seguís en el mismo paso del diagnóstico.
+          Volvés a donde estabas en el diagnóstico o en la app.
         </p>
       </div>
     </footer>

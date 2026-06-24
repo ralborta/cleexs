@@ -1,8 +1,9 @@
 'use client';
 
-import { Lock, X } from 'lucide-react';
+import { ArrowLeft, Lock, X } from 'lucide-react';
 import { PlanPaymentPanel } from './plan-payment-panel';
 import type { BillingMode } from '@/lib/plans';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 export interface PlanPaymentModalProps {
   open: boolean;
@@ -20,6 +21,9 @@ export function PlanPaymentModal({
   billingMode,
   onConfirm,
 }: PlanPaymentModalProps) {
+  const close = () => onOpenChange(false);
+  useTrapBrowserBack(open, close);
+
   if (!open) return null;
 
   function handleConfirm() {
@@ -33,7 +37,7 @@ export function PlanPaymentModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="plan-payment-title"
-      onClick={() => onOpenChange(false)}
+      onClick={close}
     >
       <div
         className="relative max-h-[min(92vh,900px)] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
@@ -41,7 +45,15 @@ export function PlanPaymentModal({
       >
         <button
           type="button"
-          onClick={() => onOpenChange(false)}
+          onClick={close}
+          className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Atrás
+        </button>
+        <button
+          type="button"
+          onClick={close}
           className="absolute right-4 top-4 z-10 rounded-full border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-800"
           aria-label="Cerrar"
         >

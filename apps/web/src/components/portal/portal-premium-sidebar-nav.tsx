@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
+import { PortalLegalLink } from '@/components/portal/portal-legal-link';
 
 export type PortalPremiumSidebarUsage = {
   planKey?: string;
@@ -286,6 +287,7 @@ export function PortalPremiumSidebarNav({ runId, usage, loadingPlan }: PortalPre
           <Headphones className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
           <span>¿Necesitás ayuda? Contactá a nuestro equipo</span>
         </Link>
+        <PortalLegalLink className="mt-2 block rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800" />
       </div>
     </aside>
   );

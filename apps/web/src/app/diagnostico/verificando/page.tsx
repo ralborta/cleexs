@@ -8,6 +8,7 @@ import { getOrCreateCleexsVisitorId } from '@/lib/cleexs-visitor-id';
 import {
   exitPublicFunnelToMarketingSite,
   usePublicFunnelBackToMarketing,
+  useTrapBrowserBack,
 } from '@/lib/public-funnel-exit';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save, Sparkles } from 'lucide-react';
@@ -296,6 +297,12 @@ function VerificandoContent() {
     if (diagnosticId) trackOnboarding('onboarding_email_countdown_expired', { diagnosticId });
     exitPublicFunnelToMarketingSite();
   }, [diagnosticId]);
+
+  const handleLegacyOverlayBack = useCallback(() => {
+    if (legacyPublicStep === 2) setLegacyPublicStep(1);
+  }, [legacyPublicStep]);
+
+  useTrapBrowserBack(needsLegacyEmailCaptchaModal, handleLegacyOverlayBack);
 
   const activeStepForCards = useMemo(() => {
     if (showFakeSteps) return Math.min(backdropStep, ANALYSIS_STEP_CARD_LABELS.length - 1);
@@ -855,6 +862,7 @@ function VerificandoContent() {
       <DiagnosticReportErrorPanel
         detail="No encontramos el identificador del diagnóstico."
         onRetry={exitPublicFunnelToMarketingSite}
+        onBack={exitPublicFunnelToMarketingSite}
       />
     );
   }
@@ -874,6 +882,7 @@ function VerificandoContent() {
         detail={diagnosticReportErrorDetail(error)}
         loading={retryLoading}
         onRetry={handleRetryReport}
+        onBack={exitPublicFunnelToMarketingSite}
       />
     );
   }
@@ -1256,7 +1265,18 @@ function VerificandoContent() {
                   <span className="text-sm font-medium text-slate-800">Soy Humano</span>
                 </label>
               </div>
-              <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+              <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="gap-1 rounded-xl text-slate-500"
+                  disabled
+                  aria-disabled
+                  title="Completá este paso para continuar"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  Atrás
+                </Button>
                 <Button
                   type="submit"
                   className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8"

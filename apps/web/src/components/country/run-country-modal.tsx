@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Globe, Loader2, Lock, Sparkles, X } from 'lucide-react';
+import { Globe, Loader2, Lock, Sparkles, X, ArrowLeft } from 'lucide-react';
 import { CountryPicker, CountryFlag } from './country-picker';
 import { findCountryByIso, type CountryOption } from '@/lib/countries';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const MAX_DISTINCT = 5;
 
@@ -43,6 +44,8 @@ export function RunCountryModal({
 }: RunCountryModalProps) {
   const [selectedIso, setSelectedIso] = useState<string | null>(defaultIso ?? null);
 
+  useTrapBrowserBack(open, onClose);
+
   useEffect(() => {
     if (open) setSelectedIso(defaultIso ?? null);
   }, [open, defaultIso]);
@@ -70,6 +73,15 @@ export function RunCountryModal({
         {/* Header */}
         <div className="relative shrink-0 overflow-hidden border-b border-slate-100 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-5">
           <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-violet-200/30 blur-3xl" aria-hidden />
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-medium text-slate-500 transition hover:bg-white/70 hover:text-slate-700 disabled:opacity-50"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Atrás
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -124,9 +136,10 @@ export function RunCountryModal({
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
             >
-              Cancelar
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Atrás
             </button>
             <button
               type="button"

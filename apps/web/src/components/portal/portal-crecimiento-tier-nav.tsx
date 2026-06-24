@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
+import { PortalLegalLink } from '@/components/portal/portal-legal-link';
 
 function planCardLabel(display: string): string {
   const t = display.trim();
@@ -206,6 +207,8 @@ export function PortalCrecimientoTierNav({
       >
         Abrir con menú portal Free →
       </Link>
+
+      <PortalLegalLink className="mt-3 block rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-center text-[11px] text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800" />
 
       <PortalSignOutButton className="mt-4" />
     </aside>

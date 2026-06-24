@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   ChevronRight,
   Crown,
@@ -26,6 +27,7 @@ import {
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { useT } from '@/lib/app-strings';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -1103,10 +1105,11 @@ function ConfirmConnectModal({
   onConfirm: () => void;
 }) {
   const { t } = useT();
+  useTrapBrowserBack(true, onCancel);
+
   const modalTitulo = t('oauth_google.modal.titulo', 'Conectar Google Analytics');
   const modalSubtitulo = t('oauth_google.modal.subtitulo', 'Antes de redirigirte a Google, revisá qué te vamos a pedir');
   const ctaConfirmar = t('oauth_google.modal.cta_confirmar', 'Sí, conectar con Google');
-  const ctaCancelar = t('oauth_google.modal.cta_cancelar', 'Cancelar');
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
@@ -1119,7 +1122,17 @@ function ConfirmConnectModal({
         <button
           type="button"
           onClick={onCancel}
-          className="absolute right-4 top-4 rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-50"
+          disabled={busy}
+          className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Atrás
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          className="absolute right-4 top-4 rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
           aria-label="Cerrar"
         >
           <X className="h-4 w-4" />
@@ -1212,9 +1225,10 @@ function ConfirmConnectModal({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
           >
-            {ctaCancelar}
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Atrás
           </button>
           <button
             type="button"

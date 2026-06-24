@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Lock, Sparkles, X } from 'lucide-react';
+import { Lock, Sparkles, X, ArrowLeft } from 'lucide-react';
 import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const PLAN_CONQUISTAR_PATH = '/plan-conquistar';
 
@@ -18,6 +19,8 @@ export function EnginePaywallModal({
   engineName: string | null;
   onClose: () => void;
 }) {
+  useTrapBrowserBack(open, onClose);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -96,9 +99,10 @@ export function EnginePaywallModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 active:scale-[0.98] sm:flex-none"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 active:scale-[0.98] sm:flex-none"
               >
-                No, por ahora no
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Atrás
               </button>
             </div>
           </div>

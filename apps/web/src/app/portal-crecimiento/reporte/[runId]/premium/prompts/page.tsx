@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
+  ArrowLeft,
   ArrowRight,
   BarChart3,
   CalendarClock,
@@ -36,6 +37,7 @@ import {
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -343,6 +345,20 @@ export default function PromptsCorridaPage() {
   const [openedFromQuickTry, setOpenedFromQuickTry] = useState(false);
   const [inlineOk, setInlineOk] = useState<string | null>(null);
   const [customPromptOpen, setCustomPromptOpen] = useState(false);
+
+  const closeCustomPrompt = useCallback(() => {
+    if (!weeklySaving && !quickTryLoading) setCustomPromptOpen(false);
+  }, [weeklySaving, quickTryLoading]);
+
+  const closeEditor = useCallback(() => {
+    if (!weeklySaving) {
+      setEditorOpen(false);
+      setOpenedFromQuickTry(false);
+    }
+  }, [weeklySaving]);
+
+  useTrapBrowserBack(customPromptOpen, closeCustomPrompt);
+  useTrapBrowserBack(editorOpen, closeEditor);
 
   useEffect(() => {
     let cancelled = false;
@@ -1284,9 +1300,7 @@ export default function PromptsCorridaPage() {
       {customPromptOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-3 backdrop-blur-[2px] sm:p-4"
-          onClick={() => {
-            if (!weeklySaving && !quickTryLoading) setCustomPromptOpen(false);
-          }}
+          onClick={closeCustomPrompt}
           role="presentation"
         >
           <div
@@ -1297,7 +1311,16 @@ export default function PromptsCorridaPage() {
             aria-labelledby="custom-prompt-title"
           >
             <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-violet-100 bg-gradient-to-r from-violet-50/95 to-white px-5 py-4 backdrop-blur-sm">
-              <div>
+              <button
+                type="button"
+                disabled={weeklySaving || quickTryLoading}
+                onClick={closeCustomPrompt}
+                className="inline-flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:opacity-40"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Atrás
+              </button>
+              <div className="min-w-0 flex-1 text-center sm:text-left">
                 <h2 id="custom-prompt-title" className="text-lg font-bold text-slate-900">
                   Tu propio prompt
                 </h2>
@@ -1308,7 +1331,7 @@ export default function PromptsCorridaPage() {
               <button
                 type="button"
                 disabled={weeklySaving || quickTryLoading}
-                onClick={() => setCustomPromptOpen(false)}
+                onClick={closeCustomPrompt}
                 className="rounded-xl p-2 text-slate-500 transition hover:bg-white hover:text-slate-800 disabled:opacity-40"
                 aria-label="Cerrar"
               >
@@ -1438,12 +1461,7 @@ export default function PromptsCorridaPage() {
       {editorOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
-          onClick={() => {
-              if (!weeklySaving) {
-                setEditorOpen(false);
-                setOpenedFromQuickTry(false);
-              }
-            }}
+          onClick={closeEditor}
           role="presentation"
         >
           <div
@@ -1452,12 +1470,25 @@ export default function PromptsCorridaPage() {
             role="dialog"
             aria-modal="true"
           >
-            <h3 className="text-lg font-bold text-slate-900">Opción {editorSlot + 1}</h3>
-            <p className="mt-1 text-xs text-slate-600">
-              {openedFromQuickTry
-                ? 'Vas a guardar en tu cuenta el texto del popup (podés editarlo antes de confirmar). Después podés marcar esta opción para weekly_portal en la lista de la derecha.'
-                : 'Guardá texto en tu cuenta para sincronizar con weekly_portal. Podés abrir “Generá tu propio prompt” para probar antes de guardar.'}
-            </p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <button
+                type="button"
+                disabled={weeklySaving}
+                onClick={closeEditor}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Atrás
+              </button>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-bold text-slate-900">Opción {editorSlot + 1}</h3>
+                <p className="mt-1 text-xs text-slate-600">
+                  {openedFromQuickTry
+                    ? 'Vas a guardar en tu cuenta el texto del popup (podés editarlo antes de confirmar). Después podés marcar esta opción para weekly_portal en la lista de la derecha.'
+                    : 'Guardá texto en tu cuenta para sincronizar con weekly_portal. Podés abrir “Generá tu propio prompt” para probar antes de guardar.'}
+                </p>
+              </div>
+            </div>
             {openedFromQuickTry ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-semibold text-slate-500">Opción:</span>

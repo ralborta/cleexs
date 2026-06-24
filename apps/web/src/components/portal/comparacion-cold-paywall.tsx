@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useState, useCallback, type ComponentType } from 'react';
 import {
+  ArrowLeft,
   BarChart3,
   Bell,
   CalendarDays,
@@ -29,6 +30,7 @@ import {
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -225,6 +227,15 @@ export function ComparacionColdPaywallPage({
       ? `/portal-cliente/reporte/${runId}`
       : `/portal-crecimiento/reporte/${runId}/cliente`;
   const suscripcionHref = `${base}/suscripcion`;
+
+  const showPremiumUpsell =
+    !loading && !loadError && usage != null && isFreePortalPlan(usage.planKey);
+
+  const goBackToSummary = useCallback(() => {
+    router.push(base);
+  }, [router, base]);
+
+  useTrapBrowserBack(showPremiumUpsell, goBackToSummary);
 
   if (loadError) {
     return (
@@ -479,6 +490,14 @@ export function ComparacionColdPaywallPage({
 
       <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
         <div className="relative my-4 w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:my-0 sm:max-w-xl">
+          <button
+            type="button"
+            onClick={goBackToSummary}
+            className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Atrás
+          </button>
           <Link
             href={base}
             className="absolute right-3 top-3 z-10 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -566,7 +585,14 @@ export function ComparacionColdPaywallPage({
                   <Crown className="h-3.5 w-3.5" />
                   Actualizar mi plan
                 </Link>
-                <span className="mt-1.5 text-center text-[9px] text-violet-800/80 sm:text-right">Cancelá cuando quieras</span>
+                <button
+                  type="button"
+                  onClick={goBackToSummary}
+                  className="mt-2 inline-flex items-center justify-center gap-1 text-center text-[11px] font-semibold text-violet-800/80 hover:text-violet-950"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                  Atrás al resumen
+                </button>
               </div>
             </div>
           </div>

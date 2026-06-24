@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   Lock,
@@ -16,6 +17,7 @@ import {
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const TOKEN_KEY = 'cleexs_portal_token';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -104,6 +106,8 @@ function InviteModalFree({
   remaining: number;
   suscripcionHref: string;
 }) {
+  useTrapBrowserBack(true, onClose);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -149,7 +153,16 @@ function InviteModalFree({
         <button
           type="button"
           onClick={onClose}
+          className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Atrás
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
           className="absolute right-4 top-4 rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-50"
+          aria-label="Cerrar"
         >
           <X className="h-4 w-4" />
         </button>
@@ -232,13 +245,23 @@ function InviteModalFree({
 
           {error && <p className="text-xs text-rose-600">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={remaining <= 0}
-            className="w-full rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Enviar invitación
-          </button>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Atrás
+            </button>
+            <button
+              type="submit"
+              disabled={remaining <= 0}
+              className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Enviar invitación
+            </button>
+          </div>
         </form>
       </div>
     </div>

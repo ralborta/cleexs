@@ -459,8 +459,14 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
                 Atrás
               </Button>
             ) : (
-              <Button type="button" variant="outline" className="rounded-xl" onClick={onExit}>
-                Cancelar
+              <Button
+                type="button"
+                variant="ghost"
+                className="gap-1 rounded-xl text-slate-700"
+                onClick={onExit}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Atrás
               </Button>
             )}
             <Button

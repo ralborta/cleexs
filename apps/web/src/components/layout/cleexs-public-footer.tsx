@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CleexsContactLinks } from '@/components/layout/cleexs-contact-links';
+import { rememberLegalReturnUrl } from '@/lib/public-funnel-exit';
 import { shouldHidePublicFooter } from '@/lib/public-chrome';
 
 export function CleexsPublicFooter() {
@@ -18,7 +19,11 @@ export function CleexsPublicFooter() {
             <Link href="/contacto" className="font-medium text-violet-700 hover:underline">
               Contacto
             </Link>
-            <Link href="/legal/cleexs" className="text-slate-600 hover:text-violet-700 hover:underline">
+            <Link
+              href="/legal/cleexs"
+              onClick={rememberLegalReturnUrl}
+              className="text-slate-600 hover:text-violet-700 hover:underline"
+            >
               Términos y privacidad
             </Link>
             <Link href="/planes" className="text-slate-600 hover:text-violet-700 hover:underline">

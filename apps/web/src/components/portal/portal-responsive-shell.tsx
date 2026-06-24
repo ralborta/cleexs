@@ -2,9 +2,10 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { ArrowLeft, Menu, X } from 'lucide-react';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { cn } from '@/lib/utils';
+import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 type PortalResponsiveShellProps = {
   sidebar: ReactNode;
@@ -26,6 +27,8 @@ export function PortalResponsiveShell({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useTrapBrowserBack(open, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;
@@ -69,7 +72,14 @@ export function PortalResponsiveShell({
             className="fixed inset-y-0 left-0 z-50 flex w-[min(100%,20.5rem)] flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 shadow-2xl lg:hidden"
           >
             <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-slate-900">Navegación</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Atrás
+              </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
