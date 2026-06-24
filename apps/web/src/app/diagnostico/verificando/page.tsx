@@ -14,7 +14,10 @@ import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save, Sparkles } from 'lucide-re
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { openLegalPopup } from '@/lib/open-legal-popup';
+import {
+  LegalAcceptanceModal,
+  type LegalSectionId,
+} from '@/components/legal/legal-acceptance-modal';
 import { useSmoothProgress } from '@/lib/use-smooth-progress';
 import { cn } from '@/lib/utils';
 import {
@@ -126,6 +129,7 @@ function VerificandoContent() {
   const lastHydratedSuggestedJsonRef = useRef('');
   /** Nodo al final de `document.body` para que los modales queden por encima del resto del DOM. */
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [legalModalSection, setLegalModalSection] = useState<LegalSectionId | null>(null);
 
   const [heroIdx, setHeroIdx] = useState(0);
   useLayoutEffect(() => {
@@ -1021,6 +1025,7 @@ function VerificandoContent() {
                   onStepNext={handleWizardNext}
                   onBack={handleWizardBack}
                   onExit={exitPublicFunnelToMarketingSite}
+                  onOpenLegal={setLegalModalSection}
                   contextLoading={contextLoading}
                   finalizeLoading={startAnalysisLoading}
                   error={startAnalysisError}
@@ -1105,6 +1110,12 @@ function VerificandoContent() {
       </div>
 
       <OnboardingEmailCountdown active={showEmailCountdown} onExpire={handleEmailCountdownExpire} />
+
+      <LegalAcceptanceModal
+        open={legalModalSection !== null}
+        section={legalModalSection ?? 'terminos-de-servicio'}
+        onClose={() => setLegalModalSection(null)}
+      />
 
       {portalRoot &&
         needsLegacyEmailCaptchaModal &&
@@ -1218,27 +1229,21 @@ function VerificandoContent() {
               </div>
               <p className="mt-6 text-center text-[11px] text-slate-500">
                 Al guardar aceptás los{' '}
-                <a
-                  href="/legal/cleexs#terminos-de-servicio"
+                <button
+                  type="button"
                   className="text-violet-600 underline hover:text-violet-700"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLegalPopup('/legal/cleexs#terminos-de-servicio');
-                  }}
+                  onClick={() => setLegalModalSection('terminos-de-servicio')}
                 >
                   Términos
-                </a>{' '}
+                </button>{' '}
                 y la{' '}
-                <a
-                  href="/legal/cleexs#politica-de-privacidad"
+                <button
+                  type="button"
                   className="text-violet-600 underline hover:text-violet-700"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLegalPopup('/legal/cleexs#politica-de-privacidad');
-                  }}
+                  onClick={() => setLegalModalSection('politica-de-privacidad')}
                 >
                   Privacidad
-                </a>
+                </button>
                 .
               </p>
             </form>

@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { COUNTRIES } from '@/lib/countries';
-import { openLegalPopup } from '@/lib/open-legal-popup';
+import type { LegalSectionId } from '@/components/legal/legal-acceptance-modal';
 
 export type SetupStep = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -69,6 +69,7 @@ interface OnboardingSetupWizardProps {
   onStepNext: () => void;
   onBack: (to: SetupStep) => void;
   onExit: () => void;
+  onOpenLegal?: (section: LegalSectionId) => void;
   contextLoading: boolean;
   finalizeLoading: boolean;
   error: string | null;
@@ -96,6 +97,7 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
     onStepNext,
     onBack,
     onExit,
+    onOpenLegal,
     contextLoading,
     finalizeLoading,
     error,
@@ -417,27 +419,21 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
               </div>
               <p className="mt-4 text-[11px] text-slate-500">
                 Al iniciar aceptás los{' '}
-                <a
-                  href="/legal/cleexs#terminos-de-servicio"
-                  className="text-violet-600 underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLegalPopup('/legal/cleexs#terminos-de-servicio');
-                  }}
+                <button
+                  type="button"
+                  className="text-violet-600 underline hover:text-violet-700"
+                  onClick={() => onOpenLegal?.('terminos-de-servicio')}
                 >
                   Términos
-                </a>{' '}
+                </button>{' '}
                 y la{' '}
-                <a
-                  href="/legal/cleexs#politica-de-privacidad"
-                  className="text-violet-600 underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLegalPopup('/legal/cleexs#politica-de-privacidad');
-                  }}
+                <button
+                  type="button"
+                  className="text-violet-600 underline hover:text-violet-700"
+                  onClick={() => onOpenLegal?.('politica-de-privacidad')}
                 >
                   Privacidad
-                </a>
+                </button>
                 .
               </p>
             </div>

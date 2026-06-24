@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 const docDate = '13 de mayo de 2026';
 
 const p = 'mb-3 text-[14px] leading-[1.65] text-slate-700 antialiased';
@@ -7,9 +9,14 @@ const h3 = 'mt-5 text-[14px] font-semibold text-slate-900';
 const ul = 'mb-3 list-disc space-y-1.5 pl-5 text-[14px] leading-[1.65] text-slate-700 marker:text-slate-400';
 const lead = 'mb-5 text-[14px] leading-relaxed text-slate-600';
 
-export function CleexsLegalDocument() {
+export function CleexsLegalDocument({ embedded = false }: { embedded?: boolean }) {
   return (
-    <article className="mx-auto max-w-2xl scroll-smooth px-4 pb-28 pt-6 sm:px-5 sm:pt-8">
+    <article
+      className={cn(
+        'mx-auto max-w-2xl scroll-smooth px-4 pt-6 sm:px-5 sm:pt-8',
+        embedded ? 'pb-6' : 'pb-28'
+      )}
+    >
       <header className="mb-6 rounded-xl border border-violet-100/90 bg-gradient-to-br from-violet-50/80 via-white to-indigo-50/30 p-5 shadow-sm ring-1 ring-violet-100/50 sm:p-6">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700">Cleexs · Documento legal</p>
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Términos y privacidad</h1>

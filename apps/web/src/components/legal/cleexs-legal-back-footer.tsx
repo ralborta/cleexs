@@ -29,7 +29,7 @@ export function CleexsLegalBackFooter() {
           Acepto y vuelvo
         </Button>
         <p className="text-center text-xs text-slate-500 sm:max-w-xs sm:text-left">
-          Volvés al paso del diagnóstico donde estabas (captcha o correo).
+          Cerrás este aviso y seguís en el mismo paso del diagnóstico.
         </p>
       </div>
     </footer>
