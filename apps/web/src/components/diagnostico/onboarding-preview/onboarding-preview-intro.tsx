@@ -68,9 +68,6 @@ export function OnboardingPreviewIntro({
       >
         Continuar
       </Button>
-      <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-        Al continuar confirmás que sos humano y aceptás los términos de uso.
-      </p>
     </div>
   );
 }

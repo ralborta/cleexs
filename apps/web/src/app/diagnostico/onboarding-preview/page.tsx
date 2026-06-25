@@ -4,15 +4,17 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
+import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
 import { OnboardingPreviewWizard } from '@/components/diagnostico/onboarding-preview/onboarding-preview-wizard';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
 import { CLEEXS_MARKETING_URL, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
 import { cn } from '@/lib/utils';
 
-type Stage = 'intro' | 'wizard' | 'cafecito';
+type Stage = 'intro' | 'human' | 'wizard' | 'cafecito';
 
 const STAGE_LABELS: Record<Stage, string> = {
   intro: 'Intro Gonzalo',
+  human: 'Soy humano',
   wizard: 'Wizard 1–5',
   cafecito: 'Cafecito ☕',
 };
@@ -33,7 +35,9 @@ function OnboardingPreviewContent() {
 
   const initialStage = (searchParams.get('stage') as Stage) || 'intro';
   const validStage: Stage =
-    initialStage === 'wizard' || initialStage === 'cafecito' ? initialStage : 'intro';
+    initialStage === 'human' || initialStage === 'wizard' || initialStage === 'cafecito'
+      ? initialStage
+      : 'intro';
 
   const [stage, setStage] = useState<Stage>(validStage);
   const [wizardStep, setWizardStep] = useState(1);
@@ -79,6 +83,10 @@ function OnboardingPreviewContent() {
 
   const goNextStage = useCallback(() => {
     if (stage === 'intro') {
+      setStage('human');
+      return;
+    }
+    if (stage === 'human') {
       setStage('wizard');
       setWizardStep(1);
       return;
@@ -93,6 +101,10 @@ function OnboardingPreviewContent() {
     if (!autoplay) return;
     if (stage === 'intro' && introReady) {
       const t = window.setTimeout(goNextStage, 1200);
+      return () => window.clearTimeout(t);
+    }
+    if (stage === 'human') {
+      const t = window.setTimeout(goNextStage, 1600);
       return () => window.clearTimeout(t);
     }
   }, [autoplay, stage, introReady, goNextStage]);
@@ -116,7 +128,7 @@ function OnboardingPreviewContent() {
               Preview — no es producción
             </p>
             <p className="text-sm text-amber-900/80">
-              Simula el onboarding propuesto (intro + wizard 5 pasos + cafecito)
+              Simula el onboarding propuesto (intro → humano → wizard 5 pasos → cafecito)
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -145,6 +157,7 @@ function OnboardingPreviewContent() {
           <code className="rounded bg-white/80 px-1">?photo=URL</code>{' '}
           <code className="rounded bg-white/80 px-1">?yt=VIDEO_ID</code>{' '}
           <code className="rounded bg-white/80 px-1">?autoplay=1</code>{' '}
+          <code className="rounded bg-white/80 px-1">?stage=human</code>{' '}
           <code className="rounded bg-white/80 px-1">?stage=cafecito</code>
         </p>
       </div>
@@ -176,11 +189,18 @@ function OnboardingPreviewContent() {
           />
         ) : null}
 
+        {stage === 'human' ? (
+          <OnboardingPreviewHuman onBack={() => setStage('intro')} onContinue={goNextStage} />
+        ) : null}
+
         {stage === 'wizard' ? (
           <OnboardingPreviewWizard
             step={wizardStep}
             mock={mock}
-            onBack={() => setWizardStep((s) => Math.max(1, s - 1))}
+            onBack={() => {
+              if (wizardStep <= 1) setStage('human');
+              else setWizardStep((s) => s - 1);
+            }}
             onNext={() => {
               if (wizardStep >= 5) goNextStage();
               else setWizardStep((s) => s + 1);
@@ -192,6 +212,8 @@ function OnboardingPreviewContent() {
           <OnboardingPreviewCafecito
             userName={userName}
             domain={domain}
+            brandLabel={brand}
+            founderPhotoUrl={photo}
             youtubeVideoId={youtube}
             whatsappHref={whatsappHref}
             reportReady={reportReady}
