@@ -1,12 +1,33 @@
 'use client';
 
-import { Building2, Globe, Mail, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import {
+  Briefcase,
+  Check,
+  ChevronDown,
+  Globe,
+  Lightbulb,
+  Mail,
+  Plus,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  OnboardingPreviewCard,
+  OnboardingPreviewNav,
+} from './onboarding-preview-frame';
+
+const ENGINES = [
+  { id: 'chatgpt', label: 'ChatGPT', plan: 'Incluido en el plan gratuito', locked: true, selected: true },
+  { id: 'gemini', label: 'Gemini', plan: 'Incluido en el plan Conquistar', locked: false, selected: true },
+  { id: 'perplexity', label: 'Perplexity', plan: 'Incluido en el plan Conquistar', locked: false, selected: true },
+  { id: 'claude', label: 'Claude', plan: 'Incluido en el plan Conquistar', locked: false, selected: false },
+] as const;
 
 const STEPS = [
   { title: '¿En qué país operás?', icon: Globe },
-  { title: '¿Cuál es tu rubro?', icon: Building2 },
+  { title: '¿Cuál es tu rubro?', icon: Briefcase },
   { title: 'Motores de IA', icon: Sparkles },
   { title: 'Competidores', icon: Globe },
   { title: 'Recibí tu informe por mail', icon: Mail },
@@ -31,93 +52,179 @@ export function OnboardingPreviewWizard({
   const idx = Math.min(Math.max(step, 1), 5) - 1;
   const meta = STEPS[idx]!;
   const Icon = meta.icon;
+  const [engines, setEngines] = useState<string[]>(['chatgpt', 'gemini', 'perplexity']);
+  const [competitors, setCompetitors] = useState(mock.competitors);
+
+  const toggleEngine = (id: string) => {
+    if (id === 'chatgpt') return;
+    setEngines((prev) =>
+      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
+    );
+  };
 
   return (
-    <div className="m-auto w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg">
-      <div className="flex gap-1.5 border-b border-slate-100 px-5 pb-3 pt-4">
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
-            className={cn(
-              'h-1.5 flex-1 rounded-full',
-              i <= idx ? 'bg-violet-600' : 'bg-slate-200'
-            )}
-          />
-        ))}
-      </div>
-      <div className="p-5 sm:p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-          Paso {idx + 1} de 5
-        </p>
-        <div className="mt-2 flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+    <OnboardingPreviewCard>
+      <div className="p-6 sm:p-7">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 ring-1 ring-violet-200/60">
             <Icon className="h-5 w-5" />
           </span>
-          <h2 className="text-lg font-bold text-slate-900">{meta.title}</h2>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold leading-snug text-slate-900">{meta.title}</h2>
+            {idx === 0 ? (
+              <p className="mt-1.5 text-sm text-slate-600">
+                Detectamos este país. Confirmalo o elegí otro: define el mercado del análisis.
+              </p>
+            ) : null}
+            {idx === 1 ? (
+              <p className="mt-1.5 text-sm text-slate-600">
+                Confirmá o ajustá el rubro que detectamos para tu sector.
+              </p>
+            ) : null}
+            {idx === 2 ? (
+              <p className="mt-1.5 text-sm text-slate-600">
+                Elegí en qué motores de IA querés medir tu visibilidad.
+              </p>
+            ) : null}
+            {idx === 3 ? (
+              <p className="mt-1.5 text-sm text-slate-600">
+                Agregá los competidores que querés analizar (mínimo 1, máximo 5).
+              </p>
+            ) : null}
+            {idx === 4 ? (
+              <p className="mt-1.5 text-sm text-slate-600">
+                Te enviamos el informe por correo cuando esté listo.
+              </p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-5 space-y-3 text-sm">
+        <div className="mt-5">
           {idx === 0 && (
             <label className="block">
-              <span className="text-slate-600">País detectado</span>
-              <input
-                readOnly
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-900"
-                value={mock.country}
-              />
+              <span className="text-xs font-semibold text-slate-500">País detectado</span>
+              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                <span className="text-lg" aria-hidden>
+                  🇦🇷
+                </span>
+                <span className="flex-1 text-sm font-medium text-slate-900">{mock.country}</span>
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              </div>
             </label>
           )}
+
           {idx === 1 && (
             <label className="block">
-              <span className="text-slate-600">Rubro sugerido</span>
-              <input
-                readOnly
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-900"
-                value={mock.industry}
-              />
+              <span className="text-xs font-semibold text-slate-500">Rubro sugerido</span>
+              <div className="relative mt-1.5">
+                <input
+                  readOnly
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-10 text-sm font-medium text-slate-900 shadow-sm"
+                  value={mock.industry}
+                />
+                <Check className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-violet-600" />
+              </div>
             </label>
           )}
+
           {idx === 2 && (
-            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-slate-700">
-              ChatGPT incluido en el plan gratuito. Gemini, Perplexity y Claude quedan registrados
-              para Plan Conquistar.
-            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {ENGINES.map((eng) => {
+                const selected = engines.includes(eng.id);
+                return (
+                  <button
+                    key={eng.id}
+                    type="button"
+                    onClick={() => toggleEngine(eng.id)}
+                    disabled={eng.locked}
+                    className={cn(
+                      'flex flex-col rounded-xl border p-3 text-left transition',
+                      selected
+                        ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-100'
+                        : 'border-slate-200 bg-white hover:border-violet-200'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-900">{eng.label}</span>
+                      <span
+                        className={cn(
+                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
+                          selected
+                            ? 'border-violet-600 bg-violet-600 text-white'
+                            : 'border-slate-300 bg-white'
+                        )}
+                      >
+                        {selected ? <Check className="h-3 w-3" /> : null}
+                      </span>
+                    </div>
+                    <span className="mt-1 text-[10px] leading-snug text-slate-500">{eng.plan}</span>
+                  </button>
+                );
+              })}
+            </div>
           )}
+
           {idx === 3 && (
-            <ul className="space-y-2">
-              {mock.competitors.map((c) => (
-                <li
-                  key={c}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-800"
-                >
-                  {c}
-                </li>
+            <div className="space-y-2">
+              {competitors.map((c, i) => (
+                <div key={`${c}-${i}`} className="flex items-center gap-2">
+                  <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                    <Globe className="h-4 w-4 shrink-0 text-slate-400" />
+                    <span className="truncate font-mono text-xs text-slate-800">{c}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Quitar competidor"
+                    onClick={() => setCompetitors((list) => list.filter((_, j) => j !== i))}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
-            </ul>
+              {competitors.length < 5 ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-600 hover:text-violet-800"
+                  onClick={() =>
+                    setCompetitors((list) => [...list, `competidor${list.length + 1}.com`])
+                  }
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar otro competidor
+                </button>
+              ) : null}
+            </div>
           )}
+
           {idx === 4 && (
             <label className="block">
-              <span className="text-slate-600">Correo</span>
+              <span className="text-xs font-semibold text-slate-500">Correo electrónico</span>
               <input
                 readOnly
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900"
+                type="email"
+                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
                 value={mock.email}
               />
             </label>
           )}
         </div>
 
-        <div className="mt-6 flex gap-2">
-          {idx > 0 ? (
-            <Button type="button" variant="outline" onClick={onBack}>
-              Atrás
-            </Button>
-          ) : null}
-          <Button type="button" className="flex-1" onClick={onNext}>
-            {idx === 4 ? 'Arrancar análisis' : 'Continuar'}
-          </Button>
-        </div>
+        {idx === 0 ? (
+          <div className="mt-5 flex gap-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-3.5">
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+            <p className="text-xs leading-relaxed text-violet-900/80">
+              Este dato nos ayuda a personalizar benchmarks y competidores para tu mercado.
+            </p>
+          </div>
+        ) : null}
+
+        <OnboardingPreviewNav
+          onBack={onBack}
+          onNext={onNext}
+          nextLabel={idx === 4 ? 'Arrancar análisis' : 'Continuar'}
+        />
       </div>
-    </div>
+    </OnboardingPreviewCard>
   );
 }

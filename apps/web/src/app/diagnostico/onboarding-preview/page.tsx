@@ -163,18 +163,13 @@ function OnboardingPreviewContent() {
       </div>
 
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">
-              {STAGE_LABELS[stage]}
-            </p>
-            <h1 className="mt-1 text-xl font-bold text-slate-900">
-              {brand ? `Análisis de ${brand}` : 'Preview onboarding'}
-            </h1>
-          </div>
+        <div className="mb-8 flex items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+            Análisis de {brand}
+          </h1>
           <Link href={CLEEXS_MARKETING_URL} className="shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/CleexsLogo.png" alt="Cleexs" className="h-12 w-auto object-contain sm:h-14" />
+            <img src="/CleexsLogo.png" alt="Cleexs" className="h-11 w-auto object-contain sm:h-12" />
           </Link>
         </div>
 

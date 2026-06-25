@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import { Check, ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  OnboardingPreviewBadge,
+  OnboardingPreviewCard,
+  OnboardingPreviewNav,
+  OnboardingPreviewTrustFooter,
+} from './onboarding-preview-frame';
 
-/** Paso 2 del funnel (después de intro Gonzalo). Mismo diseño que el wizard de producción. */
 export function OnboardingPreviewHuman({
   onBack,
   onContinue,
@@ -16,25 +20,19 @@ export function OnboardingPreviewHuman({
   const [humanOk, setHumanOk] = useState(true);
 
   return (
-    <div className="m-auto w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-lg backdrop-blur-sm">
-      <div className="h-1.5 w-full bg-slate-100">
-        <div className="h-full w-1/6 rounded-r-full bg-violet-600 transition-all" />
-      </div>
-
-      <div className="p-5 sm:p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-          Antes del setup
-        </p>
-        <div className="mt-2 flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+    <OnboardingPreviewCard badge={<OnboardingPreviewBadge>Soy humano</OnboardingPreviewBadge>}>
+      <div className="p-6 sm:p-7">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 ring-1 ring-violet-200/60">
             <ShieldCheck className="h-5 w-5" strokeWidth={1.75} />
           </span>
-          <h2 className="text-lg font-bold text-slate-900">Confirmá que sos humano</h2>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Confirmá que sos humano</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+              Un paso rápido para proteger el servicio. Podés dejarlo confirmado y tocar Continuar.
+            </p>
+          </div>
         </div>
-
-        <p className="mt-4 text-sm leading-relaxed text-slate-600">
-          Un paso rápido para proteger el servicio. Podés dejarlo confirmado y tocar Continuar.
-        </p>
 
         <button
           type="button"
@@ -84,20 +82,18 @@ export function OnboardingPreviewHuman({
         </button>
 
         <p className="mt-4 text-[11px] leading-relaxed text-slate-400">
-          Al continuar también aceptás los{' '}
-          <span className="font-medium text-slate-500">términos de uso</span> y la{' '}
-          <span className="font-medium text-slate-500">política de privacidad</span>.
+          Al continuar aceptás los{' '}
+          <span className="font-medium text-violet-600">términos de uso</span> y la{' '}
+          <span className="font-medium text-violet-600">política de privacidad</span>.
         </p>
 
-        <div className="mt-6 flex gap-2">
-          <Button type="button" variant="outline" onClick={onBack}>
-            Atrás
-          </Button>
-          <Button type="button" className="flex-1" disabled={!humanOk} onClick={onContinue}>
-            Continuar
-          </Button>
-        </div>
+        <OnboardingPreviewNav
+          onBack={onBack}
+          onNext={onContinue}
+          nextDisabled={!humanOk}
+        />
+        <OnboardingPreviewTrustFooter variant="lock" />
       </div>
-    </div>
+    </OnboardingPreviewCard>
   );
 }
