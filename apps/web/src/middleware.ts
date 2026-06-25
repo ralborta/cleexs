@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   '/',
   '/diagnostico/crear',
   '/diagnostico/verificando',
+  '/diagnostico/onboarding-preview',
   '/ver-resultado',
   '/prueba-gratuita',
   '/planes',
@@ -45,6 +46,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname === '/' || pathname === '/diagnostico/crear' || pathname === '/prueba-gratuita') return true;
   if (pathname === '/planes') return true;
   if (pathname.startsWith('/diagnostico/verificando')) return true;
+  if (pathname.startsWith('/diagnostico/onboarding-preview')) return true;
   if (pathname.startsWith('/ver-resultado')) return true;
   if (pathname.startsWith('/score')) return true;
   if (pathname.startsWith('/r/wa')) return true;
@@ -59,6 +61,7 @@ function isPublicPath(pathname: string): boolean {
   const path = pathname.replace(/\?.*$/, '').replace(/\/$/, '') || '/';
   if (PUBLIC_PATHS.includes(path)) return true;
   if (path.startsWith('/diagnostico/verificando')) return true;
+  if (path.startsWith('/diagnostico/onboarding-preview')) return true;
   if (path.startsWith('/ver-resultado')) return true;
   if (path.startsWith('/score')) return true;
   if (path.startsWith('/r/wa')) return true;
@@ -81,6 +84,7 @@ export function middleware(request: NextRequest) {
       pathname === '/prueba-gratuita' ||
       pathname === '/planes' ||
       pathname.startsWith('/diagnostico/verificando') ||
+      pathname.startsWith('/diagnostico/onboarding-preview') ||
       pathname.startsWith('/ver-resultado') ||
       pathname.startsWith('/score') ||
       pathname.startsWith('/r/wa') ||
