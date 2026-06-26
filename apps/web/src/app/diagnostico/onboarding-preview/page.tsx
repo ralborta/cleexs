@@ -7,7 +7,8 @@ import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-prev
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
 import { OnboardingPreviewWizard } from '@/components/diagnostico/onboarding-preview/onboarding-preview-wizard';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
-import { CLEEXS_MARKETING_URL, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_MARKETING_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+import { parseYoutubeVideoId } from '@/lib/youtube';
 import { cn } from '@/lib/utils';
 
 type Stage = 'intro' | 'human' | 'wizard' | 'cafecito';
@@ -29,8 +30,9 @@ function OnboardingPreviewContent() {
   const domain = (searchParams.get('domain') || 'empresa.com').trim();
   const brand = (searchParams.get('brand') || 'Empresa Demo').trim();
   const userName = (searchParams.get('name') || 'Carlos').trim();
-  const photo = searchParams.get('photo')?.trim() || undefined;
-  const youtube = searchParams.get('yt')?.trim() || 'off';
+  const photo = searchParams.get('photo')?.trim() || CLEEXS_FOUNDER_PHOTO_URL;
+  const youtube =
+    parseYoutubeVideoId(searchParams.get('yt')) ?? CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID;
   const autoplay = searchParams.get('autoplay') === '1';
 
   const initialStage = (searchParams.get('stage') as Stage) || 'intro';
@@ -154,8 +156,8 @@ function OnboardingPreviewContent() {
           <code className="rounded bg-white/80 px-1">?domain=</code>{' '}
           <code className="rounded bg-white/80 px-1">?brand=</code>{' '}
           <code className="rounded bg-white/80 px-1">?name=</code>{' '}
-          <code className="rounded bg-white/80 px-1">?photo=URL</code>{' '}
-          <code className="rounded bg-white/80 px-1">?yt=VIDEO_ID</code>{' '}
+          <code className="rounded bg-white/80 px-1">?photo=URL</code> (opcional, default Gonzalo){' '}
+          <code className="rounded bg-white/80 px-1">?yt=URL_o_ID</code> (opcional){' '}
           <code className="rounded bg-white/80 px-1">?autoplay=1</code>{' '}
           <code className="rounded bg-white/80 px-1">?stage=human</code>{' '}
           <code className="rounded bg-white/80 px-1">?stage=cafecito</code>

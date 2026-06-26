@@ -19,10 +19,38 @@ import {
 } from './onboarding-preview-frame';
 
 const ENGINES = [
-  { id: 'chatgpt', label: 'ChatGPT', plan: 'Incluido en el plan gratuito', locked: true, selected: true },
-  { id: 'gemini', label: 'Gemini', plan: 'Incluido en el plan Conquistar', locked: false, selected: true },
-  { id: 'perplexity', label: 'Perplexity', plan: 'Incluido en el plan Conquistar', locked: false, selected: true },
-  { id: 'claude', label: 'Claude', plan: 'Incluido en el plan Conquistar', locked: false, selected: false },
+  {
+    id: 'chatgpt',
+    label: 'ChatGPT',
+    plan: 'Incluido en el plan gratuito',
+    logo: '/engines/chatgpt.png',
+    locked: true,
+    selected: true,
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini',
+    plan: 'Incluido en el plan Conquistar',
+    logo: '/engines/gemini.png',
+    locked: false,
+    selected: true,
+  },
+  {
+    id: 'perplexity',
+    label: 'Perplexity',
+    plan: 'Incluido en el plan Conquistar',
+    logo: '/engines/perplexity.png',
+    locked: false,
+    selected: true,
+  },
+  {
+    id: 'claude',
+    label: 'Claude',
+    plan: 'Incluido en el plan Conquistar',
+    logo: '/engines/claude.png',
+    locked: false,
+    selected: false,
+  },
 ] as const;
 
 const STEPS = [
@@ -145,7 +173,15 @@ export function OnboardingPreviewWizard({
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-bold text-slate-900">{eng.label}</span>
+                      <div className="flex min-w-0 items-start gap-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={eng.logo}
+                          alt=""
+                          className="h-7 w-7 shrink-0 rounded-md object-contain"
+                        />
+                        <span className="text-sm font-bold leading-tight text-slate-900">{eng.label}</span>
+                      </div>
                       <span
                         className={cn(
                           'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
@@ -157,7 +193,7 @@ export function OnboardingPreviewWizard({
                         {selected ? <Check className="h-3 w-3" /> : null}
                       </span>
                     </div>
-                    <span className="mt-1 text-[10px] leading-snug text-slate-500">{eng.plan}</span>
+                    <span className="mt-2 pl-9 text-[10px] leading-snug text-slate-500">{eng.plan}</span>
                   </button>
                 );
               })}

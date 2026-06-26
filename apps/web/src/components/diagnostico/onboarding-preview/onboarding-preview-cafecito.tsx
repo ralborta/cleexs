@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { youtubeEmbedUrl } from '@/lib/youtube';
 import { OnboardingPreviewTrustFooter } from './onboarding-preview-frame';
 
 export function OnboardingPreviewCafecito({
@@ -71,7 +72,7 @@ export function OnboardingPreviewCafecito({
                 <iframe
                   title="Video fundador Cleexs"
                   className="aspect-video w-full"
-                  src={`https://www.youtube.com/embed/${embedId}?rel=0`}
+                  src={youtubeEmbedUrl(embedId)}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
@@ -87,8 +88,8 @@ export function OnboardingPreviewCafecito({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={founderPhotoUrl}
-                    alt=""
-                    className="h-10 w-10 shrink-0 rounded-full border-2 border-white object-cover shadow"
+                    alt="Gonzalo"
+                    className="h-10 w-10 shrink-0 rounded-full border-2 border-white object-cover object-top shadow"
                   />
                 ) : (
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">

@@ -1,6 +1,8 @@
 /**
  * Sitio de marketing (WordPress en cleexs.net). Usar solo para enlaces explícitos al sitio público.
  */
+import { parseYoutubeVideoId } from './youtube';
+
 export const CLEEXS_MARKETING_URL = 'https://cleexs.net' as const;
 
 /** Variante con www. */
@@ -35,6 +37,21 @@ export const CLEEXS_WHATSAPP_PHONE_E164 = '541153866372' as const;
 
 /** Contacto general (soporte, ventas, consultas). */
 export const CLEEXS_CONTACT_EMAIL = 'info@cleexs.net' as const;
+
+/** Foto del fundador (onboarding / cafecito). */
+export const CLEEXS_FOUNDER_PHOTO_URL = '/gonzalo-founder.png' as const;
+
+/**
+ * Video de Gonzalo en la pantalla “cafecito” del onboarding.
+ * Acepta URL completa o solo el ID vía NEXT_PUBLIC_ONBOARDING_YOUTUBE_URL.
+ */
+export const CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID = (() => {
+  const fromEnv =
+    process.env.NEXT_PUBLIC_ONBOARDING_YOUTUBE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_ONBOARDING_YOUTUBE_VIDEO_ID?.trim();
+  if (!fromEnv || fromEnv === 'off') return 'o9cgoy7MaxA';
+  return parseYoutubeVideoId(fromEnv) ?? 'o9cgoy7MaxA';
+})();
 
 export const CLEEXS_SOCIAL_LINKS = {
   instagram: 'https://www.instagram.com/cleexsnet/',

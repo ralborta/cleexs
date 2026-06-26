@@ -34,7 +34,11 @@ export function OnboardingPreviewIntro({
           <div className="relative h-full w-full overflow-hidden rounded-full border-4 border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-md">
             {founderPhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={founderPhotoUrl} alt="Gonzalo" className="h-full w-full object-cover" />
+              <img
+                src={founderPhotoUrl}
+                alt="Gonzalo"
+                className="h-full w-full object-cover object-top"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-violet-700">
                 GA
