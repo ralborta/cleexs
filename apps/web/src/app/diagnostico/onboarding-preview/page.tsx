@@ -46,6 +46,7 @@ function OnboardingPreviewContent() {
   const [introProcessing, setIntroProcessing] = useState(true);
   const [introReady, setIntroReady] = useState(false);
   const [reportReady, setReportReady] = useState(false);
+  const [reportProgress, setReportProgress] = useState(0);
 
   const mock = useMemo(
     () => ({
@@ -72,15 +73,27 @@ function OnboardingPreviewContent() {
     return () => window.clearTimeout(t);
   }, [stage]);
 
-  // Simula análisis (cafecito)
+  // Simula análisis (cafecito) con barra de progreso
   useEffect(() => {
     if (stage !== 'cafecito') {
       setReportReady(false);
+      setReportProgress(0);
       return;
     }
     setReportReady(false);
-    const t = window.setTimeout(() => setReportReady(true), autoplay ? 6000 : 8000);
-    return () => window.clearTimeout(t);
+    setReportProgress(0);
+    const duration = autoplay ? 6000 : 8000;
+    const start = Date.now();
+    const tick = window.setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(100, Math.round((elapsed / duration) * 100));
+      setReportProgress(pct);
+      if (pct >= 100) {
+        window.clearInterval(tick);
+        setReportReady(true);
+      }
+    }, 80);
+    return () => window.clearInterval(tick);
   }, [stage, autoplay]);
 
   const goNextStage = useCallback(() => {
@@ -214,6 +227,7 @@ function OnboardingPreviewContent() {
             youtubeVideoId={youtube}
             whatsappHref={whatsappHref}
             reportReady={reportReady}
+            reportProgress={reportProgress}
             reportHref={reportHref}
           />
         ) : null}

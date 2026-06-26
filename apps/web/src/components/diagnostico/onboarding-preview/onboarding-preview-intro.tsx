@@ -6,7 +6,6 @@ import {
   OnboardingPreviewBadge,
   OnboardingPreviewCard,
   OnboardingPreviewNav,
-  OnboardingPreviewTrustFooter,
 } from './onboarding-preview-frame';
 
 export function OnboardingPreviewIntro({
@@ -93,7 +92,6 @@ export function OnboardingPreviewIntro({
           onNext={onContinue}
           showBack={false}
         />
-        <OnboardingPreviewTrustFooter variant="shield" />
       </div>
     </OnboardingPreviewCard>
   );

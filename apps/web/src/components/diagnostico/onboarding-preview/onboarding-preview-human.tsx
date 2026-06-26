@@ -7,7 +7,6 @@ import {
   OnboardingPreviewBadge,
   OnboardingPreviewCard,
   OnboardingPreviewNav,
-  OnboardingPreviewTrustFooter,
 } from './onboarding-preview-frame';
 
 export function OnboardingPreviewHuman({
@@ -92,7 +91,6 @@ export function OnboardingPreviewHuman({
           onNext={onContinue}
           nextDisabled={!humanOk}
         />
-        <OnboardingPreviewTrustFooter variant="lock" />
       </div>
     </OnboardingPreviewCard>
   );

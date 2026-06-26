@@ -16,41 +16,24 @@ import { cn } from '@/lib/utils';
 import {
   OnboardingPreviewCard,
   OnboardingPreviewNav,
+  OnboardingPreviewTrustFooter,
 } from './onboarding-preview-frame';
 
 const ENGINES = [
-  {
-    id: 'chatgpt',
-    label: 'ChatGPT',
-    plan: 'Incluido en el plan gratuito',
-    logo: '/engines/chatgpt.png',
-    locked: true,
-    selected: true,
-  },
-  {
-    id: 'gemini',
-    label: 'Gemini',
-    plan: 'Incluido en el plan Conquistar',
-    logo: '/engines/gemini.png',
-    locked: false,
-    selected: true,
-  },
-  {
-    id: 'perplexity',
-    label: 'Perplexity',
-    plan: 'Incluido en el plan Conquistar',
-    logo: '/engines/perplexity.png',
-    locked: false,
-    selected: true,
-  },
-  {
-    id: 'claude',
-    label: 'Claude',
-    plan: 'Incluido en el plan Conquistar',
-    logo: '/engines/claude.png',
-    locked: false,
-    selected: false,
-  },
+  { id: 'chatgpt', label: 'ChatGPT', logo: '/engines/chatgpt.png' },
+  { id: 'gemini', label: 'Gemini', logo: '/engines/gemini.png' },
+  { id: 'perplexity', label: 'Perplexity', logo: '/engines/perplexity.png' },
+  { id: 'claude', label: 'Claude', logo: '/engines/claude.png' },
+] as const;
+
+const HOW_FOUND_OPTIONS = [
+  { value: '', label: 'Seleccioná una opción (opcional)' },
+  { value: 'google', label: 'Búsqueda en Google' },
+  { value: 'redes', label: 'Redes sociales' },
+  { value: 'recomendacion', label: 'Recomendación de alguien' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'podcast', label: 'Podcast o video' },
+  { value: 'otro', label: 'Otro' },
 ] as const;
 
 const STEPS = [
@@ -80,11 +63,13 @@ export function OnboardingPreviewWizard({
   const idx = Math.min(Math.max(step, 1), 5) - 1;
   const meta = STEPS[idx]!;
   const Icon = meta.icon;
-  const [engines, setEngines] = useState<string[]>(['chatgpt', 'gemini', 'perplexity']);
+  const [engines, setEngines] = useState<string[]>([]);
   const [competitors, setCompetitors] = useState(mock.competitors);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [howFound, setHowFound] = useState('');
 
   const toggleEngine = (id: string) => {
-    if (id === 'chatgpt') return;
     setEngines((prev) =>
       prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
     );
@@ -101,7 +86,7 @@ export function OnboardingPreviewWizard({
             <h2 className="text-lg font-bold leading-snug text-slate-900">{meta.title}</h2>
             {idx === 0 ? (
               <p className="mt-1.5 text-sm text-slate-600">
-                Detectamos este país. Confirmalo o elegí otro: define el mercado del análisis.
+                Detectamos país e idioma. Confirmalos o elegí otros: definen el mercado del análisis.
               </p>
             ) : null}
             {idx === 1 ? (
@@ -121,7 +106,7 @@ export function OnboardingPreviewWizard({
             ) : null}
             {idx === 4 ? (
               <p className="mt-1.5 text-sm text-slate-600">
-                Te enviamos el informe por correo cuando esté listo.
+                Te enviamos el informe por correo cuando esté listo. Los campos opcionales podés dejarlos vacíos.
               </p>
             ) : null}
           </div>
@@ -129,16 +114,25 @@ export function OnboardingPreviewWizard({
 
         <div className="mt-5">
           {idx === 0 && (
-            <label className="block">
-              <span className="text-xs font-semibold text-slate-500">País detectado</span>
-              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                <span className="text-lg" aria-hidden>
-                  🇦🇷
-                </span>
-                <span className="flex-1 text-sm font-medium text-slate-900">{mock.country}</span>
-                <ChevronDown className="h-4 w-4 text-slate-400" />
-              </div>
-            </label>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-500">País detectado</span>
+                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                  <span className="text-lg" aria-hidden>
+                    🇦🇷
+                  </span>
+                  <span className="flex-1 text-sm font-medium text-slate-900">{mock.country}</span>
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                </div>
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-500">Idioma</span>
+                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                  <span className="flex-1 text-sm font-medium text-slate-900">Español</span>
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                </div>
+              </label>
+            </div>
           )}
 
           {idx === 1 && (
@@ -164,36 +158,32 @@ export function OnboardingPreviewWizard({
                     key={eng.id}
                     type="button"
                     onClick={() => toggleEngine(eng.id)}
-                    disabled={eng.locked}
                     className={cn(
-                      'flex flex-col rounded-xl border p-3 text-left transition',
+                      'flex items-center gap-2.5 rounded-xl border p-3 text-left transition',
                       selected
                         ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-100'
                         : 'border-slate-200 bg-white hover:border-violet-200'
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-start gap-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={eng.logo}
-                          alt=""
-                          className="h-7 w-7 shrink-0 rounded-md object-contain"
-                        />
-                        <span className="text-sm font-bold leading-tight text-slate-900">{eng.label}</span>
-                      </div>
-                      <span
-                        className={cn(
-                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
-                          selected
-                            ? 'border-violet-600 bg-violet-600 text-white'
-                            : 'border-slate-300 bg-white'
-                        )}
-                      >
-                        {selected ? <Check className="h-3 w-3" /> : null}
-                      </span>
-                    </div>
-                    <span className="mt-2 pl-9 text-[10px] leading-snug text-slate-500">{eng.plan}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={eng.logo}
+                      alt=""
+                      className="h-8 w-8 shrink-0 rounded-md object-contain"
+                    />
+                    <span className="min-w-0 flex-1 text-sm font-bold leading-tight text-slate-900">
+                      {eng.label}
+                    </span>
+                    <span
+                      className={cn(
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
+                        selected
+                          ? 'border-violet-600 bg-violet-600 text-white'
+                          : 'border-slate-300 bg-white'
+                      )}
+                    >
+                      {selected ? <Check className="h-3 w-3" /> : null}
+                    </span>
                   </button>
                 );
               })}
@@ -234,15 +224,57 @@ export function OnboardingPreviewWizard({
           )}
 
           {idx === 4 && (
-            <label className="block">
-              <span className="text-xs font-semibold text-slate-500">Correo electrónico</span>
-              <input
-                readOnly
-                type="email"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
-                value={mock.email}
-              />
-            </label>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-500">Correo electrónico</span>
+                <input
+                  readOnly
+                  type="email"
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
+                  value={mock.email}
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-500">Nombre (opcional)</span>
+                  <input
+                    type="text"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
+                    placeholder="Tu nombre"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-500">Apellido (opcional)</span>
+                  <input
+                    type="text"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
+                    placeholder="Tu apellido"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-500">¿Cómo nos encontraste?</span>
+                <div className="relative mt-1.5">
+                  <select
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 shadow-sm"
+                    value={howFound}
+                    onChange={(e) => setHowFound(e.target.value)}
+                  >
+                    {HOW_FOUND_OPTIONS.map((opt) => (
+                      <option key={opt.value || 'empty'} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </label>
+              <OnboardingPreviewTrustFooter variant="email" />
+            </div>
           )}
         </div>
 

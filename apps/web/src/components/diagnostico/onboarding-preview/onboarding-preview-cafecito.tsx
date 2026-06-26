@@ -1,17 +1,9 @@
 'use client';
 
-import {
-  BarChart3,
-  Coffee,
-  ExternalLink,
-  Loader2,
-  MessageCircle,
-  Play,
-} from 'lucide-react';
+import { Coffee, ExternalLink, MessageCircle, Play, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { youtubeEmbedUrl } from '@/lib/youtube';
-import { OnboardingPreviewTrustFooter } from './onboarding-preview-frame';
 
 export function OnboardingPreviewCafecito({
   userName,
@@ -21,6 +13,7 @@ export function OnboardingPreviewCafecito({
   youtubeVideoId,
   whatsappHref,
   reportReady,
+  reportProgress,
   reportHref,
 }: {
   userName: string;
@@ -30,11 +23,13 @@ export function OnboardingPreviewCafecito({
   youtubeVideoId?: string;
   whatsappHref: string;
   reportReady: boolean;
+  reportProgress: number;
   reportHref: string;
 }) {
   const embedId = youtubeVideoId?.trim();
   const showEmbed = embedId && embedId !== 'off';
   const waMessage = `Hola Gonzalo, soy ${userName} de ${domain}. Te escribo porque quiero contarte por qué hice el análisis de Cleexs…`;
+  const progress = reportReady ? 100 : reportProgress;
 
   return (
     <div className="mx-auto w-full max-w-4xl">
@@ -55,7 +50,6 @@ export function OnboardingPreviewCafecito({
         </div>
 
         <div className="grid gap-0 lg:grid-cols-[1.15fr,0.85fr]">
-          {/* Video — columna izquierda */}
           <div className="border-b border-slate-100 p-5 sm:p-6 lg:border-b-0 lg:border-r">
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-inner">
               {!showEmbed ? (
@@ -64,9 +58,6 @@ export function OnboardingPreviewCafecito({
                     <Play className="ml-0.5 h-6 w-6 text-white" fill="currentColor" />
                   </div>
                   <p className="text-sm font-semibold text-white">Video de Gonzalo</p>
-                  <p className="max-w-xs text-xs leading-relaxed text-slate-400">
-                    Placeholder — embed de YouTube cuando esté grabado.
-                  </p>
                 </div>
               ) : (
                 <iframe
@@ -80,7 +71,6 @@ export function OnboardingPreviewCafecito({
             </div>
           </div>
 
-          {/* Sidebar — WhatsApp + informe */}
           <div className="flex flex-col gap-4 p-5 sm:p-6">
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
               <div className="flex items-start gap-3">
@@ -113,54 +103,68 @@ export function OnboardingPreviewCafecito({
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#20bd5a]"
               >
                 <MessageCircle className="h-4 w-4" />
-                Enviar por WhatsApp
+                Escribime por WhatsApp
               </a>
             </div>
 
             <div
               className={cn(
-                'flex flex-1 flex-col items-center justify-center rounded-xl border p-4 text-center transition',
+                'rounded-xl border p-4 transition-all duration-500',
                 reportReady
-                  ? 'border-violet-200 bg-violet-50/50'
+                  ? 'border-violet-300 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-md shadow-violet-200/50'
                   : 'border-slate-200 bg-slate-50/80'
               )}
             >
-              {!reportReady ? (
-                <>
-                  <Loader2 className="h-7 w-7 animate-spin text-violet-600" aria-hidden />
-                  <p className="mt-2 text-sm font-medium text-slate-700">Armando tu diagnóstico…</p>
-                </>
-              ) : (
-                <>
-                  <BarChart3 className="h-8 w-8 text-violet-600" />
-                  <p className="mt-2 text-sm font-bold text-slate-900">Informe listo</p>
-                  <button
-                    type="button"
-                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-violet-600 hover:text-violet-800"
-                    onClick={() => window.open(reportHref, '_blank', 'noopener,noreferrer')}
-                  >
-                    Ver mi diagnóstico
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
-                </>
-              )}
+              <p className="text-sm font-bold text-slate-900">Tu diagnóstico</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {reportReady
+                  ? '¡Listo! Ya podés ver tu informe completo.'
+                  : 'Estamos analizando tu sitio. El botón se activa al terminar.'}
+              </p>
 
-              {!reportReady ? (
+              {reportReady ? (
+                <Button
+                  type="button"
+                  className="mt-4 h-12 w-full gap-2 bg-violet-600 text-base font-bold shadow-lg shadow-violet-600/35 ring-2 ring-violet-400/40 hover:bg-violet-700"
+                  onClick={() => window.open(reportHref, '_blank', 'noopener,noreferrer')}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Ver mi diagnóstico
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              ) : (
                 <Button
                   type="button"
                   disabled
-                  className="mt-4 w-full opacity-50"
                   variant="secondary"
+                  className="mt-4 h-11 w-full cursor-not-allowed border border-slate-200 bg-slate-200 text-slate-500"
                 >
                   Ver mi diagnóstico
                 </Button>
-              ) : null}
+              )}
+
+              <div className="mt-4">
+                <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/90">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all duration-500 ease-out',
+                      reportReady ? 'bg-emerald-500' : 'bg-blue-600'
+                    )}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-center text-xs font-medium text-slate-600">
+                  {reportReady ? (
+                    <span className="text-emerald-700">Análisis completado</span>
+                  ) : (
+                    <>Progreso del análisis — {progress}%</>
+                  )}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <OnboardingPreviewTrustFooter variant="row" />
     </div>
   );
 }

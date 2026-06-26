@@ -76,7 +76,26 @@ export function OnboardingPreviewNav({
   );
 }
 
-export function OnboardingPreviewTrustFooter({ variant = 'shield' }: { variant?: 'shield' | 'lock' | 'row' }) {
+export function OnboardingPreviewTrustFooter({
+  variant = 'shield',
+}: {
+  variant?: 'shield' | 'lock' | 'row' | 'email';
+}) {
+  if (variant === 'email') {
+    return (
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-slate-500">
+        <span className="inline-flex items-center gap-1.5">
+          <Shield className="h-3.5 w-3.5 text-violet-500" />
+          Tus datos están protegidos
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Lock className="h-3.5 w-3.5 text-violet-500" />
+          100% seguro y confidencial
+        </span>
+      </div>
+    );
+  }
+
   if (variant === 'row') {
     return (
       <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] text-slate-500">
