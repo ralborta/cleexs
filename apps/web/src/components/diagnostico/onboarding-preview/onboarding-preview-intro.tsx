@@ -26,20 +26,20 @@ export function OnboardingPreviewIntro({
   return (
     <OnboardingPreviewCard badge={<OnboardingPreviewBadge>Introducción</OnboardingPreviewBadge>}>
       <div className="px-6 py-8 text-center sm:px-8 sm:py-10">
-        <div className="relative mx-auto h-28 w-28">
-          <Sparkles className="absolute -left-1 top-2 h-4 w-4 text-violet-400" aria-hidden />
-          <Sparkles className="absolute -right-1 top-4 h-3 w-3 text-violet-300" aria-hidden />
-          <Sparkles className="absolute bottom-3 left-0 h-3 w-3 text-violet-300" aria-hidden />
-          <div className="relative h-full w-full overflow-hidden rounded-full border-4 border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-md">
+        <div className="relative mx-auto h-40 w-40 sm:h-44 sm:w-44">
+          <Sparkles className="absolute -left-2 top-3 h-5 w-5 text-violet-400" aria-hidden />
+          <Sparkles className="absolute -right-2 top-5 h-4 w-4 text-violet-300" aria-hidden />
+          <Sparkles className="absolute bottom-4 -left-1 h-4 w-4 text-violet-300" aria-hidden />
+          <div className="relative h-full w-full overflow-hidden rounded-full border-[5px] border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-lg ring-4 ring-violet-50">
             {founderPhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={founderPhotoUrl}
                 alt="Gonzalo"
-                className="h-full w-full object-cover object-top"
+                className="h-full w-full scale-110 object-cover object-[center_18%]"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-violet-700">
+              <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-violet-700 sm:text-5xl">
                 GA
               </div>
             )}
