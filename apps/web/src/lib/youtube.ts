@@ -30,6 +30,16 @@ export function parseYoutubeVideoId(input: string | undefined | null): string | 
   return null;
 }
 
-export function youtubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube.com/embed/${videoId}?rel=0`;
+export function youtubeEmbedUrl(
+  videoId: string,
+  options?: { autoplay?: boolean }
+): string {
+  const params = new URLSearchParams({ rel: '0' });
+  if (options?.autoplay) {
+    // mute=1 es obligatorio para autoplay en Chrome, Safari, Firefox, etc.
+    params.set('autoplay', '1');
+    params.set('mute', '1');
+    params.set('playsinline', '1');
+  }
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 }
