@@ -229,6 +229,7 @@ function OnboardingPreviewContent() {
             reportReady={reportReady}
             reportProgress={reportProgress}
             reportHref={reportHref}
+            competitorsCount={mock.competitors.length}
           />
         ) : null}
       </div>

@@ -1,9 +1,103 @@
 'use client';
 
-import { Coffee, ExternalLink, MessageCircle, Play, Sparkles } from 'lucide-react';
+import {
+  Check,
+  Coffee,
+  ExternalLink,
+  FileText,
+  Globe,
+  MessageCircle,
+  Play,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { youtubeEmbedUrl } from '@/lib/youtube';
+
+function CircularProgress({
+  value,
+  ready,
+}: {
+  value: number;
+  ready?: boolean;
+}) {
+  const size = 72;
+  const stroke = 6;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (Math.min(100, Math.max(0, value)) / 100) * c;
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg
+        className="-rotate-90"
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        aria-hidden
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          className="text-slate-200"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          className={cn(
+            'transition-all duration-500 ease-out',
+            ready ? 'text-emerald-500' : 'text-blue-600'
+          )}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-800">
+        {value}%
+      </span>
+    </div>
+  );
+}
+
+function DiagnosisStat({
+  icon: Icon,
+  label,
+  value,
+  muted,
+}: {
+  icon: typeof Globe;
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200/90 bg-white px-2.5 py-2.5 text-center shadow-sm">
+      <Icon
+        className={cn('mx-auto h-4 w-4', muted ? 'text-slate-400' : 'text-violet-600')}
+        strokeWidth={1.75}
+      />
+      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p
+        className={cn(
+          'mt-0.5 truncate text-[11px] font-bold',
+          muted ? 'text-slate-400' : 'text-slate-900'
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
 
 export function OnboardingPreviewCafecito({
   userName,
@@ -15,6 +109,7 @@ export function OnboardingPreviewCafecito({
   reportReady,
   reportProgress,
   reportHref,
+  competitorsCount = 3,
 }: {
   userName: string;
   domain: string;
@@ -25,6 +120,7 @@ export function OnboardingPreviewCafecito({
   reportReady: boolean;
   reportProgress: number;
   reportHref: string;
+  competitorsCount?: number;
 }) {
   const embedId = youtubeVideoId?.trim();
   const showEmbed = embedId && embedId !== 'off';
@@ -34,7 +130,6 @@ export function OnboardingPreviewCafecito({
   return (
     <div className="mx-auto w-full max-w-5xl">
       <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/40">
-        {/* Header */}
         <div className="bg-gradient-to-r from-violet-600 to-indigo-700 px-6 py-5 text-white sm:px-8">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
@@ -50,7 +145,6 @@ export function OnboardingPreviewCafecito({
           </div>
         </div>
 
-        {/* Fila superior: video + diagnóstico */}
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1.2fr,0.8fr] lg:gap-6">
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-inner">
             {!showEmbed ? (
@@ -71,25 +165,87 @@ export function OnboardingPreviewCafecito({
             )}
           </div>
 
+          {/* Tarjeta diagnóstico */}
           <div
             className={cn(
-              'flex flex-col justify-center rounded-xl border p-5 transition-all duration-500 sm:p-6',
+              'flex flex-col rounded-xl border p-4 transition-all duration-500 sm:p-5',
               reportReady
-                ? 'border-violet-300 bg-gradient-to-br from-violet-50 via-white to-indigo-50 shadow-md shadow-violet-200/40'
-                : 'border-slate-200 bg-slate-50/80'
+                ? 'border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-violet-50/30 shadow-md shadow-emerald-100/50'
+                : 'border-slate-200 bg-slate-50/50'
             )}
           >
-            <p className="text-base font-bold text-slate-900">Tu diagnóstico</p>
-            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            <div className="flex items-start justify-between gap-2">
+              <Sparkles
+                className={cn(
+                  'h-5 w-5 shrink-0',
+                  reportReady ? 'text-violet-600' : 'text-slate-400'
+                )}
+                aria-hidden
+              />
+              {reportReady ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800 ring-1 ring-emerald-200/80">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                  Informe listo
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">
+                  Analizando…
+                </span>
+              )}
+            </div>
+
+            <h2 className="mt-2 text-base font-bold text-slate-900">Tu diagnóstico</h2>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-600 sm:text-sm">
               {reportReady
                 ? '¡Listo! Ya podés ver tu informe completo.'
                 : 'Estamos analizando tu sitio. El botón se activa al terminar.'}
             </p>
 
+            <div
+              className={cn(
+                'mt-4 flex items-center gap-3 rounded-xl border p-3',
+                reportReady
+                  ? 'border-emerald-200/80 bg-emerald-50/60'
+                  : 'border-slate-200 bg-white'
+              )}
+            >
+              <CircularProgress value={progress} ready={reportReady} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900">
+                  {reportReady ? (
+                    <span className="text-emerald-800">Análisis completado ✓</span>
+                  ) : (
+                    <>Progreso del análisis</>
+                  )}
+                </p>
+                <p className="mt-0.5 text-[11px] leading-snug text-slate-600">
+                  {reportReady
+                    ? 'Procesamos tu sitio y analizamos el mercado para generar tu informe.'
+                    : 'Estamos revisando tu dominio, competidores y visibilidad en motores de IA.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <DiagnosisStat icon={Globe} label="Dominio analizado" value={domain} />
+              <DiagnosisStat
+                icon={Users}
+                label="Competidores"
+                value={reportReady ? String(competitorsCount) : 'Detectando…'}
+                muted={!reportReady}
+              />
+              <DiagnosisStat
+                icon={FileText}
+                label="Informe"
+                value={reportReady ? 'Listo para ver' : 'En proceso'}
+                muted={!reportReady}
+              />
+            </div>
+
             {reportReady ? (
               <Button
                 type="button"
-                className="mt-5 h-12 w-full gap-2 bg-violet-600 text-base font-bold shadow-lg shadow-violet-600/35 ring-2 ring-violet-400/40 hover:bg-violet-700"
+                className="mt-4 h-11 w-full gap-2 bg-violet-600 text-sm font-bold shadow-lg shadow-violet-600/30 ring-2 ring-violet-400/30 hover:bg-violet-700"
                 onClick={() => window.open(reportHref, '_blank', 'noopener,noreferrer')}
               >
                 <Sparkles className="h-4 w-4" />
@@ -101,34 +257,14 @@ export function OnboardingPreviewCafecito({
                 type="button"
                 disabled
                 variant="secondary"
-                className="mt-5 h-11 w-full cursor-not-allowed border border-slate-200 bg-slate-200 text-slate-500"
+                className="mt-4 h-11 w-full cursor-not-allowed border border-slate-200 bg-slate-200 text-slate-500"
               >
                 Ver mi diagnóstico
               </Button>
             )}
-
-            <div className="mt-5">
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/90">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all duration-500 ease-out',
-                    reportReady ? 'bg-emerald-500' : 'bg-blue-600'
-                  )}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="mt-2 text-center text-xs font-medium text-slate-600">
-                {reportReady ? (
-                  <span className="text-emerald-700">Análisis completado</span>
-                ) : (
-                  <>Progreso del análisis — {progress}%</>
-                )}
-              </p>
-            </div>
           </div>
         </div>
 
-        {/* WhatsApp — ancho completo abajo */}
         <div className="border-t border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-slate-50/80 px-5 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
             <div className="flex shrink-0 items-center gap-3 lg:max-w-[220px]">
