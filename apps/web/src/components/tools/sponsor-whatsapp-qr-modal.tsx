@@ -195,7 +195,7 @@ export function SponsorWhatsAppQrModal({
                 className={fieldCls}
               />
               <span className="mt-1 block text-[11px] text-slate-500">
-                Número fijo para todos los QR: <code className="text-xs">+541153866372</code>
+                Número fijo para todos los QR: <code className="text-xs">+54 9 11 6015-6473</code>
               </span>
             </label>
 

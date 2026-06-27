@@ -323,7 +323,7 @@ export function SponsorLinkBuilder() {
               <code className="text-xs">ref:</code> en el texto prefijado.
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Número fijo del QR: <code className="text-[11px]">+541153866372</code>
+              Número fijo del QR: <code className="text-[11px]">+54 9 11 6015-6473</code>
             </p>
           </div>
           <Button
