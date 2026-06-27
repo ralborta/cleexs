@@ -108,6 +108,7 @@ export function OnboardingPreviewCafecito({
   whatsappHref,
   reportReady,
   reportProgress,
+  reportFinalizing = false,
   reportHref,
   competitorsCount = 3,
   onReportClick,
@@ -120,6 +121,8 @@ export function OnboardingPreviewCafecito({
   whatsappHref: string;
   reportReady: boolean;
   reportProgress: number;
+  /** Pipeline en cierre (completed en backend pero informe aún no abrible). */
+  reportFinalizing?: boolean;
   reportHref: string;
   competitorsCount?: number;
   onReportClick?: () => void;
@@ -127,7 +130,9 @@ export function OnboardingPreviewCafecito({
   const embedId = youtubeVideoId?.trim();
   const showEmbed = embedId && embedId !== 'off';
   const waMessage = `Hola Gonzalo, soy ${userName} de ${domain}. Te escribo porque quiero contarte por qué hice el análisis de Cleexs…`;
-  const progress = reportReady ? 100 : reportProgress;
+  /** 100% y estado verde solo cuando el informe se puede abrir (mismo criterio que el botón). */
+  const progress = reportReady ? 100 : Math.min(98, Math.max(0, reportProgress));
+  const showCompletedUi = reportReady;
 
   return (
     <div className="mx-auto w-full">
@@ -173,21 +178,27 @@ export function OnboardingPreviewCafecito({
               'flex flex-col rounded-xl border p-4 transition-all duration-500 sm:p-5',
               reportReady
                 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-violet-50/30 shadow-md shadow-emerald-100/50'
-                : 'border-slate-200 bg-slate-50/50'
+                : reportFinalizing
+                  ? 'border-violet-200 bg-gradient-to-br from-violet-50/30 via-white to-slate-50/50'
+                  : 'border-slate-200 bg-slate-50/50'
             )}
           >
             <div className="flex items-start justify-between gap-2">
               <Sparkles
                 className={cn(
                   'h-5 w-5 shrink-0',
-                  reportReady ? 'text-violet-600' : 'text-slate-400'
+                  showCompletedUi ? 'text-violet-600' : 'text-slate-400'
                 )}
                 aria-hidden
               />
-              {reportReady ? (
+              {showCompletedUi ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800 ring-1 ring-emerald-200/80">
                   <Check className="h-3 w-3" strokeWidth={3} />
                   Informe listo
+                </span>
+              ) : reportFinalizing ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-800 ring-1 ring-violet-200/80">
+                  Cerrando informe…
                 </span>
               ) : (
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">
@@ -198,32 +209,40 @@ export function OnboardingPreviewCafecito({
 
             <h2 className="mt-2 text-base font-bold text-slate-900">Tu diagnóstico</h2>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-600 sm:text-sm">
-              {reportReady
+              {showCompletedUi
                 ? '¡Listo! Ya podés ver tu informe completo.'
-                : 'Estamos analizando tu sitio. El botón se activa al terminar.'}
+                : reportFinalizing
+                  ? 'Estamos cerrando los últimos detalles. El botón se activa en cuanto el informe esté listo para abrir.'
+                  : 'Estamos analizando tu sitio. El botón se activa al terminar.'}
             </p>
 
             <div
               className={cn(
                 'mt-4 flex items-center gap-3 rounded-xl border p-3',
-                reportReady
+                showCompletedUi
                   ? 'border-emerald-200/80 bg-emerald-50/60'
-                  : 'border-slate-200 bg-white'
+                  : reportFinalizing
+                    ? 'border-violet-200/80 bg-violet-50/40'
+                    : 'border-slate-200 bg-white'
               )}
             >
-              <CircularProgress value={progress} ready={reportReady} />
+              <CircularProgress value={progress} ready={showCompletedUi} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-slate-900">
-                  {reportReady ? (
+                  {showCompletedUi ? (
                     <span className="text-emerald-800">Análisis completado ✓</span>
+                  ) : reportFinalizing ? (
+                    <span className="text-violet-800">Preparando informe final…</span>
                   ) : (
                     <>Progreso del análisis</>
                   )}
                 </p>
                 <p className="mt-0.5 text-[11px] leading-snug text-slate-600">
-                  {reportReady
+                  {showCompletedUi
                     ? 'Procesamos tu sitio y analizamos el mercado para generar tu informe.'
-                    : 'Estamos revisando tu dominio, competidores y visibilidad en motores de IA.'}
+                    : reportFinalizing
+                      ? 'Consolidando score, texto IA y comparativa con competidores.'
+                      : 'Estamos revisando tu dominio, competidores y visibilidad en motores de IA.'}
                 </p>
               </div>
             </div>
@@ -233,18 +252,18 @@ export function OnboardingPreviewCafecito({
               <DiagnosisStat
                 icon={Users}
                 label="Competidores"
-                value={reportReady ? String(competitorsCount) : 'Detectando…'}
-                muted={!reportReady}
+                value={showCompletedUi ? String(competitorsCount) : 'Detectando…'}
+                muted={!showCompletedUi}
               />
               <DiagnosisStat
                 icon={FileText}
                 label="Informe"
-                value={reportReady ? 'Listo para ver' : 'En proceso'}
-                muted={!reportReady}
+                value={showCompletedUi ? 'Listo para ver' : reportFinalizing ? 'Cerrando…' : 'En proceso'}
+                muted={!showCompletedUi}
               />
             </div>
 
-            {reportReady ? (
+            {showCompletedUi ? (
               <Button
                 type="button"
                 className="mt-4 h-11 w-full gap-2 bg-violet-600 text-sm font-bold shadow-lg shadow-violet-600/30 ring-2 ring-violet-400/30 hover:bg-violet-700"

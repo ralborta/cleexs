@@ -96,10 +96,11 @@ function OnboardingPreviewContent() {
     const start = Date.now();
     const tick = window.setInterval(() => {
       const elapsed = Date.now() - start;
-      const pct = Math.min(100, Math.round((elapsed / duration) * 100));
+      const pct = Math.min(98, Math.round((elapsed / duration) * 100));
       setReportProgress(pct);
-      if (pct >= 100) {
+      if (elapsed >= duration) {
         window.clearInterval(tick);
+        setReportProgress(100);
         setReportReady(true);
       }
     }, 80);

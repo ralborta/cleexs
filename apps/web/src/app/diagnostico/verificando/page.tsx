@@ -230,7 +230,10 @@ function VerificandoContent() {
 
   const progressTarget = useMemo(() => {
     if (!setupLeftProgress) return 0;
-    if (normalizedDiagnosticStatus === 'completed') return 100;
+    if (normalizedDiagnosticStatus === 'completed') {
+      if (diagnostic && isReportReadyForRedirect(diagnostic)) return 100;
+      return 96;
+    }
     if (normalizedDiagnosticStatus === 'failed') return 0;
 
     if (isRunning) {
@@ -254,6 +257,7 @@ function VerificandoContent() {
     runningElapsed,
     usingFakeProgress,
     fakeBarPct,
+    diagnostic,
   ]);
 
   const smoothProgressEnabled =
@@ -941,6 +945,14 @@ function VerificandoContent() {
     suggestedCompetitorCount < 1;
   const setupShowProcessing = !setupDataReady && !captchaVerified;
   const reportReady = isReportReadyForRedirect(diagnostic);
+  const reportFinalizing =
+    !reportReady &&
+    (normalizedDiagnosticStatus === 'completed' || waitingFinalReady || isFinalizing);
+  const cafecitoReportProgress = reportReady
+    ? 100
+    : reportFinalizing
+      ? Math.min(97, Math.max(92, Math.round(displayBarPct)))
+      : Math.min(98, Math.round(displayBarPct));
   const showCafecito = analysisRunningPhase;
   const waUserName = onboardingWhatsAppDisplayName(setupEmail || diagnosticEmailTrimmed);
   const whatsappHref = buildOnboardingWhatsAppHref(waUserName, domainShort);
@@ -1093,7 +1105,8 @@ function VerificandoContent() {
                   youtubeVideoId={CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID}
                   whatsappHref={whatsappHref}
                   reportReady={reportReady}
-                  reportProgress={Math.round(displayBarPct)}
+                  reportFinalizing={reportFinalizing}
+                  reportProgress={cafecitoReportProgress}
                   reportHref={reportHref}
                   competitorsCount={cafecitoCompetitorCount}
                   onReportClick={handleOpenReport}
