@@ -47,6 +47,8 @@ function OnboardingPreviewContent() {
   const [introReady, setIntroReady] = useState(false);
   const [reportReady, setReportReady] = useState(false);
   const [reportProgress, setReportProgress] = useState(0);
+  /** Arranca con el primer Continuar de la intro (como producción tras confirmar contexto) */
+  const [analysisStarted, setAnalysisStarted] = useState(validStage !== 'intro');
 
   const mock = useMemo(
     () => ({
@@ -57,6 +59,14 @@ function OnboardingPreviewContent() {
     }),
     [domain, userName]
   );
+
+  const leftProgressPct = useMemo(() => {
+    if (!analysisStarted) return 0;
+    if (stage === 'cafecito') return Math.min(100, 25 + Math.round(reportProgress * 0.75));
+    if (stage === 'human') return 8;
+    if (stage === 'wizard') return 8 + Math.round((wizardStep / 5) * 17);
+    return 0;
+  }, [analysisStarted, stage, wizardStep, reportProgress]);
 
   const whatsappHref = useMemo(() => buildWhatsAppHref(userName, domain), [userName, domain]);
   const reportHref = `/ver-resultado?diagnosticId=preview&domain=${encodeURIComponent(domain)}`;
@@ -96,9 +106,14 @@ function OnboardingPreviewContent() {
     return () => window.clearInterval(tick);
   }, [stage, autoplay]);
 
+  const handleIntroContinue = useCallback(() => {
+    setAnalysisStarted(true);
+    setStage('human');
+  }, []);
+
   const goNextStage = useCallback(() => {
     if (stage === 'intro') {
-      setStage('human');
+      handleIntroContinue();
       return;
     }
     if (stage === 'human') {
@@ -109,7 +124,7 @@ function OnboardingPreviewContent() {
     if (stage === 'wizard') {
       setStage('cafecito');
     }
-  }, [stage]);
+  }, [stage, handleIntroContinue]);
 
   // Autoplay demo lineal
   useEffect(() => {
@@ -151,7 +166,11 @@ function OnboardingPreviewContent() {
               <button
                 key={s}
                 type="button"
-                onClick={() => setStage(s)}
+                onClick={() => {
+                  setStage(s);
+                  if (s !== 'intro') setAnalysisStarted(true);
+                  else setAnalysisStarted(false);
+                }}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-xs font-semibold transition',
                   stage === s
@@ -179,8 +198,8 @@ function OnboardingPreviewContent() {
 
       <OnboardingPreviewProductionShell
         brandLabel={brand}
-        analysisRunning={stage === 'cafecito'}
-        leftProgressPct={stage === 'cafecito' ? reportProgress : 0}
+        analysisRunning={analysisStarted}
+        leftProgressPct={leftProgressPct}
       >
         {stage === 'intro' ? (
           <OnboardingPreviewIntro
@@ -189,7 +208,7 @@ function OnboardingPreviewContent() {
             founderPhotoUrl={photo}
             processing={introProcessing}
             ready={introReady}
-            onContinue={goNextStage}
+            onContinue={handleIntroContinue}
           />
         ) : null}
 

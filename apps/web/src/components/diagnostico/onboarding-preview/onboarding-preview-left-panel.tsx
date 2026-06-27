@@ -145,8 +145,8 @@ export function OnboardingPreviewLeftPanel({
             </>
           ) : (
             <p className="mt-2 text-sm text-slate-600">
-              Confirmá tus datos en los pasos de la derecha. Al arrancar el análisis, este panel sigue
-              el progreso real de {brandLabel ? ` ${brandLabel}` : ' tu marca'} (sin cambios en producción).
+              Tocá <span className="font-semibold">Continuar</span> en la intro para arrancar el análisis
+              {brandLabel ? ` de ${brandLabel}` : ''}.
             </p>
           )}
         </div>
