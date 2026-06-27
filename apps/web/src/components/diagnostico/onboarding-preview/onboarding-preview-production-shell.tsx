@@ -13,35 +13,34 @@ export function OnboardingPreviewProductionShell({
   children,
 }: {
   brandLabel: string;
+  /** true en stage cafecito mientras corren los 12 pasos */
   analysisRunning: boolean;
   leftProgressPct: number;
-  /** Al 100%: ocultar columna izquierda y mostrar solo la pantalla final */
+  /** true al 100%: solo cafecito a pantalla completa, sin columna izquierda */
   analysisComplete?: boolean;
   children: React.ReactNode;
 }) {
-  const showLeftPanel = analysisRunning && !analysisComplete;
+  // Pantalla final: únicamente el bloque cafecito (video + diagnóstico + WhatsApp)
+  if (analysisComplete) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center py-2">
+        {children}
+      </div>
+    );
+  }
+
+  const showLeftPanel = analysisRunning;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
       <div className="mb-4 shrink-0 sm:mb-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p
-              className={cn(
-                'text-xs font-semibold uppercase tracking-widest',
-                analysisComplete ? 'text-emerald-600' : 'text-primary-600'
-              )}
-            >
-              {analysisComplete ? 'Análisis completado' : 'Análisis en curso'}
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">
+              Análisis en curso
             </p>
             <h1 className="mt-1 text-xl font-bold text-slate-900">
-              {analysisComplete
-                ? brandLabel
-                  ? `Tu informe de ${brandLabel} está listo`
-                  : 'Tu informe está listo'
-                : brandLabel
-                  ? `Construyendo tu análisis de ${brandLabel}`
-                  : 'Construyendo tu análisis'}
+              {brandLabel ? `Construyendo tu análisis de ${brandLabel}` : 'Construyendo tu análisis'}
             </h1>
           </div>
           <Link
@@ -57,33 +56,32 @@ export function OnboardingPreviewProductionShell({
 
       <div
         className={cn(
-          'grid min-h-0 flex-1 gap-6 transition-all duration-500',
+          'grid min-h-0 flex-1 gap-6',
           showLeftPanel ? 'grid-cols-1 lg:grid-cols-[1fr,1.15fr] lg:gap-8' : 'grid-cols-1'
         )}
       >
         {showLeftPanel ? (
           <OnboardingPreviewLeftPanel
             brandLabel={brandLabel}
-            analysisRunning={analysisRunning}
+            analysisRunning
             progressPct={leftProgressPct}
           />
-        ) : null}
-        <div
-          className={cn(
-            'relative flex min-h-0 min-w-0 flex-col',
-            analysisComplete && 'mx-auto w-full'
-          )}
-        >
+        ) : (
+          <OnboardingPreviewLeftPanel
+            brandLabel={brandLabel}
+            analysisRunning={false}
+            progressPct={0}
+          />
+        )}
+        <div className="relative flex min-h-0 min-w-0 flex-col">
           <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">{children}</div>
         </div>
       </div>
 
-      {!analysisComplete ? (
-        <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
-          El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te
-          llevamos al informe.
-        </p>
-      ) : null}
+      <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
+        El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te
+        llevamos al informe.
+      </p>
     </div>
   );
 }
