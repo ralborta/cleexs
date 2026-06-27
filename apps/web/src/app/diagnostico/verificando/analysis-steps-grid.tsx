@@ -21,6 +21,21 @@ function ActiveOrbitIcon() {
   );
 }
 
+function CompletedSphereCheck() {
+  return (
+    <span className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_32%_24%,#93c5fd_0%,#2563eb_48%,#1d4ed8_100%)] shadow-[inset_0_2px_4px_rgba(255,255,255,0.38),inset_0_-3px_6px_rgba(29,78,216,0.5),0_2px_0_0_#1e40af,0_4px_10px_rgba(37,99,235,0.32)]">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-[7px] top-[6px] h-[9px] w-[9px] rounded-full bg-white/50 blur-[0.4px]"
+      />
+      <Check
+        className="relative z-10 h-4 w-4 text-white drop-shadow-[0_1px_1.5px_rgba(15,23,42,0.28)]"
+        strokeWidth={3}
+      />
+    </span>
+  );
+}
+
 function stepCardSurfaceClass(state: ProgressStepState): string {
   switch (state) {
     case 'completed':
@@ -65,11 +80,7 @@ export function ProgressStepCard({
       style={{ transitionDelay: `${delayMs}ms` }}
     >
       <div className="flex items-center gap-3">
-        {state === 'completed' && (
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
-            <Check className="h-4 w-4" />
-          </span>
-        )}
+        {state === 'completed' && <CompletedSphereCheck />}
         {state === 'active' && <ActiveOrbitIcon />}
         {state === 'pending' && (
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-slate-300 text-slate-400">
