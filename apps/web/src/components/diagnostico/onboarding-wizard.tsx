@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Briefcase,
   Check,
@@ -13,8 +13,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { COUNTRIES } from '@/lib/countries';
 import type { LegalSectionId } from '@/components/legal/legal-acceptance-modal';
+import { OnboardingCountryLanguageFields } from '@/components/diagnostico/onboarding-country-language-fields';
 import {
   OnboardingPreviewCard,
   OnboardingPreviewNav,
@@ -98,12 +98,6 @@ export function OnboardingWizard({
   const [lastName, setLastName] = useState('');
   const [howFound, setHowFound] = useState('');
 
-  const countryNames = useMemo(() => {
-    const base = COUNTRIES.map((c) => c.name);
-    if (country && !base.includes(country)) return [country, ...base];
-    return base;
-  }, [country]);
-
   const canNext =
     idx === 0
       ? Boolean(country.trim())
@@ -158,23 +152,7 @@ export function OnboardingWizard({
 
         <div className="mt-5">
           {idx === 0 && (
-            <label className="block">
-              <span className="text-xs font-semibold text-slate-500">País detectado</span>
-              <div className="relative mt-1.5">
-                <select
-                  value={country}
-                  onChange={(e) => onCountry(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                >
-                  {countryNames.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              </div>
-            </label>
+            <OnboardingCountryLanguageFields country={country} onCountry={onCountry} />
           )}
 
           {idx === 1 && (

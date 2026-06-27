@@ -18,6 +18,7 @@ import {
   OnboardingPreviewNav,
   OnboardingPreviewTrustFooter,
 } from './onboarding-preview-frame';
+import { OnboardingCountryLanguageFields } from '@/components/diagnostico/onboarding-country-language-fields';
 
 const ENGINES = [
   { id: 'chatgpt', label: 'ChatGPT', logo: '/engines/chatgpt.png' },
@@ -68,6 +69,7 @@ export function OnboardingPreviewWizard({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [howFound, setHowFound] = useState('');
+  const [previewCountry, setPreviewCountry] = useState(mock.country);
 
   const toggleEngine = (id: string) => {
     setEngines((prev) =>
@@ -114,25 +116,10 @@ export function OnboardingPreviewWizard({
 
         <div className="mt-5">
           {idx === 0 && (
-            <div className="space-y-4">
-              <label className="block">
-                <span className="text-xs font-semibold text-slate-500">País detectado</span>
-                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                  <span className="text-lg" aria-hidden>
-                    🇦🇷
-                  </span>
-                  <span className="flex-1 text-sm font-medium text-slate-900">{mock.country}</span>
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
-                </div>
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold text-slate-500">Idioma</span>
-                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                  <span className="flex-1 text-sm font-medium text-slate-900">Español</span>
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
-                </div>
-              </label>
-            </div>
+            <OnboardingCountryLanguageFields
+              country={previewCountry}
+              onCountry={setPreviewCountry}
+            />
           )}
 
           {idx === 1 && (
