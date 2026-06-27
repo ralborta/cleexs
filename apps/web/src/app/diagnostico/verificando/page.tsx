@@ -957,10 +957,6 @@ function VerificandoContent() {
   const waUserName = onboardingWhatsAppDisplayName(setupEmail || diagnosticEmailTrimmed);
   const whatsappHref = buildOnboardingWhatsAppHref(waUserName, domainShort);
   const reportHref = `/ver-resultado?diagnosticId=${diagnosticId}${diagnostic.tier === 'gold' ? '&tier=gold' : ''}`;
-  const cafecitoCompetitorCount =
-    trimmedSetupCompetitorUrls.filter(Boolean).length ||
-    (diagnostic.setupDraft?.confirmedCompetitorUrls ?? []).filter(Boolean).length ||
-    filledSetupCompetitorCount;
 
   if (handoff === 'leaving') {
     return (
@@ -1108,7 +1104,6 @@ function VerificandoContent() {
                   reportFinalizing={reportFinalizing}
                   reportProgress={cafecitoReportProgress}
                   reportHref={reportHref}
-                  competitorsCount={cafecitoCompetitorCount}
                   onReportClick={handleOpenReport}
                 />
               ) : isPreRunBackdrop && !introContinued ? (

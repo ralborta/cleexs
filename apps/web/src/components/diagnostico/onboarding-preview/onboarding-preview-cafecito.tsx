@@ -4,12 +4,9 @@ import {
   Check,
   Coffee,
   ExternalLink,
-  FileText,
-  Globe,
   MessageCircle,
   Play,
   Sparkles,
-  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -69,36 +66,6 @@ function CircularProgress({
   );
 }
 
-function DiagnosisStat({
-  icon: Icon,
-  label,
-  value,
-  muted,
-}: {
-  icon: typeof Globe;
-  label: string;
-  value: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200/90 bg-white px-2.5 py-2.5 text-center shadow-sm">
-      <Icon
-        className={cn('mx-auto h-4 w-4', muted ? 'text-slate-400' : 'text-violet-600')}
-        strokeWidth={1.75}
-      />
-      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p
-        className={cn(
-          'mt-0.5 truncate text-[11px] font-bold',
-          muted ? 'text-slate-400' : 'text-slate-900'
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 export function OnboardingPreviewCafecito({
   userName,
   domain,
@@ -110,7 +77,6 @@ export function OnboardingPreviewCafecito({
   reportProgress,
   reportFinalizing = false,
   reportHref,
-  competitorsCount = 3,
   onReportClick,
 }: {
   userName: string;
@@ -124,7 +90,6 @@ export function OnboardingPreviewCafecito({
   /** Pipeline en cierre (completed en backend pero informe aún no abrible). */
   reportFinalizing?: boolean;
   reportHref: string;
-  competitorsCount?: number;
   onReportClick?: () => void;
 }) {
   const embedId = youtubeVideoId?.trim();
@@ -245,22 +210,6 @@ export function OnboardingPreviewCafecito({
                       : 'Estamos revisando tu dominio, competidores y visibilidad en motores de IA.'}
                 </p>
               </div>
-            </div>
-
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <DiagnosisStat icon={Globe} label="Dominio analizado" value={domain} />
-              <DiagnosisStat
-                icon={Users}
-                label="Competidores"
-                value={showCompletedUi ? String(competitorsCount) : 'Detectando…'}
-                muted={!showCompletedUi}
-              />
-              <DiagnosisStat
-                icon={FileText}
-                label="Informe"
-                value={showCompletedUi ? 'Listo para ver' : reportFinalizing ? 'Cerrando…' : 'En proceso'}
-                muted={!showCompletedUi}
-              />
             </div>
 
             {showCompletedUi ? (
