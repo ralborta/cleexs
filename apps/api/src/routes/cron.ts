@@ -1,5 +1,10 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import {
+  resolveFreeDiagnosticFollowupCandidates,
+  sendFreeDiagnosticFollowup,
+  wasFreeDiagnosticFollowupSent,
+} from '../lib/free-diagnostic-followup';
 import { resolveMarketingRecipients, sendMarketingEmail, weeklyEmailForRecipient } from '../lib/marketing-email';
 import { sendLeadEmail } from '../lib/lead-email-sender';
 import { createOutreachLeadEmailDraft } from '../lib/outreach-email-builder';
@@ -285,6 +290,105 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       weekSlot: slot,
       segment: effectiveSegment,
       totalRecipients: recipients.length,
+      sent,
+      skipped,
+      failed,
+      errors,
+    };
+  });
+
+  // POST /api/cron/free-diagnostic-followup
+  // Reenvía el correo con link al diagnóstico a usuarios free registrados en los últimos N días.
+  // Pensado para GitHub Actions (sin n8n). Deduplica por diagnóstico vía cleexs_internal_email_send_logs.
+  fastify.post<{
+    Body: {
+      registeredWithinDays?: number;
+      minRegistrationAgeDays?: number;
+      limit?: number;
+      dryRun?: boolean;
+      force?: boolean;
+    };
+  }>('/free-diagnostic-followup', async (request, reply) => {
+    if (!checkCronSecret(request, reply)) return;
+
+    const schema = z.object({
+      registeredWithinDays: z.number().int().min(1).max(90).default(20),
+      minRegistrationAgeDays: z.number().int().min(0).max(90).default(1),
+      limit: z.number().int().min(1).max(500).default(100),
+      dryRun: z.boolean().default(false),
+      force: z.boolean().default(false),
+    });
+    const parsed = schema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    const { registeredWithinDays, minRegistrationAgeDays, limit, dryRun, force } = parsed.data;
+    const candidates = await resolveFreeDiagnosticFollowupCandidates({
+      registeredWithinDays,
+      minRegistrationAgeDays,
+      limit,
+    });
+
+    if (dryRun) {
+      const pending: typeof candidates = [];
+      for (const candidate of candidates) {
+        if (!force && (await wasFreeDiagnosticFollowupSent(candidate.diagnosticId))) continue;
+        pending.push(candidate);
+      }
+      return {
+        ok: true,
+        dryRun: true,
+        registeredWithinDays,
+        minRegistrationAgeDays,
+        totalCandidates: candidates.length,
+        wouldSend: pending.length,
+        sample: pending.slice(0, 15).map((c) => ({
+          email: c.email,
+          diagnosticId: c.diagnosticId,
+          brandName: c.brandName,
+          domain: c.domain,
+          registeredAt: c.createdAt.toISOString(),
+        })),
+      };
+    }
+
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+    const errors: Array<{ email: string; diagnosticId: string; error: string }> = [];
+
+    for (const candidate of candidates) {
+      if (!force && (await wasFreeDiagnosticFollowupSent(candidate.diagnosticId))) {
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        const result = await sendFreeDiagnosticFollowup(candidate);
+        if (result.sent) {
+          sent += 1;
+        } else {
+          skipped += 1;
+        }
+      } catch (e) {
+        failed += 1;
+        if (errors.length < 20) {
+          errors.push({
+            email: candidate.email,
+            diagnosticId: candidate.diagnosticId,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+    }
+
+    return {
+      ok: failed === 0,
+      dryRun: false,
+      registeredWithinDays,
+      minRegistrationAgeDays,
+      totalCandidates: candidates.length,
       sent,
       skipped,
       failed,
