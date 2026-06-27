@@ -68,12 +68,14 @@ export function OnboardingPreviewLeftPanel({
   analysisRunning,
   progressPct,
   className,
+  showSandboxHint = false,
 }: {
   brandLabel: string;
   /** false = setup (esperando confirmación a la derecha) */
   analysisRunning: boolean;
   progressPct: number;
   className?: string;
+  showSandboxHint?: boolean;
 }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -171,7 +173,7 @@ export function OnboardingPreviewLeftPanel({
         </div>
       </div>
 
-      {!analysisRunning ? (
+      {showSandboxHint && !analysisRunning ? (
         <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-[11px] text-amber-900">
           Preview: columna izquierda = producción intacta. Solo cambia la derecha.
         </p>

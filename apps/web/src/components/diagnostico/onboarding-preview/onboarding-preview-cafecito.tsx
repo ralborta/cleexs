@@ -110,6 +110,7 @@ export function OnboardingPreviewCafecito({
   reportProgress,
   reportHref,
   competitorsCount = 3,
+  onReportClick,
 }: {
   userName: string;
   domain: string;
@@ -121,6 +122,7 @@ export function OnboardingPreviewCafecito({
   reportProgress: number;
   reportHref: string;
   competitorsCount?: number;
+  onReportClick?: () => void;
 }) {
   const embedId = youtubeVideoId?.trim();
   const showEmbed = embedId && embedId !== 'off';
@@ -246,7 +248,11 @@ export function OnboardingPreviewCafecito({
               <Button
                 type="button"
                 className="mt-4 h-11 w-full gap-2 bg-violet-600 text-sm font-bold shadow-lg shadow-violet-600/30 ring-2 ring-violet-400/30 hover:bg-violet-700"
-                onClick={() => window.open(reportHref, '_blank', 'noopener,noreferrer')}
+                onClick={() =>
+                  onReportClick
+                    ? onReportClick()
+                    : window.open(reportHref, '_blank', 'noopener,noreferrer')
+                }
               >
                 <Sparkles className="h-4 w-4" />
                 Ver mi diagnóstico

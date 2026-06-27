@@ -7,7 +7,8 @@ import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-prev
 import { OnboardingPreviewWizard } from '@/components/diagnostico/onboarding-preview/onboarding-preview-wizard';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
 import { OnboardingPreviewProductionShell } from '@/components/diagnostico/onboarding-preview/onboarding-preview-production-shell';
-import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID } from '@/lib/site';
+import { buildOnboardingWhatsAppHref } from '@/lib/onboarding-whatsapp';
 import { parseYoutubeVideoId } from '@/lib/youtube';
 import { cn } from '@/lib/utils';
 
@@ -21,8 +22,7 @@ const STAGE_LABELS: Record<Stage, string> = {
 };
 
 function buildWhatsAppHref(name: string, domain: string): string {
-  const text = `Hola Gonzalo, soy ${name} de ${domain}. Te escribo porque quiero contarte por qué hice el análisis de Cleexs…`;
-  return `https://wa.me/${CLEEXS_WHATSAPP_PHONE_E164.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+  return buildOnboardingWhatsAppHref(name, domain);
 }
 
 function OnboardingPreviewContent() {
@@ -200,6 +200,7 @@ function OnboardingPreviewContent() {
         brandLabel={brand}
         analysisRunning={analysisStarted}
         leftProgressPct={leftProgressPct}
+        showSandboxHint
       >
         {stage === 'intro' ? (
           <OnboardingPreviewIntro

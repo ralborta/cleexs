@@ -8,11 +8,13 @@ export function OnboardingPreviewProductionShell({
   brandLabel,
   analysisRunning,
   leftProgressPct,
+  showSandboxHint,
   children,
 }: {
   brandLabel: string;
   analysisRunning: boolean;
   leftProgressPct: number;
+  showSandboxHint?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -43,6 +45,7 @@ export function OnboardingPreviewProductionShell({
           brandLabel={brandLabel}
           analysisRunning={analysisRunning}
           progressPct={leftProgressPct}
+          showSandboxHint={showSandboxHint}
         />
         <div className="relative flex min-h-0 min-w-0 flex-col">
           <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">{children}</div>

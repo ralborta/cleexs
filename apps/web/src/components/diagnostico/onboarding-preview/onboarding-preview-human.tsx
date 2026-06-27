@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { LegalSectionId } from '@/components/legal/legal-acceptance-modal';
 import {
   OnboardingPreviewBadge,
   OnboardingPreviewCard,
@@ -10,13 +11,21 @@ import {
 } from './onboarding-preview-frame';
 
 export function OnboardingPreviewHuman({
+  humanOk: controlledHumanOk,
+  onHumanOk,
   onBack,
   onContinue,
+  onOpenLegal,
 }: {
+  humanOk?: boolean;
+  onHumanOk?: (v: boolean) => void;
   onBack: () => void;
   onContinue: () => void;
+  onOpenLegal?: (section: LegalSectionId) => void;
 }) {
-  const [humanOk, setHumanOk] = useState(true);
+  const [localHumanOk, setLocalHumanOk] = useState(true);
+  const humanOk = controlledHumanOk ?? localHumanOk;
+  const setHumanOk = onHumanOk ?? setLocalHumanOk;
 
   return (
     <OnboardingPreviewCard badge={<OnboardingPreviewBadge>Soy humano</OnboardingPreviewBadge>}>
@@ -82,8 +91,31 @@ export function OnboardingPreviewHuman({
 
         <p className="mt-4 text-[11px] leading-relaxed text-slate-400">
           Al continuar aceptás los{' '}
-          <span className="font-medium text-violet-600">términos de uso</span> y la{' '}
-          <span className="font-medium text-violet-600">política de privacidad</span>.
+          {onOpenLegal ? (
+            <>
+              <button
+                type="button"
+                className="font-medium text-violet-600 hover:underline"
+                onClick={() => onOpenLegal('terminos-de-servicio')}
+              >
+                términos de uso
+              </button>{' '}
+              y la{' '}
+              <button
+                type="button"
+                className="font-medium text-violet-600 hover:underline"
+                onClick={() => onOpenLegal('politica-de-privacidad')}
+              >
+                política de privacidad
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-violet-600">términos de uso</span> y la{' '}
+              <span className="font-medium text-violet-600">política de privacidad</span>
+            </>
+          )}
+          .
         </p>
 
         <OnboardingPreviewNav

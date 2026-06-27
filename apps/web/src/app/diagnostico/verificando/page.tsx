@@ -10,8 +10,9 @@ import {
   usePublicFunnelBackToMarketing,
   useTrapBrowserBack,
 } from '@/lib/public-funnel-exit';
-import { CLEEXS_MARKETING_URL } from '@/lib/site';
-import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save, Sparkles } from 'lucide-react';
+import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_MARKETING_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID } from '@/lib/site';
+import { buildOnboardingWhatsAppHref, onboardingWhatsAppDisplayName } from '@/lib/onboarding-whatsapp';
+import { ArrowLeft, Boxes, Loader2, Lock, Mail, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -21,11 +22,11 @@ import {
 } from '@/components/legal/legal-acceptance-modal';
 import { useSmoothProgress } from '@/lib/use-smooth-progress';
 import { cn } from '@/lib/utils';
-import {
-  OnboardingSetupWizard,
-  type SetupStep,
-} from '@/components/diagnostico/onboarding-setup-wizard';
-import { AnalysisProgressDial } from '@/components/diagnostico/analysis-progress-dial';
+import { OnboardingWizard } from '@/components/diagnostico/onboarding-wizard';
+import type { SetupStep } from '@/components/diagnostico/onboarding-setup-wizard';
+import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
+import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
+import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
 import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
@@ -50,7 +51,6 @@ function PulsingDots() {
   );
 }
 
-const HERO = ['/verificando-hero.png', '/verificando-hero-2.png'] as const;
 const ANALYSIS_STEP_CARD_LABELS = [
   'Verificando acceso de IA al sitio',
   'Analizando orden para IA',
@@ -121,7 +121,8 @@ function VerificandoContent() {
   const [publicSetupStep, setPublicSetupStep] = useState<SetupStep>(1);
   const [setupCountry, setSetupCountry] = useState('');
   const [setupIndustry, setSetupIndustry] = useState('');
-  const [setupEngines, setSetupEngines] = useState<string[]>(['chatgpt']);
+  const [setupEngines, setSetupEngines] = useState<string[]>([]);
+  const [introContinued, setIntroContinued] = useState(false);
   const [contextLoading, setContextLoading] = useState(false);
   /** True una vez que el usuario confirmó país+rubro (gatilla la detección/progreso). */
   const contextConfirmedRef = useRef(false);
@@ -135,8 +136,6 @@ function VerificandoContent() {
   /** Nodo al final de `document.body` para que los modales queden por encima del resto del DOM. */
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [legalModalSection, setLegalModalSection] = useState<LegalSectionId | null>(null);
-
-  const [heroIdx, setHeroIdx] = useState(0);
   useLayoutEffect(() => {
     const el = document.createElement('div');
     el.setAttribute('data-cleexs-diagnostico-portal', 'true');
@@ -147,19 +146,13 @@ function VerificandoContent() {
       setPortalRoot(null);
     };
   }, []);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setHeroIdx((i) => (i + 1) % HERO.length);
-    }, 5000);
-    return () => clearInterval(id);
-  }, []);
 
   const reportGenerationFailed =
     Boolean(error) || String(diagnostic?.status ?? '').trim().toLowerCase() === 'failed';
   /** Solo en pantalla de error: atrás del navegador → cleexs.net (no `/diagnostico/crear`). */
   usePublicFunnelBackToMarketing(reportGenerationFailed || !diagnosticId);
 
-  const [handoff, setHandoff] = useState<'no' | 'preview' | 'leaving'>('no');
+  const [handoff, setHandoff] = useState<'no' | 'leaving'>('no');
   const [visibleStepCards, setVisibleStepCards] = useState(3);
   /** Avance "fake" del checklist izquierdo durante el setup (uno por uno), independiente del proceso real. */
   const [fakeBackdropStep, setFakeBackdropStep] = useState(0);
@@ -204,11 +197,12 @@ function VerificandoContent() {
   // El progreso de la izquierda "arranca" recién cuando el usuario confirma país+rubro
   // (captchaVerified) o el análisis ya está corriendo. Antes, invita a confirmar a la derecha.
   const displayCaptchaVerified = captchaVerified || hasServerEmailAfterStart;
+  const setupLeftProgress = displayCaptchaVerified || introContinued;
   const backdropStep = Math.min(fakeBackdropStep, ONBOARDING_STEP_LABELS.length - 1);
   // Avance "fake" continuo: corre desde que se confirma país+rubro y NO se reinicia al pasar
   // del onboarding al análisis real; solo se apaga al completarse o fallar.
   const usingFakeProgress =
-    displayCaptchaVerified &&
+    setupLeftProgress &&
     normalizedDiagnosticStatus !== 'completed' &&
     normalizedDiagnosticStatus !== 'failed';
   const fakeBarPct = Math.round((backdropStep / ONBOARDING_STEP_LABELS.length) * 100);
@@ -232,7 +226,7 @@ function VerificandoContent() {
       : 0;
 
   const progressTarget = useMemo(() => {
-    if (!displayCaptchaVerified) return 0;
+    if (!setupLeftProgress) return 0;
     if (normalizedDiagnosticStatus === 'completed') return 100;
     if (normalizedDiagnosticStatus === 'failed') return 0;
 
@@ -248,7 +242,7 @@ function VerificandoContent() {
 
     return Math.min(progress, 100);
   }, [
-    displayCaptchaVerified,
+    setupLeftProgress,
     normalizedDiagnosticStatus,
     isRunning,
     isFinalizing,
@@ -260,7 +254,7 @@ function VerificandoContent() {
   ]);
 
   const smoothProgressEnabled =
-    displayCaptchaVerified && normalizedDiagnosticStatus !== 'failed' && handoff === 'no';
+    setupLeftProgress && normalizedDiagnosticStatus !== 'failed' && handoff === 'no';
   const displayBarPct = useSmoothProgress(progressTarget, smoothProgressEnabled);
   const showLegacyEmail =
     analysisRunningPhase &&
@@ -329,7 +323,8 @@ function VerificandoContent() {
     setLegacyPublicStep(1);
     setSetupCountry('');
     setSetupIndustry('');
-    setSetupEngines(['chatgpt']);
+    setSetupEngines([]);
+    setIntroContinued(false);
     contextConfirmedRef.current = false;
     runningStartElapsedRef.current = null;
   }, [diagnosticId]);
@@ -365,8 +360,7 @@ function VerificandoContent() {
     setSetupCountry((prev) => prev || draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '');
     setSetupIndustry((prev) => prev || draft?.confirmedIndustry || draft?.suggestedIndustry || '');
     if (draft?.selectedEngines?.length) {
-      const fromDraft = draft.selectedEngines.filter(Boolean);
-      setSetupEngines(fromDraft.includes('chatgpt') ? fromDraft : ['chatgpt', ...fromDraft]);
+      setSetupEngines(draft.selectedEngines.filter(Boolean));
     }
     // Las URLs de competidores las hidrata el efecto que sigue el setupDraft (evita quedar en blanco si el primer poll llega sin borrador).
   }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft]);
@@ -414,8 +408,7 @@ function VerificandoContent() {
         setDiagnostic(data);
         if (isReportReadyForRedirect(data)) {
           waitingCompletedSinceRef.current = null;
-          setHandoff('preview');
-          return false;
+          return true;
         }
         if (data.status === 'completed' && data.runResult) {
           if (!waitingCompletedSinceRef.current) {
@@ -423,8 +416,7 @@ function VerificandoContent() {
           }
           const waitedMs = Date.now() - waitingCompletedSinceRef.current;
           if (waitedMs >= 60_000) {
-            setHandoff('preview');
-            return false;
+            return true;
           }
         } else {
           waitingCompletedSinceRef.current = null;
@@ -454,20 +446,8 @@ function VerificandoContent() {
   }, [diagnosticId, tierQParam, pollRetryToken]);
 
   useEffect(() => {
-    if (handoff !== 'preview' || !diagnosticId) return;
-    trackOnboarding('onboarding_preview_viewed', { diagnosticId });
-    const t = setTimeout(() => {
-      setHandoff('leaving');
-      const tierQ = diagnostic?.tier === 'gold' ? '&tier=gold' : '';
-      trackOnboarding('onboarding_report_opened', { diagnosticId });
-      router.replace(`/ver-resultado?diagnosticId=${diagnosticId}${tierQ}`);
-    }, 3000);
-    return () => clearTimeout(t);
-  }, [handoff, diagnosticId, router, diagnostic?.tier]);
-
-  useEffect(() => {
     const h = () => {
-      if (!diagnosticId || handoff === 'leaving' || handoff === 'preview') return;
+      if (!diagnosticId || handoff === 'leaving') return;
       if (document.visibilityState === 'hidden' && !abandonedTracked.current) {
         abandonedTracked.current = true;
         const steps = diagnostic?.steps ?? [];
@@ -540,14 +520,24 @@ function VerificandoContent() {
   }, [diagnosticId, setupCountry, setupIndustry, setupEngines]);
 
   const handleToggleEngine = useCallback((id: string) => {
-    if (id === 'chatgpt') return;
-    setSetupEngines((prev) => {
-      const withChatgpt = prev.includes('chatgpt') ? prev : ['chatgpt', ...prev];
-      return withChatgpt.includes(id)
-        ? withChatgpt.filter((e) => e !== id)
-        : [...withChatgpt, id];
-    });
+    setSetupEngines((prev) =>
+      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
+    );
   }, []);
+
+  const handleIntroContinue = useCallback(() => {
+    setIntroContinued(true);
+    if (diagnosticId) trackOnboarding('onboarding_intro_completed', { diagnosticId });
+  }, [diagnosticId]);
+
+  const handleNewFlowBack = useCallback(() => {
+    setStartAnalysisError(null);
+    if (publicSetupStep === 1) {
+      setIntroContinued(false);
+      return;
+    }
+    setPublicSetupStep((publicSetupStep - 1) as SetupStep);
+  }, [publicSetupStep]);
 
   const handleCompetitorChange = useCallback(
     (idx: number, nextVal: string) => {
@@ -617,6 +607,12 @@ function VerificandoContent() {
     setStartAnalysisLoading(true);
     try {
       const vid = getOrCreateCleexsVisitorId();
+      const enginesPayload =
+        setupEngines.length > 0
+          ? setupEngines.includes('chatgpt')
+            ? setupEngines
+            : ['chatgpt', ...setupEngines]
+          : ['chatgpt'];
       await publicDiagnosticApi.start(
         diagnosticId,
         {
@@ -627,7 +623,7 @@ function VerificandoContent() {
             : {}),
           ...(setupCountry.trim() ? { country: setupCountry.trim() } : {}),
           ...(setupIndustry.trim() ? { industry: setupIndustry.trim() } : {}),
-          ...(setupEngines.length ? { engines: setupEngines } : {}),
+          engines: enginesPayload,
         },
         { visitorId: vid }
       );
@@ -747,7 +743,10 @@ function VerificandoContent() {
         void handleConfirmContext();
         return;
       case 4:
-        if (setupEngines.length < 1) return;
+        if (setupEngines.length < 1) {
+          setStartAnalysisError('Elegí al menos un motor de IA.');
+          return;
+        }
         setPublicSetupStep(5);
         return;
       case 5: {
@@ -765,10 +764,21 @@ function VerificandoContent() {
     }
   };
 
-  const handleWizardBack = (to: SetupStep) => {
-    setStartAnalysisError(null);
-    setPublicSetupStep(to);
-  };
+  useEffect(() => {
+    if (analysisRunningPhase) setIntroContinued(true);
+  }, [analysisRunningPhase]);
+
+  useEffect(() => {
+    if (publicSetupStep > 1) setIntroContinued(true);
+  }, [diagnosticId, publicSetupStep]);
+
+  const handleOpenReport = useCallback(() => {
+    if (!diagnosticId) return;
+    setHandoff('leaving');
+    trackOnboarding('onboarding_report_opened', { diagnosticId });
+    const tierQ = diagnostic?.tier === 'gold' ? '&tier=gold' : '';
+    router.push(`/ver-resultado?diagnosticId=${diagnosticId}${tierQ}`);
+  }, [diagnosticId, diagnostic?.tier, router]);
 
   const handleLegacySetupSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -887,28 +897,6 @@ function VerificandoContent() {
     );
   }
 
-  if (handoff === 'preview' || handoff === 'leaving') {
-    return (
-      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-lg">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-            {handoff === 'leaving' ? (
-              <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
-            ) : (
-              <Sparkles className="h-6 w-6 text-primary-600" />
-            )}
-          </div>
-          <p className="text-lg font-bold text-slate-900">Tu informe está listo</p>
-          <p className="mt-2 text-sm text-slate-600">
-            {brandLabel
-              ? `Abrimos el análisis completo de ${brandLabel}: score, intención y posición frente a la competencia.`
-              : 'Abrimos el análisis con tu score y comparativa con la competencia.'}
-          </p>
-          {handoff === 'leaving' && <p className="mt-4 text-xs text-slate-500">Redirigiendo…</p>}
-        </div>
-      </main>
-    );
-  }
 
   if (!diagnostic) {
     return (
@@ -927,10 +915,27 @@ function VerificandoContent() {
     (normalizedDiagnosticStatus === 'awaiting_user' &&
       filledSetupCompetitorCount < 1 &&
       suggestedFromServer.length < 1);
-  // El captcha + wizard aparecen recién cuando la detección terminó (awaiting_user).
-  // Antes mostramos un "remolino procesando". Tras confirmar país+rubro (captchaVerified)
-  // ya no volvemos a tapar con el spinner aunque se re-detecten competidores.
   const setupShowProcessing = !setupDataReady && !captchaVerified;
+  const reportReady = isReportReadyForRedirect(diagnostic);
+  const showCafecito = analysisRunningPhase;
+  const waUserName = onboardingWhatsAppDisplayName(setupEmail || diagnosticEmailTrimmed);
+  const whatsappHref = buildOnboardingWhatsAppHref(waUserName, domainShort);
+  const reportHref = `/ver-resultado?diagnosticId=${diagnosticId}${diagnostic.tier === 'gold' ? '&tier=gold' : ''}`;
+  const cafecitoCompetitorCount =
+    trimmedSetupCompetitorUrls.filter(Boolean).length ||
+    (diagnostic.setupDraft?.confirmedCompetitorUrls ?? []).filter(Boolean).length ||
+    filledSetupCompetitorCount;
+
+  if (handoff === 'leaving') {
+    return (
+      <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4">
+        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-lg">
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary-600" />
+          <p className="mt-4 text-sm text-slate-600">Abriendo tu informe…</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
@@ -961,21 +966,21 @@ function VerificandoContent() {
           <div
             className={cn(
               'flex min-h-0 min-w-0 flex-col',
-              isPreRunBackdrop && 'pointer-events-none select-none'
+              !setupLeftProgress && isPreRunBackdrop && 'pointer-events-none select-none opacity-[0.72]'
             )}
           >
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="h-1.5 w-full overflow-hidden bg-slate-100">
                 <div
                   className="h-full bg-primary-600 transition-all duration-700 ease-out"
-                  style={{ width: `${displayCaptchaVerified ? displayBarPct : 0}%` }}
+                  style={{ width: `${setupLeftProgress ? displayBarPct : 0}%` }}
                 />
               </div>
               <div className="p-4 sm:p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Construyendo tu Cleexs Score: {displayCompletedCount}/{ONBOARDING_STEP_LABELS.length} completado
                 </p>
-                {displayCaptchaVerified ? (
+                {setupLeftProgress ? (
                   <>
                     <div className="mt-2 flex items-start justify-between gap-3">
                       <div>
@@ -1012,7 +1017,7 @@ function VerificandoContent() {
                             : 'Preparando…'}
                         </span>
                         <span className="font-semibold text-slate-700">
-                          {Math.round(displayCaptchaVerified ? displayBarPct : 0)}% · {formatElapsed(elapsedSeconds)}
+                          {Math.round(setupLeftProgress ? displayBarPct : 0)}% · {formatElapsed(elapsedSeconds)}
                         </span>
                       </div>
                     </div>
@@ -1028,13 +1033,11 @@ function VerificandoContent() {
                       </p>
                     )}
                   </>
-                ) : needsLegacyEmailCaptchaModal ? (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Completá verificación y correo en el formulario que aparece sobre esta pantalla (centro).
-                  </p>
                 ) : (
-                  <p className="mt-2 text-sm text-slate-600">Confirmá tu país y rubro en los pasos de la derecha. Al
-                    confirmarlos arranca el análisis y el progreso.</p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Tocá <span className="font-semibold">Continuar</span> en la intro para arrancar el análisis
+                    {brandLabel ? ` de ${brandLabel}` : ''}.
+                  </p>
                 )}
               </div>
             </div>
@@ -1047,7 +1050,7 @@ function VerificandoContent() {
                     En proceso
                   </span>
                   <span className="font-semibold text-slate-700">
-                    {Math.round(displayCaptchaVerified ? displayBarPct : 0)}%
+                    {Math.round(setupLeftProgress ? displayBarPct : 0)}%
                   </span>
                   <span className="text-slate-500">{formatElapsed(elapsedSeconds)}</span>
                 </div>
@@ -1056,55 +1059,41 @@ function VerificandoContent() {
           </div>
 
           <div className="relative flex min-h-0 min-w-0 flex-col">
-            {/* Fondo (GIF/hero + overlay) solo durante el análisis real; en el setup la derecha queda limpia. */}
-            {!isPreRunBackdrop && (
-              <>
-                {HERO.map((src, i) => (
-                  <div
-                    key={src}
-                    aria-hidden
-                    className={cn(
-                      'pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out',
-                      heroIdx === i ? 'opacity-25' : 'opacity-0'
-                    )}
-                    style={{ backgroundImage: `url('${src}')`, backgroundSize: '60% auto' }}
-                  />
-                ))}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/55 via-white/20 to-white/50"
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">
+              {showCafecito ? (
+                <OnboardingPreviewCafecito
+                  userName={waUserName}
+                  domain={domainShort}
+                  brandLabel={brandLabel ?? undefined}
+                  founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
+                  youtubeVideoId={CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID}
+                  whatsappHref={whatsappHref}
+                  reportReady={reportReady}
+                  reportProgress={Math.round(displayBarPct)}
+                  reportHref={reportHref}
+                  competitorsCount={cafecitoCompetitorCount}
+                  onReportClick={handleOpenReport}
                 />
-              </>
-            )}
-
-            <div
-              className={cn(
-                'relative z-10 flex min-h-0 flex-1 flex-col gap-3',
-                (isPreRunBackdrop || analysisRunningPhase) && 'justify-center'
-              )}
-            >
-              {isPreRunBackdrop && setupShowProcessing ? (
-                <div className="m-auto flex w-full max-w-md flex-col items-center rounded-2xl border border-slate-200/90 bg-white/95 p-10 text-center shadow-lg backdrop-blur-sm">
-                  <span className="relative flex h-16 w-16 items-center justify-center">
-                    <span className="absolute inset-0 animate-ping rounded-full bg-violet-400/30" />
-                    <Loader2 className="h-12 w-12 animate-spin text-violet-600" aria-hidden />
-                  </span>
-                  <p className="mt-6 text-lg font-bold text-slate-900">Procesando tu información</p>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    Estamos detectando tu país, tu rubro y los competidores de tu sector. En unos segundos vas a poder
-                    confirmar y arrancar.
-                  </p>
-                  <div className="mt-5 flex items-center gap-1.5 text-xs font-medium text-violet-600">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" style={{ animationDelay: '0ms' }} />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" style={{ animationDelay: '150ms' }} />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              ) : isPreRunBackdrop ? (
-                <OnboardingSetupWizard
-                  step={publicSetupStep}
+              ) : isPreRunBackdrop && !introContinued ? (
+                <OnboardingPreviewIntro
+                  brandLabel={brandLabel ?? ''}
+                  domain={domainShort}
+                  founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
+                  processing={setupShowProcessing}
+                  ready={!setupShowProcessing && setupDataReady}
+                  onContinue={handleIntroContinue}
+                />
+              ) : isPreRunBackdrop && publicSetupStep === 1 ? (
+                <OnboardingPreviewHuman
                   humanOk={setupHumanOk}
                   onHumanOk={setSetupHumanOk}
+                  onBack={handleNewFlowBack}
+                  onContinue={handleWizardNext}
+                  onOpenLegal={setLegalModalSection}
+                />
+              ) : isPreRunBackdrop ? (
+                <OnboardingWizard
+                  step={publicSetupStep - 1}
                   country={setupCountry}
                   onCountry={setSetupCountry}
                   industry={setupIndustry}
@@ -1119,83 +1108,13 @@ function VerificandoContent() {
                   filledCompetitorCount={filledSetupCompetitorCount}
                   email={setupEmail}
                   onEmail={setSetupEmail}
-                  onStepNext={handleWizardNext}
-                  onBack={handleWizardBack}
-                  onExit={exitPublicFunnelToMarketingSite}
-                  onOpenLegal={setLegalModalSection}
-                  contextLoading={contextLoading}
-                  finalizeLoading={startAnalysisLoading}
+                  onBack={handleNewFlowBack}
+                  onNext={handleWizardNext}
+                  nextLoading={contextLoading || startAnalysisLoading}
                   error={startAnalysisError}
+                  onOpenLegal={setLegalModalSection}
                 />
-              ) : (
-                <>
-              {analysisRunningPhase && (
-                <AnalysisProgressDial
-                  percent={displayBarPct}
-                  label={displayCardLabel}
-                  brandName={brandLabel}
-                  elapsed={formatElapsed(elapsedSeconds)}
-                />
-              )}
-
-              {captchaVerified && showLegacyEmail && !emailSent && (
-                <div className="overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/60 p-4 shadow-sm ring-1 ring-violet-200/30">
-                  <div className="flex items-start gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-1 ring-violet-200/80">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-violet-900">Desbloqueá el envío a tu mail</p>
-                      <p className="mt-0.5 text-xs text-violet-800/90">
-                        Recibí un aviso y el resumen de tu análisis cuando cierre. Sin spam.
-                      </p>
-                    </div>
-                  </div>
-                  <form onSubmit={handleEmailSubmit} className="mt-2 flex flex-col gap-2">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-sm"
-                      placeholder="correo@empresa.com"
-                    />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={emailLoading || !email.trim()}
-                      className="h-10 w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-md shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700"
-                    >
-                      {emailLoading ? 'Guardando…' : 'Enviar'}
-                    </Button>
-                  </form>
-                </div>
-              )}
-
-              {captchaVerified && showLegacyEmail && emailSent && (
-                <div className="rounded-xl border border-slate-200 bg-white p-3 text-center text-sm text-slate-600">
-                  {emailSendFailed ? (
-                    <p className="text-xs text-amber-800">
-                      Guardamos tu email. Si no te llega el aviso, revisá spam o escribinos.
-                      {emailErrorCode === 'provider_rejected' && (
-                        <span>
-                          {' '}
-                          <a href="https://resend.com/domains" className="underline" target="_blank" rel="noreferrer">
-                            Verificar dominio
-                          </a>
-                        </span>
-                      )}
-                    </p>
-                  ) : (
-                    <p>Email guardado. Te avisamos cuando cierre el análisis.</p>
-                  )}
-                </div>
-              )}
-
-              {captchaVerified && !showLegacyEmail && !emailSent && progress >= 45 && analysisRunningPhase && (
-                <p className="text-center text-[10px] text-slate-500">El correo se habilita al 60% del progreso.</p>
-              )}
-                </>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
