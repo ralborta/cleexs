@@ -266,8 +266,10 @@ export function OnboardingPreviewCafecito({
         </div>
 
         <div className="border-t border-emerald-100/80 bg-gradient-to-b from-emerald-50/50 to-white px-4 py-4 sm:px-5 sm:py-5">
-          <div className="flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,10.5rem)_minmax(0,1fr)_auto] md:items-center md:gap-4">
-            <div className="flex items-center gap-2.5 md:min-w-0">
+          <p className="text-xs leading-relaxed text-slate-600 sm:text-[13px]">{waMessage}</p>
+
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex min-w-0 items-center gap-2.5">
               {founderPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -288,17 +290,11 @@ export function OnboardingPreviewCafecito({
               </div>
             </div>
 
-            <div className="min-w-0 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
-              <p className="line-clamp-3 text-[11px] leading-relaxed text-slate-600 sm:line-clamp-2 sm:text-xs">
-                {waMessage}
-              </p>
-            </div>
-
             <a
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#20bd5a] md:h-11 md:w-auto md:whitespace-nowrap md:px-5 md:text-sm"
+              className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#20bd5a] sm:h-11 sm:w-auto sm:whitespace-nowrap sm:px-5 sm:text-sm"
             >
               <MessageCircle className="h-4 w-4 shrink-0" />
               Escribime por WhatsApp
