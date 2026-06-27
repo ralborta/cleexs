@@ -59,6 +59,8 @@ export type OnboardingWizardProps = {
   onCompetitorRemove: (idx: number) => void;
   onRestoreSuggested: () => void;
   competitorsLoading: boolean;
+  competitorsDetectEmpty?: boolean;
+  suggestedCompetitorCount?: number;
   filledCompetitorCount: number;
   email: string;
   onEmail: (v: string) => void;
@@ -82,6 +84,8 @@ export function OnboardingWizard({
   onCompetitorRemove,
   onRestoreSuggested,
   competitorsLoading,
+  competitorsDetectEmpty,
+  suggestedCompetitorCount = 0,
   filledCompetitorCount,
   email,
   onEmail,
@@ -217,6 +221,12 @@ export function OnboardingWizard({
                   <span>Buscando competidores de tu rubro…</span>
                 </div>
               ) : null}
+              {!competitorsLoading && competitorsDetectEmpty && filledCompetitorCount < 1 ? (
+                <div className="mb-3 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+                  No encontramos sugeridos automáticos para tu rubro. Ingresá al menos 1 URL de competidor abajo
+                  (ej. <span className="font-mono text-xs">https://otra-empresa.com</span>).
+                </div>
+              ) : null}
               {competitorUrls.map((val, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
@@ -225,7 +235,7 @@ export function OnboardingWizard({
                       type="text"
                       value={val}
                       onChange={(e) => onCompetitorChange(i, e.target.value)}
-                      placeholder={`competidor${i + 1}.com`}
+                      placeholder="https://competidor.com"
                       className="min-w-0 flex-1 bg-transparent font-mono text-xs text-slate-800 outline-none placeholder:text-slate-400"
                     />
                   </div>
@@ -239,13 +249,15 @@ export function OnboardingWizard({
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
-                className="text-xs font-semibold text-violet-600 hover:text-violet-800"
-                onClick={onRestoreSuggested}
-              >
-                Restaurar sugeridos
-              </button>
+              {suggestedCompetitorCount > 0 ? (
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-violet-600 hover:text-violet-800"
+                  onClick={onRestoreSuggested}
+                >
+                  Restaurar sugeridos
+                </button>
+              ) : null}
             </div>
           )}
 

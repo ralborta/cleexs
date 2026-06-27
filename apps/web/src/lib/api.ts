@@ -1109,6 +1109,8 @@ export interface PublicDiagnosticSetupDraft {
   selectedEngines?: string[];
   /** URLs de competidor confirmadas al iniciar el análisis. */
   confirmedCompetitorUrls?: string[];
+  /** ISO timestamp: la detección automática ya terminó (aunque sea sin resultados). */
+  competitorRescueAttemptedAt?: string;
 }
 
 export interface PublicDiagnostic {

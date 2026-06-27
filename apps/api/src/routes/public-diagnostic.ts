@@ -2586,6 +2586,21 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               .catch(() => {});
           }
         });
+      } else {
+        await prisma.publicDiagnostic.update({
+          where: { id },
+          data: {
+            status: 'awaiting_user',
+            setupDraftJson: {
+              ...setupDraftJsonRecord(diagnostic.setupDraftJson),
+              suggestedCompetitorUrls: [],
+              competitorRescueAttemptedAt: new Date().toISOString(),
+              ...(confirmedCountry ? { confirmedCountry } : {}),
+              ...(confirmedIndustry ? { confirmedIndustry } : {}),
+              ...(selectedEngines.length ? { selectedEngines } : {}),
+            },
+          },
+        });
       }
 
       return reply.code(200).send({

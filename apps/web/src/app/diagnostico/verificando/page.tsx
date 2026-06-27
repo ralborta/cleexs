@@ -123,6 +123,9 @@ function VerificandoContent() {
   const [setupIndustry, setSetupIndustry] = useState('');
   const [setupEngines, setSetupEngines] = useState<string[]>([]);
   const [introContinued, setIntroContinued] = useState(false);
+  /** Timestamp cuando el backend entra en detecting_competitors (para timeout de UI). */
+  const [competitorDetectSince, setCompetitorDetectSince] = useState<number | null>(null);
+  const [, setCompetitorDetectTick] = useState(0);
   const [contextLoading, setContextLoading] = useState(false);
   /** True una vez que el usuario confirmó país+rubro (gatilla la detección/progreso). */
   const contextConfirmedRef = useRef(false);
@@ -765,6 +768,20 @@ function VerificandoContent() {
   };
 
   useEffect(() => {
+    if (normalizedDiagnosticStatus === 'detecting_competitors') {
+      setCompetitorDetectSince((prev) => prev ?? Date.now());
+    } else {
+      setCompetitorDetectSince(null);
+    }
+  }, [normalizedDiagnosticStatus]);
+
+  useEffect(() => {
+    if (normalizedDiagnosticStatus !== 'detecting_competitors') return;
+    const id = window.setInterval(() => setCompetitorDetectTick((t) => t + 1), 5000);
+    return () => window.clearInterval(id);
+  }, [normalizedDiagnosticStatus]);
+
+  useEffect(() => {
     if (analysisRunningPhase) setIntroContinued(true);
   }, [analysisRunningPhase]);
 
@@ -910,11 +927,18 @@ function VerificandoContent() {
   const trimmedSetupCompetitorUrls = competitorUrls.map((u) => u.trim());
   const filledSetupCompetitorCount = trimmedSetupCompetitorUrls.filter(Boolean).length;
   const suggestedFromServer = diagnostic.setupDraft?.suggestedCompetitorUrls ?? [];
+  const suggestedCompetitorCount = suggestedFromServer.filter((u) => u.trim()).length;
+  const competitorDetectTimedOut =
+    normalizedDiagnosticStatus === 'detecting_competitors' &&
+    competitorDetectSince != null &&
+    Date.now() - competitorDetectSince > 60_000;
   const competitorsDetecting =
-    normalizedDiagnosticStatus === 'detecting_competitors' ||
-    (normalizedDiagnosticStatus === 'awaiting_user' &&
-      filledSetupCompetitorCount < 1 &&
-      suggestedFromServer.length < 1);
+    normalizedDiagnosticStatus === 'detecting_competitors' && !competitorDetectTimedOut;
+  const competitorsDetectEmpty =
+    !competitorsDetecting &&
+    publicSetupStep >= 5 &&
+    filledSetupCompetitorCount < 1 &&
+    suggestedCompetitorCount < 1;
   const setupShowProcessing = !setupDataReady && !captchaVerified;
   const reportReady = isReportReadyForRedirect(diagnostic);
   const showCafecito = analysisRunningPhase;
@@ -1105,6 +1129,8 @@ function VerificandoContent() {
                   onCompetitorRemove={handleCompetitorRemove}
                   onRestoreSuggested={handleRestoreSuggested}
                   competitorsLoading={competitorsDetecting}
+                  competitorsDetectEmpty={competitorsDetectEmpty}
+                  suggestedCompetitorCount={suggestedCompetitorCount}
                   filledCompetitorCount={filledSetupCompetitorCount}
                   email={setupEmail}
                   onEmail={setSetupEmail}
