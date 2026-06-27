@@ -265,10 +265,15 @@ export function OnboardingPreviewCafecito({
           </div>
         </div>
 
-        <div className="border-t border-emerald-100/80 bg-gradient-to-b from-emerald-50/50 to-white px-4 py-4 sm:px-5 sm:py-5">
-          <p className="text-xs leading-relaxed text-slate-600 sm:text-[13px]">{waMessage}</p>
+        <div className="border-t border-emerald-100/80 bg-gradient-to-b from-emerald-50/40 to-white px-4 py-4 sm:px-5 sm:py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-800/70">
+            Mensaje para Gonzalo
+          </p>
+          <div className="relative mt-2 rounded-2xl rounded-tl-md border border-emerald-200/90 bg-white px-4 py-3 shadow-sm ring-1 ring-white">
+            <p className="text-xs leading-relaxed text-slate-700 sm:text-[13px]">{waMessage}</p>
+          </div>
 
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex min-w-0 items-center gap-2.5">
               {founderPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
