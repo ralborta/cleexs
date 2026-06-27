@@ -128,7 +128,7 @@ export function OnboardingPreviewCafecito({
   const progress = reportReady ? 100 : reportProgress;
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="mx-auto w-full">
       <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/40">
         <div className="bg-gradient-to-r from-violet-600 to-indigo-700 px-6 py-5 text-white sm:px-8">
           <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export function OnboardingPreviewCafecito({
           </div>
         </div>
 
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1.2fr,0.8fr] lg:gap-6">
+        <div className="grid grid-cols-1 gap-5 p-5 sm:p-6">
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-inner">
             {!showEmbed ? (
               <div className="relative flex aspect-video flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-6 text-center">

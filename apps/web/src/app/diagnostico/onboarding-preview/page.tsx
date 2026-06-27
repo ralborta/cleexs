@@ -2,12 +2,12 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
 import { OnboardingPreviewWizard } from '@/components/diagnostico/onboarding-preview/onboarding-preview-wizard';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
-import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_MARKETING_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+import { OnboardingPreviewProductionShell } from '@/components/diagnostico/onboarding-preview/onboarding-preview-production-shell';
+import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID, CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
 import { parseYoutubeVideoId } from '@/lib/youtube';
 import { cn } from '@/lib/utils';
 
@@ -135,7 +135,7 @@ function OnboardingPreviewContent() {
   }, [autoplay, stage, wizardStep, goNextStage]);
 
   return (
-    <main className="relative min-h-[calc(100vh-72px)] bg-slate-50 px-4 py-6 sm:px-6">
+    <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
       <div className="sticky top-0 z-50 -mx-4 mb-6 border-b border-amber-200 bg-amber-50 px-4 py-3 shadow-sm sm:-mx-6 sm:px-6">
         <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -143,7 +143,7 @@ function OnboardingPreviewContent() {
               Preview — no es producción
             </p>
             <p className="text-sm text-amber-900/80">
-              Simula el onboarding propuesto (intro → humano → wizard 5 pasos → cafecito)
+              Layout producción: izquierda = progreso real (intacto) · derecha = onboarding nuevo
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -177,17 +177,11 @@ function OnboardingPreviewContent() {
         </p>
       </div>
 
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
-          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-            Análisis de {brand}
-          </h1>
-          <Link href={CLEEXS_MARKETING_URL} className="shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/CleexsLogo.png" alt="Cleexs" className="h-11 w-auto object-contain sm:h-12" />
-          </Link>
-        </div>
-
+      <OnboardingPreviewProductionShell
+        brandLabel={brand}
+        analysisRunning={stage === 'cafecito'}
+        leftProgressPct={stage === 'cafecito' ? reportProgress : 0}
+      >
         {stage === 'intro' ? (
           <OnboardingPreviewIntro
             brandLabel={brand}
@@ -232,7 +226,7 @@ function OnboardingPreviewContent() {
             competitorsCount={mock.competitors.length}
           />
         ) : null}
-      </div>
+      </OnboardingPreviewProductionShell>
     </main>
   );
 }
