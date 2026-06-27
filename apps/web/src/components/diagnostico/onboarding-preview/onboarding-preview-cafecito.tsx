@@ -136,24 +136,16 @@ export function OnboardingPreviewCafecito({
               <Coffee className="h-5 w-5" />
             </span>
             <div>
-              <h1 className="text-lg font-bold sm:text-xl">
-                {reportReady ? 'Tu diagnóstico está listo ☕' : 'Un cafecito mientras terminamos ☕'}
-              </h1>
+              <h1 className="text-lg font-bold sm:text-xl">Un cafecito mientras terminamos ☕</h1>
               <p className="mt-0.5 text-sm text-violet-100/90">
-                {reportReady
-                  ? `Mirá el informe completo${brandLabel ? ` de ${brandLabel}` : ''} cuando quieras.`
-                  : `Videíto de Gonzalo antes de ver tu diagnóstico${brandLabel ? ` de ${brandLabel}` : ''}.`}
+                Videíto de Gonzalo antes de ver tu diagnóstico
+                {brandLabel ? ` de ${brandLabel}` : ''}.
               </p>
             </div>
           </div>
         </div>
 
-        <div
-          className={cn(
-            'grid gap-5 p-5 sm:p-6',
-            reportReady ? 'lg:grid-cols-[1.2fr,0.85fr] lg:gap-6' : 'grid-cols-1'
-          )}
-        >
+        <div className="grid grid-cols-1 gap-5 p-5 sm:p-6">
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-inner">
             {!showEmbed ? (
               <div className="relative flex aspect-video flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-6 text-center">
@@ -273,40 +265,42 @@ export function OnboardingPreviewCafecito({
           </div>
         </div>
 
-        <div className="border-t border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-slate-50/80 px-5 py-5 sm:px-6 sm:py-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-            <div className="flex shrink-0 items-center gap-3 lg:max-w-[220px]">
+        <div className="border-t border-emerald-100/80 bg-gradient-to-b from-emerald-50/50 to-white px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,10.5rem)_minmax(0,1fr)_auto] md:items-center md:gap-4">
+            <div className="flex items-center gap-2.5 md:min-w-0">
               {founderPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={founderPhotoUrl}
                   alt="Gonzalo"
-                  className="h-12 w-12 shrink-0 rounded-full border-2 border-white object-cover object-top shadow-md ring-2 ring-emerald-100"
+                  className="h-10 w-10 shrink-0 rounded-full border-2 border-white object-cover object-top shadow-sm ring-1 ring-emerald-100"
                 />
               ) : (
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 ring-2 ring-emerald-100">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 ring-1 ring-emerald-100">
                   GA
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-sm font-bold text-slate-900">Seguimos por WhatsApp</p>
-                <p className="mt-0.5 text-xs leading-snug text-slate-500">
+                <p className="text-[13px] font-bold leading-tight text-slate-900">Seguimos por WhatsApp</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
                   Contame qué te motivó a hacer el análisis
                 </p>
               </div>
             </div>
 
-            <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
-              <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">{waMessage}</p>
+            <div className="min-w-0 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+              <p className="line-clamp-3 text-[11px] leading-relaxed text-slate-600 sm:line-clamp-2 sm:text-xs">
+                {waMessage}
+              </p>
             </div>
 
             <a
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-[#20bd5a] hover:shadow-lg hover:shadow-emerald-600/25 lg:min-w-[220px]"
+              className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#20bd5a] md:h-11 md:w-auto md:whitespace-nowrap md:px-5 md:text-sm"
             >
-              <MessageCircle className="h-5 w-5" />
+              <MessageCircle className="h-4 w-4 shrink-0" />
               Escribime por WhatsApp
             </a>
           </div>

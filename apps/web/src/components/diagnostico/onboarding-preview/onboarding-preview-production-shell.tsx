@@ -2,35 +2,19 @@
 
 import Link from 'next/link';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
-import { cn } from '@/lib/utils';
 import { OnboardingPreviewLeftPanel } from './onboarding-preview-left-panel';
 
 export function OnboardingPreviewProductionShell({
   brandLabel,
   analysisRunning,
   leftProgressPct,
-  analysisComplete,
   children,
 }: {
   brandLabel: string;
-  /** true en stage cafecito mientras corren los 12 pasos */
   analysisRunning: boolean;
   leftProgressPct: number;
-  /** true al 100%: solo cafecito a pantalla completa, sin columna izquierda */
-  analysisComplete?: boolean;
   children: React.ReactNode;
 }) {
-  // Pantalla final: únicamente el bloque cafecito (video + diagnóstico + WhatsApp)
-  if (analysisComplete) {
-    return (
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center py-2">
-        {children}
-      </div>
-    );
-  }
-
-  const showLeftPanel = analysisRunning;
-
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
       <div className="mb-4 shrink-0 sm:mb-5">
@@ -54,25 +38,12 @@ export function OnboardingPreviewProductionShell({
         </div>
       </div>
 
-      <div
-        className={cn(
-          'grid min-h-0 flex-1 gap-6',
-          showLeftPanel ? 'grid-cols-1 lg:grid-cols-[1fr,1.15fr] lg:gap-8' : 'grid-cols-1'
-        )}
-      >
-        {showLeftPanel ? (
-          <OnboardingPreviewLeftPanel
-            brandLabel={brandLabel}
-            analysisRunning
-            progressPct={leftProgressPct}
-          />
-        ) : (
-          <OnboardingPreviewLeftPanel
-            brandLabel={brandLabel}
-            analysisRunning={false}
-            progressPct={0}
-          />
-        )}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
+        <OnboardingPreviewLeftPanel
+          brandLabel={brandLabel}
+          analysisRunning={analysisRunning}
+          progressPct={leftProgressPct}
+        />
         <div className="relative flex min-h-0 min-w-0 flex-col">
           <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">{children}</div>
         </div>
