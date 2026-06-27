@@ -136,16 +136,24 @@ export function OnboardingPreviewCafecito({
               <Coffee className="h-5 w-5" />
             </span>
             <div>
-              <h1 className="text-lg font-bold sm:text-xl">Un cafecito mientras terminamos ☕</h1>
+              <h1 className="text-lg font-bold sm:text-xl">
+                {reportReady ? 'Tu diagnóstico está listo ☕' : 'Un cafecito mientras terminamos ☕'}
+              </h1>
               <p className="mt-0.5 text-sm text-violet-100/90">
-                Videíto de Gonzalo antes de ver tu diagnóstico
-                {brandLabel ? ` de ${brandLabel}` : ''}.
+                {reportReady
+                  ? `Mirá el informe completo${brandLabel ? ` de ${brandLabel}` : ''} cuando quieras.`
+                  : `Videíto de Gonzalo antes de ver tu diagnóstico${brandLabel ? ` de ${brandLabel}` : ''}.`}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 p-5 sm:p-6">
+        <div
+          className={cn(
+            'grid gap-5 p-5 sm:p-6',
+            reportReady ? 'lg:grid-cols-[1.2fr,0.85fr] lg:gap-6' : 'grid-cols-1'
+          )}
+        >
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-inner">
             {!showEmbed ? (
               <div className="relative flex aspect-video flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-6 text-center">

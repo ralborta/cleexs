@@ -181,6 +181,7 @@ function OnboardingPreviewContent() {
         brandLabel={brand}
         analysisRunning={stage === 'cafecito'}
         leftProgressPct={stage === 'cafecito' ? reportProgress : 0}
+        analysisComplete={stage === 'cafecito' && reportReady}
       >
         {stage === 'intro' ? (
           <OnboardingPreviewIntro
