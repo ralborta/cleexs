@@ -21,6 +21,27 @@ function ActiveOrbitIcon() {
   );
 }
 
+function stepCardSurfaceClass(state: ProgressStepState): string {
+  switch (state) {
+    case 'completed':
+      return cn(
+        'border-slate-200 border-b-slate-300 bg-white',
+        'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.95),0_2px_0_0_rgb(226,232,240),0_5px_14px_rgba(15,23,42,0.08)]'
+      );
+    case 'active':
+      return cn(
+        'border-blue-300 border-b-blue-400 bg-blue-50/40 ring-1 ring-blue-200/80',
+        '-translate-y-px',
+        'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75),0_2px_0_0_rgb(147,197,253),0_6px_16px_rgba(59,130,246,0.14)]'
+      );
+    case 'pending':
+      return cn(
+        'border-slate-200 bg-slate-50/65',
+        'shadow-[inset_0_2px_5px_rgba(15,23,42,0.05),0_1px_0_0_rgba(255,255,255,0.65)]'
+      );
+  }
+}
+
 export function ProgressStepCard({
   stepNumber,
   label,
@@ -39,9 +60,7 @@ export function ProgressStepCard({
       className={cn(
         'rounded-xl border px-4 py-3 transition-all duration-400 ease-out',
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
-        state === 'completed' && 'border-slate-200 bg-white shadow-sm',
-        state === 'active' && 'border-blue-300 bg-blue-50/40 shadow-sm ring-1 ring-blue-200/80',
-        state === 'pending' && 'border-slate-200 bg-slate-50/65'
+        stepCardSurfaceClass(state)
       )}
       style={{ transitionDelay: `${delayMs}ms` }}
     >
@@ -79,7 +98,7 @@ export function ProgressStepCard({
 
 export function AnalysisStepsGrid({ steps }: { steps: AnalysisStepItem[] }) {
   return (
-    <div className="mt-4 space-y-2.5">
+    <div className="mt-4 space-y-3">
       {steps.map((step, i) => (
         <ProgressStepCard
           key={step.id}
