@@ -3,14 +3,15 @@ import { FastifyPluginAsync } from 'fastify';
 import {
   CleexsEmailScoreBucket,
   CleexsEmailSendStatus,
+  CleexsEmailTemplateVariant,
   Prisma,
 } from '@prisma/client';
 import { z } from 'zod';
 import { sendInternalCampaignTestEmail } from '../lib/internal-email-campaign-send';
 import { sendAdminTestEmail } from '../lib/internal-email-send';
 import {
-  buildMonthlyScoreEmailPreviewExample,
-  buildMonthlyScoreEmail,
+  buildCleexsEmail,
+  buildCleexsEmailPreviewExample,
   buildMonthlyScoreDiagnosticUrl,
   buildMonthlyScorePlansUrl,
 } from '../lib/monthly-score-email';
@@ -40,6 +41,7 @@ const createCampaignBody = z.object({
   espTemplateId: z.string().trim().max(200).optional(),
   active: z.boolean().optional(),
   priority: z.number().int().min(0).max(999).optional(),
+  templateVariant: z.enum(['letter', 'editorial']).optional(),
 });
 
 const patchCampaignBody = z.object({
@@ -53,6 +55,7 @@ const patchCampaignBody = z.object({
   subject: z.string().trim().max(300).nullable().optional(),
   body: z.string().trim().max(20000).nullable().optional(),
   preheader: z.string().trim().max(500).nullable().optional(),
+  templateVariant: z.enum(['letter', 'editorial']).optional(),
 });
 
 const createLogBody = z.object({
@@ -77,7 +80,8 @@ const sendCampaignTestBody = z.object({
   campaignId: z.string().uuid(),
 });
 
-const monthlyScorePreviewQuery = z.object({
+const templatePreviewQuery = z.object({
+  variant: z.enum(['letter', 'editorial']).default('letter'),
   score: z
     .string()
     .optional()
@@ -86,12 +90,21 @@ const monthlyScorePreviewQuery = z.object({
       const n = Number(v);
       return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : 62;
     }),
+  domain: z.string().trim().max(200).optional().default('kievsrl.com'),
+  brandName: z.string().trim().max(200).optional().default('Kiev Srl'),
 });
 
-const monthlyScoreTestBody = z.object({
+const monthlyScorePreviewQuery = templatePreviewQuery;
+
+const templateTestBody = z.object({
   to: z.string().email(),
+  variant: z.enum(['letter', 'editorial']).default('letter'),
   score: z.number().int().min(0).max(100).optional(),
+  domain: z.string().trim().max(200).optional(),
+  brandName: z.string().trim().max(200).optional(),
 });
+
+const monthlyScoreTestBody = templateTestBody;
 
 const broadcastBody = z.object({
   subject: z.string().trim().min(3).max(180),
@@ -311,6 +324,10 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
           espTemplateId: parsed.data.espTemplateId,
           active: parsed.data.active ?? true,
           priority: parsed.data.priority ?? 0,
+          templateVariant:
+            parsed.data.templateVariant === 'editorial'
+              ? CleexsEmailTemplateVariant.editorial
+              : CleexsEmailTemplateVariant.letter,
         },
       });
       return row;
@@ -349,6 +366,12 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       if (parsed.data.subject !== undefined) data.subject = parsed.data.subject;
       if (parsed.data.body !== undefined) data.body = parsed.data.body;
       if (parsed.data.preheader !== undefined) data.preheader = parsed.data.preheader;
+      if (parsed.data.templateVariant !== undefined) {
+        data.templateVariant =
+          parsed.data.templateVariant === 'editorial'
+            ? CleexsEmailTemplateVariant.editorial
+            : CleexsEmailTemplateVariant.letter;
+      }
 
       if (Object.keys(data).length === 0) {
         return reply.code(400).send({ error: 'Nada para actualizar.' });
@@ -430,7 +453,34 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
     }
 
-    const built = buildMonthlyScoreEmailPreviewExample({ score: parsed.data.score });
+    const built = buildCleexsEmailPreviewExample({
+      variant: 'editorial',
+      score: parsed.data.score,
+      domain: parsed.data.domain,
+      brandName: parsed.data.brandName,
+    });
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return built.html;
+  });
+
+  fastify.get('/email/templates/preview', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = templatePreviewQuery.safeParse(request.query ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
+    }
+
+    const built = buildCleexsEmailPreviewExample({
+      variant: parsed.data.variant,
+      score: parsed.data.score,
+      domain: parsed.data.domain,
+      brandName: parsed.data.brandName,
+    });
     reply.header('Content-Type', 'text/html; charset=utf-8');
     return built.html;
   });
@@ -447,18 +497,127 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
     }
 
-    const built = buildMonthlyScoreEmailPreviewExample({ score: parsed.data.score });
+    const built = buildCleexsEmailPreviewExample({
+      variant: 'editorial',
+      score: parsed.data.score,
+      domain: parsed.data.domain,
+      brandName: parsed.data.brandName,
+    });
     return {
       ok: true,
+      variant: built.variant,
       subject: built.subject,
       html: built.html,
       text: built.text,
       assets: built.assets,
       sampleScore: parsed.data.score,
+      sampleDomain: parsed.data.domain,
+      sampleBrandName: parsed.data.brandName,
       newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(),
       plansUrl: buildMonthlyScorePlansUrl(),
     };
   });
+
+  fastify.get('/email/templates/preview.json', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = templatePreviewQuery.safeParse(request.query ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
+    }
+
+    const built = buildCleexsEmailPreviewExample({
+      variant: parsed.data.variant,
+      score: parsed.data.score,
+      domain: parsed.data.domain,
+      brandName: parsed.data.brandName,
+    });
+    return {
+      ok: true,
+      variant: built.variant,
+      subject: built.subject,
+      html: built.html,
+      text: built.text,
+      assets: built.assets,
+      sampleScore: parsed.data.score,
+      sampleDomain: parsed.data.domain,
+      sampleBrandName: parsed.data.brandName,
+      newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(),
+      plansUrl: buildMonthlyScorePlansUrl(),
+    };
+  });
+
+  fastify.post<{ Body: z.infer<typeof templateTestBody> }>(
+    '/email/templates/send-test',
+    async (request, reply) => {
+      if (!requireAdminSecret(request)) {
+        return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+          error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+        });
+      }
+
+      const parsed = templateTestBody.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+      }
+
+      if (isEmailDisabled()) {
+        return reply.code(400).send({ error: 'Envíos deshabilitados (DISABLE_EMAILS).' });
+      }
+
+      const base = getAppBaseUrlForPublicLinks();
+      const built = buildCleexsEmail({
+        variant: parsed.data.variant,
+        personalization: {
+          score: parsed.data.score ?? 62,
+          domain: parsed.data.domain ?? 'kievsrl.com',
+          brandName: parsed.data.brandName ?? 'Kiev Srl',
+        },
+        links: {
+          newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),
+          reportUrl: `${base.replace(/\/+$/, '')}/ver-resultado?diagnosticId=preview-example`,
+          shareUrl: `${base.replace(/\/+$/, '')}/score/ejemplo-preview`,
+          plansUrl: buildMonthlyScorePlansUrl(base),
+          unsubscribeUrl: `${base.replace(/\/+$/, '')}/email/unsubscribe?example=1`,
+        },
+        showFounderSignature: true,
+        showScoreBlock: true,
+        showReportLinks: true,
+      });
+
+      const to = parsed.data.to.trim().toLowerCase();
+      const from = buildTransactionalFromAddress();
+      const apiKey = process.env.RESEND_API_KEY?.trim();
+
+      try {
+        if (apiKey) {
+          const resend = new Resend(apiKey);
+          const { data, error } = await resend.emails.send({
+            from,
+            to: [to],
+            subject: built.subject,
+            html: built.html,
+            text: built.text,
+            headers: { 'X-Cleexs-Campaign': `template-${parsed.data.variant}-test` },
+          });
+          if (error) throw new Error(typeof error === 'object' && error && 'message' in error ? String((error as { message: string }).message) : String(error));
+          return { ok: true, provider: 'resend_inline', variant: built.variant, externalId: data?.id ?? null, subject: built.subject };
+        }
+        if (isEmailConfigured()) {
+          const info = await sendSmtpMail({ to, subject: built.subject, html: built.html, text: built.text });
+          return { ok: true, provider: 'smtp', variant: built.variant, externalId: info.messageId ?? null, subject: built.subject };
+        }
+        return reply.code(503).send({ error: 'Sin canal de envío: configurá RESEND_API_KEY o SMTP completo.' });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return reply.code(502).send({ error: msg });
+      }
+    }
+  );
 
   fastify.post<{ Body: z.infer<typeof monthlyScoreTestBody> }>(
     '/email/monthly-score/send-test',
@@ -479,12 +638,24 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const base = getAppBaseUrlForPublicLinks();
-      const built = buildMonthlyScoreEmail({
-        score: parsed.data.score ?? 62,
-        newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),
-        plansUrl: buildMonthlyScorePlansUrl(base),
-        unsubscribeUrl: `${base.replace(/\/+$/, '')}/email/unsubscribe?example=1`,
+      const variant = parsed.data.variant ?? 'editorial';
+      const built = buildCleexsEmail({
+        variant,
+        personalization: {
+          score: parsed.data.score ?? 62,
+          domain: parsed.data.domain ?? 'kievsrl.com',
+          brandName: parsed.data.brandName ?? 'Kiev Srl',
+        },
+        links: {
+          newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),
+          reportUrl: `${base.replace(/\/+$/, '')}/ver-resultado?diagnosticId=preview-example`,
+          shareUrl: `${base.replace(/\/+$/, '')}/score/ejemplo-preview`,
+          plansUrl: buildMonthlyScorePlansUrl(base),
+          unsubscribeUrl: `${base.replace(/\/+$/, '')}/email/unsubscribe?example=1`,
+        },
         showFounderSignature: true,
+        showScoreBlock: true,
+        showReportLinks: variant === 'letter',
       });
 
       const to = parsed.data.to.trim().toLowerCase();
@@ -503,11 +674,11 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
             headers: { 'X-Cleexs-Campaign': 'monthly-score-preview-test' },
           });
           if (error) throw new Error(typeof error === 'object' && error && 'message' in error ? String((error as { message: string }).message) : String(error));
-          return { ok: true, provider: 'resend_inline', externalId: data?.id ?? null, subject: built.subject };
+          return { ok: true, provider: 'resend_inline', variant: built.variant, externalId: data?.id ?? null, subject: built.subject };
         }
         if (isEmailConfigured()) {
           const info = await sendSmtpMail({ to, subject: built.subject, html: built.html, text: built.text });
-          return { ok: true, provider: 'smtp', externalId: info.messageId ?? null, subject: built.subject };
+          return { ok: true, provider: 'smtp', variant: built.variant, externalId: info.messageId ?? null, subject: built.subject };
         }
         return reply.code(503).send({ error: 'Sin canal de envío: configurá RESEND_API_KEY o SMTP completo.' });
       } catch (e) {

@@ -49,8 +49,8 @@ const sections: NavSection[] = [
   {
     title: 'Marketing',
     links: [
-      { href: '/admin/email', label: 'Email · secuencia', icon: Mail, excludePrefixes: ['/admin/email/weekly', '/admin/email/monthly-score'] },
-      { href: '/admin/email/monthly-score', label: 'Email · score mensual', icon: Mail },
+      { href: '/admin/email', label: 'Email · secuencia', icon: Mail, excludePrefixes: ['/admin/email/weekly', '/admin/email/monthly-score', '/admin/email/templates'] },
+      { href: '/admin/email/templates', label: 'Email · plantillas', icon: Mail },
       { href: '/admin/email/weekly', label: 'Emails semanales', icon: CalendarClock },
       { href: '/admin/whatsapp', label: 'Mensajes WhatsApp', icon: MessageCircle },
       { href: '/admin/referidores', label: 'Referidores', icon: MousePointerClick },

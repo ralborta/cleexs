@@ -897,6 +897,11 @@ enum CleexsEmailScoreBucket {
   all
 }
 
+enum CleexsEmailTemplateVariant {
+  letter
+  editorial
+}
+
 enum CleexsEmailSendStatus {
   pending
   sent
@@ -953,6 +958,7 @@ model CleexsInternalEmailCampaign {
   subject       String?                @db.Text
   body          String?                @db.Text
   preheader     String?                @db.Text
+  templateVariant CleexsEmailTemplateVariant @default(letter) @map("template_variant")
   active        Boolean                @default(true)
   priority      Int                    @default(0)
   createdAt     DateTime               @default(now()) @map("created_at")
