@@ -45,8 +45,8 @@ export default function EmailTemplatesPreviewPage() {
     searchParams.get('variant') === 'editorial' ? 'editorial' : ('letter' as TemplateVariant);
   const [variant, setVariant] = useState<TemplateVariant>(initialVariant);
   const [score, setScore] = useState(62);
-  const [domain, setDomain] = useState('kievsrl.com');
-  const [brandName, setBrandName] = useState('Kiev Srl');
+  const [domain, setDomain] = useState('empliados.net');
+  const [brandName, setBrandName] = useState('Empliados');
   const [testEmail, setTestEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -119,8 +119,8 @@ export default function EmailTemplatesPreviewPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Email · plantillas</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">Carta vs Newsletter</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-            <strong>Carta (letter)</strong> — default para secuencia y score mensual: tono humano, firma Gonzalo,
-            bloque personalizado chico. <strong>Editorial</strong> — newsletter visual para piezas especiales.
+            <strong>Carta (letter)</strong> — mensaje primero, firma Gonzalo, dato de score sutil abajo.
+            <strong> Editorial</strong> — newsletter visual para piezas especiales.
           </p>
         </div>
         <Link href="/admin/email" className="text-sm font-medium text-violet-600 hover:text-violet-800">

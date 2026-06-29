@@ -90,8 +90,8 @@ const templatePreviewQuery = z.object({
       const n = Number(v);
       return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : 62;
     }),
-  domain: z.string().trim().max(200).optional().default('kievsrl.com'),
-  brandName: z.string().trim().max(200).optional().default('Kiev Srl'),
+  domain: z.string().trim().max(200).optional().default('empliados.net'),
+  brandName: z.string().trim().max(200).optional().default('Empliados'),
 });
 
 const monthlyScorePreviewQuery = templatePreviewQuery;
@@ -574,8 +574,8 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
         variant: parsed.data.variant,
         personalization: {
           score: parsed.data.score ?? 62,
-          domain: parsed.data.domain ?? 'kievsrl.com',
-          brandName: parsed.data.brandName ?? 'Kiev Srl',
+          domain: parsed.data.domain ?? 'empliados.net',
+          brandName: parsed.data.brandName ?? 'Empliados',
         },
         links: {
           newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),
@@ -643,8 +643,8 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
         variant,
         personalization: {
           score: parsed.data.score ?? 62,
-          domain: parsed.data.domain ?? 'kievsrl.com',
-          brandName: parsed.data.brandName ?? 'Kiev Srl',
+          domain: parsed.data.domain ?? 'empliados.net',
+          brandName: parsed.data.brandName ?? 'Empliados',
         },
         links: {
           newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),

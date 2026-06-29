@@ -109,7 +109,7 @@ export function resolveCleexsEmailAssets(
 export function founderSignatureHtml(assets: CleexsEmailAssets, founderTitle: string): string {
   if (!assets.founderPhotoUrl) return '';
   return `
-    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 0;">
+    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 0;">
       <tr>
         <td style="padding-right:12px;vertical-align:middle;">
           <img src="${escapeHtml(assets.founderPhotoUrl)}" alt="Gonzalo" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:50%;border:2px solid #e2e8f0;object-fit:cover;" />
@@ -137,7 +137,7 @@ export function sampleCleexsEmailLinks(baseUrl = getAppBaseUrlForPublicLinks()):
 export function sampleCleexsPersonalization(overrides?: Partial<CleexsEmailPersonalization>): CleexsEmailPersonalization {
   return {
     score: overrides?.score ?? 62,
-    brandName: overrides?.brandName ?? 'Kiev Srl',
-    domain: overrides?.domain ?? 'kievsrl.com',
+    brandName: overrides?.brandName ?? 'Empliados',
+    domain: overrides?.domain ?? 'empliados.net',
   };
 }
