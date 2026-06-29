@@ -29,6 +29,10 @@ export type CleexsLetterContent = {
   planCtaLabel: string;
   founderTitle: string;
   unsubscribeLabel: string;
+  /** Mini sección educativa antes de la firma (Click / Cleexs Score). */
+  scoreTipsTitle: string;
+  scoreTipsParagraphs: string[];
+  scoreTipsReportCta: string;
 };
 
 export type CleexsLetterEmailInput = {
@@ -41,6 +45,8 @@ export type CleexsLetterEmailInput = {
   showScoreBlock?: boolean;
   /** Muestra botones de reporte y compartir. */
   showReportLinks?: boolean;
+  /** Bloque educativo personalizado antes de la firma. */
+  showScoreTipsBlock?: boolean;
 };
 
 export function defaultCleexsLetterContent(): CleexsLetterContent {
@@ -66,6 +72,12 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     planCtaLabel: 'Ver Plan Conquistar',
     founderTitle: 'Fundador',
     unsubscribeLabel: 'Dejar de recibir los emails de Cleexs',
+    scoreTipsTitle: 'Sacándole jugo a tu Cleexs Score',
+    scoreTipsParagraphs: [
+      'Tu score mide qué tan seguido {{brandName}} aparece cuando alguien le pide a ChatGPT, Claude, Gemini o Perplexity que recomienden opciones como la tuya. No es tráfico web: es visibilidad dentro de las respuestas.',
+      'En tu reporte ves en qué consultas aparecés, quién ocupa tu lugar y qué señales podés reforzar en {{domain}} para subir ese número.',
+    ],
+    scoreTipsReportCta: 'Ver mi reporte completo',
   };
 }
 
@@ -148,6 +160,91 @@ function actionLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetterCon
     <table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 8px;">${rows.join('')}</table>`;
 }
 
+function scoreTipsIllustrationHtml(ctx: CleexsEmailPersonalization): string {
+  const brand = escapeHtml((ctx.brandName || ctx.domain || 'Tu marca').trim());
+  const domain = escapeHtml((ctx.domain || 'tu-sitio.com').trim());
+  const score = normalizedScore(ctx.score);
+  const scoreLabel =
+    score != null ? `Cleexs Score ${score}` : 'Cleexs Score pendiente';
+  const accent = scoreAccent(ctx.score);
+
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);border-radius:12px 12px 0 0;">
+      <tr>
+        <td style="padding:20px 16px 8px;font-family:Inter,Arial,sans-serif;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#93c5fd;">${domain}</p>
+          <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;">${scoreLabel}</p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:8px 16px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;max-width:320px;background:#ffffff;border-radius:12px;box-shadow:0 16px 32px rgba(0,0,0,.22);">
+            <tr>
+              <td style="padding:12px;font-family:Inter,Arial,sans-serif;">
+                <table role="presentation" cellspacing="0" cellpadding="0"><tr>
+                  <td width="7" height="7" style="background:#cbd5e1;border-radius:50%;"></td>
+                  <td width="5"></td>
+                  <td width="7" height="7" style="background:#cbd5e1;border-radius:50%;"></td>
+                  <td width="5"></td>
+                  <td width="7" height="7" style="background:#cbd5e1;border-radius:50%;"></td>
+                </tr></table>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;">
+                  <tr><td style="padding:10px;">
+                    <strong style="display:block;color:#64748b;font-size:11px;margin-bottom:4px;">Respuesta de IA</strong>
+                    <div style="height:6px;border-radius:999px;background:#e2e8f0;margin:5px 0;"></div>
+                    <div style="height:6px;width:75%;border-radius:999px;background:#e2e8f0;margin:5px 0;"></div>
+                  </td></tr>
+                </table>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;">
+                  <tr><td style="padding:10px;">
+                    <strong style="display:block;color:#1d4ed8;font-size:11px;margin-bottom:4px;">Proveedor recomendado</strong>
+                    <p style="margin:0;font-size:13px;font-weight:700;color:${accent};">${brand}</p>
+                    <p style="margin:4px 0 0;font-size:11px;color:#64748b;">${domain}</p>
+                  </td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>`;
+}
+
+function scoreTipsBlockHtml(
+  input: CleexsLetterEmailInput,
+  content: CleexsLetterContent,
+  ctx: CleexsEmailPersonalization
+): string {
+  if (input.showScoreTipsBlock === false) return '';
+
+  const title = mergeCleexsText(content.scoreTipsTitle, ctx);
+  const paragraphs = content.scoreTipsParagraphs
+    .map(
+      (p) =>
+        `<p style="margin:0 0 12px;font-size:14px;line-height:1.65;color:#475569;font-family:Inter,Arial,sans-serif;">${escapeHtml(mergeCleexsText(p, ctx))}</p>`
+    )
+    .join('\n');
+
+  const reportCta =
+    input.links.reportUrl && input.showReportLinks !== false
+      ? `<p style="margin:14px 0 0;">
+          <a href="${escapeHtml(input.links.reportUrl)}" style="font-size:14px;font-weight:700;color:#2563eb;text-decoration:underline;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.scoreTipsReportCta)} →</a>
+        </p>`
+      : '';
+
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:28px 0 0;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#ffffff;">
+      <tr><td style="padding:0;">${scoreTipsIllustrationHtml(ctx)}</td></tr>
+      <tr>
+        <td style="padding:20px 18px 18px;font-family:Georgia,'Times New Roman',Times,serif;">
+          <h3 style="margin:0 0 12px;font-size:18px;line-height:1.35;color:#0f172a;font-weight:700;">${escapeHtml(title)}</h3>
+          ${paragraphs}
+          ${reportCta}
+        </td>
+      </tr>
+    </table>`;
+}
+
 export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuilt {
   const content = mergeContent(input.content);
   const ctx = input.personalization;
@@ -180,6 +277,7 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
               ${bodyParagraphsHtml(content.bodyParagraphs, ctx)}
               ${personalizedBlockHtml(input, content, ctx)}
               ${actionLinksHtml(input, content)}
+              ${scoreTipsBlockHtml(input, content, ctx)}
               ${showFounder ? founderSignatureHtml(assets, content.founderTitle) : ''}
               <p style="margin:24px 0 0;font-size:15px;line-height:1.65;color:#475569;font-style:italic;">${escapeHtml(postscript)}</p>
             </td>
@@ -223,6 +321,10 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
     input.links.reportUrl ? `${content.reportCtaLabel}: ${input.links.reportUrl}` : '',
     input.links.shareUrl ? `${content.shareCtaLabel}: ${input.links.shareUrl}` : '',
     `${content.newDiagnosticCtaLabel}: ${input.links.newDiagnosticUrl}`,
+    '',
+    mergeCleexsText(content.scoreTipsTitle, ctx),
+    ...content.scoreTipsParagraphs.map((p) => mergeCleexsText(p, ctx)),
+    input.links.reportUrl ? `${content.scoreTipsReportCta}: ${input.links.reportUrl}` : '',
     '',
     postscript,
     '',
