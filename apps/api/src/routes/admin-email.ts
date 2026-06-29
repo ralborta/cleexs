@@ -8,7 +8,16 @@ import {
 import { z } from 'zod';
 import { sendInternalCampaignTestEmail } from '../lib/internal-email-campaign-send';
 import { sendAdminTestEmail } from '../lib/internal-email-send';
+import {
+  buildMonthlyScoreEmailPreviewExample,
+  buildMonthlyScoreEmail,
+  buildMonthlyScoreDiagnosticUrl,
+  buildMonthlyScorePlansUrl,
+} from '../lib/monthly-score-email';
 import { resolveMarketingRecipients, sendMarketingEmail } from '../lib/marketing-email';
+import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
+import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from '../lib/email';
+import { Resend } from 'resend';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { prisma } from '../lib/prisma';
 
@@ -66,6 +75,22 @@ const sendTestBody = z.object({
 const sendCampaignTestBody = z.object({
   to: z.string().email(),
   campaignId: z.string().uuid(),
+});
+
+const monthlyScorePreviewQuery = z.object({
+  score: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (v == null || v.trim() === '') return 62;
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : 62;
+    }),
+});
+
+const monthlyScoreTestBody = z.object({
+  to: z.string().email(),
+  score: z.number().int().min(0).max(100).optional(),
 });
 
 const broadcastBody = z.object({
@@ -392,6 +417,105 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
     });
     return row;
   });
+
+  fastify.get('/email/monthly-score/preview', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = monthlyScorePreviewQuery.safeParse(request.query ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
+    }
+
+    const built = buildMonthlyScoreEmailPreviewExample({ score: parsed.data.score });
+    reply.header('Content-Type', 'text/html; charset=utf-8');
+    return built.html;
+  });
+
+  fastify.get('/email/monthly-score/preview.json', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = monthlyScorePreviewQuery.safeParse(request.query ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
+    }
+
+    const built = buildMonthlyScoreEmailPreviewExample({ score: parsed.data.score });
+    return {
+      ok: true,
+      subject: built.subject,
+      html: built.html,
+      text: built.text,
+      assets: built.assets,
+      sampleScore: parsed.data.score,
+      newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(),
+      plansUrl: buildMonthlyScorePlansUrl(),
+    };
+  });
+
+  fastify.post<{ Body: z.infer<typeof monthlyScoreTestBody> }>(
+    '/email/monthly-score/send-test',
+    async (request, reply) => {
+      if (!requireAdminSecret(request)) {
+        return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+          error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+        });
+      }
+
+      const parsed = monthlyScoreTestBody.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+      }
+
+      if (isEmailDisabled()) {
+        return reply.code(400).send({ error: 'Envíos deshabilitados (DISABLE_EMAILS).' });
+      }
+
+      const base = getAppBaseUrlForPublicLinks();
+      const built = buildMonthlyScoreEmail({
+        score: parsed.data.score ?? 62,
+        newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),
+        plansUrl: buildMonthlyScorePlansUrl(base),
+        unsubscribeUrl: `${base.replace(/\/+$/, '')}/email/unsubscribe?example=1`,
+        showFounderSignature: true,
+      });
+
+      const to = parsed.data.to.trim().toLowerCase();
+      const from = buildTransactionalFromAddress();
+      const apiKey = process.env.RESEND_API_KEY?.trim();
+
+      try {
+        if (apiKey) {
+          const resend = new Resend(apiKey);
+          const { data, error } = await resend.emails.send({
+            from,
+            to: [to],
+            subject: built.subject,
+            html: built.html,
+            text: built.text,
+            headers: { 'X-Cleexs-Campaign': 'monthly-score-preview-test' },
+          });
+          if (error) throw new Error(typeof error === 'object' && error && 'message' in error ? String((error as { message: string }).message) : String(error));
+          return { ok: true, provider: 'resend_inline', externalId: data?.id ?? null, subject: built.subject };
+        }
+        if (isEmailConfigured()) {
+          const info = await sendSmtpMail({ to, subject: built.subject, html: built.html, text: built.text });
+          return { ok: true, provider: 'smtp', externalId: info.messageId ?? null, subject: built.subject };
+        }
+        return reply.code(503).send({ error: 'Sin canal de envío: configurá RESEND_API_KEY o SMTP completo.' });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return reply.code(502).send({ error: msg });
+      }
+    }
+  );
 
   fastify.get('/email/stats', async (request, reply) => {
     if (!requireAdminSecret(request)) {
