@@ -197,58 +197,90 @@ function secondaryLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetter
   return `<p style="margin:8px 0 0;font-size:11px;line-height:1.5;color:#cbd5e1;font-family:${letterFont};">${links.join(' · ')}${hint}</p>`;
 }
 
-function planCheckIconHtml(): string {
+function planBulletDotHtml(): string {
   return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>
-    <td width="24" height="24" align="center" valign="middle" style="width:24px;height:24px;border-radius:50%;background:#2563eb;color:#ffffff;font-size:13px;font-weight:700;font-family:Inter,Arial,sans-serif;line-height:24px;">✓</td>
+    <td width="16" height="16" align="center" valign="middle" style="width:16px;height:16px;border-radius:50%;background:#2563eb;">
+      <table role="presentation" cellspacing="0" cellpadding="0"><tr>
+        <td width="6" height="6" style="width:6px;height:6px;border-radius:50%;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+      </tr></table>
+    </td>
+  </tr></table>`;
+}
+
+function planShieldIconHtml(): string {
+  return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>
+    <td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;border-radius:9px;background:#1d4ed8;color:#ffffff;font-size:16px;line-height:34px;">&#9819;</td>
   </tr></table>`;
 }
 
 function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetterContent): string {
-  const bullets = content.planBullets
-    .map((b, i) => {
-      const border =
-        i < content.planBullets.length - 1 ? 'border-bottom:1px solid #1e293b;' : '';
-      return `<tr>
-        <td colspan="2" style="padding:14px 0;${border}">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-            <tr>
-              <td width="36" valign="top" style="padding-right:10px;">${planCheckIconHtml()}</td>
-              <td valign="top" style="font-size:15px;line-height:1.55;color:#e2e8f0;font-family:${letterFont};">${escapeHtml(b)}</td>
-            </tr>
-          </table>
-        </td>
-      </tr>`;
-    })
+  const bulletRows = content.planBullets
+    .map(
+      (b) =>
+        `<tr>
+          <td width="24" valign="top" style="padding:0 10px 10px 0;">${planBulletDotHtml()}</td>
+          <td valign="top" style="padding:0 0 10px;font-size:14px;line-height:1.55;color:#f8fafc;font-family:${letterFont};">${escapeHtml(b)}</td>
+        </tr>`
+    )
     .join('');
 
   return `
     <tr>
       <td style="padding:32px 0 0;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:16px;overflow:hidden;border:1px solid #1e3a8a;box-shadow:0 16px 40px rgba(15,23,42,.22);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:14px;overflow:hidden;border:1px solid #1e3a8a;box-shadow:0 14px 36px rgba(15,23,42,.2);">
           <tr>
-            <td style="padding:24px 24px 20px;background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 55%,#1e40af 100%);font-family:${letterFont};">
-              <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#dbeafe;font-family:Inter,Arial,sans-serif;">
-                <span style="font-size:13px;margin-right:6px;">&#9819;</span>${escapeHtml(content.planBadgeLabel)}
-              </p>
-              <p style="margin:0;font-size:22px;font-weight:700;line-height:1.3;color:#ffffff;">${escapeHtml(content.planTitle)}</p>
+            <td style="padding:14px 18px;background:#2563eb;font-family:${letterFont};">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td width="1" valign="middle" style="white-space:nowrap;padding-right:10px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0"><tr>
+                      <td valign="middle" style="padding-right:8px;">${planShieldIconHtml()}</td>
+                      <td valign="middle" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#dbeafe;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planBadgeLabel)}</td>
+                    </tr></table>
+                  </td>
+                  <td width="1" valign="middle" style="padding:0 14px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0"><tr>
+                      <td width="1" style="width:1px;height:34px;background:rgba(255,255,255,.35);font-size:0;line-height:0;">&nbsp;</td>
+                    </tr></table>
+                  </td>
+                  <td valign="middle" style="font-size:19px;font-weight:700;line-height:1.3;color:#ffffff;">${escapeHtml(content.planTitle)}</td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:22px 24px 24px;background:#0b1220;font-family:${letterFont};">
-              <p style="margin:0 0 8px;font-size:15px;line-height:1.65;color:#94a3b8;font-family:Inter,Arial,sans-serif;">
-                ${escapeHtml(content.planPriceIntro)}
-                <span style="text-decoration:line-through;color:#64748b;">${escapeHtml(content.planPriceStrikethrough)}</span>
-                <strong style="color:#60a5fa;font-size:20px;font-weight:800;"> ${escapeHtml(content.planPriceCurrent)}</strong>
-                ${escapeHtml(content.planPriceSuffix)}
-              </p>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 18px;">${bullets}</table>
-              <p style="margin:0 0 22px;font-size:14px;line-height:1.65;color:#94a3b8;font-style:italic;">
-                <span style="margin-right:6px;">&#128640;</span>${escapeHtml(content.planClosingLine)}
-              </p>
+            <td style="padding:20px 18px 18px;background:#0b1220;font-family:${letterFont};">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="border-radius:12px;background:#ffffff;text-align:center;">
-                    <a href="${escapeHtml(input.links.plansUrl)}" style="display:block;padding:16px 20px;font-size:16px;font-weight:800;color:#1d4ed8;text-decoration:none;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planCtaLabel)} &#8594;</a>
+                  <td width="30%" valign="top" style="padding-right:16px;border-right:1px solid #1e293b;">
+                    <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#cbd5e1;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planPriceIntro)}</p>
+                    <p style="margin:0 0 2px;font-size:13px;line-height:1.4;color:#64748b;font-family:Inter,Arial,sans-serif;">
+                      <span style="text-decoration:line-through;">${escapeHtml(content.planPriceStrikethrough)}</span>
+                    </p>
+                    <p style="margin:0 0 8px;font-size:28px;font-weight:800;line-height:1.1;color:#60a5fa;font-family:Inter,Arial,sans-serif;letter-spacing:-.5px;">${escapeHtml(content.planPriceCurrent)}</p>
+                    <p style="margin:0 0 12px;font-size:12px;line-height:1.5;color:#cbd5e1;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planPriceSuffix)}</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+                      <td style="height:1px;background:#1e293b;font-size:0;line-height:0;">&nbsp;</td>
+                    </tr></table>
+                  </td>
+                  <td width="70%" valign="top" style="padding-left:18px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;">${bulletRows}</table>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td valign="bottom" style="padding-right:12px;">
+                          <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;font-style:italic;">${escapeHtml(content.planClosingLine)}</p>
+                        </td>
+                        <td width="1" valign="bottom" align="right" style="white-space:nowrap;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" align="right">
+                            <tr>
+                              <td style="border-radius:10px;background:#2563eb;text-align:center;">
+                                <a href="${escapeHtml(input.links.plansUrl)}" style="display:inline-block;padding:12px 18px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;font-family:Inter,Arial,sans-serif;white-space:nowrap;">${escapeHtml(content.planCtaLabel)} &#8594;</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
