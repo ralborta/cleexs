@@ -1,7 +1,4 @@
-import isoCountries from 'i18n-iso-countries';
-import esLocale from 'i18n-iso-countries/langs/es.json';
-
-isoCountries.registerLocale(esLocale);
+import { COUNTRY_NAMES_ES } from './countries-names';
 
 export type CountryRegion = 'América Latina' | 'Norteamérica' | 'Europa' | 'Asia' | 'África';
 export type GeoMarket = 'AR' | 'BR' | 'MX' | 'US' | 'LATAM' | 'EU' | 'global';
@@ -58,24 +55,13 @@ export function geoMarketForIso(iso: string): GeoMarket {
   return 'global';
 }
 
-function spanishName(iso: string): string | undefined {
-  return isoCountries.getName(iso, 'es', { select: 'official' }) ?? isoCountries.getName(iso, 'es');
-}
-
 function buildAllCountries(): CountryOption[] {
-  const codes = Object.keys(isoCountries.getAlpha2Codes());
-  const rows: CountryOption[] = [];
-  for (const iso of codes) {
-    const name = spanishName(iso);
-    if (!name) continue;
-    rows.push({
-      iso: iso.toUpperCase(),
-      name,
-      geoMarket: geoMarketForIso(iso),
-      region: regionForIso(iso),
-    });
-  }
-  return rows.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  return COUNTRY_NAMES_ES.map(({ iso, name }) => ({
+    iso,
+    name,
+    geoMarket: geoMarketForIso(iso),
+    region: regionForIso(iso),
+  }));
 }
 
 export const ALL_COUNTRIES: CountryOption[] = buildAllCountries();
