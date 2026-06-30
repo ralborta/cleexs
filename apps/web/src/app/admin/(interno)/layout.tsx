@@ -3,15 +3,14 @@ import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { AdminInternoNav } from '@/components/admin/admin-interno-nav';
 import { AdminInternoTopBar } from '@/components/admin/admin-interno-top-bar';
+import { adminRequireAuthEnabled } from '@/lib/admin-session';
 import { assertAdminUiSession } from '@/lib/admin-api';
 
 export const dynamic = 'force-dynamic';
 
 export default function AdminInternoLayout({ children }: { children: React.ReactNode }) {
   noStore();
-  // TODO: re-habilitar la auth despues de la presentacion (comentado a pedido para demo).
-  // Para reactivar, descomentar el bloque siguiente.
-  if (process.env.ADMIN_REQUIRE_AUTH === 'true' && !assertAdminUiSession()) {
+  if (adminRequireAuthEnabled() && !assertAdminUiSession()) {
     redirect('/admin/login');
   }
 
