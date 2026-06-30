@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { adminRequireAuthEnabled, COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-session';
+import {
+  ADMIN_UI_COOKIE_NAME,
+  adminRequireAuthEnabled,
+  hasAdminSessionCookie,
+} from '@/lib/admin-auth-config';
 
 /**
  * Rutas públicas para pruebas (sin login).
@@ -64,8 +68,8 @@ function adminLoginRedirect(request: NextRequest): NextResponse | null {
   if (pathname.startsWith('/admin/login')) return null;
   if (!adminRequireAuthEnabled()) return null;
 
-  const token = request.cookies.get(COOKIE_NAME)?.value;
-  if (verifyAdminSessionToken(token)) return null;
+  const token = request.cookies.get(ADMIN_UI_COOKIE_NAME)?.value;
+  if (hasAdminSessionCookie(token)) return null;
 
   const url = request.nextUrl.clone();
   url.pathname = '/admin/login';

@@ -1,20 +1,13 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import {
+  adminOpenAccessEnabled,
+  adminRequireAuthEnabled,
+  ADMIN_UI_COOKIE_NAME,
+} from '@/lib/admin-auth-config';
 
-const COOKIE_NAME = 'cleexs_admin_ui';
+const COOKIE_NAME = ADMIN_UI_COOKIE_NAME;
 
-export { COOKIE_NAME };
-
-/** Panel abierto sin login (solo demo). Por defecto: cerrado. */
-export function adminOpenAccessEnabled(): boolean {
-  return process.env.ADMIN_OPEN_ACCESS === 'true';
-}
-
-/** Login obligatorio salvo bypass explícito o opt-out ADMIN_REQUIRE_AUTH=false. */
-export function adminRequireAuthEnabled(): boolean {
-  if (adminOpenAccessEnabled()) return false;
-  if (process.env.ADMIN_REQUIRE_AUTH === 'false') return false;
-  return true;
-}
+export { COOKIE_NAME, adminOpenAccessEnabled, adminRequireAuthEnabled };
 
 function sessionSecret(): string {
   const password = normalizeEnvSecret(process.env.ADMIN_UI_PASSWORD);

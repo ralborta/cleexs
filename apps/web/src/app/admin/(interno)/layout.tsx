@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { AdminInternoNav } from '@/components/admin/admin-interno-nav';
 import { AdminInternoTopBar } from '@/components/admin/admin-interno-top-bar';
-import { adminRequireAuthEnabled } from '@/lib/admin-session';
+import { adminRequireAuthEnabled } from '@/lib/admin-auth-config';
 import { assertAdminUiSession } from '@/lib/admin-api';
 
 export const dynamic = 'force-dynamic';
