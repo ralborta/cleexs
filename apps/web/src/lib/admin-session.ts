@@ -17,11 +17,20 @@ export function adminRequireAuthEnabled(): boolean {
 }
 
 function sessionSecret(): string {
-  return (
-    process.env.ADMIN_UI_SESSION_SECRET?.trim() ||
-    process.env.ADMIN_UI_PASSWORD?.trim() ||
-    ''
-  );
+  const password = normalizeEnvSecret(process.env.ADMIN_UI_PASSWORD);
+  const sessionSecretValue = normalizeEnvSecret(process.env.ADMIN_UI_SESSION_SECRET);
+  return sessionSecretValue || password || '';
+}
+
+export function normalizeEnvSecret(value: string | undefined): string {
+  const trimmed = `${value || ''}`.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
 }
 
 /** Token: `${expMs}.${hexSig}` */
