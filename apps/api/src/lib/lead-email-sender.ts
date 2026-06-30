@@ -341,13 +341,23 @@ export async function updateLeadEmailFromResendEvent(emailId: string, eventType:
   const candidates = await prisma.leadEmail.findMany({
     where: { provider: 'resend' },
     orderBy: { updatedAt: 'desc' },
-    take: 250,
+    take: 500,
   });
   const leadEmail = candidates.find((row) => {
     const meta = row.metaJson;
     return Boolean(meta && typeof meta === 'object' && !Array.isArray(meta) && (meta as { externalId?: unknown }).externalId === emailId);
   });
   if (!leadEmail) return null;
+
+  const priorMeta =
+    leadEmail.metaJson && typeof leadEmail.metaJson === 'object' && !Array.isArray(leadEmail.metaJson)
+      ? (leadEmail.metaJson as Record<string, unknown>)
+      : {};
+  const priorCounts =
+    priorMeta.eventCounts && typeof priorMeta.eventCounts === 'object' && !Array.isArray(priorMeta.eventCounts)
+      ? (priorMeta.eventCounts as Record<string, number>)
+      : {};
+  const eventCounts = { ...priorCounts, [eventType]: (priorCounts[eventType] ?? 0) + 1 };
 
   const statusByEvent: Record<string, string | undefined> = {
     'email.delivered': 'delivered',
@@ -357,14 +367,15 @@ export async function updateLeadEmailFromResendEvent(emailId: string, eventType:
     'email.failed': 'failed',
   };
   const nextStatus = statusByEvent[eventType];
-  if (!nextStatus) return leadEmail;
 
   return prisma.leadEmail.update({
     where: { id: leadEmail.id },
     data: {
-      status: nextStatus,
+      ...(nextStatus ? { status: nextStatus } : {}),
       metaJson: {
-        ...(leadEmail.metaJson && typeof leadEmail.metaJson === 'object' && !Array.isArray(leadEmail.metaJson) ? leadEmail.metaJson : {}),
+        ...priorMeta,
+        eventCounts,
+        lastEvent: eventType.replace(/^email\./, ''),
         lastResendEvent: eventType,
         lastResendEventAt: new Date().toISOString(),
       },

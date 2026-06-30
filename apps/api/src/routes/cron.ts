@@ -6,7 +6,13 @@ import {
   wasFreeDiagnosticFollowupSent,
 } from '../lib/free-diagnostic-followup';
 import { resolveMarketingRecipients, sendMarketingEmail, weeklyEmailForRecipient } from '../lib/marketing-email';
+import { runMonthlyScoreEmailBatch } from '../lib/monthly-score-email-sender';
 import { sendLeadEmail } from '../lib/lead-email-sender';
+import {
+  evaluateWeeklyEmailSend,
+  getCurrentWeeklyWindowStart,
+  weeklyCampaignSlugForWindow,
+} from '../lib/weekly-email-schedule';
 import { createOutreachLeadEmailDraft } from '../lib/outreach-email-builder';
 import { prisma } from '../lib/prisma';
 
@@ -76,10 +82,6 @@ function getPeriodForFrequency(frequency: 'semanal' | 'quincenal' | 'mensual'): 
 function weekSlotOfMonth(date = new Date()): 1 | 2 | 3 | 4 {
   const slot = (Math.floor((date.getDate() - 1) / 7) % 4) + 1;
   return slot as 1 | 2 | 3 | 4;
-}
-
-function dateSlug(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
 }
 
 function outreachAutoShadowLimit(): number {
@@ -173,44 +175,56 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const nowUtc = new Date();
-    const currentDow = nowUtc.getUTCDay();
-    const currentHour = nowUtc.getUTCHours();
 
-    if (!parsed.data.force) {
-      if (!schedule.enabled) {
-        return {
-          ok: true,
-          skipped: true,
-          reason: 'schedule_disabled',
-          schedule: {
-            enabled: schedule.enabled,
-            dayOfWeekUtc: schedule.dayOfWeekUtc,
-            hourUtc: schedule.hourUtc,
-          },
-          nowUtc: nowUtc.toISOString(),
-        };
-      }
-      if (currentDow !== schedule.dayOfWeekUtc || currentHour !== schedule.hourUtc) {
-        return {
-          ok: true,
-          skipped: true,
-          reason: 'outside_window',
-          schedule: {
-            enabled: schedule.enabled,
-            dayOfWeekUtc: schedule.dayOfWeekUtc,
-            hourUtc: schedule.hourUtc,
-          },
-          nowUtc: nowUtc.toISOString(),
-          currentDow,
-          currentHour,
-        };
-      }
+    const weeklyDecision = evaluateWeeklyEmailSend(schedule, {
+      force: parsed.data.force,
+      now: nowUtc,
+    });
+
+    if (!weeklyDecision.due) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: weeklyDecision.reason,
+        schedule: {
+          enabled: schedule.enabled,
+          dayOfWeekUtc: schedule.dayOfWeekUtc,
+          hourUtc: schedule.hourUtc,
+        },
+        nowUtc: nowUtc.toISOString(),
+        currentDow: nowUtc.getUTCDay(),
+        currentHour: nowUtc.getUTCHours(),
+      };
     }
+
+    const windowStart = weeklyDecision.windowStart ?? getCurrentWeeklyWindowStart(schedule, nowUtc) ?? nowUtc;
 
     const effectiveSegment = parsed.data.segment ?? (schedule.segment as 'all' | 'free' | 'premium');
     const effectiveDryRun = parsed.data.dryRun || schedule.dryRun;
-    const slot = parsed.data.weekSlot ?? weekSlotOfMonth();
-    const campaignSlug = `weekly-auto-w${slot}-${dateSlug()}`;
+    const slot = parsed.data.weekSlot ?? weekSlotOfMonth(windowStart);
+    const campaignSlug = weeklyCampaignSlugForWindow(windowStart, slot);
+
+    const batchAlreadySent =
+      !parsed.data.force &&
+      (await prisma.cleexsInternalEmailSendLog.findFirst({
+        where: { campaignSlug, status: 'sent' },
+        select: { id: true },
+      }));
+    if (batchAlreadySent) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: 'already_sent_this_week',
+        campaignSlug,
+        windowStart: windowStart.toISOString(),
+        schedule: {
+          enabled: schedule.enabled,
+          dayOfWeekUtc: schedule.dayOfWeekUtc,
+          hourUtc: schedule.hourUtc,
+        },
+        nowUtc: nowUtc.toISOString(),
+      };
+    }
     const recipients = await resolveMarketingRecipients({
       segment: effectiveSegment,
       limit: parsed.data.limit,
@@ -235,6 +249,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
         dryRun: true,
         campaignSlug,
         weekSlot: slot,
+        windowStart: windowStart.toISOString(),
         segment: effectiveSegment,
         totalRecipients: recipients.length,
         sample,
@@ -288,6 +303,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       dryRun: false,
       campaignSlug,
       weekSlot: slot,
+      windowStart: windowStart.toISOString(),
       segment: effectiveSegment,
       totalRecipients: recipients.length,
       sent,
@@ -295,6 +311,33 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       failed,
       errors,
     };
+  });
+
+  // POST /api/cron/monthly-score-emails
+  fastify.post<{
+    Body: {
+      segment?: 'all' | 'free' | 'premium';
+      limit?: number;
+      dryRun?: boolean;
+      force?: boolean;
+      variant?: 'letter' | 'editorial';
+    };
+  }>('/monthly-score-emails', async (request, reply) => {
+    if (!checkCronSecret(request, reply)) return;
+
+    const schema = z.object({
+      segment: z.enum(['all', 'free', 'premium']).optional(),
+      limit: z.number().int().min(1).max(1000).default(250),
+      dryRun: z.boolean().default(false),
+      force: z.boolean().default(false),
+      variant: z.enum(['letter', 'editorial']).optional(),
+    });
+    const parsed = schema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    return runMonthlyScoreEmailBatch(parsed.data);
   });
 
   // POST /api/cron/free-diagnostic-followup

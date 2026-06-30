@@ -3,7 +3,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
-import { isEmailConfigured, isEmailDisabled, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
+import { isEmailDisabled, isOutboundEmailAvailable, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
 import {
   executeRun,
   executeRunGemini,
@@ -1204,7 +1204,7 @@ async function executePublicDiagnosticPipeline(params: {
   if (emailForNotify && !isWaPlaceholderEmail) {
     const baseUrl = getAppBaseUrlForPublicLinks();
     try {
-      if (!isEmailDisabled() && isEmailConfigured()) {
+      if (!isEmailDisabled() && isOutboundEmailAvailable()) {
         await sendDiagnosticLink(
           emailForNotify,
           diagnosticId,
@@ -2639,7 +2639,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     if (diagnostic.status === 'completed') {
       const baseUrl = getAppBaseUrlForPublicLinks();
       try {
-        if (!isEmailDisabled() && isEmailConfigured()) {
+        if (!isEmailDisabled() && isOutboundEmailAvailable()) {
           const fresh = await prisma.publicDiagnostic.findUnique({
             where: { id },
             select: { analysisJson: true, tier: true, domain: true },

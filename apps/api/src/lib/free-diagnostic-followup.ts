@@ -1,6 +1,6 @@
 import { CleexsEmailSendStatus } from '@prisma/client';
 import { getAppBaseUrlForPublicLinks } from './app-public-url';
-import { sendDiagnosticLink, type DiagnosticAnalysisForEmail, isEmailConfigured, isEmailDisabled } from './email';
+import { sendDiagnosticLink, type DiagnosticAnalysisForEmail, isEmailDisabled, isOutboundEmailAvailable } from './email';
 import { prisma } from './prisma';
 
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
@@ -99,7 +99,7 @@ export async function sendFreeDiagnosticFollowup(
   if (isEmailDisabled()) {
     return { sent: false, reason: 'emails_disabled' };
   }
-  if (!isEmailConfigured()) {
+  if (!isOutboundEmailAvailable()) {
     return { sent: false, reason: 'email_not_configured' };
   }
 

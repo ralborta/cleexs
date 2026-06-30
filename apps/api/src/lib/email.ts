@@ -1,3 +1,4 @@
+import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
@@ -18,6 +19,59 @@ export function isEmailDisabled(): boolean {
 
 export function isEmailConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== 'localhost' && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
+export function isResendApiKeyConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim());
+}
+
+/** Hay al menos un canal de salida (Resend REST o SMTP relay). */
+export function isOutboundEmailAvailable(): boolean {
+  return isResendApiKeyConfigured() || isEmailConfigured();
+}
+
+function formatResendSendError(error: unknown): string {
+  if (error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+    return (error as { message: string }).message;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+async function sendTransactionalMessage(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  headers?: Record<string, string>;
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = buildTransactionalFromAddress();
+  if (apiKey) {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from,
+      to: [opts.to],
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text,
+      headers: opts.headers,
+    });
+    if (error) throw new Error(formatResendSendError(error));
+    return;
+  }
+  if (!isEmailConfigured()) return;
+  await transporter.sendMail({
+    from,
+    to: opts.to,
+    subject: opts.subject,
+    text: opts.text,
+    html: opts.html,
+    headers: opts.headers,
+  });
 }
 
 /** Remitente transaccional (diagnóstico, admin, SMTP). */
@@ -327,9 +381,8 @@ export async function sendDiagnosticLink(
   analysis?: DiagnosticAnalysisForEmail | null
 ): Promise<void> {
   if (isEmailDisabled()) return;
-  if (!isEmailConfigured()) return;
+  if (!isOutboundEmailAvailable()) return;
   const link = `${baseUrl.replace(/\/$/, '')}/ver-resultado?diagnosticId=${diagnosticId}`;
-  const from = buildTransactionalFromAddress();
 
   const hasAnalysis = analysis && typeof analysis === 'object';
   const analysisText = hasAnalysis ? '\n\n---\n\n' + buildAnalysisText(analysis) + '\n\n---\n\n' : '';
@@ -347,15 +400,12 @@ export async function sendDiagnosticLink(
       ? topCompetitors.map((c) => `<li style="margin-bottom: 6px;">${escapeHtml(c)}</li>`).join('')
       : '<li style="margin-bottom: 6px;">Se identificaron competidores en tu diagnóstico completo.</li>';
 
-  await transporter.sendMail({
-    from,
-    to,
-    subject: 'Tu diagnóstico Cleexs está listo',
-    text:
-      `Tu diagnóstico está listo.${analysisText}` +
-      `\n\nVer resultados: ${link}\n\n` +
-      `Copiá el link en el navegador si no funciona el botón.`,
-    html: `
+  const subject = 'Tu diagnóstico Cleexs está listo';
+  const text =
+    `Tu diagnóstico está listo.${analysisText}` +
+    `\n\nVer resultados: ${link}\n\n` +
+    `Copiá el link en el navegador si no funciona el botón.`;
+  const html = `
       <div style="margin:0;padding:0;background:#f1f5f9;">
         <div style="font-family:Inter,Arial,sans-serif;max-width:820px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;">
           <div style="background:linear-gradient(135deg,#0f2d8f 0%,#2563eb 100%);padding:30px 32px;color:#fff;">
@@ -415,7 +465,14 @@ export async function sendDiagnosticLink(
           </div>
         </div>
       </div>
-    `,
+    `;
+
+  await sendTransactionalMessage({
+    to,
+    subject,
+    text,
+    html,
+    headers: { 'X-Cleexs-Campaign': 'diagnostic-link' },
   });
 }
 
@@ -435,25 +492,21 @@ export async function sendShareCleexsFollowUpEmail(
   brandLabel?: string | null
 ): Promise<void> {
   if (isEmailDisabled()) return;
-  if (!isEmailConfigured()) return;
+  if (!isOutboundEmailAvailable()) return;
   if (process.env.DISABLE_SHARE_FOLLOWUP_EMAIL === 'true') return;
 
   const ref = shareRefFromDiagnosticId(diagnosticId);
   const origin = baseUrl.replace(/\/$/, '');
   const shareUrl = `${origin}/diagnostico/crear?ref=${encodeURIComponent(ref)}&utm_source=email&utm_medium=followup&utm_campaign=compartir_cleexs`;
-  const from = buildTransactionalFromAddress();
   const label = brandLabel?.trim() || 'tu marca';
 
-  await transporter.sendMail({
-    from,
-    to,
-    subject: 'Tu link para compartir Cleexs',
-    text:
-      `Gracias por usar Cleexs.\n\n` +
-      `Si querés que otras personas hagan el mismo diagnóstico con tu referencia, usá este link:\n\n` +
-      `${shareUrl}\n\n` +
-      `Cada visita con ese link quedará asociada a tu código (${ref}).\n`,
-    html: `
+  const subject = 'Tu link para compartir Cleexs';
+  const text =
+    `Gracias por usar Cleexs.\n\n` +
+    `Si querés que otras personas hagan el mismo diagnóstico con tu referencia, usá este link:\n\n` +
+    `${shareUrl}\n\n` +
+    `Cada visita con ese link quedará asociada a tu código (${ref}).\n`;
+  const html = `
       <div style="margin:0;padding:0;background:#f1f5f9;">
         <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;">
           <div style="background:linear-gradient(135deg,#0f2d8f 0%,#2563eb 100%);padding:24px 28px;color:#fff;">
@@ -472,6 +525,13 @@ export async function sendShareCleexsFollowUpEmail(
           </div>
         </div>
       </div>
-    `,
+    `;
+
+  await sendTransactionalMessage({
+    to,
+    subject,
+    text,
+    html,
+    headers: { 'X-Cleexs-Campaign': 'share-followup' },
   });
 }

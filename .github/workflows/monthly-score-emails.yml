@@ -1,10 +1,10 @@
-name: Weekly Emails
+name: Monthly Score Emails
 
 on:
   schedule:
-    # Diario 14:00 UTC. La API deduplica por semana: envía una vez cuando ya pasó
-    # el slot configurado en /admin/email/weekly (martes 13:00 UTC por defecto).
-    - cron: '0 14 * * *'
+    # Diario 15:00 UTC. La API envía una vez al mes (día 1, 14:00 UTC por defecto)
+    # usando plantilla carta/editorial con el último Cleexs Score en BD.
+    - cron: '0 15 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,7 +18,7 @@ on:
       segment:
         description: 'Audience segment'
         required: true
-        default: 'free'
+        default: 'all'
         type: choice
         options:
           - free
@@ -29,7 +29,7 @@ on:
         required: true
         default: '50'
       force:
-        description: 'Ignorar ventana y deduplicación semanal'
+        description: 'Ignorar ventana mensual y deduplicación'
         required: true
         default: 'false'
         type: choice
@@ -38,15 +38,15 @@ on:
           - 'true'
 
 jobs:
-  send-weekly-emails:
+  send-monthly-score-emails:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger weekly email campaign
+      - name: Trigger monthly Cleexs Score email campaign
         env:
           CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
           API_URL: https://cleexsapi-production.up.railway.app
           DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
-          SEGMENT: ${{ github.event_name == 'schedule' && '' || inputs.segment }}
+          SEGMENT: ${{ github.event_name == 'schedule' && 'all' || inputs.segment }}
           LIMIT: ${{ github.event_name == 'schedule' && '50' || inputs.limit }}
           FORCE: ${{ github.event_name == 'schedule' && 'false' || inputs.force }}
         run: |
@@ -60,10 +60,10 @@ jobs:
             --argjson limit "$LIMIT" \
             --argjson dryRun "$DRY_RUN" \
             --argjson force "$FORCE" \
-            '{limit:$limit, dryRun:$dryRun, force:$force} + (if $segment == "" then {} else {segment:$segment} end)')
+            '{limit:$limit, dryRun:$dryRun, force:$force, segment:$segment}')
 
           curl --fail-with-body -sS \
-            -X POST "$API_URL/api/cron/weekly-emails" \
+            -X POST "$API_URL/api/cron/monthly-score-emails" \
             -H "x-cron-secret: $CRON_SECRET" \
             -H "Content-Type: application/json" \
             -d "$payload"
