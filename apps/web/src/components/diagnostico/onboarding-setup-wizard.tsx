@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { COUNTRIES } from '@/lib/countries';
+import { CountrySelect } from '@/components/country/country-select';
 import type { LegalSectionId } from '@/components/legal/legal-acceptance-modal';
 
 export type SetupStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -105,13 +104,6 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
 
   const meta = STEP_META[step];
   const StepIcon = meta.icon;
-
-  // Lista de países: aseguramos que el sugerido (aunque no esté en el catálogo) sea elegible.
-  const countryNames = useMemo(() => {
-    const base = COUNTRIES.map((c) => c.name);
-    if (country && !base.includes(country)) return [country, ...base];
-    return base;
-  }, [country]);
 
   const canNext =
     step === 1
@@ -238,18 +230,13 @@ export function OnboardingSetupWizard(props: OnboardingSetupWizardProps) {
                 <label htmlFor="setup-country" className="text-xs font-semibold text-slate-500">
                   País
                 </label>
-                <select
+                <CountrySelect
                   id="setup-country"
                   value={country}
-                  onChange={(e) => onCountry(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                >
-                  {countryNames.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={onCountry}
+                  suggestedName={country}
+                  className="mt-1.5"
+                />
               </div>
               <div className="mt-3 flex items-center gap-2 rounded-lg bg-violet-50/70 px-3 py-2 text-xs text-violet-800">
                 <Check className="h-3.5 w-3.5 shrink-0" />
