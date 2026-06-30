@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -10,17 +11,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 
 interface PromptResult {
   id: string;
+  promptId?: string;
   prompt: {
     id: string;
+    name?: string | null;
     promptText: string;
     category?: { name: string };
   };
   responseText: string;
-  top3Json: Array<{ position: number; name: string; type: string }>;
+  top3Json: Array<{ position: number; name: string; type: string; reason?: string }>;
   score: number;
   flags: Record<string, boolean>;
   truncated: boolean;
@@ -29,107 +31,119 @@ interface PromptResult {
 
 interface PromptDetailProps {
   results: PromptResult[];
+  runId?: string;
 }
 
-export function PromptDetail({ results }: PromptDetailProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+export function PromptDetail({ results, runId }: PromptDetailProps) {
+  const uniquePromptIds = [...new Set(results.map((r) => r.promptId ?? r.prompt?.id).filter(Boolean))];
+  const allSamePromptId = uniquePromptIds.length === 1 && results.length > 1;
 
   return (
-    <Card>
+    <Card className="border-transparent bg-white shadow-md">
       <CardHeader>
-        <CardTitle>Detalle por Prompt</CardTitle>
-        <CardDescription>Resultados y evidencia por cada consulta</CardDescription>
+        <CardTitle className="text-xl text-foreground">Detalle por Prompt</CardTitle>
+        <CardDescription className="text-muted-foreground">
+          Resultados y evidencia por cada consulta. Clic en Ver abre la pantalla de detalle.
+        </CardDescription>
+        {allSamePromptId && (
+          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Todos los resultados tienen el mismo <strong>promptId</strong> en la base de datos. Si deberían ser prompts distintos, re-ejecutá la corrida con &quot;Forzar recálculo&quot; para regenerar con el prompt correcto en cada uno.
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Prompt</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Top 3</TableHead>
-              <TableHead className="text-right">Score</TableHead>
-              <TableHead>Flags</TableHead>
-              <TableHead>Evidencia</TableHead>
+            <TableRow className="bg-primary-50/80 border-b border-border">
+              <TableHead className="text-muted-foreground">Prompt</TableHead>
+              <TableHead className="text-muted-foreground">Categoría</TableHead>
+              <TableHead className="text-muted-foreground">Top 3</TableHead>
+              <TableHead className="text-right text-muted-foreground">Score</TableHead>
+              <TableHead className="text-muted-foreground">Flags</TableHead>
+              <TableHead className="text-muted-foreground">Evidencia</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   No hay resultados disponibles
                 </TableCell>
               </TableRow>
             ) : (
               results.map((result) => (
-                <>
-                  <TableRow key={result.id}>
-                    <TableCell className="max-w-xs truncate">{result.prompt.promptText}</TableCell>
-                    <TableCell>{result.prompt.category?.name || '-'}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {result.top3Json.map((entry) => (
-                          <div key={entry.position} className="text-sm">
-                            {entry.position}. {entry.name} ({entry.type})
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-semibold">{(result.score * 100).toFixed(1)}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(result.flags)
-                          .filter(([, value]) => value)
-                          .map(([key]) => (
-                            <span
-                              key={key}
-                              className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                            >
-                              {key}
+                <TableRow key={`${result.id}-${result.prompt?.id ?? result.id}`} className="hover:bg-primary-50/60">
+                  <TableCell className="max-w-xs text-foreground">
+                    {result.prompt?.name && (
+                      <span className="block text-sm font-medium text-foreground">{result.prompt.name}</span>
+                    )}
+                    <span className="block truncate" title={result.prompt?.promptText ?? ''}>
+                      {result.prompt?.name ? result.prompt.promptText?.slice(0, 60) + (result.prompt.promptText?.length > 60 ? '…' : '') : (result.prompt?.promptText ?? '—')}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] font-mono text-muted-foreground/80">
+                      promptId (guardado): {(result.promptId ?? result.prompt?.id ?? '').slice(0, 8)}
+                      {result.promptId && result.prompt?.id && result.promptId !== result.prompt.id && (
+                        <span className="text-amber-600"> · mostrado: {result.prompt.id.slice(0, 8)}</span>
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{result.prompt.category?.name || '-'}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {result.top3Json.map((entry) => (
+                        <div key={entry.position} className="text-sm text-muted-foreground">
+                          {entry.position}. {entry.name} ({entry.type})
+                          {entry.reason && (
+                            <span className="block pl-4 text-xs text-muted-foreground/90">
+                              — {entry.reason}
                             </span>
-                          ))}
-                        {result.manualOverride && (
-                          <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
-                            override
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setExpandedId(expandedId === result.id ? null : result.id)
-                        }
-                      >
-                        {expandedId === result.id ? 'Ocultar' : 'Ver'}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {expandedId === result.id && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="bg-muted/50">
-                        <div className="space-y-2 p-4">
-                          <div>
-                            <strong>Prompt:</strong>
-                            <p className="text-sm text-muted-foreground">{result.prompt.promptText}</p>
-                          </div>
-                          <div>
-                            <strong>Respuesta:</strong>
-                            <pre className="mt-1 max-h-64 overflow-auto rounded bg-background p-2 text-xs">
-                              {result.responseText}
-                              {result.truncated && (
-                                <span className="text-muted-foreground">... (truncado)</span>
-                              )}
-                            </pre>
-                          </div>
+                          )}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-semibold text-foreground">
+                      {(result.score * 100).toFixed(1)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(result.flags)
+                        .filter(([, value]) => value)
+                        .map(([key]) => (
+                          <span
+                            key={key}
+                            className="rounded bg-primary-50 px-2 py-0.5 text-xs text-muted-foreground"
+                          >
+                            {key}
+                          </span>
+                        ))}
+                      {result.manualOverride && (
+                        <span className="rounded bg-accent-50 px-2 py-0.5 text-xs text-accent-700">
+                          override
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {runId ? (
+                      <Link href={`/runs/${runId}/result/${result.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-foreground hover:bg-primary-50"
+                        >
+                          Ver
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="text-muted-foreground" disabled>
+                        Ver
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
               ))
             )}
           </TableBody>

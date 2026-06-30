@@ -4,22 +4,35 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "prebuild": "npm --workspace=@cleexs/shared run build && prisma generate --schema=../../prisma/schema.prisma",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "migrate:deploy": "prisma migrate deploy --schema=../../prisma/schema.prisma",
+    "start": "npm run migrate:deploy && node dist/index.js",
     "lint": "eslint ."
   },
   "dependencies": {
     "@cleexs/shared": "*",
     "@fastify/cors": "^8.4.0",
     "@fastify/helmet": "^11.1.1",
+    "@google/genai": "^1.43.0",
     "@prisma/client": "^5.7.0",
+    "bcryptjs": "^2.4.3",
     "fastify": "^4.24.3",
+    "fastify-raw-body": "^4.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mercadopago": "^2.12.1",
+    "nodemailer": "^8.0.1",
+    "prisma": "^5.7.0",
+    "resend": "^6.12.2",
+    "svix": "^1.92.2",
+    "tsx": "^4.7.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.10.0",
-    "prisma": "^5.7.0",
-    "tsx": "^4.7.0",
+    "@types/nodemailer": "^7.0.9",
     "typescript": "^5.3.3"
   }
 }

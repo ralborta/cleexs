@@ -1,0 +1,10 @@
+# Config Railway para @cleexs/api
+
+[build]
+builder = "RAILPACK"
+
+[deploy]
+preDeployCommand = "/bin/true"
+startCommand = "npm run deploy:api"
+healthcheckPath = "/health"
+healthcheckTimeout = 120

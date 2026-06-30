@@ -1,0 +1,69 @@
+name: Monthly Score Emails
+
+on:
+  schedule:
+    # Diario 15:00 UTC. La API envía una vez al mes (día 1, 14:00 UTC por defecto)
+    # usando plantilla carta/editorial con el último Cleexs Score en BD.
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview recipients without sending emails'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      segment:
+        description: 'Audience segment'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - free
+          - all
+          - premium
+      limit:
+        description: 'Maximum recipients'
+        required: true
+        default: '50'
+      force:
+        description: 'Ignorar ventana mensual y deduplicación'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  send-monthly-score-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger monthly Cleexs Score email campaign
+        env:
+          CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          SEGMENT: ${{ github.event_name == 'schedule' && 'all' || inputs.segment }}
+          LIMIT: ${{ github.event_name == 'schedule' && '50' || inputs.limit }}
+          FORCE: ${{ github.event_name == 'schedule' && 'false' || inputs.force }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CLEEXS_CRON_SECRET GitHub secret"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --arg segment "$SEGMENT" \
+            --argjson limit "$LIMIT" \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson force "$FORCE" \
+            '{limit:$limit, dryRun:$dryRun, force:$force, segment:$segment}')
+
+          curl --fail-with-body -sS \
+            -X POST "$API_URL/api/cron/monthly-score-emails" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$payload"

@@ -1,44 +1,170 @@
+/* eslint-disable no-console */
+const log = (msg: string) => console.log(`[Cleexs API] ${msg}`);
+
+log('1/7 Proceso iniciado, cargando módulos...');
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import fastifyRawBody from 'fastify-raw-body';
 import tenantRoutes from './routes/tenants';
 import brandRoutes from './routes/brands';
 import promptRoutes from './routes/prompts';
 import runRoutes from './routes/runs';
 import reportRoutes from './routes/reports';
+import publicDiagnosticRoutes from './routes/public-diagnostic';
+import trackingRoutes from './routes/tracking';
+import cronRoutes from './routes/cron';
+import leadsRoutes from './routes/leads';
+import usageRoutes from './routes/usage';
+import profileRoutes from './routes/profile';
+import adminEntitlementRoutes from './routes/admin-entitlements';
+import adminProvisionRoutes from './routes/admin-provision';
+import adminEmailRoutes from './routes/admin-email';
+import adminDashboardRoutes from './routes/admin-dashboard';
+import adminReportsRoutes from './routes/admin-reports';
+import webhooksResendRoutes from './routes/webhooks-resend';
+import webhooksMercadoPagoRoutes from './routes/webhooks-mercadopago';
+import authPortalRoutes from './routes/auth-portal';
+import meReferralRoutes from './routes/me-referral';
+import portalWeeklyPromptsRoutes from './routes/portal-weekly-prompts';
+import referralRoutes from './routes/referrals';
+import subscriptionRoutes from './routes/subscriptions';
+import googleIntegrationRoutes from './routes/google-integration';
+import adminAppStringsRoutes, { publicAppStringsRoutes } from './routes/admin-app-strings';
+import adminAgenticAuditsRoutes, { publicAgenticAuditRoutes } from './routes/admin-agentic-audits';
+import adminAeoAuditsRoutes, { publicAeoAuditRoutes } from './routes/admin-aeo-audits';
+import adminPromoRoutes from './routes/admin-promo';
 
-const server = Fastify({
-  logger: true,
-});
+log('2/7 Módulos cargados, iniciando bootstrap...');
 
-// Plugins
-await server.register(cors, {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-});
+async function bootstrap() {
+  log('3/7 Creando servidor Fastify...');
+  const server = Fastify({
+    logger: true,
+  });
 
-await server.register(helmet);
+  // Plugins
+  const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 
-// Health check
-server.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+  // Railway healthcheck: requests vienen de healthcheck.railway.app
+  const RAILWAY_HEALTHCHECK = 'https://healthcheck.railway.app';
+  const isVercelOrigin = (o: string) =>
+    o.endsWith('.vercel.app') || o.endsWith('.vercel.sh');
+  const isNivel41Origin = (o: string) =>
+    o.endsWith('.nivel41.com') || o === 'https://nivel41.com' || o === 'http://nivel41.com';
 
-// Routes
-await server.register(tenantRoutes, { prefix: '/api/tenants' });
-await server.register(brandRoutes, { prefix: '/api/brands' });
-await server.register(promptRoutes, { prefix: '/api/prompts' });
-await server.register(runRoutes, { prefix: '/api/runs' });
-await server.register(reportRoutes, { prefix: '/api/reports' });
+  /** cleexs.net / cleexs.com y subdominios */
+  const isCleexsOrigin = (o: string) =>
+    o === 'https://cleexs.net' ||
+    o === 'http://cleexs.net' ||
+    o === 'https://www.cleexs.net' ||
+    o === 'http://www.cleexs.net' ||
+    o.endsWith('.cleexs.net') ||
+    o === 'https://cleexs.com' ||
+    o === 'http://cleexs.com' ||
+    o === 'https://www.cleexs.com' ||
+    o === 'http://www.cleexs.com' ||
+    o.endsWith('.cleexs.com');
 
-// Start server
-const port = Number(process.env.API_PORT) || 3001;
-const host = process.env.API_HOST || '0.0.0.0';
+  const isLocalDevOrigin = (o: string) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
 
-server.listen({ port, host }, (err, address) => {
-  if (err) {
+  log('4/7 Registrando CORS...');
+  await server.register(cors, {
+    credentials: true,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.length === 0) return cb(null, true);
+      if (allowedOrigins.includes('*')) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (isVercelOrigin(origin)) return cb(null, true);
+      if (isCleexsOrigin(origin)) return cb(null, true);
+      if (isNivel41Origin(origin)) return cb(null, true);
+      if (isLocalDevOrigin(origin)) return cb(null, true);
+      if (origin === RAILWAY_HEALTHCHECK || origin === 'http://healthcheck.railway.app')
+        return cb(null, true);
+      return cb(new Error('Not allowed by CORS'), false);
+    },
+  });
+  log('5/7 CORS OK, registrando Helmet y rutas...');
+  await server.register(helmet);
+
+  await server.register(fastifyRawBody, {
+    field: 'rawBody',
+    global: false,
+    encoding: 'utf8',
+    runFirst: true,
+  });
+
+  // Health check (Railway + diagnóstico sin panel)
+  server.get('/health', async () => {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      integrations: {
+        resendWebhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
+      },
+    };
+  });
+
+  // Routes
+  await server.register(tenantRoutes, { prefix: '/api/tenants' });
+  await server.register(brandRoutes, { prefix: '/api/brands' });
+  await server.register(promptRoutes, { prefix: '/api/prompts' });
+  await server.register(runRoutes, { prefix: '/api/runs' });
+  await server.register(reportRoutes, { prefix: '/api/reports' });
+  await server.register(adminReportsRoutes, { prefix: '/api/reports' });
+  await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
+  await server.register(trackingRoutes, { prefix: '/api/public' });
+  await server.register(cronRoutes, { prefix: '/api/cron' });
+  await server.register(leadsRoutes, { prefix: '/api/leads' });
+  await server.register(authPortalRoutes, { prefix: '/api/auth' });
+  await server.register(usageRoutes, { prefix: '/api' });
+  await server.register(meReferralRoutes, { prefix: '/api' });
+  await server.register(referralRoutes, { prefix: '/api' });
+  await server.register(subscriptionRoutes, { prefix: '/api' });
+  await server.register(portalWeeklyPromptsRoutes, { prefix: '/api/portal' });
+  await server.register(profileRoutes, { prefix: '/api' });
+  await server.register(adminEntitlementRoutes, { prefix: '/api/admin' });
+  await server.register(adminProvisionRoutes, { prefix: '/api/admin' });
+  await server.register(adminEmailRoutes, { prefix: '/api/admin' });
+  await server.register(adminDashboardRoutes, { prefix: '/api/admin' });
+  await server.register(webhooksResendRoutes, { prefix: '/api' });
+  await server.register(webhooksMercadoPagoRoutes, { prefix: '/api' });
+  await server.register(googleIntegrationRoutes, { prefix: '/api' });
+  await server.register(adminAppStringsRoutes, { prefix: '/api/admin' });
+  await server.register(publicAppStringsRoutes, { prefix: '/api/public' });
+  await server.register(adminAgenticAuditsRoutes, { prefix: '/api/admin' });
+  await server.register(publicAgenticAuditRoutes, { prefix: '/api/public' });
+  await server.register(adminAeoAuditsRoutes, { prefix: '/api/admin' });
+  await server.register(publicAeoAuditRoutes, { prefix: '/api/public' });
+  await server.register(adminPromoRoutes, { prefix: '/api/admin' });
+  log('6/7 Rutas OK, iniciando listen...');
+
+  // Start server
+  const port = Number(process.env.PORT) || Number(process.env.API_PORT) || 3001;
+  const host = process.env.API_HOST || '0.0.0.0';
+
+  try {
+    log(`Escuchando en ${host}:${port}...`);
+    const address = await server.listen({ port, host });
+    log(`7/7 Servidor activo: ${address} — /health listo para Railway`);
+    log(
+      process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+        ? 'Gemini API key: configurada (diagnósticos Gold usarán OpenAI + Gemini)'
+        : 'Gemini API key: NO CONFIGURADA — diagnósticos Gold usarán solo OpenAI'
+    );
+    console.log(`📚 API docs available at ${address}/api`);
+  } catch (err) {
     server.log.error(err);
     process.exit(1);
   }
-  console.log(`🚀 API server listening on ${address}`);
-  console.log(`📚 API docs available at http://${address}/api`);
+}
+
+bootstrap().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });

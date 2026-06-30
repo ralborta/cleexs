@@ -9,13 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@cleexs/shared": "*",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "country-flag-icons": "^1.6.17",
     "lucide-react": "^0.294.0",
     "next": "14.0.4",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.10.3",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",

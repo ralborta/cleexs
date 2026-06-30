@@ -1,0 +1,109 @@
+{
+  "name": "Cleexs - Corridas programadas (mensual)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 1 * *" }
+          ]
+        }
+      },
+      "id": "cron-m1",
+      "name": "Día 1 de cada mes 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Cron: primer día del mes a las 8:00."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ ($env.CLEEXS_API_URL || 'http://localhost:3001') + '/api/cron/scheduled-runs?frequency=mensual' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Cron-Secret",
+              "value": "={{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "cron-m2",
+      "name": "Listar marcas mensuales",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "id": "cron-m3",
+      "name": "Un ítem por marca",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLEEXS_API_URL || 'http://localhost:3001' }}/api/runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $json.tenantId, brandId: $json.brandId, periodStart: $json.periodStart, periodEnd: $json.periodEnd }) }}"
+      },
+      "id": "cron-m4",
+      "name": "Crear run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.CLEEXS_API_URL || 'http://localhost:3001') + '/api/runs/' + $json.id + '/execute' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}"
+      },
+      "id": "cron-m5",
+      "name": "Ejecutar run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Día 1 de cada mes 8:00": {
+      "main": [[{ "node": "Listar marcas mensuales", "type": "main", "index": 0 }]]
+    },
+    "Listar marcas mensuales": {
+      "main": [[{ "node": "Un ítem por marca", "type": "main", "index": 0 }]]
+    },
+    "Un ítem por marca": {
+      "main": [[{ "node": "Crear run", "type": "main", "index": 0 }]]
+    },
+    "Crear run": {
+      "main": [[{ "node": "Ejecutar run", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "meta": { "templateCredsSetupCompleted": false },
+  "pinData": {}
+}

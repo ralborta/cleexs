@@ -50,6 +50,12 @@ cleexs/
 └── prisma/           # Schema y migraciones
 ```
 
+## 🌐 Demo en Vivo
+
+**Frontend desplegado en Vercel:** https://web-nivel-41.vercel.app
+
+> Nota: El backend aún no está desplegado, por lo que las llamadas a la API mostrarán errores. Esto es normal y se resolverá cuando se configure Railway.
+
 ## 🚀 Inicio Rápido
 
 ### Prerrequisitos
@@ -62,7 +68,7 @@ cleexs/
 
 1. **Clonar el repositorio:**
 ```bash
-git clone https://github.com/tu-usuario/cleexs.git
+git clone https://github.com/ralborta/cleexs.git
 cd cleexs
 ```
 

@@ -1,0 +1,8 @@
+# Config Railway solo para @cleexs/web (sin Prisma ni healthcheck de API).
+
+[build]
+builder = "RAILPACK"
+
+[deploy]
+preDeployCommand = "/bin/true"
+startCommand = "npm run start --workspace=@cleexs/web"

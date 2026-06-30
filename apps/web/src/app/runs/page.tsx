@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,99 +14,222 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { runsApi, Run } from '@/lib/api';
-import { PromptDetail } from '@/components/dashboard/prompt-detail';
+import { brandsApi, reportsApi, runsApi, tenantsApi, Run, RankingEntry, Brand } from '@/lib/api';
 
-const MOCK_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const PAGE_SIZE = 10;
 
 export default function RunsPage() {
   const [runs, setRuns] = useState<Run[]>([]);
-  const [selectedRun, setSelectedRun] = useState<Run | null>(null);
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tenantId, setTenantId] = useState('');
+  const [executingRunId, setExecutingRunId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pathname = usePathname();
+
+  const isAdminRuns = pathname?.startsWith('/admin/runs') ?? false;
 
   useEffect(() => {
+    // Permitimos cargar desde la ruta canónica /runs y también desde /admin/runs (wrapper interno).
+    if (pathname !== '/runs' && !pathname?.startsWith('/admin/runs')) return;
+    let cancelled = false;
     async function loadRuns() {
       try {
-        const data = await runsApi.list(MOCK_TENANT_ID);
-        setRuns(data);
+        const tenant = await tenantsApi.getByCode('000');
+        if (cancelled) return;
+        setTenantId(tenant.id);
+        const [runsData, rankingData, brandsData] = await Promise.all([
+          runsApi.list(tenant.id, undefined, isAdminRuns),
+          reportsApi.getRanking(tenant.id),
+          brandsApi.list(tenant.id),
+        ]);
+        if (cancelled) return;
+        setRuns(runsData);
+        setRanking(rankingData);
+        setBrands(brandsData);
       } catch (error) {
-        console.error('Error cargando runs:', error);
+        if (!cancelled) console.error('Error cargando runs:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadRuns();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, isAdminRuns]);
 
-  const handleViewDetails = async (run: Run) => {
+  const handleExecuteRun = async (runId: string) => {
+    if (!tenantId) return;
+    setExecutingRunId(runId);
+    setNotice(null);
     try {
-      const fullRun = await runsApi.get(run.id);
-      setSelectedRun(fullRun as any);
-    } catch (error) {
-      console.error('Error cargando detalles:', error);
+      await runsApi.execute(runId, { model: 'gpt-4o-mini' });
+      const data = await runsApi.list(tenantId, undefined, isAdminRuns);
+      setRuns(data);
+      setNotice({ type: 'success', message: 'Run ejecutado y Cleexs Score actualizado.' });
+    } catch (error: any) {
+      setNotice({ type: 'error', message: error?.message || 'No se pudo ejecutar el run.' });
+    } finally {
+      setExecutingRunId(null);
     }
   };
 
+  const totalRuns = runs.length;
+  const lastRun = runs[0];
+  const lastRunScore = lastRun?.priaReports?.[0]?.priaTotal ?? 0;
+  const lastRunDate = lastRun ? new Date(lastRun.periodEnd).toLocaleDateString('es-AR') : '-';
+  const runningCount = runs.filter((run) => run.status === 'running').length;
+  const failedCount = runs.filter((run) => run.status === 'failed').length;
+
+  const totalPages = Math.max(1, Math.ceil(totalRuns / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const paginatedRuns = useMemo(
+    () => runs.slice(startIndex, startIndex + PAGE_SIZE),
+    [runs, startIndex],
+  );
+  const rangeStart = totalRuns === 0 ? 0 : startIndex + 1;
+  const rangeEnd = Math.min(startIndex + PAGE_SIZE, totalRuns);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">Cargando...</div>
+      <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-16">
+        <div className="mx-auto max-w-6xl text-center text-muted-foreground">Cargando...</div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-background via-white to-primary-50 px-6 py-10">
+      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Runs</h1>
-          <p className="text-muted-foreground">Gestiona y visualiza tus corridas de análisis</p>
+          <p className="text-sm font-medium text-primary-700">Centro de control</p>
+          <h1 className="text-3xl font-bold text-foreground">Runs</h1>
+          <p className="text-muted-foreground">
+            Gestiona, auditá y visualizá tus corridas de análisis con evidencia completa.
+          </p>
         </div>
         <Link href="/runs/add-result">
-          <Button>Agregar Resultado Manual</Button>
+          <Button className="bg-primary-600 text-white hover:bg-primary-700">
+            Agregar Resultado Manual
+          </Button>
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Runs</CardTitle>
-          <CardDescription>Corridas de análisis por marca y período</CardDescription>
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Runs Totales</p>
+            <p className="text-2xl font-semibold text-foreground">{totalRuns}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Último Run</p>
+            <p className="text-2xl font-semibold text-foreground">
+              {lastRunScore.toFixed(0)} / 100
+            </p>
+            <p className="text-xs text-muted-foreground">{lastRunDate}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">En curso / Fallidos</p>
+            <p className="text-2xl font-semibold text-foreground">
+              {runningCount} <span className="text-muted-foreground">en curso</span>
+            </p>
+            <p className="text-xs text-muted-foreground">{failedCount} fallidos</p>
+          </CardContent>
+        </Card>
+        <Card className="border-transparent bg-white shadow-md">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Más reciente</p>
+            <p className="text-sm font-medium text-foreground">Últimos 90 días</p>
+            <p className="text-xs text-muted-foreground">Filtro rápido</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {notice && (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm ${
+            notice.type === 'success'
+              ? 'border-primary-100 bg-primary-50 text-primary-900'
+              : 'border-destructive/20 bg-destructive/10 text-destructive'
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
+      <Card className="border-transparent bg-white shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl text-foreground">Lista de Runs</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Corridas de análisis por marca y período, con estado y Cleexs Score agregado.
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-wrap items-center gap-2 pb-4">
+            <select className="rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground">
+              <option>Marca</option>
+            </select>
+            <select className="rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground">
+              <option>Estado</option>
+            </select>
+            <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-primary-50">
+              + Filtrar 90 días
+            </Button>
+            <input
+              className="w-full max-w-xs rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-600"
+              placeholder="Buscar Runs..."
+            />
+            <select className="rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground">
+              <option>Más reciente</option>
+            </select>
+          </div>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Marca</TableHead>
-                <TableHead>Período</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">PRIA</TableHead>
-                <TableHead>Acciones</TableHead>
+              <TableRow className="bg-primary-50/80 border-b border-border">
+                <TableHead className="text-muted-foreground font-semibold">Marca</TableHead>
+                <TableHead className="text-muted-foreground font-semibold">Período</TableHead>
+                <TableHead className="text-muted-foreground font-semibold">Estado</TableHead>
+                <TableHead className="text-right text-muted-foreground font-semibold">Cleexs Score</TableHead>
+                <TableHead className="text-muted-foreground font-semibold">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {runs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No hay runs disponibles
+                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                    No hay runs disponibles todavía.
                   </TableCell>
                 </TableRow>
               ) : (
-                runs.map((run) => (
-                  <TableRow key={run.id}>
-                    <TableCell>{run.brand.name}</TableCell>
+                paginatedRuns.map((run) => (
+                  <TableRow key={run.id} className="hover:bg-primary-50/60">
+                    <TableCell className="font-medium text-foreground">{run.brand.name}</TableCell>
                     <TableCell>
                       {new Date(run.periodStart).toLocaleDateString('es-AR')} -{' '}
                       {new Date(run.periodEnd).toLocaleDateString('es-AR')}
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`rounded px-2 py-1 text-xs ${
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${
                           run.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-primary-50 text-primary-700 border border-primary-100'
                             : run.status === 'failed'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                              : 'bg-accent-50 text-accent-700 border border-accent-100'
                         }`}
                       >
                         {run.status}
@@ -112,7 +237,7 @@ export default function RunsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {run.priaReports && run.priaReports[0] ? (
-                        <span className="font-semibold">
+                        <span className="font-semibold text-foreground">
                           {run.priaReports[0].priaTotal.toFixed(2)}
                         </span>
                       ) : (
@@ -120,35 +245,71 @@ export default function RunsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => handleViewDetails(run)}>
-                        Ver Detalles
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/runs/${run.id}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-border text-foreground hover:bg-primary-50"
+                        >
+                          Ver Detalles
+                        </Button>
+                      </Link>
+                        <Button
+                          size="sm"
+                          className="bg-primary-600 text-white hover:bg-primary-700"
+                          onClick={() => handleExecuteRun(run.id)}
+                          disabled={executingRunId === run.id}
+                        >
+                          {executingRunId === run.id ? 'Ejecutando…' : 'Ejecutar Run'}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+          {totalRuns > 0 ? (
+            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                Mostrando <span className="font-semibold text-foreground">{rangeStart}–{rangeEnd}</span> de{' '}
+                <span className="font-semibold text-foreground">{totalRuns}</span> runs
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-border text-foreground hover:bg-primary-50 disabled:opacity-40"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Anterior
+                </Button>
+                <span className="text-xs font-medium text-muted-foreground">
+                  Página <span className="text-foreground">{safePage}</span> de{' '}
+                  <span className="text-foreground">{totalPages}</span>
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-border text-foreground hover:bg-primary-50 disabled:opacity-40"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      {selectedRun && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalles del Run</CardTitle>
-              <CardDescription>
-                {selectedRun.brand.name} -{' '}
-                {new Date(selectedRun.periodStart).toLocaleDateString('es-AR')} a{' '}
-                {new Date(selectedRun.periodEnd).toLocaleDateString('es-AR')}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-          {(selectedRun as any).promptResults && (
-            <PromptDetail results={(selectedRun as any).promptResults} />
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

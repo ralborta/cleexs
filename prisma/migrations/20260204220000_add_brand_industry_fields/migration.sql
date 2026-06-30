@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "brands" ADD COLUMN IF NOT EXISTS "industry" TEXT;
+ALTER TABLE "brands" ADD COLUMN IF NOT EXISTS "product_type" TEXT;
+ALTER TABLE "brands" ADD COLUMN IF NOT EXISTS "country" TEXT;
+ALTER TABLE "brands" ADD COLUMN IF NOT EXISTS "objective" TEXT;

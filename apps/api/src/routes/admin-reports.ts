@@ -1,0 +1,2232 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { executeRunGemini, executeRunPerplexity, executeRunClaude } from '../lib/run-executor';
+import { isOpenRouterConfigured } from '../lib/openrouter-runner';
+import type { SatelliteModuleResult } from '../lib/satellite-client';
+import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
+import { resolveConversionRange } from '@cleexs/shared';
+import { primaryRunWhere } from '../lib/run-type-filters';
+
+type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
+
+function planConquistarGeminiConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+  );
+}
+
+function planConquistarAvailableEngines(): PlanConquistarEngineKey[] {
+  const engines: PlanConquistarEngineKey[] = [];
+  if (planConquistarGeminiConfigured()) engines.push('gemini');
+  if (isOpenRouterConfigured()) {
+    engines.push('perplexity');
+    engines.push('claude');
+  }
+  return engines;
+}
+
+function planConquistarReadEngineRuns(
+  modelMeta: unknown
+): Partial<Record<PlanConquistarEngineKey, string>> {
+  if (modelMeta && typeof modelMeta === 'object' && modelMeta !== null && 'engineRuns' in modelMeta) {
+    const value = (modelMeta as { engineRuns?: unknown }).engineRuns;
+    if (value && typeof value === 'object') {
+      return value as Partial<Record<PlanConquistarEngineKey, string>>;
+    }
+  }
+  return {};
+}
+
+function planConquistarReadPromptVersionId(modelMeta: unknown): string | undefined {
+  if (modelMeta && typeof modelMeta === 'object' && modelMeta !== null && 'promptVersionId' in modelMeta) {
+    const value = (modelMeta as { promptVersionId?: unknown }).promptVersionId;
+    if (typeof value === 'string' && value) return value;
+  }
+  return undefined;
+}
+
+function planConquistarExecutorForEngine(engine: PlanConquistarEngineKey) {
+  if (engine === 'gemini') return executeRunGemini;
+  if (engine === 'perplexity') return executeRunPerplexity;
+  return executeRunClaude;
+}
+
+function planConquistarExtractSatelliteModule(analysisJson: unknown): SatelliteModuleResult | null {
+  if (!analysisJson || typeof analysisJson !== 'object' || Array.isArray(analysisJson)) return null;
+  const externalModules = (analysisJson as { externalModules?: unknown }).externalModules;
+  if (!externalModules || typeof externalModules !== 'object' || Array.isArray(externalModules)) return null;
+  const satellite = (externalModules as { satelliteAeo?: unknown }).satelliteAeo;
+  if (!satellite || typeof satellite !== 'object' || Array.isArray(satellite)) return null;
+  return satellite as SatelliteModuleResult;
+}
+
+const windowDaysSchema = z.object({
+  windowDays: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 30;
+      if (n <= 7) return 7;
+      if (n <= 30) return 30;
+      return 90;
+    }),
+});
+
+function startOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dayKey(date: Date): string {
+  return startOfDay(date).toISOString().slice(0, 10);
+}
+
+function buildDailySeries<T extends { createdAt: Date }>(
+  rows: T[],
+  fromDate: Date,
+  windowDays: number,
+  enrich?: (acc: Record<string, number>, row: T, key: string) => void
+): Array<{ date: string; count: number; extra?: Record<string, number> }> {
+  const series: Array<{ date: string; count: number; extra?: Record<string, number> }> = [];
+  for (let i = 0; i < windowDays; i += 1) {
+    const d = new Date(fromDate);
+    d.setDate(fromDate.getDate() + i);
+    series.push({ date: dayKey(d), count: 0, extra: enrich ? {} : undefined });
+  }
+  const lookup = new Map(series.map((row, idx) => [row.date, idx] as const));
+  for (const row of rows) {
+    const key = dayKey(row.createdAt);
+    const idx = lookup.get(key);
+    if (idx == null) continue;
+    series[idx].count += 1;
+    if (enrich && series[idx].extra) enrich(series[idx].extra as Record<string, number>, row, key);
+  }
+  return series;
+}
+
+function envFlag(name: string): boolean {
+  return Boolean(process.env[name]?.toString().trim());
+}
+
+function envValue(name: string, fallback = ''): string {
+  return process.env[name]?.toString().trim() || fallback;
+}
+
+function envBool(name: string): boolean {
+  return process.env[name]?.toString().trim().toLowerCase() === 'true';
+}
+
+const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
+  // 1) Reporte de Adquisicion y Funnel
+  // ----------------------------------------------------------------
+  fastify.get('/internal/acquisition', async (request) => {
+    const parsed = windowDaysSchema.safeParse(request.query);
+    const windowDays = parsed.success ? parsed.data.windowDays : 30;
+    const fromDate = startOfDay(new Date());
+    fromDate.setDate(fromDate.getDate() - (windowDays - 1));
+
+    const [diagnosticsInWindow, totalDiagnosticsAllTime] = await Promise.all([
+      prisma.publicDiagnostic.findMany({
+        where: { createdAt: { gte: fromDate } },
+        select: {
+          id: true,
+          createdAt: true,
+          status: true,
+          email: true,
+          refCode: true,
+          utmSource: true,
+          utmMedium: true,
+          sourceChannel: true,
+          domain: true,
+          brandName: true,
+          tier: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.publicDiagnostic.count(),
+    ]);
+
+    const totalCreated = diagnosticsInWindow.length;
+    const totalWithEmail = diagnosticsInWindow.filter((d) => Boolean(d.email)).length;
+    const totalCompleted = diagnosticsInWindow.filter((d) => d.status === 'completed').length;
+    const totalGold = diagnosticsInWindow.filter((d) => d.tier === 'gold').length;
+
+    const series = buildDailySeries(diagnosticsInWindow, fromDate, windowDays, (extra, row) => {
+      extra.completed = (extra.completed || 0) + (row.status === 'completed' ? 1 : 0);
+      extra.withEmail = (extra.withEmail || 0) + (row.email ? 1 : 0);
+    }).map((row) => ({
+      date: row.date,
+      created: row.count,
+      completed: row.extra?.completed ?? 0,
+      withEmail: row.extra?.withEmail ?? 0,
+    }));
+
+    const channelMap = new Map<string, number>();
+    for (const row of diagnosticsInWindow) {
+      const channel = (row.sourceChannel || 'web').trim().toLowerCase() || 'web';
+      channelMap.set(channel, (channelMap.get(channel) || 0) + 1);
+    }
+    const channels = Array.from(channelMap.entries())
+      .map(([channel, count]) => ({ channel, count, share: totalCreated ? (count / totalCreated) * 100 : 0 }))
+      .sort((a, b) => b.count - a.count);
+
+    type RefRow = {
+      refCode: string;
+      visits: number;
+      completed: number;
+      capturedEmails: number;
+      latestAt: Date;
+    };
+    const refMap = new Map<string, RefRow>();
+    for (const row of diagnosticsInWindow) {
+      const code = (row.refCode || '').trim().toLowerCase();
+      if (!code) continue;
+      const current = refMap.get(code) || {
+        refCode: code,
+        visits: 0,
+        completed: 0,
+        capturedEmails: 0,
+        latestAt: row.createdAt,
+      };
+      current.visits += 1;
+      if (row.status === 'completed') current.completed += 1;
+      if (row.email) current.capturedEmails += 1;
+      if (row.createdAt > current.latestAt) current.latestAt = row.createdAt;
+      refMap.set(code, current);
+    }
+    const topReferrers = Array.from(refMap.values())
+      .map((row) => ({
+        refCode: row.refCode,
+        visits: row.visits,
+        completed: row.completed,
+        capturedEmails: row.capturedEmails,
+        completionRate: row.visits > 0 ? (row.completed / row.visits) * 100 : 0,
+        latestAt: row.latestAt.toISOString(),
+      }))
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 15);
+
+    const utmMap = new Map<string, number>();
+    for (const row of diagnosticsInWindow) {
+      const src = (row.utmSource || '').trim() || 'directo';
+      utmMap.set(src, (utmMap.get(src) || 0) + 1);
+    }
+    const topUtmSources = Array.from(utmMap.entries())
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const latest = diagnosticsInWindow.slice(0, 25).map((row) => ({
+      id: row.id,
+      createdAt: row.createdAt.toISOString(),
+      brandName: row.brandName,
+      domain: row.domain,
+      email: row.email,
+      status: row.status,
+      tier: row.tier,
+      refCode: row.refCode,
+      utmSource: row.utmSource,
+      sourceChannel: row.sourceChannel,
+    }));
+
+    return {
+      windowDays,
+      asOf: new Date().toISOString(),
+      totals: {
+        diagnosticsInWindow: totalCreated,
+        diagnosticsAllTime: totalDiagnosticsAllTime,
+        completedInWindow: totalCompleted,
+        withEmailInWindow: totalWithEmail,
+        goldInWindow: totalGold,
+        completionRate: totalCreated ? (totalCompleted / totalCreated) * 100 : 0,
+        emailCaptureRate: totalCreated ? (totalWithEmail / totalCreated) * 100 : 0,
+        goldUpgradeRate: totalCreated ? (totalGold / totalCreated) * 100 : 0,
+      },
+      dailySeries: series,
+      channels,
+      topReferrers,
+      topUtmSources,
+      latestDiagnostics: latest,
+    };
+  });
+
+  // 2) Reporte de Cleexs Score y posicionamiento
+  // ----------------------------------------------------------------
+  fastify.get('/internal/cleexs-score', async (request) => {
+    const parsed = windowDaysSchema.safeParse(request.query);
+    const windowDays = parsed.success ? parsed.data.windowDays : 30;
+    const fromDate = startOfDay(new Date());
+    fromDate.setDate(fromDate.getDate() - (windowDays - 1));
+
+    const reports = await prisma.pRIAReport.findMany({
+      where: {
+        createdAt: { gte: fromDate },
+        run: primaryRunWhere(),
+      },
+      include: {
+        brand: {
+          select: { id: true, name: true, domain: true, industry: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalReports = reports.length;
+    const sum = reports.reduce((acc, r) => acc + (r.priaTotal || 0), 0);
+    const avgScore = totalReports > 0 ? sum / totalReports : 0;
+
+    const buckets = {
+      poor: 0,
+      low: 0,
+      mid: 0,
+      good: 0,
+      excellent: 0,
+    };
+    for (const r of reports) {
+      const s = r.priaTotal;
+      if (s < 20) buckets.poor += 1;
+      else if (s < 40) buckets.low += 1;
+      else if (s < 60) buckets.mid += 1;
+      else if (s < 80) buckets.good += 1;
+      else buckets.excellent += 1;
+    }
+
+    type BrandStat = {
+      brandId: string;
+      brandName: string;
+      domain: string | null;
+      industry: string | null;
+      latestScore: number;
+      latestAt: Date;
+      avgScore: number;
+      runs: number;
+    };
+    const brandMap = new Map<string, BrandStat>();
+    for (const r of reports) {
+      const key = r.brandId;
+      const current = brandMap.get(key);
+      if (!current) {
+        brandMap.set(key, {
+          brandId: r.brandId,
+          brandName: r.brand.name,
+          domain: r.brand.domain,
+          industry: r.brand.industry,
+          latestScore: r.priaTotal,
+          latestAt: r.createdAt,
+          avgScore: r.priaTotal,
+          runs: 1,
+        });
+        continue;
+      }
+      current.runs += 1;
+      current.avgScore = (current.avgScore * (current.runs - 1) + r.priaTotal) / current.runs;
+      if (r.createdAt > current.latestAt) {
+        current.latestAt = r.createdAt;
+        current.latestScore = r.priaTotal;
+      }
+    }
+    const brandStats = Array.from(brandMap.values()).map((b) => ({
+      brandId: b.brandId,
+      brandName: b.brandName,
+      domain: b.domain,
+      industry: b.industry,
+      latestScore: Math.round(b.latestScore * 10) / 10,
+      avgScore: Math.round(b.avgScore * 10) / 10,
+      latestAt: b.latestAt.toISOString(),
+      runs: b.runs,
+    }));
+
+    const topBrands = [...brandStats].sort((a, b) => b.latestScore - a.latestScore).slice(0, 10);
+    const bottomBrands = [...brandStats]
+      .sort((a, b) => a.latestScore - b.latestScore)
+      .slice(0, 10);
+
+    type IndustryStat = { industry: string; runs: number; sum: number };
+    const industryMap = new Map<string, IndustryStat>();
+    for (const r of reports) {
+      const industry = (r.brand.industry || 'Sin industria').trim() || 'Sin industria';
+      const current = industryMap.get(industry) || { industry, runs: 0, sum: 0 };
+      current.runs += 1;
+      current.sum += r.priaTotal;
+      industryMap.set(industry, current);
+    }
+    const industries = Array.from(industryMap.values())
+      .map((row) => ({
+        industry: row.industry,
+        runs: row.runs,
+        avgScore: row.runs ? Math.round((row.sum / row.runs) * 10) / 10 : 0,
+      }))
+      .sort((a, b) => b.runs - a.runs)
+      .slice(0, 12);
+
+    const series = buildDailySeries(reports, fromDate, windowDays, (extra, row) => {
+      extra.scoreSum = (extra.scoreSum || 0) + (row.priaTotal || 0);
+    }).map((row) => ({
+      date: row.date,
+      runs: row.count,
+      avgScore:
+        row.count > 0 && row.extra
+          ? Math.round(((row.extra.scoreSum || 0) / row.count) * 10) / 10
+          : 0,
+    }));
+
+    return {
+      windowDays,
+      asOf: new Date().toISOString(),
+      totals: {
+        reportsInWindow: totalReports,
+        brandsAnalyzed: brandMap.size,
+        averageScore: Math.round(avgScore * 10) / 10,
+      },
+      distribution: buckets,
+      topBrands,
+      bottomBrands,
+      industries,
+      dailySeries: series,
+    };
+  });
+
+  // 2.5) Marcas analizadas (vista completa por marca con owner y plan)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/brands', async (request) => {
+    const querySchema = z.object({
+      search: z.string().optional(),
+      limit: z
+        .string()
+        .optional()
+        .transform((v) => {
+          const n = Number(v);
+          if (!Number.isFinite(n) || n <= 0) return 200;
+          return Math.min(n, 500);
+        }),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    const limit = parsed.success ? parsed.data.limit : 200;
+    const search = parsed.success ? parsed.data.search?.trim().toLowerCase() : undefined;
+
+    const brands = await prisma.brand.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        domain: true,
+        industry: true,
+        country: true,
+        category: true,
+        runSchedule: true,
+        createdAt: true,
+        updatedAt: true,
+        tenant: {
+          select: {
+            id: true,
+            tenantCode: true,
+            tenantType: true,
+            status: true,
+            plan: { select: { name: true } },
+          },
+        },
+        runs: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            priaReports: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { priaTotal: true, createdAt: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
+        _count: { select: { runs: true } },
+      },
+    });
+
+    const items = brands.map((brand) => {
+      const lastRun = brand.runs[0];
+      let lastScore: number | null = null;
+      let lastScoreAt: string | null = null;
+      for (const run of brand.runs) {
+        if (run.priaReports[0]) {
+          lastScore = run.priaReports[0].priaTotal;
+          lastScoreAt = run.priaReports[0].createdAt.toISOString();
+          break;
+        }
+      }
+      return {
+        id: brand.id,
+        name: brand.name,
+        domain: brand.domain,
+        industry: brand.industry,
+        country: brand.country,
+        category: brand.category,
+        runSchedule: brand.runSchedule,
+        createdAt: brand.createdAt.toISOString(),
+        updatedAt: brand.updatedAt.toISOString(),
+        runsTotal: brand._count.runs,
+        lastRun: lastRun
+          ? {
+              id: lastRun.id,
+              status: lastRun.status,
+              createdAt: lastRun.createdAt.toISOString(),
+            }
+          : null,
+        lastScore,
+        lastScoreAt,
+        tenant: brand.tenant
+          ? {
+              id: brand.tenant.id,
+              code: brand.tenant.tenantCode,
+              type: brand.tenant.tenantType,
+              status: brand.tenant.status,
+              plan: brand.tenant.plan?.name ?? null,
+            }
+          : null,
+      };
+    });
+
+    const filtered = search
+      ? items.filter((b) => {
+          const hay = `${b.name} ${b.domain || ''} ${b.industry || ''} ${b.tenant?.code || ''} ${b.tenant?.plan || ''}`.toLowerCase();
+          return hay.includes(search);
+        })
+      : items;
+
+    const summary = {
+      total: filtered.length,
+      withScore: filtered.filter((b) => b.lastScore != null).length,
+      scoredAvg:
+        filtered.filter((b) => b.lastScore != null).reduce((acc, b) => acc + (b.lastScore || 0), 0) /
+          Math.max(1, filtered.filter((b) => b.lastScore != null).length),
+      premium: filtered.filter((b) => (b.tenant?.plan || '').toLowerCase().includes('premium')).length,
+      withRuns: filtered.filter((b) => b.runsTotal > 0).length,
+    };
+
+    return {
+      asOf: new Date().toISOString(),
+      summary: {
+        ...summary,
+        scoredAvg: Math.round(summary.scoredAvg * 10) / 10,
+      },
+      items: filtered,
+    };
+  });
+
+  // 3) Reporte de Email y Outreach
+  // ----------------------------------------------------------------
+  fastify.get('/internal/email-outreach', async (request) => {
+    const parsed = windowDaysSchema.safeParse(request.query);
+    const windowDays = parsed.success ? parsed.data.windowDays : 30;
+    const fromDate = startOfDay(new Date());
+    fromDate.setDate(fromDate.getDate() - (windowDays - 1));
+
+    const [
+      weeklyLogs,
+      weeklyEventsByType,
+      outreachEmails,
+      outreachContacts,
+      campaigns,
+    ] = await Promise.all([
+      prisma.cleexsInternalEmailSendLog.findMany({
+        where: { createdAt: { gte: fromDate } },
+        select: {
+          id: true,
+          status: true,
+          campaignSlug: true,
+          recipientEmail: true,
+          createdAt: true,
+          scoreBucket: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.cleexsResendWebhookEvent.groupBy({
+        by: ['eventType'],
+        where: { occurredAt: { gte: fromDate } },
+        _count: { _all: true },
+      }),
+      prisma.leadEmail.findMany({
+        where: { createdAt: { gte: fromDate } },
+        select: {
+          id: true,
+          status: true,
+          sentAt: true,
+          createdAt: true,
+          metaJson: true,
+          leadContact: { select: { email: true } },
+          leadSource: { select: { competitorName: true, competitorDomain: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.leadContact.count(),
+      prisma.cleexsInternalEmailCampaign.count(),
+    ]);
+
+    const weeklyTotals = {
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+    };
+    for (const log of weeklyLogs) {
+      const key = log.status as keyof typeof weeklyTotals;
+      if (key in weeklyTotals) weeklyTotals[key] += 1;
+    }
+
+    const weeklyEvents: Record<string, number> = {};
+    for (const g of weeklyEventsByType) {
+      weeklyEvents[g.eventType] = g._count._all;
+    }
+
+    type OutreachMeta = {
+      eventCounts?: Record<string, number>;
+      lastEvent?: string;
+      mode?: string;
+    } | null;
+    const outreachTotals = {
+      sent: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      bounced: 0,
+      complained: 0,
+      failed: 0,
+      delivery_delayed: 0,
+      shadow: 0,
+      real: 0,
+      drafts: 0,
+    };
+    type DomainStat = {
+      domain: string;
+      sent: number;
+      opened: number;
+      clicked: number;
+    };
+    const domainMap = new Map<string, DomainStat>();
+
+    for (const email of outreachEmails) {
+      const meta = (email.metaJson as OutreachMeta) ?? {};
+      const counts = (meta?.eventCounts || {}) as Record<string, number>;
+      if (email.status === 'draft' || email.status === 'queued') {
+        outreachTotals.drafts += 1;
+      }
+      if (email.status === 'sent' || email.sentAt) {
+        outreachTotals.sent += 1;
+      }
+      const lastEvent = (meta?.lastEvent || '').toLowerCase();
+      if (lastEvent === 'failed') outreachTotals.failed += 1;
+      for (const [evt, c] of Object.entries(counts)) {
+        const key = evt.replace('email.', '');
+        if (key in outreachTotals) {
+          outreachTotals[key as keyof typeof outreachTotals] += c;
+        }
+      }
+      if (meta?.mode === 'shadow') outreachTotals.shadow += 1;
+      if (meta?.mode === 'real') outreachTotals.real += 1;
+
+      const domain = (email.leadSource?.competitorDomain || '').trim().toLowerCase();
+      if (domain) {
+        const current = domainMap.get(domain) || { domain, sent: 0, opened: 0, clicked: 0 };
+        if (email.sentAt || email.status === 'sent') current.sent += 1;
+        const ev = (meta?.eventCounts || {}) as Record<string, number>;
+        current.opened += ev['email.opened'] || ev.opened || 0;
+        current.clicked += ev['email.clicked'] || ev.clicked || 0;
+        domainMap.set(domain, current);
+      }
+    }
+
+    const topOutreachDomains = Array.from(domainMap.values())
+      .sort((a, b) => {
+        const aRate = a.sent > 0 ? a.opened / a.sent : 0;
+        const bRate = b.sent > 0 ? b.opened / b.sent : 0;
+        return bRate - aRate || b.sent - a.sent;
+      })
+      .slice(0, 12)
+      .map((row) => ({
+        domain: row.domain,
+        sent: row.sent,
+        opened: row.opened,
+        clicked: row.clicked,
+        openRate: row.sent > 0 ? (row.opened / row.sent) * 100 : 0,
+        clickRate: row.sent > 0 ? (row.clicked / row.sent) * 100 : 0,
+      }));
+
+    const weeklySeries = buildDailySeries(weeklyLogs, fromDate, windowDays).map((row) => ({
+      date: row.date,
+      sends: row.count,
+    }));
+    const outreachSeries = buildDailySeries(outreachEmails, fromDate, windowDays).map((row) => ({
+      date: row.date,
+      sends: row.count,
+    }));
+
+    const outreachDeliveryRate =
+      outreachTotals.sent > 0 ? (outreachTotals.delivered / outreachTotals.sent) * 100 : 0;
+    const outreachOpenRate =
+      outreachTotals.delivered > 0
+        ? (outreachTotals.opened / outreachTotals.delivered) * 100
+        : 0;
+    const outreachBounceRate =
+      outreachTotals.sent > 0 ? (outreachTotals.bounced / outreachTotals.sent) * 100 : 0;
+
+    return {
+      windowDays,
+      asOf: new Date().toISOString(),
+      weekly: {
+        campaignsConfigured: campaigns,
+        totals: weeklyTotals,
+        eventsByType: weeklyEvents,
+        dailySeries: weeklySeries,
+      },
+      outreach: {
+        contactsAllTime: outreachContacts,
+        totals: outreachTotals,
+        rates: {
+          deliveryRate: Math.round(outreachDeliveryRate * 10) / 10,
+          openRate: Math.round(outreachOpenRate * 10) / 10,
+          bounceRate: Math.round(outreachBounceRate * 10) / 10,
+        },
+        topDomains: topOutreachDomains,
+        dailySeries: outreachSeries,
+      },
+      integrations: {
+        resendWebhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
+        outreachDomainVerified: process.env.OUTREACH_DOMAIN_VERIFIED === 'true',
+      },
+    };
+  });
+
+  // 4) Configuracion del sistema (integraciones + variables + webhooks + cron + DB)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/system-config', async () => {
+    const now = new Date();
+    const since30 = new Date(now);
+    since30.setDate(since30.getDate() - 30);
+    const since7 = new Date(now);
+    since7.setDate(since7.getDate() - 7);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const apiBase =
+      envValue('PUBLIC_WEBHOOK_BASE_URL') ||
+      envValue('RAILWAY_PUBLIC_DOMAIN') ||
+      envValue('API_URL') ||
+      'https://cleexsapi-production.up.railway.app';
+    const apiBaseHttp = apiBase.startsWith('http') ? apiBase : `https://${apiBase}`;
+
+    const [
+      mpEventsLast30,
+      mpLastEvent,
+      resendEventsLast30,
+      resendLastEvent,
+      resendEventsByType,
+      weeklyLastSend,
+      weeklySendsLast30,
+      weeklySendsLast7,
+      weeklyCampaignsActive,
+      outreachTodayReal,
+      outreachLast7,
+      dbCounts,
+    ] = await Promise.all([
+      prisma.webhookEvent
+        .count({ where: { receivedAt: { gte: since30 } } })
+        .catch(() => 0),
+      prisma.webhookEvent
+        .findFirst({ orderBy: { receivedAt: 'desc' }, select: { receivedAt: true, provider: true } })
+        .catch(() => null),
+      prisma.cleexsResendWebhookEvent
+        .count({ where: { occurredAt: { gte: since30 } } })
+        .catch(() => 0),
+      prisma.cleexsResendWebhookEvent
+        .findFirst({ orderBy: { occurredAt: 'desc' }, select: { occurredAt: true, eventType: true } })
+        .catch(() => null),
+      prisma.cleexsResendWebhookEvent
+        .groupBy({
+          by: ['eventType'],
+          where: { occurredAt: { gte: since30 } },
+          _count: { _all: true },
+        })
+        .catch(() => [] as Array<{ eventType: string; _count: { _all: number } }>),
+      prisma.cleexsInternalEmailSendLog
+        .findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true, status: true } })
+        .catch(() => null),
+      prisma.cleexsInternalEmailSendLog
+        .count({ where: { createdAt: { gte: since30 } } })
+        .catch(() => 0),
+      prisma.cleexsInternalEmailSendLog
+        .count({ where: { createdAt: { gte: since7 } } })
+        .catch(() => 0),
+      prisma.cleexsInternalEmailCampaign
+        .count({ where: { active: true } })
+        .catch(() => 0),
+      prisma.leadEmail
+        .count({
+          where: {
+            sentAt: { gte: startOfToday },
+            metaJson: { path: ['mode'], equals: 'real' },
+          },
+        })
+        .catch(() => 0),
+      prisma.leadEmail.count({ where: { sentAt: { gte: since7 } } }).catch(() => 0),
+      Promise.all([
+        prisma.tenant.count(),
+        prisma.user.count(),
+        prisma.brand.count(),
+        prisma.run.count({ where: primaryRunWhere() }),
+        prisma.payment.count(),
+        prisma.subscription.count(),
+        prisma.leadContact.count(),
+        prisma.leadEmail.count(),
+        prisma.publicDiagnostic.count(),
+      ]).then(([tenants, users, brands, runs, payments, subscriptions, leadContacts, leadEmails, publicDiagnostics]) => ({
+        tenants,
+        users,
+        brands,
+        runs,
+        payments,
+        subscriptions,
+        leadContacts,
+        leadEmails,
+        publicDiagnostics,
+      })),
+    ]);
+
+    const resendEventsByTypeMap: Record<string, number> = {};
+    for (const g of resendEventsByType) {
+      resendEventsByTypeMap[g.eventType] = g._count._all;
+    }
+
+    return {
+      asOf: now.toISOString(),
+      environment: {
+        nodeVersion: process.version,
+        uptimeSec: Math.floor(process.uptime()),
+        hostname: process.env.HOSTNAME || null,
+        railwayCommit: envValue('RAILWAY_GIT_COMMIT_SHA') || null,
+        railwayBranch: envValue('RAILWAY_GIT_BRANCH') || null,
+        railwayDomain: envValue('RAILWAY_PUBLIC_DOMAIN') || null,
+        nodeEnv: envValue('NODE_ENV', 'development'),
+      },
+      integrations: {
+        openai: {
+          configured: envFlag('OPENAI_API_KEY'),
+          model: envValue('DIAGNOSTIC_AI_OPENAI_MODEL', 'gpt-4o-mini'),
+          competitorsModel: envValue('DIAGNOSTIC_COMPETITORS_OPENAI_MODEL', 'gpt-4o'),
+        },
+        gemini: {
+          configured:
+            envFlag('GEMINI_API_KEY') || envFlag('GOOGLE_API_KEY') || envFlag('GOOGLE_AI_API_KEY'),
+        },
+        resend: {
+          apiKeyConfigured: envFlag('RESEND_API_KEY'),
+          webhookSecretConfigured: envFlag('RESEND_WEBHOOK_SECRET'),
+        },
+        smtp: {
+          configured:
+            envFlag('SMTP_HOST') &&
+            envValue('SMTP_HOST') !== 'localhost' &&
+            envFlag('SMTP_USER') &&
+            envFlag('SMTP_PASS'),
+          host: envValue('SMTP_HOST') || null,
+          port: Number(envValue('SMTP_PORT', '587')),
+          fromEmail: envValue('SMTP_FROM_EMAIL') || envValue('SMTP_FROM') || null,
+          fromName: envValue('SMTP_FROM_NAME') || null,
+        },
+        mercadopago: {
+          accessTokenConfigured: envFlag('MP_ACCESS_TOKEN'),
+          webhookSecretConfigured: envFlag('MP_WEBHOOK_SECRET'),
+          webhookUrl: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/mercadopago`,
+        },
+        firecrawl: { configured: envFlag('FIRECRAWL_API_KEY') },
+        hunter: { configured: envFlag('HUNTER_API_KEY') },
+        serper: { configured: envFlag('SERPER_API_KEY') },
+        builderbot: {
+          configured: envFlag('BUILDERBOT_BOT_ID') && envFlag('BUILDERBOT_API_KEY'),
+          baseUrl: envValue('BUILDERBOT_BASE_URL', 'https://app.builderbot.cloud'),
+        },
+        whatsapp: {
+          apiKeyConfigured: envFlag('WHATSAPP_CHANNEL_API_KEY'),
+          dailyLimit: Number(envValue('WA_CHANNEL_DAILY_LIMIT', '5')),
+        },
+        satellite: {
+          enabled: envValue('SATELLITE_ENABLED', 'true').toLowerCase() !== 'false',
+          baseUrl: envValue('SATELLITE_BASE_URL') || null,
+        },
+        database: {
+          configured: envFlag('DATABASE_URL'),
+        },
+      },
+      variables: {
+        outreach: {
+          fromEmail: envValue('OUTREACH_FROM_EMAIL') || null,
+          fromName: envValue('OUTREACH_FROM_NAME') || null,
+          replyTo: envValue('OUTREACH_REPLY_TO') || null,
+          shadowTo: envValue('OUTREACH_SHADOW_TO') || null,
+          dailyLimit: Number(envValue('OUTREACH_DAILY_LIMIT', '20')),
+          domainVerified: envBool('OUTREACH_DOMAIN_VERIFIED'),
+        },
+        admin: {
+          apiSecretConfigured: envFlag('ADMIN_API_SECRET'),
+          requireAuth: envBool('ADMIN_REQUIRE_AUTH'),
+          fullAccessEmails:
+            envValue('ADMIN_FULL_ACCESS_EMAILS')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean).length,
+          allowActorQuery: envBool('ALLOW_USAGE_ACTOR_QUERY'),
+        },
+        auth: {
+          portalJwtSecretConfigured: envFlag('PORTAL_JWT_SECRET'),
+          cronSecretConfigured: envFlag('CRON_SECRET'),
+        },
+        urls: {
+          frontend: envValue('FRONTEND_URL') || null,
+          frontendList: envValue('FRONTEND_URLS') || null,
+          appUrl: envValue('CLEEXS_APP_URL') || envValue('NEXT_PUBLIC_APP_URL') || null,
+          marketingUrl: envValue('CLEEXS_MARKETING_URL', 'https://cleexs.net'),
+          apiBase: apiBaseHttp,
+        },
+        billing: {
+          usdToArsRate: Number(envValue('BILLING_USD_TO_ARS_RATE', '0')) || null,
+          currency: envValue('BILLING_CURRENCY') || null,
+        },
+        publicDiagnostic: {
+          defaultCountry: envValue('PUBLIC_DIAGNOSTIC_DEFAULT_COUNTRY', 'Argentina'),
+          marketConfidenceMin: Number(envValue('PUBLIC_DIAGNOSTIC_MARKET_CONFIDENCE_MIN', '70')),
+        },
+      },
+      webhooks: {
+        mercadopago: {
+          url: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/mercadopago`,
+          eventsLast30Days: mpEventsLast30,
+          lastEventAt: mpLastEvent?.receivedAt?.toISOString() ?? null,
+          lastEventSource: mpLastEvent?.provider ?? null,
+          configured: envFlag('MP_ACCESS_TOKEN'),
+        },
+        resend: {
+          url: `${apiBaseHttp.replace(/\/$/, '')}/api/webhooks/resend`,
+          eventsLast30Days: resendEventsLast30,
+          lastEventAt: resendLastEvent?.occurredAt?.toISOString() ?? null,
+          lastEventType: resendLastEvent?.eventType ?? null,
+          eventsByType: resendEventsByTypeMap,
+          configured: envFlag('RESEND_WEBHOOK_SECRET'),
+        },
+      },
+      cron: {
+        weeklyEmails: {
+          lastSendAt: weeklyLastSend?.createdAt?.toISOString() ?? null,
+          lastSendStatus: weeklyLastSend?.status ?? null,
+          sendsLast30Days: weeklySendsLast30,
+          sendsLast7Days: weeklySendsLast7,
+          campaignsActive: weeklyCampaignsActive,
+          cronSecretConfigured: envFlag('CRON_SECRET'),
+        },
+        outreach: {
+          dailyLimit: Number(envValue('OUTREACH_DAILY_LIMIT', '20')),
+          todayRealSent: outreachTodayReal,
+          last7DaysSent: outreachLast7,
+          domainVerified: envBool('OUTREACH_DOMAIN_VERIFIED'),
+        },
+      },
+      database: dbCounts,
+    };
+  });
+
+  // 6) Listado de Facturas / Pagos emitidos a clientes
+  // ----------------------------------------------------------------
+  fastify.get('/internal/payments', async (request) => {
+    const querySchema = z.object({
+      status: z.string().optional(),
+      search: z.string().optional(),
+      page: z.string().optional(),
+      pageSize: z.string().optional(),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    const status = parsed.success ? parsed.data.status?.trim() : undefined;
+    const search = parsed.success ? parsed.data.search?.trim() : undefined;
+    const page = Math.max(1, Number(parsed.success ? parsed.data.page : '1') || 1);
+    const pageSizeRaw = Number(parsed.success ? parsed.data.pageSize : '20') || 20;
+    const pageSize = Math.min(100, Math.max(5, pageSizeRaw));
+
+    const where: Record<string, unknown> = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { payerEmail: { contains: search, mode: 'insensitive' } },
+        { mpPaymentId: { contains: search, mode: 'insensitive' } },
+        { mpMerchantOrderId: { contains: search, mode: 'insensitive' } },
+        { tenant: { is: { tenantCode: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [items, total, byStatusRaw, allTime, approvedThisMonth] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          status: true,
+          currency: true,
+          amountArs: true,
+          amountUsd: true,
+          netReceivedAmountArs: true,
+          mpPaymentId: true,
+          mpMerchantOrderId: true,
+          mpPreapprovalId: true,
+          paymentMethodId: true,
+          paymentTypeId: true,
+          statusDetail: true,
+          payerEmail: true,
+          paidAt: true,
+          createdAt: true,
+          tenant: {
+            select: {
+              id: true,
+              tenantCode: true,
+              plan: { select: { id: true, name: true } },
+            },
+          },
+          subscription: {
+            select: {
+              id: true,
+              billingInterval: true,
+              status: true,
+              plan: { select: { id: true, name: true } },
+            },
+          },
+        },
+      }),
+      prisma.payment.count({ where }),
+      prisma.payment.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      prisma.payment.aggregate({
+        where: { status: 'approved' },
+        _sum: { amountArs: true, amountUsd: true, netReceivedAmountArs: true },
+        _count: { _all: true },
+      }),
+      prisma.payment.aggregate({
+        where: { status: 'approved', paidAt: { gte: startOfMonth } },
+        _sum: { amountArs: true, amountUsd: true, netReceivedAmountArs: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const byStatus: Record<string, number> = {};
+    for (const row of byStatusRaw) {
+      byStatus[String(row.status)] = row._count?._all ?? 0;
+    }
+
+    return {
+      items: items.map((p) => ({
+        id: p.id,
+        status: p.status,
+        currency: p.currency,
+        amountArs: p.amountArs ? Number(p.amountArs) : null,
+        amountUsd: p.amountUsd ? Number(p.amountUsd) : null,
+        netReceivedAmountArs: p.netReceivedAmountArs ? Number(p.netReceivedAmountArs) : null,
+        mpPaymentId: p.mpPaymentId,
+        mpMerchantOrderId: p.mpMerchantOrderId,
+        mpPreapprovalId: p.mpPreapprovalId,
+        paymentMethodId: p.paymentMethodId,
+        paymentTypeId: p.paymentTypeId,
+        statusDetail: p.statusDetail,
+        payerEmail: p.payerEmail,
+        paidAt: p.paidAt?.toISOString() ?? null,
+        createdAt: p.createdAt.toISOString(),
+        tenant: p.tenant
+          ? {
+              id: p.tenant.id,
+              tenantCode: p.tenant.tenantCode,
+              planName: p.tenant.plan?.name ?? null,
+            }
+          : null,
+        subscription: p.subscription
+          ? {
+              id: p.subscription.id,
+              billingInterval: p.subscription.billingInterval,
+              status: p.subscription.status,
+              planName: p.subscription.plan?.name ?? null,
+            }
+          : null,
+      })),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+      summary: {
+        byStatus,
+        approvedAllTime: {
+          count: allTime._count?._all ?? 0,
+          totalArs: allTime._sum?.amountArs ? Number(allTime._sum.amountArs) : 0,
+          totalUsd: allTime._sum?.amountUsd ? Number(allTime._sum.amountUsd) : 0,
+          netReceivedArs: allTime._sum?.netReceivedAmountArs
+            ? Number(allTime._sum.netReceivedAmountArs)
+            : 0,
+        },
+        approvedThisMonth: {
+          count: approvedThisMonth._count?._all ?? 0,
+          totalArs: approvedThisMonth._sum?.amountArs
+            ? Number(approvedThisMonth._sum.amountArs)
+            : 0,
+          totalUsd: approvedThisMonth._sum?.amountUsd
+            ? Number(approvedThisMonth._sum.amountUsd)
+            : 0,
+          netReceivedArs: approvedThisMonth._sum?.netReceivedAmountArs
+            ? Number(approvedThisMonth._sum.netReceivedAmountArs)
+            : 0,
+        },
+      },
+    };
+  });
+
+  // 7) Planes (lectura y edicion desde /admin/planes)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/plans', async () => {
+    const plans = await prisma.plan.findMany({
+      orderBy: [{ displayOrder: 'asc' }, { priceMonthly: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: { select: { tenants: true, subscriptions: true } },
+      },
+    });
+
+    return {
+      items: plans.map((p) => ({
+        id: p.id,
+        name: p.name,
+        tier: p.tier ?? null,
+        description: p.description ?? null,
+        ctaLabel: p.ctaLabel ?? null,
+        badge: p.badge ?? null,
+        isRecommended: p.isRecommended,
+        isPublic: p.isPublic,
+        displayOrder: p.displayOrder,
+        priceMonthly: p.priceMonthly == null ? null : Number(p.priceMonthly),
+        runsPerMonth: p.runsPerMonth,
+        promptsActiveLimit: p.promptsActiveLimit,
+        brandsLimit: p.brandsLimit,
+        competitorsLimit: p.competitorsLimit,
+        retentionMonths: p.retentionMonths,
+        automationEnabled: p.automationEnabled,
+        features: Array.isArray(p.features) ? (p.features as unknown as string[]) : [],
+        engines: Array.isArray(p.engines) ? (p.engines as unknown as string[]) : [],
+        tenantsCount: p._count.tenants,
+        subscriptionsCount: p._count.subscriptions,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+      })),
+    };
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/internal/plans/:id', async (request, reply) => {
+    const bodySchema = z
+      .object({
+        name: z.string().min(1).max(120).optional(),
+        tier: z
+          .string()
+          .max(30)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        description: z
+          .string()
+          .max(2000)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        ctaLabel: z
+          .string()
+          .max(60)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        badge: z
+          .string()
+          .max(40)
+          .nullable()
+          .optional()
+          .transform((v) => (v == null ? v : v.trim() || null)),
+        isRecommended: z.boolean().optional(),
+        isPublic: z.boolean().optional(),
+        displayOrder: z.number().int().min(0).max(999).optional(),
+        priceMonthly: z.number().min(0).max(1_000_000).nullable().optional(),
+        runsPerMonth: z.number().int().min(0).max(1_000_000).optional(),
+        promptsActiveLimit: z.number().int().min(0).max(1_000_000).optional(),
+        brandsLimit: z.number().int().min(0).max(1_000_000).optional(),
+        competitorsLimit: z.number().int().min(0).max(1_000_000).optional(),
+        retentionMonths: z.number().int().min(0).max(120).optional(),
+        automationEnabled: z.boolean().optional(),
+        features: z.array(z.string().min(1).max(200)).max(20).optional(),
+        engines: z.array(z.string().min(1).max(40)).max(10).optional(),
+      })
+      .strict();
+
+    const parsed = bodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
+    }
+
+    const { id } = request.params;
+    const existing = await prisma.plan.findUnique({ where: { id } });
+    if (!existing) {
+      return reply.status(404).send({ error: 'plan_not_found' });
+    }
+
+    const data: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.features !== undefined) data.features = parsed.data.features;
+    if (parsed.data.engines !== undefined) data.engines = parsed.data.engines;
+
+    const updated = await prisma.plan.update({ where: { id }, data });
+    return {
+      id: updated.id,
+      name: updated.name,
+      tier: updated.tier ?? null,
+      description: updated.description ?? null,
+      ctaLabel: updated.ctaLabel ?? null,
+      badge: updated.badge ?? null,
+      isRecommended: updated.isRecommended,
+      isPublic: updated.isPublic,
+      displayOrder: updated.displayOrder,
+      priceMonthly: updated.priceMonthly == null ? null : Number(updated.priceMonthly),
+      runsPerMonth: updated.runsPerMonth,
+      promptsActiveLimit: updated.promptsActiveLimit,
+      brandsLimit: updated.brandsLimit,
+      competitorsLimit: updated.competitorsLimit,
+      retentionMonths: updated.retentionMonths,
+      automationEnabled: updated.automationEnabled,
+      features: Array.isArray(updated.features) ? (updated.features as unknown as string[]) : [],
+      engines: Array.isArray(updated.engines) ? (updated.engines as unknown as string[]) : [],
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  });
+
+  // 7) Estadisticas de emails semanales (campaignSlug que arranca con "weekly-")
+  // ----------------------------------------------------------------
+  fastify.get('/internal/weekly-emails-stats', async (request) => {
+    const querySchema = z.object({
+      windowDays: z.string().optional(),
+      campaignLimit: z.string().optional(),
+      recipientsLimit: z.string().optional(),
+    });
+    const parsed = querySchema.safeParse(request.query);
+    const windowDays = (() => {
+      const n = Number(parsed.success ? parsed.data.windowDays : '90');
+      if (!Number.isFinite(n) || n <= 7) return 7;
+      if (n <= 30) return 30;
+      if (n <= 90) return 90;
+      return 180;
+    })();
+    const campaignLimit = Math.min(
+      30,
+      Math.max(5, Number(parsed.success ? parsed.data.campaignLimit : '12') || 12)
+    );
+    const recipientsLimit = Math.min(
+      200,
+      Math.max(10, Number(parsed.success ? parsed.data.recipientsLimit : '50') || 50)
+    );
+
+    const since = new Date();
+    since.setDate(since.getDate() - windowDays);
+
+    const weeklyWhere = {
+      campaignSlug: { startsWith: 'weekly-' },
+    } as const;
+
+    const [logsInWindow, totalAllTime, byStatusAllTime, lastLog, firstLog, recentRecipients] =
+      await Promise.all([
+        prisma.cleexsInternalEmailSendLog.findMany({
+          where: { ...weeklyWhere, createdAt: { gte: since } },
+          select: {
+            id: true,
+            campaignSlug: true,
+            status: true,
+            createdAt: true,
+            mergeSummary: true,
+            recipientEmail: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.cleexsInternalEmailSendLog.count({ where: weeklyWhere }),
+        prisma.cleexsInternalEmailSendLog.groupBy({
+          by: ['status'],
+          where: weeklyWhere,
+          _count: { _all: true },
+        }),
+        prisma.cleexsInternalEmailSendLog.findFirst({
+          where: weeklyWhere,
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true, campaignSlug: true, status: true },
+        }),
+        prisma.cleexsInternalEmailSendLog.findFirst({
+          where: weeklyWhere,
+          orderBy: { createdAt: 'asc' },
+          select: { createdAt: true },
+        }),
+        prisma.cleexsInternalEmailSendLog.findMany({
+          where: weeklyWhere,
+          orderBy: { createdAt: 'desc' },
+          take: recipientsLimit,
+          select: {
+            id: true,
+            recipientEmail: true,
+            campaignSlug: true,
+            status: true,
+            errorMessage: true,
+            externalId: true,
+            scoreBucket: true,
+            cleexsScore: true,
+            mergeSummary: true,
+            createdAt: true,
+            tenant: { select: { id: true, tenantCode: true } },
+          },
+        }),
+      ]);
+
+    const statusCounts: Record<string, number> = { sent: 0, failed: 0, skipped: 0, pending: 0 };
+    for (const row of byStatusAllTime) {
+      statusCounts[row.status] = row._count._all;
+    }
+
+    const inWindowStatusCounts: Record<string, number> = {
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+    };
+    for (const row of logsInWindow) {
+      inWindowStatusCounts[row.status] = (inWindowStatusCounts[row.status] ?? 0) + 1;
+    }
+
+    type CampaignAcc = {
+      slug: string;
+      firstAt: Date;
+      lastAt: Date;
+      sent: number;
+      failed: number;
+      skipped: number;
+      pending: number;
+      segment: string | null;
+      weekSlot: number | null;
+      mode: string | null;
+      recipients: number;
+    };
+
+    const campaignMap = new Map<string, CampaignAcc>();
+    for (const log of logsInWindow) {
+      const slug = log.campaignSlug;
+      const acc = campaignMap.get(slug) ?? {
+        slug,
+        firstAt: log.createdAt,
+        lastAt: log.createdAt,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        pending: 0,
+        segment: null,
+        weekSlot: null,
+        mode: null,
+        recipients: 0,
+      };
+      if (log.createdAt < acc.firstAt) acc.firstAt = log.createdAt;
+      if (log.createdAt > acc.lastAt) acc.lastAt = log.createdAt;
+      if (log.status === 'sent') acc.sent += 1;
+      else if (log.status === 'failed') acc.failed += 1;
+      else if (log.status === 'skipped') acc.skipped += 1;
+      else if (log.status === 'pending') acc.pending += 1;
+      acc.recipients += 1;
+      if (log.mergeSummary && typeof log.mergeSummary === 'object') {
+        const summary = log.mergeSummary as Record<string, unknown>;
+        if (acc.segment == null && typeof summary.segment === 'string') {
+          acc.segment = summary.segment;
+        }
+        if (acc.weekSlot == null && typeof summary.weekSlot === 'number') {
+          acc.weekSlot = summary.weekSlot;
+        }
+        if (acc.mode == null && typeof summary.mode === 'string') {
+          acc.mode = summary.mode;
+        }
+      }
+      campaignMap.set(slug, acc);
+    }
+
+    const campaigns = Array.from(campaignMap.values())
+      .sort((a, b) => b.lastAt.getTime() - a.lastAt.getTime())
+      .slice(0, campaignLimit)
+      .map((c) => ({
+        campaignSlug: c.slug,
+        firstSendAt: c.firstAt.toISOString(),
+        lastSendAt: c.lastAt.toISOString(),
+        recipients: c.recipients,
+        sent: c.sent,
+        failed: c.failed,
+        skipped: c.skipped,
+        pending: c.pending,
+        successRate: c.recipients > 0 ? (c.sent / c.recipients) * 100 : 0,
+        segment: c.segment,
+        weekSlot: c.weekSlot,
+        mode: c.mode,
+      }));
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const sentToday = logsInWindow.filter(
+      (r) => r.status === 'sent' && r.createdAt.toISOString().slice(0, 10) === todayKey
+    ).length;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sentLast7 = logsInWindow.filter(
+      (r) => r.status === 'sent' && r.createdAt >= sevenDaysAgo
+    ).length;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays,
+      campaignsTracked: campaignMap.size,
+      allTime: {
+        total: totalAllTime,
+        ...statusCounts,
+        firstSendAt: firstLog?.createdAt?.toISOString() ?? null,
+        lastSendAt: lastLog?.createdAt?.toISOString() ?? null,
+        lastCampaignSlug: lastLog?.campaignSlug ?? null,
+        lastStatus: lastLog?.status ?? null,
+      },
+      window: {
+        total: logsInWindow.length,
+        ...inWindowStatusCounts,
+        sentToday,
+        sentLast7,
+      },
+      campaigns,
+      recentRecipients: recentRecipients.map((r) => ({
+        id: r.id,
+        recipientEmail: r.recipientEmail,
+        campaignSlug: r.campaignSlug,
+        status: r.status,
+        errorMessage: r.errorMessage,
+        externalId: r.externalId,
+        scoreBucket: r.scoreBucket,
+        cleexsScore: r.cleexsScore,
+        segment:
+          r.mergeSummary && typeof r.mergeSummary === 'object'
+            ? ((r.mergeSummary as Record<string, unknown>).segment as string | undefined) ?? null
+            : null,
+        weekSlot:
+          r.mergeSummary && typeof r.mergeSummary === 'object'
+            ? ((r.mergeSummary as Record<string, unknown>).weekSlot as number | undefined) ?? null
+            : null,
+        tenantCode: r.tenant?.tenantCode ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      cron: {
+        cronSecretConfigured: envFlag('CRON_SECRET'),
+        scheduleHint: 'martes 13:00 UTC (10:00 AR)',
+      },
+    };
+  });
+
+  const SCHEDULE_KEY = 'default';
+
+  async function loadWeeklySchedule() {
+    let row = await prisma.weeklyEmailSchedule.findUnique({ where: { key: SCHEDULE_KEY } });
+    if (!row) {
+      row = await prisma.weeklyEmailSchedule.create({
+        data: {
+          key: SCHEDULE_KEY,
+          enabled: true,
+          dayOfWeekUtc: 2,
+          hourUtc: 13,
+          segment: 'free',
+          dryRun: false,
+        },
+      });
+    }
+    return row;
+  }
+
+  fastify.get('/internal/weekly-schedule', async () => {
+    const row = await loadWeeklySchedule();
+    return {
+      id: row.id,
+      key: row.key,
+      enabled: row.enabled,
+      dayOfWeekUtc: row.dayOfWeekUtc,
+      hourUtc: row.hourUtc,
+      segment: row.segment,
+      dryRun: row.dryRun,
+      notes: row.notes,
+      updatedAt: row.updatedAt.toISOString(),
+      updatedBy: row.updatedBy,
+    };
+  });
+
+  const updateScheduleSchema = z.object({
+    enabled: z.boolean().optional(),
+    dayOfWeekUtc: z.number().int().min(0).max(6).optional(),
+    hourUtc: z.number().int().min(0).max(23).optional(),
+    segment: z.enum(['all', 'free', 'premium']).optional(),
+    dryRun: z.boolean().optional(),
+    notes: z.string().trim().max(2000).nullable().optional(),
+  });
+
+  fastify.put('/internal/weekly-schedule', async (request, reply) => {
+    const parsed = updateScheduleSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload invalido', details: parsed.error.flatten() });
+    }
+
+    const current = await loadWeeklySchedule();
+
+    const row = await prisma.weeklyEmailSchedule.update({
+      where: { id: current.id },
+      data: {
+        enabled: parsed.data.enabled ?? current.enabled,
+        dayOfWeekUtc: parsed.data.dayOfWeekUtc ?? current.dayOfWeekUtc,
+        hourUtc: parsed.data.hourUtc ?? current.hourUtc,
+        segment: parsed.data.segment ?? current.segment,
+        dryRun: parsed.data.dryRun ?? current.dryRun,
+        notes: parsed.data.notes === undefined ? current.notes : parsed.data.notes,
+      },
+    });
+
+    return {
+      id: row.id,
+      key: row.key,
+      enabled: row.enabled,
+      dayOfWeekUtc: row.dayOfWeekUtc,
+      hourUtc: row.hourUtc,
+      segment: row.segment,
+      dryRun: row.dryRun,
+      notes: row.notes,
+      updatedAt: row.updatedAt.toISOString(),
+      updatedBy: row.updatedBy,
+    };
+  });
+
+  // ============================================
+  // WhatsApp · Mensajes (admin)
+  // ============================================
+
+  fastify.get<{ Querystring: { search?: string; limit?: string } }>(
+    '/internal/whatsapp/conversations',
+    async (request) => {
+      const search = (request.query.search || '').trim();
+      const limit = Math.min(200, Math.max(1, Number(request.query.limit) || 80));
+      const looksLikePhoneDigits = (value: string) => /^\d{8,15}$/.test(value);
+
+      // Filtro de busqueda por phone (digitos), chatId o contenido del ultimo mensaje.
+      const where: Prisma.WhatsAppMessageWhereInput = search
+        ? {
+            OR: [
+              { chatId: { contains: search, mode: 'insensitive' } },
+              { phoneDigits: { contains: search.replace(/\D/g, '') || search } },
+              { message: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {};
+
+      // Agrupar por chatId con count y ultimo mensaje (se hace en JS para portabilidad).
+      const rows = await prisma.whatsAppMessage.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 2000,
+      });
+
+      type ConvBucket = {
+        chatId: string;
+        phoneDigits: string | null;
+        total: number;
+        inbound: number;
+        outbound: number;
+        failed: number;
+        lastMessage: string;
+        lastDirection: string;
+        lastStatus: string;
+        lastAt: string;
+        firstAt: string;
+      };
+
+      const map = new Map<string, ConvBucket>();
+      for (const r of rows) {
+        // Agrupamos por teléfono cuando está disponible para evitar conversaciones duplicadas
+        // del mismo contacto con chatIds distintos (ej: JID vs número limpio).
+        const key = (r.phoneDigits || '').trim() || r.chatId;
+        const existing = map.get(key);
+        if (!existing) {
+          const keyIsPhone = looksLikePhoneDigits(key);
+          map.set(key, {
+            chatId: key,
+            phoneDigits: r.phoneDigits || (keyIsPhone ? key : null),
+            total: 1,
+            inbound: r.direction === 'inbound' ? 1 : 0,
+            outbound: r.direction === 'outbound' ? 1 : 0,
+            failed: r.status === 'failed' ? 1 : 0,
+            lastMessage: r.message,
+            lastDirection: r.direction,
+            lastStatus: r.status,
+            lastAt: r.createdAt.toISOString(),
+            firstAt: r.createdAt.toISOString(),
+          });
+        } else {
+          existing.total += 1;
+          if (r.direction === 'inbound') existing.inbound += 1;
+          else existing.outbound += 1;
+          if (r.status === 'failed') existing.failed += 1;
+          if (r.createdAt < new Date(existing.firstAt)) {
+            existing.firstAt = r.createdAt.toISOString();
+          }
+        }
+      }
+
+      const conversations = Array.from(map.values())
+        .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
+        .slice(0, limit);
+
+      const totalMessages = await prisma.whatsAppMessage.count();
+      const totalInbound = await prisma.whatsAppMessage.count({ where: { direction: 'inbound' } });
+      const totalOutbound = await prisma.whatsAppMessage.count({ where: { direction: 'outbound' } });
+      const totalFailed = await prisma.whatsAppMessage.count({ where: { status: 'failed' } });
+
+      const since7 = new Date();
+      since7.setDate(since7.getDate() - 7);
+      const last7Days = await prisma.whatsAppMessage.count({ where: { createdAt: { gte: since7 } } });
+
+      return {
+        ok: true,
+        kpis: {
+          totalMessages,
+          totalInbound,
+          totalOutbound,
+          totalFailed,
+          last7Days,
+          uniqueChats: map.size,
+        },
+        conversations,
+      };
+    }
+  );
+
+  fastify.get<{ Params: { chatId: string }; Querystring: { limit?: string } }>(
+    '/internal/whatsapp/conversations/:chatId/messages',
+    async (request, reply) => {
+      const chatId = decodeURIComponent(request.params.chatId || '').trim();
+      if (!chatId) return reply.code(400).send({ error: 'chatId requerido' });
+      const limit = Math.min(500, Math.max(1, Number(request.query.limit) || 200));
+      const isPhoneGroup = /^\d{8,15}$/.test(chatId);
+
+      const messages = await prisma.whatsAppMessage.findMany({
+        where: isPhoneGroup
+          ? {
+              OR: [{ phoneDigits: chatId }, { chatId }],
+            }
+          : { chatId },
+        orderBy: { createdAt: 'asc' },
+        take: limit,
+      });
+
+      return {
+        ok: true,
+        chatId,
+        count: messages.length,
+        messages: messages.map((m) => ({
+          id: m.id,
+          direction: m.direction,
+          message: m.message,
+          mediaUrl: m.mediaUrl,
+          status: m.status,
+          source: m.source,
+          externalId: m.externalId,
+          errorMessage: m.errorMessage,
+          diagnosticId: m.diagnosticId,
+          createdAt: m.createdAt.toISOString(),
+        })),
+      };
+    }
+  );
+
+  // ============================================
+  // Métricas de Conversión (funnel interno del team)
+  // ============================================
+  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+    '/internal/conversion-metrics',
+    async (request) => {
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+
+      const where = { createdAt: { gte: from, lte: to } };
+      const pct = (num: number, den: number): number | null =>
+        den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+
+      const [
+        pageViewsTotal,
+        visitorGroups,
+        urlSubmitted,
+        emailLeft,
+        shareGroups,
+        referredRows,
+        purchases,
+        sentEmails,
+        unlockClickGroups,
+      ] = await Promise.all([
+        prisma.pageView.count({ where }),
+        prisma.pageView.groupBy({
+          by: ['visitorId'],
+          where: { ...where, visitorId: { not: null } },
+        }),
+        prisma.publicDiagnostic.count({ where }),
+        prisma.publicDiagnostic.count({ where: { ...where, email: { not: null } } }),
+        prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
+        prisma.publicDiagnostic.findMany({
+          where: { ...where, refCode: { not: null } },
+          select: { refCode: true },
+        }),
+        prisma.subscription.findMany({
+          where: { ...where, status: 'authorized' },
+          select: { utmSource: true, refCode: true, sourceChannel: true, amountUsd: true },
+        }),
+        prisma.leadEmail.findMany({
+          where: { status: 'sent', sentAt: { gte: from, lte: to } },
+          select: { leadSource: { select: { competitorDomain: true } } },
+        }),
+        prisma.unlockClickEvent.groupBy({
+          by: ['unlockKey'],
+          where,
+          _count: { _all: true },
+        }),
+      ]);
+
+      const homeVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
+
+      // Share por canal
+      const shareByChannel = shareGroups
+        .map((g) => ({ channel: g.channel, count: g._count._all }))
+        .sort((a, b) => b.count - a.count);
+      const sharedTotal = shareByChannel.reduce((acc, r) => acc + r.count, 0);
+
+      // Referidos por refCode
+      const refMap = new Map<string, number>();
+      for (const r of referredRows) {
+        const key = (r.refCode || '').trim() || '—';
+        refMap.set(key, (refMap.get(key) || 0) + 1);
+      }
+      const referredByCode = Array.from(refMap.entries())
+        .map(([refCode, count]) => ({ refCode, count }))
+        .sort((a, b) => b.count - a.count);
+      const referredTotal = referredRows.length;
+
+      // Compras por source (utm_source || ref_code || source_channel || 'directo')
+      const purchaseMap = new Map<string, { count: number; usd: number }>();
+      for (const p of purchases) {
+        const key =
+          (p.utmSource || '').trim() ||
+          (p.refCode || '').trim() ||
+          (p.sourceChannel || '').trim() ||
+          'directo';
+        const prev = purchaseMap.get(key) || { count: 0, usd: 0 };
+        prev.count += 1;
+        prev.usd += p.amountUsd ? Number(p.amountUsd) : 0;
+        purchaseMap.set(key, prev);
+      }
+      const purchasesBySource = Array.from(purchaseMap.entries())
+        .map(([source, v]) => ({ source, count: v.count, usd: Math.round(v.usd) }))
+        .sort((a, b) => b.count - a.count);
+      const purchasedTotal = purchases.length;
+
+      const unlockClickTotal = unlockClickGroups.reduce((acc, g) => acc + g._count._all, 0);
+
+      // Cold outreach: dominios contactados (email enviado) que luego entraron al diagnóstico.
+      const contactedDomains = new Set<string>();
+      for (const e of sentEmails) {
+        const dom = (e.leadSource?.competitorDomain || '').trim().toLowerCase();
+        if (dom) contactedDomains.add(dom);
+      }
+      let returnedDomains = 0;
+      if (contactedDomains.size > 0) {
+        const matches = await prisma.publicDiagnostic.findMany({
+          where: { domain: { in: Array.from(contactedDomains) } },
+          select: { domain: true },
+          distinct: ['domain'],
+        });
+        const matchedSet = new Set(matches.map((m) => (m.domain || '').trim().toLowerCase()));
+        for (const d of contactedDomains) if (matchedSet.has(d)) returnedDomains += 1;
+      }
+
+      return {
+        ok: true,
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+        funnel: {
+          homeVisitors: { count: homeVisitors, pageViews: pageViewsTotal },
+          urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
+          emailLeft: { count: emailLeft, pct: pct(emailLeft, urlSubmitted) },
+          shared: {
+            count: sharedTotal,
+            pct: pct(sharedTotal, urlSubmitted),
+            byChannel: shareByChannel,
+          },
+          referred: {
+            count: referredTotal,
+            pct: pct(referredTotal, urlSubmitted),
+            byCode: referredByCode,
+          },
+          unlockClicks: {
+            count: unlockClickTotal,
+            pct: pct(unlockClickTotal, emailLeft),
+          },
+          purchased: {
+            count: purchasedTotal,
+            pct: pct(purchasedTotal, urlSubmitted),
+            bySource: purchasesBySource,
+          },
+        },
+        outreach: {
+          emailsSent: sentEmails.length,
+          domainsContacted: contactedDomains.size,
+          domainsReturned: returnedDomains,
+          returnPct: pct(returnedDomains, contactedDomains.size),
+        },
+      };
+    }
+  );
+
+  // Detalle de clics en "Desbloquear" (upsell Plan Conquistar).
+  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+    '/internal/conversion-metrics/unlock-clicks',
+    async (request) => {
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+
+      const where = { createdAt: { gte: from, lte: to } };
+
+      const grouped = await prisma.unlockClickEvent.groupBy({
+        by: ['unlockKey'],
+        where,
+        _count: { _all: true },
+      });
+
+      const labelRows =
+        grouped.length > 0
+          ? await prisma.unlockClickEvent.findMany({
+              where: { unlockKey: { in: grouped.map((g) => g.unlockKey) } },
+              distinct: ['unlockKey'],
+              select: { unlockKey: true, label: true },
+            })
+          : [];
+      const labelByKey = new Map(labelRows.map((r) => [r.unlockKey, r.label]));
+
+      const items = grouped
+        .map((g) => ({
+          unlockKey: g.unlockKey,
+          label: labelByKey.get(g.unlockKey) || g.unlockKey,
+          count: g._count._all,
+        }))
+        .sort((a, b) => {
+          if (b.count !== a.count) return b.count - a.count;
+          return a.unlockKey.localeCompare(b.unlockKey);
+        });
+
+      const total = items.reduce((acc, r) => acc + r.count, 0);
+
+      return {
+        ok: true,
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+        total,
+        items,
+      };
+    }
+  );
+
+  // Detalle de leads que dejaron email (para el drilldown de "Dejaron email").
+  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+    '/internal/conversion-metrics/emails',
+    async (request) => {
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+
+      const rows = await prisma.publicDiagnostic.findMany({
+        where: { createdAt: { gte: from, lte: to }, email: { not: null } },
+        select: {
+          id: true,
+          email: true,
+          brandName: true,
+          domain: true,
+          industry: true,
+          sourceChannel: true,
+          tier: true,
+          status: true,
+          shareSlug: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+      });
+
+      return {
+        ok: true,
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+        total: rows.length,
+        items: rows,
+      };
+    }
+  );
+
+  // ----------------------------------------------------------------
+  // Plan Conquistar (AI Visibility Accelerator) — generado desde admin
+  // ----------------------------------------------------------------
+
+  // Lista de corridas para elegir el cliente desde el panel admin.
+  fastify.get<{ Querystring: { q?: string; limit?: string } }>(
+    '/internal/plan-conquistar/runs',
+    async (request) => {
+      const q = (request.query.q || '').trim();
+      const limit = Math.min(Math.max(Number(request.query.limit) || 50, 1), 100);
+
+      const and: Prisma.RunWhereInput[] = [
+        { promptResults: { some: {} } },
+        primaryRunWhere(),
+      ];
+      if (q) {
+        and.push({
+          brand: {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { domain: { contains: q, mode: 'insensitive' } },
+            ],
+          },
+        });
+      }
+      const where: Prisma.RunWhereInput = { AND: and };
+
+      const runs = await prisma.run.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          status: true,
+          runType: true,
+          createdAt: true,
+          brand: { select: { name: true, domain: true } },
+          _count: { select: { promptResults: true } },
+        },
+      });
+
+      return {
+        ok: true,
+        items: runs.map((r) => ({
+          id: r.id,
+          status: r.status,
+          runType: r.runType,
+          createdAt: r.createdAt,
+          brandName: r.brand?.name ?? 'Sin marca',
+          domain: r.brand?.domain ?? null,
+          prompts: r._count.promptResults,
+        })),
+      };
+    }
+  );
+
+  // Detalle de una corrida (misma forma que el endpoint del portal, sin chequeo de tenant).
+  fastify.get<{ Params: { id: string } }>(
+    '/internal/plan-conquistar/runs/:id',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const run = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        include: {
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              domain: true,
+              tenantId: true,
+              industry: true,
+              productType: true,
+              competitors: { select: { id: true, name: true, domain: true } },
+              aliases: { select: { id: true, alias: true } },
+            },
+          },
+          promptResults: { include: { prompt: { include: { category: true } } }, orderBy: { createdAt: 'asc' } },
+          priaReports: { orderBy: { createdAt: 'desc' } },
+        },
+      });
+      if (!run) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+      return run;
+    }
+  );
+
+  // Estado + score por motor de la corrida (ChatGPT del run padre + auxiliares).
+  fastify.get<{ Params: { id: string } }>(
+    '/internal/plan-conquistar/runs/:id/engines',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const parent = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        select: {
+          id: true,
+          status: true,
+          modelMeta: true,
+          priaReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { priaTotal: true } },
+        },
+      });
+      if (!parent) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+
+      const scoreOf = (priaReports: Array<{ priaTotal: number }>) =>
+        priaReports[0] ? Math.round(priaReports[0].priaTotal) : null;
+
+      const engineRuns = planConquistarReadEngineRuns(parent.modelMeta);
+      const engineEntries = await Promise.all(
+        planConquistarAvailableEngines().map(async (engine) => {
+          const subRunId = engineRuns[engine];
+          if (!subRunId) return { engine, status: 'not_started' as const, score: null };
+          const subRun = await prisma.run.findUnique({
+            where: { id: subRunId },
+            select: {
+              status: true,
+              priaReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { priaTotal: true } },
+            },
+          });
+          if (!subRun) return { engine, status: 'not_started' as const, score: null };
+          return { engine, status: subRun.status, score: scoreOf(subRun.priaReports) };
+        })
+      );
+
+      return {
+        ok: true,
+        chatgpt: { status: parent.status, score: scoreOf(parent.priaReports) },
+        engines: engineEntries,
+        configured: { gemini: planConquistarGeminiConfigured(), openrouter: isOpenRouterConfigured() },
+      };
+    }
+  );
+
+  // Genera el score real por motor (Gemini / Perplexity / Claude) en background.
+  fastify.post<{ Params: { id: string }; Body: { engines?: string[] } }>(
+    '/internal/plan-conquistar/runs/:id/engines',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const parent = await prisma.run.findUnique({
+        where: { id: idParsed.data.id },
+        select: { id: true, tenantId: true, brandId: true, periodStart: true, periodEnd: true, modelMeta: true },
+      });
+      if (!parent) return reply.code(404).send({ error: 'Reporte no encontrado.' });
+
+      const available = planConquistarAvailableEngines();
+      if (available.length === 0) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'No hay motores extra configurados en el servidor (Gemini / OpenRouter).',
+        });
+      }
+
+      const requested = Array.isArray(request.body?.engines) ? request.body.engines : null;
+      const engines = requested ? available.filter((e) => requested.includes(e)) : available;
+      if (engines.length === 0) {
+        return reply.code(400).send({ ok: false, error: 'Ninguno de los motores solicitados está disponible.' });
+      }
+
+      const promptVersionId = planConquistarReadPromptVersionId(parent.modelMeta);
+      const existingMap = planConquistarReadEngineRuns(parent.modelMeta);
+      const engineRuns: Partial<Record<PlanConquistarEngineKey, string>> = { ...existingMap };
+      const started: PlanConquistarEngineKey[] = [];
+
+      for (const engine of engines) {
+        const existingId = existingMap[engine];
+        if (existingId) {
+          const existingRun = await prisma.run.findUnique({
+            where: { id: existingId },
+            select: { status: true },
+          });
+          if (existingRun && existingRun.status !== 'failed') continue;
+        }
+
+        const subRun = await prisma.run.create({
+          data: {
+            tenantId: parent.tenantId,
+            brandId: parent.brandId,
+            periodStart: parent.periodStart,
+            periodEnd: parent.periodEnd,
+            runType: `engine_${engine}`,
+            status: 'pending',
+          },
+        });
+        engineRuns[engine] = subRun.id;
+        started.push(engine);
+
+        const executor = planConquistarExecutorForEngine(engine);
+        setImmediate(async () => {
+          try {
+            await executor(subRun.id, promptVersionId ? { promptVersionId } : {});
+          } catch (err) {
+            request.log.error({ err, subRunId: subRun.id, engine }, 'plan-conquistar engine sub-run failed');
+            await prisma.run.update({ where: { id: subRun.id }, data: { status: 'failed' } }).catch(() => {});
+          }
+        });
+      }
+
+      const baseMeta =
+        parent.modelMeta && typeof parent.modelMeta === 'object' && !Array.isArray(parent.modelMeta)
+          ? (parent.modelMeta as Record<string, unknown>)
+          : {};
+      await prisma.run.update({
+        where: { id: parent.id },
+        data: { modelMeta: { ...baseMeta, engineRuns } as unknown as Prisma.InputJsonValue },
+      });
+
+      return { ok: true, started, engines: Object.keys(engineRuns) };
+    }
+  );
+
+  // Contexto del diagnóstico público vinculado (AEO satélite + tendencia + DR Ahrefs), si existe.
+  fastify.get<{ Params: { id: string } }>(
+    '/internal/plan-conquistar/runs/:id/context',
+    async (request, reply) => {
+      const idParsed = z.object({ id: z.string().uuid() }).safeParse({ id: request.params.id });
+      if (!idParsed.success) return reply.code(400).send({ error: 'ID inválido.' });
+
+      const runId = idParsed.data.id;
+
+      const run = await prisma.run.findUnique({
+        where: { id: runId },
+        select: {
+          brand: {
+            select: {
+              name: true,
+              domain: true,
+              competitors: { select: { name: true, domain: true } },
+            },
+          },
+        },
+      });
+
+      let diagnostic = await prisma.publicDiagnostic.findFirst({
+        where: {
+          OR: [
+            { runId },
+            { runGeminiId: runId },
+            { runPerplexityId: runId },
+            { runClaudeId: runId },
+          ],
+        },
+        select: {
+          id: true,
+          domain: true,
+          brandName: true,
+          status: true,
+          runId: true,
+        },
+      });
+
+      const brandDomain = diagnostic?.domain ?? run?.brand?.domain ?? '';
+      if (!diagnostic && brandDomain) {
+        diagnostic = await prisma.publicDiagnostic.findFirst({
+          where: { domain: brandDomain, status: 'completed' },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            domain: true,
+            brandName: true,
+            status: true,
+            runId: true,
+          },
+        });
+      }
+
+      if (!diagnostic && !run) {
+        return { ok: true, diagnostic: null, satelliteModule: null, trendData: [], domainRating: null };
+      }
+
+      let analysisJson: unknown = null;
+      if (diagnostic?.status === 'completed') {
+        const jsonRow = await prisma.publicDiagnostic.findUnique({
+          where: { id: diagnostic.id },
+          select: { analysisJson: true },
+        });
+        analysisJson = jsonRow?.analysisJson ?? null;
+      }
+
+      const satelliteModule = analysisJson
+        ? planConquistarExtractSatelliteModule(analysisJson)
+        : null;
+
+      let trendData: Array<{ label: string; score: number; date: string }> = [];
+      if (diagnostic?.status === 'completed' && diagnostic.domain) {
+        const lastDiagnostics = await prisma.publicDiagnostic.findMany({
+          where: { domain: diagnostic.domain, status: 'completed', runId: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+          select: { id: true, runId: true, createdAt: true },
+        });
+        const runIds = lastDiagnostics.map((d) => d.runId).filter(Boolean) as string[];
+        if (runIds.length > 0) {
+          const runs = await prisma.run.findMany({
+            where: { id: { in: runIds }, ...primaryRunWhere() },
+            include: { priaReports: { take: 1, orderBy: { createdAt: 'desc' } } },
+          });
+          const scoreByRunId = new Map<string, number>();
+          for (const r of runs) {
+            const score = r.priaReports[0]?.priaTotal;
+            if (score != null) scoreByRunId.set(r.id, score);
+          }
+          const chronological = [...lastDiagnostics].reverse();
+          trendData = chronological
+            .filter((d) => d.runId && scoreByRunId.has(d.runId))
+            .map((d, idx) => ({
+              label: `Corrida ${idx + 1}`,
+              score: scoreByRunId.get(d.runId!) ?? 0,
+              date: d.createdAt.toISOString(),
+            }));
+        }
+      }
+
+      const brandName = diagnostic?.brandName ?? run?.brand?.name ?? 'Marca';
+      const competitorsForDr =
+        run?.brand?.competitors?.map((c) => ({ name: c.name, domain: c.domain ?? null })) ?? [];
+
+      let domainRating = null;
+      if (brandDomain && !brandDomain.startsWith('brand-')) {
+        try {
+          domainRating = await buildDomainRatingSnapshot({
+            brandName,
+            brandDomain,
+            competitors: competitorsForDr,
+            includeCompetitors: true,
+          });
+        } catch {
+          domainRating = null;
+        }
+      }
+
+      return {
+        ok: true,
+        diagnostic: diagnostic
+          ? {
+              id: diagnostic.id,
+              domain: diagnostic.domain,
+              brandName: diagnostic.brandName,
+              primaryRunId: diagnostic.runId,
+            }
+          : null,
+        satelliteModule,
+        trendData,
+        domainRating,
+      };
+    }
+  );
+};
+
+export default adminReportsRoutes;

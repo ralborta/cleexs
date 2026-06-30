@@ -1,0 +1,6 @@
+# Config compartida de build (monorepo). Deploy por servicio:
+# - API: apps/api/railway.toml (o Settings del dashboard)
+# - Web: apps/web/railway.toml (o Settings del dashboard)
+
+[build]
+builder = "RAILPACK"

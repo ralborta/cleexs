@@ -27,51 +27,199 @@ enum TenantStatus {
   archived
 }
 
+enum BillingCurrency {
+  ARS
+  USD
+}
+
+enum BillingInterval {
+  monthly
+  annual
+}
+
+enum SubscriptionStatus {
+  pending
+  authorized
+  paused
+  cancelled
+  expired
+}
+
+enum PaymentStatus {
+  pending
+  approved
+  rejected
+  cancelled
+  refunded
+  charged_back
+}
+
 model Tenant {
-  id              String        @id @default(uuid())
-  tenantCode      String        @unique @map("tenant_code")
-  tenantPath      String        @map("tenant_path") // ej: "000/001/014"
-  parentTenantId  String?       @map("parent_tenant_id")
-  tenantType      TenantType    @map("tenant_type")
-  planId          String        @map("plan_id")
-  status          TenantStatus  @default(active)
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  id             String       @id @default(uuid())
+  tenantCode     String       @unique @map("tenant_code")
+  tenantPath     String       @map("tenant_path") // ej: "000/001/014"
+  parentTenantId String?      @map("parent_tenant_id")
+  tenantType     TenantType   @map("tenant_type")
+  planId         String       @map("plan_id")
+  status         TenantStatus @default(active)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  // Slug único para enlaces ?ref= del programa portal referidos (portal cliente).
+  referralSlug              String?   @unique @map("referral_slug")
+  referredByTenantId        String?   @map("referred_by_tenant_id")
+  referralCount             Int       @default(0) @map("referral_count")
+  referralRewardAt          DateTime? @map("referral_reward_at")
+  referralUpsellDismissedAt DateTime? @map("referral_upsell_dismissed_at")
 
   // Relations
-  parent          Tenant?       @relation("TenantHierarchy", fields: [parentTenantId], references: [id])
-  children        Tenant[]      @relation("TenantHierarchy")
-  plan            Plan          @relation(fields: [planId], references: [id])
-  users           User[]
-  brands          Brand[]
-  promptVersions  PromptVersion[]
-  promptCategories PromptCategory[]
-  runs            Run[]
+  parent                      Tenant?                      @relation("TenantHierarchy", fields: [parentTenantId], references: [id])
+  children                    Tenant[]                     @relation("TenantHierarchy")
+  referredByTenant            Tenant?                      @relation("TenantReferralInvites", fields: [referredByTenantId], references: [id])
+  referredTenants             Tenant[]                     @relation("TenantReferralInvites")
+  plan                        Plan                         @relation(fields: [planId], references: [id])
+  users                       User[]
+  brands                      Brand[]
+  promptVersions              PromptVersion[]
+  promptCategories            PromptCategory[]
+  runs                        Run[]
+  leadSources                 LeadSource[]
+  usageEvents                 UsageLedger[]
+  brandAccesses               TenantBrandAccess[]
+  entitlementOverrides        EntitlementOverride[]
+  profileClaims               ProfileClaim[]
+  cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
+  subscriptions               Subscription[]
+  payments                    Payment[]
 
   @@index([parentTenantId])
   @@index([tenantCode])
   @@index([tenantPath])
   @@index([tenantType])
+  @@index([referredByTenantId])
   @@map("tenants")
 }
 
 model Plan {
-  id                  String    @id @default(uuid())
-  name                String
-  runsPerMonth        Int       @default(10) @map("runs_per_month")
-  promptsActiveLimit  Int       @default(50) @map("prompts_active_limit")
-  brandsLimit         Int       @default(5) @map("brands_limit")
-  competitorsLimit    Int       @default(10) @map("competitors_limit")
-  retentionMonths     Int       @default(12) @map("retention_months")
-  automationEnabled   Boolean   @default(false) @map("automation_enabled")
-  priceMonthly        Float?    @map("price_monthly")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  name               String
+  runsPerMonth       Int      @default(10) @map("runs_per_month")
+  promptsActiveLimit Int      @default(50) @map("prompts_active_limit")
+  brandsLimit        Int      @default(5) @map("brands_limit")
+  competitorsLimit   Int      @default(10) @map("competitors_limit")
+  retentionMonths    Int      @default(12) @map("retention_months")
+  automationEnabled  Boolean  @default(false) @map("automation_enabled")
+  priceMonthly       Float?   @map("price_monthly")
+
+  // Campos visibles en la pagina publica de planes (editables desde /admin/planes)
+  tier            String?  @map("tier") // free | premium | enterprise (clasificacion comercial)
+  description     String?  @db.Text
+  ctaLabel        String?  @map("cta_label")
+  badge           String?  // Ej. "Recomendado", "Beta", "Ahorra 20%"
+  isRecommended   Boolean  @default(false) @map("is_recommended")
+  isPublic        Boolean  @default(true)  @map("is_public")
+  displayOrder    Int      @default(0)     @map("display_order")
+  features        Json     @default("[]")  // array de strings con los checks visibles
+  engines         Json     @default("[]")  // array de strings: ChatGPT, Gemini, Perplexity, Claude
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenants             Tenant[]
+  tenants       Tenant[]
+  subscriptions Subscription[]
 
   @@map("plans")
+}
+
+model Subscription {
+  id                  String             @id @default(uuid())
+  tenantId            String             @map("tenant_id")
+  planId              String             @map("plan_id")
+  status              SubscriptionStatus @default(pending)
+  billingInterval     BillingInterval    @default(monthly) @map("billing_interval")
+  currency            BillingCurrency    @default(ARS)
+  amountUsd           Decimal            @map("amount_usd") @db.Decimal(12, 2)
+  amountArs           Decimal            @map("amount_ars") @db.Decimal(12, 2)
+  fxRate              Decimal            @map("fx_rate") @db.Decimal(12, 4)
+  mpPreapprovalId     String?            @unique @map("mp_preapproval_id")
+  mpPreapprovalPlanId String?            @map("mp_preapproval_plan_id")
+  payerEmail          String?            @map("payer_email")
+  reason              String?
+  initPoint           String?            @map("init_point") @db.Text
+  sandboxInitPoint    String?            @map("sandbox_init_point") @db.Text
+  startedAt           DateTime?          @map("started_at")
+  currentPeriodStart  DateTime?          @map("current_period_start")
+  currentPeriodEnd    DateTime?          @map("current_period_end")
+  cancelledAt         DateTime?          @map("cancelled_at")
+  // Atribución de adquisición de la compra (para el dashboard de conversión interno).
+  refCode             String?            @map("ref_code")
+  utmSource           String?            @map("utm_source")
+  utmMedium           String?            @map("utm_medium")
+  utmCampaign         String?            @map("utm_campaign")
+  sourceChannel       String?            @map("source_channel")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@index([tenantId, status])
+  @@index([planId])
+  @@index([status, currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                   String          @id @default(uuid())
+  tenantId             String          @map("tenant_id")
+  subscriptionId       String?         @map("subscription_id")
+  status               PaymentStatus   @default(pending)
+  currency             BillingCurrency @default(ARS)
+  amountUsd            Decimal?        @map("amount_usd") @db.Decimal(12, 2)
+  amountArs            Decimal         @map("amount_ars") @db.Decimal(12, 2)
+  netReceivedAmountArs Decimal?        @map("net_received_amount_ars") @db.Decimal(12, 2)
+  fxRate               Decimal?        @map("fx_rate") @db.Decimal(12, 4)
+  mpPaymentId          String?         @unique @map("mp_payment_id")
+  mpPreapprovalId      String?         @map("mp_preapproval_id")
+  mpMerchantOrderId    String?         @map("mp_merchant_order_id")
+  paymentMethodId      String?         @map("payment_method_id")
+  paymentTypeId        String?         @map("payment_type_id")
+  statusDetail         String?         @map("status_detail")
+  payerEmail           String?         @map("payer_email")
+  paidAt               DateTime?       @map("paid_at")
+  rawPayload           Json?           @map("raw_payload")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([subscriptionId])
+  @@index([status, createdAt])
+  @@index([mpPreapprovalId])
+  @@map("payments")
+}
+
+model WebhookEvent {
+  id           String    @id @default(uuid())
+  provider     String    @default("mercadopago")
+  eventId      String    @map("event_id")
+  eventType    String    @map("event_type")
+  action       String?
+  resourceId   String?   @map("resource_id")
+  payload      Json?
+  processedAt  DateTime? @map("processed_at")
+  errorMessage String?   @map("error_message") @db.Text
+  receivedAt   DateTime  @default(now()) @map("received_at")
+
+  @@unique([provider, eventId])
+  @@index([eventType, receivedAt])
+  @@index([resourceId])
+  @@index([processedAt])
+  @@map("webhook_events")
 }
 
 // ============================================
@@ -84,17 +232,41 @@ enum UserRole {
   viewer
 }
 
+enum EntitlementAction {
+  score_view
+  score_generate
+  report_deep_generate
+  report_deep_view
+  profile_claim
+}
+
+enum UsageActorType {
+  anonymous
+  user
+}
+
+enum ProfileClaimStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  name        String?
-  tenantId    String    @map("tenant_id")
-  role        UserRole  @default(viewer)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?  @map("password_hash")
+  tenantId     String   @map("tenant_id")
+  role         UserRole @default(viewer)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id])
+  usageEvents                 UsageLedger[]
+  claims                      ProfileClaim[]
+  entitlementOverrides        EntitlementOverride[]
+  cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
 
   @@index([tenantId])
   @@index([email])
@@ -105,24 +277,113 @@ model User {
 // BRANDS & COMPETITORS
 // ============================================
 
+enum RunSchedule {
+  semanal
+  quincenal
+  mensual
+}
+
+enum BusinessType {
+  brand
+  retailer_multibrand
+  distributor
+  importer
+  marketplace
+  service
+  saas
+  unknown
+}
+
+enum SizeSegment {
+  premium
+  mid
+  value
+  unknown
+}
+
 model Brand {
-  id          String    @id @default(uuid())
-  tenantId    String    @map("tenant_id")
-  name        String
-  domain      String?
-  description String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id                           String        @id @default(uuid())
+  tenantId                     String        @map("tenant_id")
+  name                         String
+  domain                       String?
+  industry                     String?
+  productType                  String?       @map("product_type")
+  country                      String?
+  objective                    String?
+  description                  String?       @db.Text
+  // Clasificacion automatica por dominio
+  businessType                 BusinessType? @default(unknown) @map("business_type")
+  category                     String?       @map("category")
+  subcategory                  String?       @map("subcategory")
+  geoMarket                    String?       @map("geo_market")
+  sizeSegment                  SizeSegment?  @default(unknown) @map("size_segment")
+  autoDetected                 Boolean       @default(false) @map("auto_detected")
+  classifierMeta               Json?         @map("classifier_meta")
+  runSchedule                  RunSchedule?  @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
+  /// Prompt guardado en portal (1 de 5) usado en corridas `weekly_portal` cuando está seleccionado
+  selectedWeeklyPortalPromptId String?       @map("selected_weekly_portal_prompt_id")
+  createdAt                    DateTime      @default(now()) @map("created_at")
+  updatedAt                    DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
-  aliases     BrandAlias[]
-  competitors Competitor[]
-  runs        Run[]
-  priaReports PRIAReport[]
+  tenant                     Tenant                   @relation(fields: [tenantId], references: [id])
+  aliases                    BrandAlias[]
+  competitors                Competitor[]
+  runs                       Run[]
+  portalSavedPrompts         BrandPortalSavedPrompt[] @relation("BrandPortalSavedPrompts")
+  selectedWeeklyPortalPrompt BrandPortalSavedPrompt?  @relation("BrandSelectedWeeklyPrompt", fields: [selectedWeeklyPortalPromptId], references: [id], onDelete: SetNull)
+  priaReports                PRIAReport[]
+  leadSources                LeadSource[]
+  usageEvents                UsageLedger[]
+  tenantAccesses             TenantBrandAccess[]
+  profileClaims              ProfileClaim[]
 
   @@index([tenantId])
+  @@index([runSchedule])
+  @@index([domain])
+  @@index([businessType])
+  @@index([selectedWeeklyPortalPromptId])
   @@map("brands")
+}
+
+/// Hasta 5 prompts guardados por marca (slots 0–4) para corridas semanales tipo `weekly_portal`
+model BrandPortalSavedPrompt {
+  id         String   @id @default(uuid())
+  brandId    String   @map("brand_id")
+  slot       Int // 0..4
+  title      String   @default("")
+  promptText String   @map("prompt_text") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  brand               Brand                             @relation("BrandPortalSavedPrompts", fields: [brandId], references: [id], onDelete: Cascade)
+  shadowPrompt        Prompt?
+  brandsSelectingThis Brand[]                           @relation("BrandSelectedWeeklyPrompt")
+  runsSnapshot        Run[]                             @relation("RunWeeklyPortalPrompt")
+  executions          BrandPortalSavedPromptExecution[]
+
+  @@unique([brandId, slot])
+  @@index([brandId])
+  @@map("brand_portal_saved_prompts")
+}
+
+/// Snapshots históricos de ejecuciones de prompts guardados del portal.
+model BrandPortalSavedPromptExecution {
+  id                 String   @id @default(uuid())
+  savedPromptId      String   @map("saved_prompt_id")
+  runId              String?  @map("run_id")
+  source             String   @default("portal_manual")
+  promptTextSnapshot String   @map("prompt_text_snapshot") @db.Text
+  responseText       String   @map("response_text") @db.Text
+  analysisJson       Json?    @map("analysis_json")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  savedPrompt BrandPortalSavedPrompt @relation(fields: [savedPromptId], references: [id], onDelete: Cascade)
+  run         Run?                   @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([savedPromptId, createdAt])
+  @@index([runId])
+  @@map("brand_portal_saved_prompt_executions")
 }
 
 model BrandAlias {
@@ -132,7 +393,7 @@ model BrandAlias {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@unique([brandId, alias])
   @@index([brandId])
@@ -140,17 +401,27 @@ model BrandAlias {
 }
 
 model Competitor {
-  id        String   @id @default(uuid())
-  brandId   String   @map("brand_id")
-  name      String
-  aliases   Json?    // Array de strings como JSON
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String        @id @default(uuid())
+  brandId         String        @map("brand_id")
+  name            String
+  domain          String?
+  aliases         Json? // Array de strings como JSON
+  // Clasificacion coherente con la marca medida
+  businessType    BusinessType? @default(unknown) @map("business_type")
+  category        String?       @map("category")
+  subcategory     String?       @map("subcategory")
+  geoMarket       String?       @map("geo_market")
+  autoDetected    Boolean       @default(false) @map("auto_detected")
+  validated       Boolean       @default(false) @map("validated")
+  discoveryReason String?       @map("discovery_reason") @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([brandId])
+  @@index([domain])
   @@map("competitors")
 }
 
@@ -161,14 +432,14 @@ model Competitor {
 model PromptVersion {
   id        String   @id @default(uuid())
   tenantId  String   @map("tenant_id")
-  name      String   // ej: "PROMPTS_v1", "PROMPTS_v2"
+  name      String // ej: "PROMPTS_v1", "PROMPTS_v2"
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  prompts   Prompt[]
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  prompts Prompt[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -184,8 +455,8 @@ model PromptCategory {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  prompts   Prompt[]
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  prompts Prompt[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -193,18 +464,23 @@ model PromptCategory {
 }
 
 model Prompt {
-  id              String   @id @default(uuid())
-  promptVersionId String   @map("prompt_version_id")
-  categoryId      String?  @map("category_id")
-  promptText      String   @db.Text @map("prompt_text")
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                       String   @id @default(uuid())
+  promptVersionId          String   @map("prompt_version_id")
+  categoryId               String?  @map("category_id")
+  name                     String? // nombre corto por tipo, ej. "Urgencia (30%) - Recomendación"
+  promptText               String   @map("prompt_text") @db.Text
+  active                   Boolean  @default(true)
+  /// Enlaza el prompt técnico (inactivo) generado desde BrandPortalSavedPrompt
+  brandPortalSavedPromptId String?  @unique @map("brand_portal_saved_prompt_id")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
   // Relations
-  promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
-  category        PromptCategory? @relation(fields: [categoryId], references: [id])
-  promptResults   PromptResult[]
+  promptVersion          PromptVersion           @relation(fields: [promptVersionId], references: [id], onDelete: Cascade)
+  category               PromptCategory?         @relation(fields: [categoryId], references: [id])
+  brandPortalSavedPrompt BrandPortalSavedPrompt? @relation(fields: [brandPortalSavedPromptId], references: [id], onDelete: SetNull)
+  promptResults          PromptResult[]
+  leadSources            LeadSource[]
 
   @@index([promptVersionId])
   @@index([categoryId])
@@ -224,49 +500,60 @@ enum RunStatus {
 }
 
 model Run {
-  id          String      @id @default(uuid())
-  tenantId    String      @map("tenant_id")
-  brandId     String      @map("brand_id")
-  periodStart DateTime    @map("period_start")
-  periodEnd   DateTime    @map("period_end")
-  runType     String      @default("monthly") @map("run_type")
-  status      RunStatus   @default(pending)
-  modelMeta   Json?       @map("model_meta") // { model, temperature, etc }
-  tokensUsed  Int?        @default(0) @map("tokens_used")
-  costUsd     Float?      @default(0) @map("cost_usd")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id                        String    @id @default(uuid())
+  tenantId                  String    @map("tenant_id")
+  brandId                   String    @map("brand_id")
+  periodStart               DateTime  @map("period_start")
+  periodEnd                 DateTime  @map("period_end")
+  runType                   String    @default("monthly") @map("run_type")
+  /// País/mercado de la corrida (premium elige; free usa su país por defecto).
+  /// `country` = nombre legible; `geoMarket` = bloque que consumen prompts/competidores.
+  country                   String?
+  geoMarket                 String?   @map("geo_market")
+  countryIso                String?   @map("country_iso")
+  /// Si se setea al crear el run, executeRun usa solo ese prompt guardado (snapshot)
+  weeklyPortalSavedPromptId String?   @map("weekly_portal_saved_prompt_id")
+  status                    RunStatus @default(pending)
+  modelMeta                 Json?     @map("model_meta") // { model, temperature, etc }
+  tokensUsed                Int?      @default(0) @map("tokens_used")
+  costUsd                   Float?    @default(0) @map("cost_usd")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
-  brand       Brand       @relation(fields: [brandId], references: [id])
-  promptResults PromptResult[]
-  priaReports PRIAReport[]
+  tenant                      Tenant                            @relation(fields: [tenantId], references: [id])
+  brand                       Brand                             @relation(fields: [brandId], references: [id])
+  weeklyPortalSavedPrompt     BrandPortalSavedPrompt?           @relation("RunWeeklyPortalPrompt", fields: [weeklyPortalSavedPromptId], references: [id], onDelete: SetNull)
+  portalSavedPromptExecutions BrandPortalSavedPromptExecution[]
+  promptResults               PromptResult[]
+  priaReports                 PRIAReport[]
+  leadSources                 LeadSource[]
 
   @@index([tenantId])
   @@index([brandId])
   @@index([tenantId, periodStart, periodEnd])
   @@index([status])
+  @@index([weeklyPortalSavedPromptId])
   @@map("runs")
 }
 
 model PromptResult {
-  id              String   @id @default(uuid())
-  runId           String   @map("run_id")
-  promptId        String   @map("prompt_id")
-  responseText    String   @db.Text @map("response_text")
-  top3Json        Json     @map("top3_json") // [{ position: 1, name: "...", type: "brand|competitor" }]
-  score           Float    @default(0)
-  flags           Json     @default("{}") // { ambiguous_ranking, no_ranking, etc }
-  truncated       Boolean  @default(false)
-  manualOverride  Boolean  @default(false) @map("manual_override")
-  overrideTop3Json Json?   @map("override_top3_json") // Si hay override, guardar el original aquí
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  runId            String   @map("run_id")
+  promptId         String   @map("prompt_id")
+  responseText     String   @map("response_text") @db.Text
+  top3Json         Json     @map("top3_json") // [{ position: 1, name: "...", type: "brand|competitor" }]
+  score            Float    @default(0)
+  flags            Json     @default("{}") // { ambiguous_ranking, no_ranking, etc }
+  truncated        Boolean  @default(false)
+  manualOverride   Boolean  @default(false) @map("manual_override")
+  overrideTop3Json Json?    @map("override_top3_json") // Si hay override, guardar el original aquí
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
-  run             Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
-  prompt          Prompt   @relation(fields: [promptId], references: [id])
+  run    Run    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  prompt Prompt @relation(fields: [promptId], references: [id])
 
   @@unique([runId, promptId])
   @@index([runId])
@@ -279,19 +566,647 @@ model PromptResult {
 // ============================================
 
 model PRIAReport {
-  id                    String   @id @default(uuid())
-  runId                 String   @map("run_id")
-  brandId               String   @map("brand_id")
-  priaTotal             Float    @map("pria_total") // 0-100
-  priaByCategoryJson    Json     @map("pria_by_category_json") // { categoryId: pria }
-  createdAt             DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(uuid())
+  runId              String   @map("run_id")
+  brandId            String   @map("brand_id")
+  priaTotal          Float    @map("pria_total") // 0-100
+  priaByCategoryJson Json     @map("pria_by_category_json") // { categoryId: pria }
+  createdAt          DateTime @default(now()) @map("created_at")
 
   // Relations
-  run                   Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
-  brand                 Brand    @relation(fields: [brandId], references: [id])
+  run   Run   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id])
 
   @@unique([runId, brandId])
   @@index([runId])
   @@index([brandId])
   @@map("pria_reports")
+}
+
+// ============================================
+// DIAGNÓSTICO PÚBLICO (una medición por dominio)
+// ============================================
+
+model PublicDiagnostic {
+  id             String   @id @default(uuid())
+  brandName      String   @map("brand_name") // marca ingresada por el usuario (obligatoria)
+  domain         String // dominio normalizado; múltiples corridas permitidas (Fase 3 Freemium)
+  industry       String?  @map("industry") // determinado por IA antes del run
+  refCode        String?  @map("ref_code") // código de embajador/referido (ej: ana23)
+  utmSource      String?  @map("utm_source")
+  utmMedium      String?  @map("utm_medium")
+  utmCampaign    String?  @map("utm_campaign")
+  sourceChannel  String?  @map("source_channel") // web | whatsapp_yt | ...
+  waPhone        String?  @map("wa_phone") // E.164 normalizado; límites anti-abuso canal WA
+  tier           String?  @default("freemium") // freemium = solo OpenAI; gold = OpenAI + Gemini + Perplexity + Claude
+  email          String? // capturado al final del flujo (para enviar resultado)
+  status         String   @default("pending") // pending | detecting_competitors | awaiting_user | running | completed | failed
+  runId          String?  @map("run_id") // Run real ejecutado automáticamente (OpenAI)
+  runGeminiId    String?  @map("run_gemini_id") // Run con mismos prompts ejecutados con Gemini (score y métricas)
+  runPerplexityId String? @map("run_perplexity_id") // Run con mismos prompts ejecutados con Perplexity vía OpenRouter (solo gold)
+  runClaudeId    String?  @map("run_claude_id") // Run con mismos prompts ejecutados con Claude vía OpenRouter (solo gold)
+  analysisJson   Json?    @map("analysis_json") // análisis detallado con IA (Fase 2)
+  // Borrador previo al run: URLs sugeridas de competidores, país (fase captcha + confirmación).
+  setupDraftJson Json?    @map("setup_draft_json")
+  shareSlug      String?  @unique @map("share_slug") // URL pública /score/{slug}
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  shareVisits PublicDiagnosticShareVisit[]
+  usageEvents UsageLedger[]
+
+  @@index([domain])
+  @@index([refCode])
+  @@index([utmSource])
+  @@index([status])
+  @@map("public_diagnostics")
+}
+
+// Visitas únicas al enlace compartido (desbloqueo viral tras N visitas).
+model PublicDiagnosticShareVisit {
+  id           String   @id @default(uuid())
+  diagnosticId String   @map("diagnostic_id")
+  visitorId    String   @map("visitor_id") // UUID estable en el navegador del visitante
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  diagnostic PublicDiagnostic @relation(fields: [diagnosticId], references: [id], onDelete: Cascade)
+
+  @@unique([diagnosticId, visitorId])
+  @@index([diagnosticId])
+  @@map("public_diagnostic_share_visits")
+}
+
+// Visitas a la landing/app de Cleexs (denominador del funnel de conversión interno).
+// Anónimo: solo ruta + visitante (UUID de navegador) + atribución utm/ref.
+model PageView {
+  id            String   @id @default(uuid())
+  path          String // ruta visitada (ej: /diagnostico/crear)
+  visitorId     String?  @map("visitor_id") // UUID estable en el navegador (anónimo)
+  refCode       String?  @map("ref_code")
+  utmSource     String?  @map("utm_source")
+  utmMedium     String?  @map("utm_medium")
+  utmCampaign   String?  @map("utm_campaign")
+  sourceChannel String?  @map("source_channel")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@map("page_views")
+}
+
+// Clicks en botones de compartir el Cleexs Score, por canal (para el funnel).
+model ShareEvent {
+  id           String   @id @default(uuid())
+  channel      String // whatsapp | email | linkedin | x | copy
+  diagnosticId String?  @map("diagnostic_id")
+  shareSlug    String?  @map("share_slug")
+  visitorId    String?  @map("visitor_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([channel, createdAt])
+  @@map("share_events")
+}
+
+// Clics en "Desbloquear" del upsell Plan Conquistar (métricas de conversión admin).
+model UnlockClickEvent {
+  id           String   @id @default(uuid())
+  unlockKey    String   @map("unlock_key")
+  label        String
+  diagnosticId String?  @map("diagnostic_id")
+  visitorId    String?  @map("visitor_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([unlockKey, createdAt])
+  @@map("unlock_click_events")
+}
+
+// Campañas internas de referidores / auspiciadores para links de tráfico a Cleexs.
+model ReferralCampaign {
+  id          String   @id @default(uuid())
+  refCode     String   @unique @map("ref_code")
+  name        String
+  utmSource   String?  @map("utm_source")
+  utmMedium   String?  @map("utm_medium")
+  utmCampaign String?  @map("utm_campaign")
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  clicks ReferralClick[]
+
+  @@index([active])
+  @@index([createdAt])
+  @@map("referral_campaigns")
+}
+
+// Clicks reales al link corto /r/:ref antes de redirigir al sitio público.
+model ReferralClick {
+  id            String   @id @default(uuid())
+  campaignId    String?  @map("campaign_id")
+  refCode       String   @map("ref_code")
+  targetUrl     String   @map("target_url")
+  ipHash        String?  @map("ip_hash")
+  userAgentHash String?  @map("user_agent_hash")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  campaign ReferralCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([refCode])
+  @@index([createdAt])
+  @@map("referral_clicks")
+}
+
+model UsageLedger {
+  id                 String            @id @default(uuid())
+  action             EntitlementAction
+  actorType          UsageActorType    @map("actor_type")
+  anonymousId        String?           @map("anonymous_id")
+  userId             String?           @map("user_id")
+  tenantId           String?           @map("tenant_id")
+  brandId            String?           @map("brand_id")
+  publicDiagnosticId String?           @map("public_diagnostic_id")
+  profileSlug        String?           @map("profile_slug")
+  periodStart        DateTime          @map("period_start")
+  periodEnd          DateTime          @map("period_end")
+  quantity           Int               @default(1)
+  dedupeKey          String?           @unique @map("dedupe_key")
+  metaJson           Json?             @map("meta_json")
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  brand            Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  publicDiagnostic PublicDiagnostic? @relation(fields: [publicDiagnosticId], references: [id], onDelete: SetNull)
+
+  @@index([action, periodStart, periodEnd])
+  @@index([actorType, anonymousId, periodStart])
+  @@index([userId, periodStart])
+  @@index([tenantId, periodStart])
+  @@index([brandId])
+  @@map("usage_ledger")
+}
+
+model TenantBrandAccess {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  brandId   String   @map("brand_id")
+  source    String   @default("claim")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brand  Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, brandId])
+  @@index([tenantId])
+  @@index([brandId])
+  @@map("tenant_brand_access")
+}
+
+model EntitlementOverride {
+  id        String    @id @default(uuid())
+  tenantId  String?   @map("tenant_id")
+  userId    String?   @map("user_id")
+  grantPlan String    @map("grant_plan")
+  reason    String?
+  startsAt  DateTime  @map("starts_at")
+  endsAt    DateTime? @map("ends_at")
+  active    Boolean   @default(true)
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, active, startsAt, endsAt])
+  @@index([userId, active, startsAt, endsAt])
+  @@map("entitlement_overrides")
+}
+
+model ProfileClaim {
+  id             String             @id @default(uuid())
+  tenantId       String             @map("tenant_id")
+  userId         String             @map("user_id")
+  brandId        String             @map("brand_id")
+  profileSlug    String?            @map("profile_slug")
+  claimMethod    String             @default("manual")
+  corporateEmail String?            @map("corporate_email")
+  status         ProfileClaimStatus @default(pending)
+  note           String?
+  reviewedBy     String?            @map("reviewed_by")
+  reviewedAt     DateTime?          @map("reviewed_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand  Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+  @@index([brandId, status])
+  @@map("profile_claims")
+}
+
+// ============================================
+// LEADS (outreach a competidores)
+// ============================================
+
+model LeadSource {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  brandId          String?  @map("brand_id")
+  runId            String?  @map("run_id")
+  promptId         String?  @map("prompt_id")
+  competitorName   String   @map("competitor_name")
+  competitorDomain String?  @map("competitor_domain")
+  evidenceJson     Json?    @map("evidence_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant        @relation(fields: [tenantId], references: [id])
+  brand    Brand?        @relation(fields: [brandId], references: [id])
+  run      Run?          @relation(fields: [runId], references: [id])
+  prompt   Prompt?       @relation(fields: [promptId], references: [id])
+  contacts LeadContact[]
+  emails   LeadEmail[]
+
+  @@index([tenantId])
+  @@index([brandId])
+  @@index([runId])
+  @@index([competitorName])
+  @@map("lead_sources")
+}
+
+model LeadContact {
+  id           String   @id @default(uuid())
+  leadSourceId String   @map("lead_source_id")
+  name         String?
+  email        String
+  role         String?
+  source       String // firecrawl | hunter | browserbase
+  score        Float?   @default(0)
+  verified     Boolean  @default(false)
+  status       String   @default("new") // new | queued | sent | ignored
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  leadSource LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+  emails     LeadEmail[]
+
+  @@unique([leadSourceId, email])
+  @@index([email])
+  @@map("lead_contacts")
+}
+
+model LeadEmail {
+  id            String    @id @default(uuid())
+  leadSourceId  String    @map("lead_source_id")
+  leadContactId String    @map("lead_contact_id")
+  subject       String
+  body          String    @db.Text
+  provider      String? // resend | sendgrid | manual
+  status        String    @default("draft") // draft | queued | sent | failed
+  sentAt        DateTime? @map("sent_at")
+  metaJson      Json?     @map("meta_json")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  leadSource  LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+  leadContact LeadContact @relation(fields: [leadContactId], references: [id], onDelete: Cascade)
+
+  @@index([leadSourceId])
+  @@index([leadContactId])
+  @@map("lead_emails")
+}
+
+// ============================================
+// CLEEXS INTERNO — secuencia email / auditoría (solo operaciones Cleexs)
+// ============================================
+
+enum CleexsEmailScoreBucket {
+  low
+  mid
+  high
+  all
+}
+
+enum CleexsEmailTemplateVariant {
+  letter
+  editorial
+}
+
+enum CleexsEmailSendStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+model WhatsAppMessage {
+  id             String   @id @default(uuid())
+  chatId         String   @map("chat_id") // E.164 normalizado o JID/LID tal como llega de BuilderBot
+  phoneDigits    String?  @map("phone_digits") // solo digitos, para agrupar facil por contacto
+  direction      String // 'inbound' | 'outbound'
+  message        String   @db.Text
+  mediaUrl       String?  @map("media_url")
+  status         String   @default("received") // received | sent | failed
+  source         String?  // flow | builderbot_inbound | api_send | webhook_score
+  externalId     String?  @map("external_id") // id de BuilderBot/Resend equivalente cuando aplica
+  errorMessage   String?  @map("error_message") @db.Text
+  diagnosticId   String?  @map("diagnostic_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([chatId, createdAt])
+  @@index([phoneDigits])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}
+
+model WeeklyEmailSchedule {
+  // Singleton: filas con key = 'default'.
+  id            String   @id @default(uuid())
+  key           String   @unique @default("default")
+  enabled       Boolean  @default(true)
+  dayOfWeekUtc  Int      @default(2) @map("day_of_week_utc") // 0 = domingo, 2 = martes
+  hourUtc       Int      @default(13) @map("hour_utc")       // hora UTC del envio
+  segment       String   @default("free")
+  dryRun        Boolean  @default(false) @map("dry_run")
+  notes         String?  @db.Text
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedBy     String?  @map("updated_by")
+
+  @@map("weekly_email_schedule")
+}
+
+model CleexsInternalEmailCampaign {
+  id            String                 @id @default(uuid())
+  slug          String                 @unique
+  weekIndex     Int                    @map("week_index")
+  scoreBucket   CleexsEmailScoreBucket @map("score_bucket")
+  title         String
+  description   String?                @db.Text
+  espTemplateId String?                @map("esp_template_id")
+  // Contenido editable usado por el cron weekly y por el boton "Probar".
+  // Si subject/body/preheader estan vacios, se cae al texto por defecto.
+  subject       String?                @db.Text
+  body          String?                @db.Text
+  preheader     String?                @db.Text
+  templateVariant CleexsEmailTemplateVariant @default(letter) @map("template_variant")
+  active        Boolean                @default(true)
+  priority      Int                    @default(0)
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  @@index([weekIndex, scoreBucket, active])
+  @@map("cleexs_internal_email_campaigns")
+}
+
+model CleexsInternalEmailSendLog {
+  id             String                @id @default(uuid())
+  recipientEmail String                @map("recipient_email")
+  userId         String?               @map("user_id")
+  tenantId       String?               @map("tenant_id")
+  campaignSlug   String                @map("campaign_slug")
+  scoreBucket    String?               @map("score_bucket")
+  cleexsScore    Int?                  @map("cleexs_score")
+  mergeSummary   Json?                 @map("merge_summary")
+  status         CleexsEmailSendStatus
+  externalId     String?               @map("external_id")
+  errorMessage   String?               @map("error_message") @db.Text
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([campaignSlug, createdAt])
+  @@index([recipientEmail, createdAt])
+  @@index([status])
+  @@map("cleexs_internal_email_send_logs")
+}
+
+model CleexsResendWebhookEvent {
+  id             String    @id @default(uuid())
+  svixId         String    @unique @map("svix_id")
+  eventType      String    @map("event_type")
+  emailId        String?   @map("email_id")
+  recipientEmail String?   @map("recipient_email")
+  occurredAt     DateTime? @map("occurred_at")
+  payload        Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([eventType, occurredAt])
+  @@index([emailId])
+  @@index([occurredAt])
+  @@map("cleexs_resend_webhook_events")
+}
+
+// Plantilla editable de cold outreach (singleton: row con key='default').
+// El asunto y el cuerpo aceptan variables {{brandName}}, {{competitorName}},
+// {{top3}} (los top 3 separados por salto de linea). Si useAi=true, el
+// contenido se pasa como prompt base a OpenAI para mejorarlo.
+model OutreachTemplate {
+  id        String   @id @default(uuid())
+  key       String   @unique @default("default")
+  subject   String   @db.Text
+  body      String   @db.Text
+  useAi     Boolean  @default(false) @map("use_ai")
+  updatedBy String?  @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("outreach_templates")
+}
+
+// ============================================
+// GOOGLE INTEGRATIONS (GA4 + Search Console)
+// Solo disponible para planes Premium (crecimiento/enterprise).
+// El cliente autoriza con OAuth y guardamos el refresh token cifrado.
+// ============================================
+
+/// Una sola integración OAuth por tenant. Permite varias propiedades GA4 asociadas a brands.
+model GoogleIntegration {
+  id                     String   @id @default(uuid())
+  tenantId               String   @unique @map("tenant_id")
+  googleEmail            String   @map("google_email")
+  googleUserId           String?  @map("google_user_id")
+  refreshTokenEncrypted  String   @map("refresh_token_encrypted") @db.Text
+  scopesGranted          String   @map("scopes_granted") @db.Text
+  status                 String   @default("active") // active | revoked | error
+  lastErrorMessage       String?  @map("last_error_message") @db.Text
+  lastErrorAt            DateTime? @map("last_error_at")
+  connectedAt            DateTime @default(now()) @map("connected_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  properties GoogleAnalyticsProperty[]
+
+  @@index([status])
+  @@map("google_integrations")
+}
+
+/// Propiedad GA4 (y opcional sitio GSC) elegida para una brand específica.
+model GoogleAnalyticsProperty {
+  id              String   @id @default(uuid())
+  integrationId   String   @map("integration_id")
+  brandId         String   @unique @map("brand_id")
+  ga4PropertyId   String   @map("ga4_property_id") // formato "properties/123456"
+  ga4PropertyName String?  @map("ga4_property_name")
+  gscSiteUrl      String?  @map("gsc_site_url") // ej "sc-domain:cleexs.com" o "https://cleexs.com/"
+  lastSyncAt      DateTime? @map("last_sync_at")
+  lastSyncStatus  String?  @map("last_sync_status") // ok | error
+  lastSyncError   String?  @map("last_sync_error") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  integration GoogleIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  snapshots AITrafficSnapshot[]
+
+  @@index([integrationId])
+  @@map("google_analytics_properties")
+}
+
+// ============================================
+// APP STRINGS (mini-CMS interno editable)
+// Permite al admin sobreescribir textos de la UI sin tocar código.
+// Frontend usa helper `t(key, defaultValue)` que cae al default si no hay row.
+// ============================================
+model AppString {
+  id        String   @id @default(uuid())
+  key       String
+  locale    String   @default("es") // soporte multi-idioma silencioso (es | en | pt)
+  value     String   @db.Text
+  notes     String?  @db.Text // contexto interno opcional (donde aparece, observaciones)
+  updatedBy String?  @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([key, locale])
+  @@index([locale])
+  @@map("app_strings")
+}
+
+/// Snapshot diario por brand + fuente IA. Se rellena con cron cada ~6h.
+/// `aiSource` valores típicos: chatgpt, perplexity, gemini, claude, copilot, you, otros_ia
+model AITrafficSnapshot {
+  id              String   @id @default(uuid())
+  propertyId      String   @map("property_id")
+  brandId         String   @map("brand_id")
+  date            DateTime @db.Date
+  aiSource        String   @map("ai_source")
+  sessions        Int      @default(0)
+  totalUsers      Int      @default(0) @map("total_users")
+  newUsers        Int      @default(0) @map("new_users")
+  conversions     Int      @default(0)
+  engagedSessions Int      @default(0) @map("engaged_sessions")
+  bounceRate      Float?   @map("bounce_rate")
+  topLandingPage  String?  @map("top_landing_page")
+  rawJson         Json?    @map("raw_json")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  property GoogleAnalyticsProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, date, aiSource])
+  @@index([brandId, date])
+  @@index([propertyId, date])
+  @@map("ai_traffic_snapshots")
+}
+
+/// J101 — Auditoría Agéntica: producto standalone de venta única.
+/// El admin crea una auditoría para la URL de un cliente, corre el análisis
+/// (legibilidad para agentes de IA) y le entrega un link público con el informe.
+model AgenticAudit {
+  id           String    @id @default(uuid())
+  /// Slug para el link público que se le pasa al cliente: /auditoria/[slug]
+  slug         String    @unique
+  targetUrl    String    @map("target_url")
+  /// Nombre legible del sitio/cliente que se muestra en el informe.
+  siteLabel    String?   @map("site_label")
+  /// Marca asociada (opcional), por si se vincula a una cuenta existente.
+  brandId      String?   @map("brand_id")
+  clientEmail  String?   @map("client_email")
+  status       String    @default("pending") // pending | running | completed | failed
+  /// Agent-Readiness Score 0-100.
+  overallScore Int?      @map("overall_score")
+  /// Resultado completo: checks, métricas, recomendaciones.
+  resultJson   Json?     @map("result_json")
+  error        String?   @db.Text
+  /// Control de venta única / entrega (se marcan a mano desde el admin).
+  paidAt       DateTime? @map("paid_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  notes        String?   @db.Text
+  createdBy    String?   @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([brandId])
+  @@index([createdAt])
+  @@map("agentic_audits")
+}
+
+/// J102 — Análisis + Reescritura AEO (producto standalone de venta única).
+/// Servicio separado de la Auditoría Agéntica: analiza el CONTENIDO de un sitio
+/// con un LLM y entrega diagnóstico por dimensiones + landing reescrita + queries.
+model ContentAeoAudit {
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  targetUrl     String    @map("target_url")
+  siteLabel     String?   @map("site_label")
+  /// Contexto opcional cargado por el admin para guiar al LLM.
+  industry      String?
+  region        String?
+  brandId       String?   @map("brand_id")
+  clientEmail   String?   @map("client_email")
+  status        String    @default("pending") // pending | running | completed | failed
+  /// Promedio del score "antes" (0-100) que estima el LLM.
+  scoreBefore   Int?      @map("score_before")
+  /// Promedio del score "después" estimado tras la reescritura.
+  scoreAfter    Int?      @map("score_after")
+  /// Resultado completo (diagnóstico, reescritura, queries, claims a validar).
+  resultJson    Json?     @map("result_json")
+  /// Modelo usado (ej. gpt-4o) para trazabilidad.
+  model         String?
+  error         String?   @db.Text
+  paidAt        DateTime? @map("paid_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  notes         String?   @db.Text
+  createdBy     String?   @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([brandId])
+  @@index([createdAt])
+  @@map("content_aeo_audits")
+}
+
+/// Configuración global clave/valor para feature flags y promociones controladas
+/// desde el admin (ej. mostrar el upsell "Plan Conquistar" en la página de resultados).
+/// El valor se guarda como JSON para soportar toggles con ventana de fechas.
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("app_settings")
+}
+
+/// Cache de Domain Rating (Ahrefs API pública gratuita) por dominio.
+model DomainRatingCache {
+  domain    String   @id
+  rating    Float?
+  fetchedAt DateTime @default(now()) @map("fetched_at")
+
+  @@map("domain_rating_cache")
 }

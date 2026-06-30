@@ -1,0 +1,53 @@
+name: Free Diagnostic Follow-up
+
+on:
+  schedule:
+    # Diario 14:00 UTC. Envía el correo con diagnóstico a free registrados en los últimos 20 días.
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview recipients without sending emails'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      registered_within_days:
+        description: 'Ventana de registro (días)'
+        required: true
+        default: '20'
+      limit:
+        description: 'Maximum recipients'
+        required: true
+        default: '100'
+
+jobs:
+  send-free-diagnostic-followup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger free diagnostic follow-up emails
+        env:
+          CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          REGISTERED_WITHIN_DAYS: ${{ github.event_name == 'schedule' && '20' || inputs.registered_within_days }}
+          LIMIT: ${{ github.event_name == 'schedule' && '100' || inputs.limit }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CLEEXS_CRON_SECRET GitHub secret"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --argjson registeredWithinDays "$REGISTERED_WITHIN_DAYS" \
+            --argjson limit "$LIMIT" \
+            --argjson dryRun "$DRY_RUN" \
+            '{registeredWithinDays:$registeredWithinDays, limit:$limit, dryRun:$dryRun}')
+
+          curl --fail-with-body -sS \
+            -X POST "$API_URL/api/cron/free-diagnostic-followup" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
