@@ -51,7 +51,7 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
 // Railway, asi que la proteccion real esta a nivel del backend y de la red.
 // Si en el futuro quisieramos exigir login con cookie de sesion, basta con
 // poner ADMIN_OPEN_ACCESS = false y redesplegar.
-const ADMIN_OPEN_ACCESS = true;
+const ADMIN_OPEN_ACCESS = process.env.ADMIN_OPEN_ACCESS === 'true';
 
 function adminAuthBypassEnabled(): boolean {
   return ADMIN_OPEN_ACCESS;
