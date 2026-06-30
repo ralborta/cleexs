@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Lock } from 'lucide-react';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 export default function AdminLoginPage() {
@@ -35,7 +36,12 @@ export default function AdminLoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-center text-lg font-semibold text-slate-900">Cleexs · Admin interno</h1>
+        <div className="flex flex-col items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- asset estático en /public */}
+          <img src="/CleexsLogo.png" alt="Cleexs" className="h-12 w-auto object-contain" />
+          <Lock className="mt-3 h-5 w-5 text-slate-400" aria-hidden />
+        </div>
+        <h1 className="mt-4 text-center text-lg font-semibold text-slate-900">Admin interno</h1>
         <p className="mt-1 text-center text-xs text-slate-500">Usuario y contraseña del panel interno</p>
         {error ? <p className="mt-4 rounded-md bg-red-50 p-2 text-center text-sm text-red-700">{error}</p> : null}
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
