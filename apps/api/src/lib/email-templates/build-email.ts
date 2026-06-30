@@ -26,7 +26,6 @@ export type BuildCleexsEmailInput = {
   showFounderSignature?: boolean;
   showScoreBlock?: boolean;
   showReportLinks?: boolean;
-  showScoreTipsBlock?: boolean;
 };
 
 export function buildCleexsEmail(input: BuildCleexsEmailInput): CleexsEmailBuilt {
@@ -39,7 +38,6 @@ export function buildCleexsEmail(input: BuildCleexsEmailInput): CleexsEmailBuilt
       showFounderSignature: input.showFounderSignature,
       showScoreBlock: input.showScoreBlock,
       showReportLinks: input.showReportLinks,
-      showScoreTipsBlock: input.showScoreTipsBlock,
     });
   }
 
@@ -65,7 +63,6 @@ export function buildCleexsEmailPreviewExample(options?: {
     showFounderSignature: true,
     showScoreBlock: true,
     showReportLinks: true,
-    showScoreTipsBlock: true,
   });
 }
 

@@ -8,10 +8,19 @@ export type CleexsEmailAssets = {
   founderPhotoUrl?: string | null;
 };
 
+export type CleexsEmailCompetitor = {
+  name: string;
+  score?: number | null;
+};
+
 export type CleexsEmailPersonalization = {
   score: number | null;
   brandName?: string | null;
   domain?: string | null;
+  /** Nombres o filas con score; se usan en el bloque de insight del reporte. */
+  competitors?: Array<CleexsEmailCompetitor | string>;
+  /** Si no viene, se arma desde `improvementTipTemplate` en la plantilla. */
+  improvementTip?: string | null;
 };
 
 export type CleexsEmailLinks = {
@@ -60,16 +69,34 @@ export type MergeContext = {
   score: number | null;
   brandName?: string | null;
   domain?: string | null;
+  competitors?: Array<CleexsEmailCompetitor | string>;
+  improvementTip?: string | null;
 };
+
+export function normalizeEmailCompetitors(
+  raw?: Array<CleexsEmailCompetitor | string> | null
+): CleexsEmailCompetitor[] {
+  if (!raw?.length) return [];
+  return raw
+    .map((c) => (typeof c === 'string' ? { name: c.trim() } : { name: (c.name || '').trim(), score: c.score }))
+    .filter((c) => c.name.length > 0)
+    .slice(0, 5);
+}
 
 export function mergeCleexsText(template: string, ctx: MergeContext): string {
   const scoreText = normalizedScore(ctx.score) != null ? String(normalizedScore(ctx.score)) : '—';
   const brandName = (ctx.brandName || 'tu marca').trim() || 'tu marca';
   const domain = (ctx.domain || 'tu sitio').trim() || 'tu sitio';
+  const competitors = normalizeEmailCompetitors(ctx.competitors);
+  const competitorsList =
+    competitors.map((c) => c.name).join(', ') || 'tus competidores del reporte';
+  const topCompetitor = competitors[0]?.name || 'tu principal competidor';
   const values: Record<string, string> = {
     score: scoreText,
     brandName,
     domain,
+    competitorsList,
+    topCompetitor,
   };
   return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => values[key] ?? '');
 }
@@ -109,7 +136,7 @@ export function resolveCleexsEmailAssets(
 export function founderSignatureHtml(assets: CleexsEmailAssets, founderTitle: string): string {
   if (!assets.founderPhotoUrl) return '';
   return `
-    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 0;">
+    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:20px 0 0;">
       <tr>
         <td style="padding-right:12px;vertical-align:middle;">
           <img src="${escapeHtml(assets.founderPhotoUrl)}" alt="Gonzalo" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:50%;border:2px solid #e2e8f0;object-fit:cover;" />
@@ -139,5 +166,11 @@ export function sampleCleexsPersonalization(overrides?: Partial<CleexsEmailPerso
     score: overrides?.score ?? 62,
     brandName: overrides?.brandName ?? 'Empliados',
     domain: overrides?.domain ?? 'empliados.net',
+    competitors: overrides?.competitors ?? [
+      { name: 'Rival HR', score: 78 },
+      { name: 'TalentoPro', score: 71 },
+      { name: 'PeopleFirst', score: 65 },
+    ],
+    improvementTip: overrides?.improvementTip,
   };
 }

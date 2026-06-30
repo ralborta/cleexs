@@ -119,8 +119,8 @@ export default function EmailTemplatesPreviewPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Email · plantillas</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">Carta vs Newsletter</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-            <strong>Carta (letter)</strong> — mensaje primero, firma Gonzalo, dato de score sutil abajo.
-            <strong> Editorial</strong> — newsletter visual para piezas especiales.
+            <strong>Carta (letter)</strong> — mensaje, firma, recuadro con score + competidores + sugerencia, y cierre
+            de venta Plan 90 días. <strong>Editorial</strong> — newsletter visual para piezas especiales.
           </p>
         </div>
         <Link href="/admin/email" className="text-sm font-medium text-violet-600 hover:text-violet-800">
