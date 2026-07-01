@@ -2,7 +2,6 @@ import { isExcludedFromEmailBatchMonitor } from './email-batch-status';
 
 /**
  * Campañas de la secuencia configurada con Gonzalo (cron semanal + mensual).
- * Excluye pruebas manuales (test-1, broadcast-*, batches ad-hoc).
  */
 export function isConfiguredMarketingCampaignSlug(campaignSlug: string): boolean {
   const slug = campaignSlug.trim().toLowerCase();
@@ -18,5 +17,10 @@ export function isAdHocEmailTestBatch(campaignSlug: string): boolean {
   return !isConfiguredMarketingCampaignSlug(slug);
 }
 
+/** Mismo alcance que el monitor de batches: incluye pruebas (test-1), excluye transaccionales. */
+export function isEmailBatchAnalyticsSlug(campaignSlug: string): boolean {
+  return !isExcludedFromEmailBatchMonitor(campaignSlug);
+}
+
 export const CONFIGURED_CAMPAIGN_SCOPE_NOTE =
-  'Solo cuenta envíos programados: semanal (weekly-auto-w…) y mensual score (monthly-score-…). Las pruebas manuales (test-1, etc.) aparecen abajo en detalle operativo.';
+  'Incluye secuencia programada (semanal + mensual) y batches de prueba (test-1, etc.). Excluye solo correos transaccionales (link diagnóstico).';

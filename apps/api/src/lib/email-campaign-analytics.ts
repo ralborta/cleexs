@@ -1,7 +1,8 @@
 import { CleexsEmailSendStatus } from '@prisma/client';
 import {
   CONFIGURED_CAMPAIGN_SCOPE_NOTE,
-  isConfiguredMarketingCampaignSlug,
+  isAdHocEmailTestBatch,
+  isEmailBatchAnalyticsSlug,
 } from './email-configured-campaigns';
 import { inferVariantFromMergeSummary, isEmailUtmPurchase } from './email-link-attribution';
 import {
@@ -20,6 +21,7 @@ export type EmailCampaignAnalyticsRow = {
   campaignSlug: string;
   variant: string | null;
   label: string;
+  kind: 'scheduled' | 'test';
   sent: number;
   delivered: number;
   opened: number;
@@ -91,6 +93,7 @@ function campaignLabel(slug: string, variant: string | null): string {
   }
   if (slug.startsWith('monthly-score')) return variant ? `Mensual · ${variant}` : 'Mensual score';
   if (slug.startsWith('broadcast-')) return 'Broadcast manual';
+  if (isAdHocEmailTestBatch(slug)) return variant ? `Prueba · ${variant}` : `Prueba · ${slug}`;
   return variant ? `${slug} · ${variant}` : slug;
 }
 
@@ -103,7 +106,7 @@ async function loadRecipientStates(from: Date, to: Date): Promise<RecipientState
     orderBy: { createdAt: 'desc' },
   });
 
-  const marketingLogs = logs.filter((l) => isConfiguredMarketingCampaignSlug(l.campaignSlug));
+  const marketingLogs = logs.filter((l) => isEmailBatchAnalyticsSlug(l.campaignSlug));
   const states: RecipientState[] = marketingLogs.map((log) => ({
     id: log.id,
     recipientEmail: log.recipientEmail.trim().toLowerCase(),
@@ -216,6 +219,7 @@ export async function buildEmailCampaignAnalytics(input: {
         campaignSlug: row.campaignSlug,
         variant: row.variant,
         label: campaignLabel(row.campaignSlug, row.variant),
+        kind: isAdHocEmailTestBatch(row.campaignSlug) ? 'test' : 'scheduled',
         sent: 0,
         delivered: 0,
         opened: 0,
@@ -232,7 +236,10 @@ export async function buildEmailCampaignAnalytics(input: {
     campaignMap.set(key, current);
   }
 
-  const byCampaign = Array.from(campaignMap.values()).sort((a, b) => b.sent - a.sent);
+  const byCampaign = Array.from(campaignMap.values()).sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'test' ? -1 : 1;
+    return b.sent - a.sent;
+  });
   const resendEventsLast7Days = await countRecentResendWebhookEvents(7);
 
   return {

@@ -36,6 +36,7 @@ type AnalyticsReport = {
     campaignSlug: string;
     variant: string | null;
     label: string;
+    kind?: 'scheduled' | 'test';
     sent: number;
     delivered: number;
     opened: number;
@@ -274,7 +275,17 @@ export function EmailEnviosFunnel() {
                 .map(([type, n]) => `${type.replace(/^email\./, '')} ${n}`)
                 .join(' · ')}
             </p>
-          ) : null}
+          ) : (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p>
+                No hay eventos Resend guardados en los últimos 7 días. Las aperturas no van a aparecer hasta que el
+                webhook en Resend apunte a la API de producción (<code className="font-mono">/api/webhooks/resend</code>
+                ) y esté suscrito a <code className="font-mono">email.delivered</code> y{' '}
+                <code className="font-mono">email.opened</code>.
+              </p>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -334,9 +345,9 @@ export function EmailEnviosFunnel() {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Por campaña programada</h2>
+        <h2 className="text-sm font-semibold text-slate-900">Por campaña</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Solo secuencia configurada (semanal + mensual). Pruebas manuales no suman acá — ver detalle operativo abajo.
+          Secuencia programada y batches de prueba (test-1, etc.). Las filas de prueba aparecen primero.
         </p>
         {!data?.byCampaign.length ? (
           <p className="mt-4 text-sm text-slate-500">Sin envíos de marketing en este período.</p>
@@ -356,9 +367,19 @@ export function EmailEnviosFunnel() {
               </thead>
               <tbody>
                 {data.byCampaign.map((row) => (
-                  <tr key={`${row.campaignSlug}-${row.variant || ''}`} className="border-t border-slate-100">
+                  <tr
+                    key={`${row.campaignSlug}-${row.variant || ''}`}
+                    className={`border-t border-slate-100 ${row.kind === 'test' ? 'bg-amber-50/40' : ''}`}
+                  >
                     <td className="py-2">
-                      <div className="font-medium text-slate-900">{row.label}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-slate-900">{row.label}</div>
+                        {row.kind === 'test' ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                            Prueba
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="font-mono text-[10px] text-slate-400">{row.campaignSlug}</div>
                     </td>
                     <td className="py-2 text-right tabular-nums">{row.sent}</td>

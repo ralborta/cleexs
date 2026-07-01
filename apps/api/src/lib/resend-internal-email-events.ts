@@ -50,8 +50,67 @@ export function extractResendWebhookRecipients(payload: unknown): string[] {
   const to = data?.to;
   if (!Array.isArray(to)) return [];
   return to
-    .filter((v): v is string => typeof v === 'string' && v.includes('@'))
-    .map((v) => v.trim().toLowerCase());
+    .map((v) => {
+      if (typeof v !== 'string') return null;
+      const trimmed = v.trim();
+      const angle = trimmed.match(/<([^>]+@[^>]+)>/);
+      const email = (angle?.[1] ?? trimmed).trim().toLowerCase();
+      return email.includes('@') ? email : null;
+    })
+    .filter((v): v is string => Boolean(v));
+}
+
+/** Enlaza externalId faltante cruzando eventos Resend por destinatario + ventana temporal. */
+async function hydrateExternalIdsFromResendEvents(logs: SendLogForResendMatch[]): Promise<void> {
+  const missing = logs.filter((l) => !l.externalId?.trim());
+  if (missing.length === 0) return;
+
+  const minSent = missing.reduce((min, l) => (l.sentAt < min ? l.sentAt : min), missing[0]!.sentAt);
+  const since = new Date(minSent.getTime() - 2 * 60 * 60 * 1000);
+
+  const events = await prisma.cleexsResendWebhookEvent.findMany({
+    where: {
+      eventType: { in: ['email.sent', 'email.delivered', 'email.opened'] },
+      occurredAt: { gte: since },
+      emailId: { not: null },
+    },
+    select: { emailId: true, recipientEmail: true, occurredAt: true, payload: true },
+    orderBy: { occurredAt: 'asc' },
+  });
+
+  for (const log of missing) {
+    const sentMs = log.sentAt.getTime();
+    const windowEnd = sentMs + 48 * 60 * 60 * 1000;
+    const email = log.recipientEmail.trim().toLowerCase();
+
+    let best: { emailId: string; at: number } | null = null;
+    for (const ev of events) {
+      if (!ev.emailId) continue;
+      const at = ev.occurredAt?.getTime() ?? 0;
+      if (at < sentMs - 60 * 60 * 1000 || at > windowEnd) continue;
+      const recipients = ev.recipientEmail
+        ? [ev.recipientEmail.trim().toLowerCase()]
+        : extractResendWebhookRecipients(ev.payload);
+      if (!recipients.includes(email)) continue;
+      if (!best || Math.abs(at - sentMs) < Math.abs(best.at - sentMs)) {
+        best = { emailId: ev.emailId, at };
+      }
+    }
+
+    if (!best) continue;
+
+    const linked = await prisma.cleexsInternalEmailSendLog.findFirst({
+      where: { externalId: best.emailId },
+      select: { id: true },
+    });
+    if (linked && linked.id !== log.id) continue;
+
+    await prisma.cleexsInternalEmailSendLog.update({
+      where: { id: log.id },
+      data: { externalId: best.emailId },
+    });
+    log.externalId = best.emailId;
+  }
 }
 
 function summarizeEvents(
@@ -139,13 +198,16 @@ export async function loadAppliedResendFlagsForSendLogs(
   const result = new Map<string, AppliedResendFlags>();
   if (logs.length === 0) return result;
 
-  for (const log of logs) {
+  const workingLogs = logs.map((l) => ({ ...l }));
+  await hydrateExternalIdsFromResendEvents(workingLogs);
+
+  for (const log of workingLogs) {
     result.set(log.id, emptyFlags());
   }
 
-  const externalIds = [...new Set(logs.map((l) => l.externalId).filter(Boolean) as string[])];
-  const recipientEmails = [...new Set(logs.map((l) => l.recipientEmail.trim().toLowerCase()).filter(Boolean))];
-  const minSentAt = logs.reduce((min, l) => (l.sentAt < min ? l.sentAt : min), logs[0]!.sentAt);
+  const externalIds = [...new Set(workingLogs.map((l) => l.externalId).filter(Boolean) as string[])];
+  const recipientEmails = [...new Set(workingLogs.map((l) => l.recipientEmail.trim().toLowerCase()).filter(Boolean))];
+  const minSentAt = workingLogs.reduce((min, l) => (l.sentAt < min ? l.sentAt : min), workingLogs[0]!.sentAt);
   const since = new Date(minSentAt.getTime() - 24 * 60 * 60 * 1000);
 
   const orClauses: Array<Record<string, unknown>> = [];
@@ -184,7 +246,7 @@ export async function loadAppliedResendFlagsForSendLogs(
 
   const assignedEventKeys = new Set<string>();
 
-  for (const log of logs) {
+  for (const log of workingLogs) {
     if (log.externalId && eventsByEmailId.has(log.externalId)) {
       const flags = summarizeEvents(eventsByEmailId.get(log.externalId)!);
       result.set(log.id, { ...flags, matchedVia: 'email_id' });
@@ -195,7 +257,7 @@ export async function loadAppliedResendFlagsForSendLogs(
   }
 
   const logsByRecipient = new Map<string, SendLogForResendMatch[]>();
-  for (const log of logs) {
+  for (const log of workingLogs) {
     const email = log.recipientEmail.trim().toLowerCase();
     const arr = logsByRecipient.get(email) ?? [];
     arr.push(log);
