@@ -20,6 +20,7 @@ import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from '../lib/email';
 import { Resend } from 'resend';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
+import { getEmailBatchDetail, listEmailBatches } from '../lib/email-batch-status';
 import { prisma } from '../lib/prisma';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
@@ -687,6 +688,40 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
   );
+
+  fastify.get('/email/batches', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const q = z
+      .object({ limit: z.coerce.number().int().min(5).max(60).optional() })
+      .safeParse(request.query);
+    const limit = q.success ? q.data.limit : undefined;
+    const batches = await listEmailBatches(limit ?? 30);
+    return { batches };
+  });
+
+  fastify.get<{ Params: { campaignSlug: string } }>('/email/batches/:campaignSlug', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const slug = decodeURIComponent(request.params.campaignSlug).trim();
+    if (!slug) {
+      return reply.code(400).send({ error: 'campaignSlug requerido' });
+    }
+
+    const detail = await getEmailBatchDetail(slug);
+    if (detail.recipients.length === 0) {
+      return reply.code(404).send({ error: 'Batch no encontrado' });
+    }
+    return detail;
+  });
 
   fastify.get('/email/stats', async (request, reply) => {
     if (!requireAdminSecret(request)) {
