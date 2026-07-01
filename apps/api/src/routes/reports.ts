@@ -12,6 +12,11 @@ import {
 } from '../lib/run-executor';
 import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import { enrichRowsWithDomainRating } from '../lib/ahrefs-domain-rating';
+import {
+  buildSponsorChannelBreakdown,
+  enrichAndSortReferrerMetrics,
+  loadReferrerCampaignMap,
+} from '../lib/referrer-display';
 
 type EngineKey = 'gemini' | 'perplexity' | 'claude';
 
@@ -854,7 +859,8 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     startOf30Days.setDate(startOf30Days.getDate() - 29);
     startOf30Days.setHours(0, 0, 0, 0);
 
-    const [totalRuns, runsToday, statusGroups, avgPria, recentRuns, trackedDiagnostics] = await Promise.all([
+    const [totalRuns, runsToday, statusGroups, avgPria, recentRuns, trackedDiagnostics, campaignMap] =
+      await Promise.all([
       prisma.run.count(),
       prisma.run.count({
         where: {
@@ -907,6 +913,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { createdAt: 'desc' },
         take: 5000,
       }),
+      loadReferrerCampaignMap(),
     ]);
 
     const statusCount = {
@@ -1019,8 +1026,8 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       refMap.set(ref, current);
     }
 
-    const topReferrers = Array.from(refMap.values())
-      .map((row) => ({
+    const topReferrers = enrichAndSortReferrerMetrics(
+      Array.from(refMap.values()).map((row) => ({
         refCode: row.refCode,
         visits: row.visits,
         completedDiagnostics: row.completedDiagnostics,
@@ -1028,9 +1035,10 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
         completionRate: row.visits > 0 ? (row.completedDiagnostics / row.visits) * 100 : 0,
         latestAt: row.latestAt,
         topSource: row.topSource,
-      }))
-      .sort((a, b) => b.visits - a.visits)
-      .slice(0, 15);
+      })),
+      campaignMap,
+      { limit: 15 }
+    );
 
     const topSources = Array.from(sourceMap.entries())
       .map(([source, visits]) => ({ source, visits }))
@@ -1071,17 +1079,20 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       waRefMap.set(ref, current);
     }
 
-    const topWhatsAppReferrers = Array.from(waRefMap.values())
-      .map((row) => ({
+    const topWhatsAppReferrers = enrichAndSortReferrerMetrics(
+      Array.from(waRefMap.values()).map((row) => ({
         refCode: row.refCode,
         visits: row.visits,
         completedDiagnostics: row.completedDiagnostics,
         capturedEmails: row.capturedEmails,
         completionRate: row.visits > 0 ? (row.completedDiagnostics / row.visits) * 100 : 0,
         latestAt: row.latestAt,
-      }))
-      .sort((a, b) => b.visits - a.visits)
-      .slice(0, 15);
+      })),
+      campaignMap,
+      { limit: 15 }
+    );
+
+    const sponsorBreakdown = buildSponsorChannelBreakdown(trackedDiagnostics);
 
     const whatsappTotal = trackedDiagnostics.filter(
       (row) => isWhatsAppDiagnostic(row.sourceChannel) || row.utmMedium?.toLowerCase() === 'whatsapp'
@@ -1105,6 +1116,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
         totalTrackedDiagnostics: trackedDiagnostics.length,
         topReferrers,
         topSources,
+        sponsorBreakdown,
       },
       whatsappReferrals: {
         totalDiagnostics: whatsappTotal,

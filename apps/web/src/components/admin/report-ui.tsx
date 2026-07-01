@@ -198,3 +198,77 @@ export function formatDateShort(iso: string | null | undefined): string {
     return iso;
   }
 }
+
+export function ReferrerNameCell({
+  name,
+  refCode,
+  isSponsor,
+}: {
+  name: string;
+  refCode: string;
+  isSponsor?: boolean;
+}) {
+  return (
+    <div>
+      <div className="font-medium text-slate-900">
+        {name}
+        {isSponsor ? (
+          <span className="ml-1.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+            YouTube
+          </span>
+        ) : null}
+      </div>
+      {name !== refCode ? (
+        <div className="font-mono text-[10px] text-slate-400">{refCode}</div>
+      ) : null}
+    </div>
+  );
+}
+
+export function SponsorBreakdownTable({
+  rows,
+  empty = 'Sin tráfico de auspiciadores en la ventana.',
+}: {
+  rows: Array<{
+    refCode: string;
+    name: string;
+    web: { diagnostics: number; withEmail: number };
+    whatsapp: { diagnostics: number; withEmail: number };
+    total: { diagnostics: number; withEmail: number };
+  }>;
+  empty?: string;
+}) {
+  const hasData = rows.some((r) => r.total.diagnostics > 0);
+  if (!hasData) return <p className="text-sm text-slate-500">{empty}</p>;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="text-left text-xs text-slate-500">
+          <tr>
+            <th className="py-2">Auspiciador</th>
+            <th className="py-2 text-right">Web</th>
+            <th className="py-2 text-right">WhatsApp</th>
+            <th className="py-2 text-right">Total</th>
+            <th className="py-2 text-right">Emails</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.refCode} className="border-t border-slate-100">
+              <td className="py-2">
+                <ReferrerNameCell name={row.name} refCode={row.refCode} isSponsor />
+              </td>
+              <td className="py-2 text-right tabular-nums text-slate-900">{row.web.diagnostics}</td>
+              <td className="py-2 text-right tabular-nums text-slate-900">{row.whatsapp.diagnostics}</td>
+              <td className="py-2 text-right tabular-nums font-medium text-slate-900">
+                {row.total.diagnostics}
+              </td>
+              <td className="py-2 text-right tabular-nums text-emerald-700">{row.total.withEmail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

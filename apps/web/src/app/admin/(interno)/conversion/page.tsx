@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
+import { SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 import { addDaysToDayString, formatDayInArgentina } from '@cleexs/shared';
 
@@ -31,7 +32,15 @@ type Metrics = {
     urlSubmitted: FunnelStep;
     emailLeft: EmailLeftStep;
     shared: FunnelStep & { byChannel: { channel: string; count: number }[] };
-    referred: FunnelStep & { byCode: { refCode: string; count: number }[] };
+    referred: FunnelStep & {
+      byCode: Array<{
+        refCode: string;
+        name: string;
+        count: number;
+        isSponsor?: boolean;
+        registered?: boolean;
+      }>;
+    };
     unlockClicks: FunnelStep;
     purchased: FunnelStep & { bySource: { source: string; count: number; usd: number }[] };
   };
@@ -47,6 +56,14 @@ type Metrics = {
     uniqueEmails: number;
     diagnosticsWithEmail: number;
     registered: boolean;
+    isSponsor?: boolean;
+  }>;
+  sponsorBreakdown?: Array<{
+    refCode: string;
+    name: string;
+    web: { diagnostics: number; withEmail: number };
+    whatsapp: { diagnostics: number; withEmail: number };
+    total: { diagnostics: number; withEmail: number };
   }>;
 };
 
@@ -365,7 +382,13 @@ export default function AdminConversionPage() {
             .map((r) => (
               <Row
                 key={r.refCode}
-                label={r.registered ? r.name : `${r.name} (${r.refCode})`}
+                label={
+                  r.isSponsor
+                    ? `${r.name} · YouTube`
+                    : r.registered
+                      ? r.name
+                      : `${r.name} (${r.refCode})`
+                }
                 value={`${fmt(r.uniqueEmails)} únicos`}
               />
             ))}
@@ -389,7 +412,11 @@ export default function AdminConversionPage() {
 
         <BreakdownCard title="Referidos por código" empty="Sin referidos en el rango.">
           {(f?.referred.byCode ?? []).map((r) => (
-            <Row key={r.refCode} label={r.refCode} value={fmt(r.count)} />
+            <Row
+              key={r.refCode}
+              label={r.name !== r.refCode ? `${r.name} (${r.refCode})` : r.name}
+              value={fmt(r.count)}
+            />
           ))}
         </BreakdownCard>
 
@@ -399,6 +426,16 @@ export default function AdminConversionPage() {
           ))}
         </BreakdownCard>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-1 text-sm font-semibold text-slate-900">
+          Auspiciadores YouTube — web vs WhatsApp
+        </h2>
+        <p className="mb-4 text-xs text-slate-500">
+          Tipito Enojado, Herederos de Alberdi y Eldo Larcito en el rango seleccionado.
+        </p>
+        <SponsorBreakdownTable rows={data?.sponsorBreakdown ?? []} />
+      </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Cold outreach a competidores</h2>

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { AlertCircle, Loader2, MessageCircle, RefreshCw, TrendingUp } from 'lucide-react';
+import { SponsorBreakdownTable } from '@/components/admin/report-ui';
 
 type ReferralRow = PlatformDashboard['referrals']['topReferrers'][number];
 type WaReferralRow = PlatformDashboard['whatsappReferrals']['topReferrers'][number];
@@ -37,7 +38,14 @@ function ReferralStats({
   normalizedActiveRef,
   channelLabel,
 }: {
-  activeRow?: { visits: number; completedDiagnostics: number; completionRate: number; capturedEmails: number; latestAt: string };
+  activeRow?: {
+    name?: string;
+    visits: number;
+    completedDiagnostics: number;
+    completionRate: number;
+    capturedEmails: number;
+    latestAt: string;
+  };
   normalizedActiveRef?: string;
   channelLabel: string;
 }) {
@@ -49,7 +57,11 @@ function ReferralStats({
       }`}
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {channelLabel} · ref <span className="text-slate-800">{normalizedActiveRef}</span>
+        {channelLabel} ·{' '}
+        <span className="text-slate-800">{activeRow?.name ?? normalizedActiveRef}</span>
+        {normalizedActiveRef ? (
+          <span className="ml-1 font-mono text-[10px] font-normal text-slate-400">{normalizedActiveRef}</span>
+        ) : null}
       </p>
       {activeRow ? (
         <>
@@ -73,18 +85,17 @@ function ReferralStats({
 function ReferralTable({
   rows,
   normalizedActiveRef,
-  showTopSource,
 }: {
   rows: Array<{
     refCode: string;
+    name?: string;
     visits: number;
     completedDiagnostics: number;
     completionRate: number;
     capturedEmails: number;
-    topSource?: string;
+    isSponsor?: boolean;
   }>;
   normalizedActiveRef?: string;
-  showTopSource?: boolean;
 }) {
   if (rows.length === 0) {
     return <p className="mt-4 text-sm text-slate-500">Sin tráfico registrado todavía.</p>;
@@ -94,7 +105,7 @@ function ReferralTable({
       <Table>
         <TableHeader>
           <TableRow className="bg-slate-50">
-            <TableHead className="font-semibold text-slate-600">Ref</TableHead>
+            <TableHead className="font-semibold text-slate-600">Auspiciador</TableHead>
             <TableHead className="text-right font-semibold text-slate-600">Inicios</TableHead>
             <TableHead className="text-right font-semibold text-slate-600">Completados</TableHead>
             <TableHead className="text-right font-semibold text-slate-600">% cierre</TableHead>
@@ -106,7 +117,12 @@ function ReferralTable({
             const highlighted = normalizedActiveRef && row.refCode === normalizedActiveRef;
             return (
               <TableRow key={row.refCode} className={highlighted ? 'bg-primary-50/50' : undefined}>
-                <TableCell className="font-medium text-slate-900">{row.refCode}</TableCell>
+                <TableCell className="font-medium text-slate-900">
+                  <div>{row.name ?? row.refCode}</div>
+                  {row.name && row.name !== row.refCode ? (
+                    <div className="font-mono text-[10px] text-slate-400">{row.refCode}</div>
+                  ) : null}
+                </TableCell>
                 <TableCell className="text-right tabular-nums text-slate-700">{row.visits}</TableCell>
                 <TableCell className="text-right tabular-nums text-slate-700">{row.completedDiagnostics}</TableCell>
                 <TableCell className="text-right tabular-nums text-slate-700">
@@ -279,6 +295,17 @@ export function SponsorTrackingPanel({ activeRef }: { activeRef: string }) {
           </TabsContent>
         </Tabs>
       )}
+
+      {dashboard?.referrals.sponsorBreakdown?.some((r) => r.total.diagnostics > 0) ? (
+        <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Auspiciadores YouTube — web vs WhatsApp
+          </p>
+          <div className="mt-3">
+            <SponsorBreakdownTable rows={dashboard.referrals.sponsorBreakdown} />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -13,6 +13,13 @@ import {
   SIN_REFERIDOR_LABEL,
   SIN_REFERIDOR_SLUG,
 } from '../lib/referral-attribution';
+import {
+  buildSponsorChannelBreakdown,
+  enrichAndSortReferrerMetrics,
+  isSponsorRef,
+  loadReferrerCampaignMap,
+  resolveReferrerDisplayName,
+} from '../lib/referrer-display';
 import { primaryRunWhere } from '../lib/run-type-filters';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
@@ -135,7 +142,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     const fromDate = startOfDay(new Date());
     fromDate.setDate(fromDate.getDate() - (windowDays - 1));
 
-    const [diagnosticsInWindow, totalDiagnosticsAllTime] = await Promise.all([
+    const [diagnosticsInWindow, totalDiagnosticsAllTime, campaignMap] = await Promise.all([
       prisma.publicDiagnostic.findMany({
         where: { createdAt: { gte: fromDate } },
         select: {
@@ -154,6 +161,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { createdAt: 'desc' },
       }),
       prisma.publicDiagnostic.count(),
+      loadReferrerCampaignMap(),
     ]);
 
     const totalCreated = diagnosticsInWindow.length;
@@ -204,17 +212,20 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       if (row.createdAt > current.latestAt) current.latestAt = row.createdAt;
       refMap.set(code, current);
     }
-    const topReferrers = Array.from(refMap.values())
-      .map((row) => ({
+    const topReferrers = enrichAndSortReferrerMetrics(
+      Array.from(refMap.values()).map((row) => ({
         refCode: row.refCode,
         visits: row.visits,
         completed: row.completed,
         capturedEmails: row.capturedEmails,
         completionRate: row.visits > 0 ? (row.completed / row.visits) * 100 : 0,
         latestAt: row.latestAt.toISOString(),
-      }))
-      .sort((a, b) => b.visits - a.visits)
-      .slice(0, 15);
+      })),
+      campaignMap,
+      { limit: 15 }
+    );
+
+    const sponsorBreakdown = buildSponsorChannelBreakdown(diagnosticsInWindow);
 
     const utmMap = new Map<string, number>();
     for (const row of diagnosticsInWindow) {
@@ -226,18 +237,23 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    const latest = diagnosticsInWindow.slice(0, 25).map((row) => ({
-      id: row.id,
-      createdAt: row.createdAt.toISOString(),
-      brandName: row.brandName,
-      domain: row.domain,
-      email: row.email,
-      status: row.status,
-      tier: row.tier,
-      refCode: row.refCode,
-      utmSource: row.utmSource,
-      sourceChannel: row.sourceChannel,
-    }));
+    const latest = diagnosticsInWindow.slice(0, 25).map((row) => {
+      const refCode = row.refCode?.trim().toLowerCase() || null;
+      const campaign = refCode ? campaignMap.get(refCode) : undefined;
+      return {
+        id: row.id,
+        createdAt: row.createdAt.toISOString(),
+        brandName: row.brandName,
+        domain: row.domain,
+        email: row.email,
+        status: row.status,
+        tier: row.tier,
+        refCode: row.refCode,
+        referrerName: refCode ? resolveReferrerDisplayName(refCode, campaign?.name) : null,
+        utmSource: row.utmSource,
+        sourceChannel: row.sourceChannel,
+      };
+    });
 
     return {
       windowDays,
@@ -255,6 +271,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       dailySeries: series,
       channels,
       topReferrers,
+      sponsorBreakdown,
       topUtmSources,
       latestDiagnostics: latest,
     };
@@ -1695,7 +1712,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
         prisma.publicDiagnostic.findMany({
           where: { ...where, refCode: { not: null } },
-          select: { refCode: true },
+          select: { refCode: true, sourceChannel: true, email: true, utmMedium: true },
         }),
         prisma.subscription.findMany({
           where: { ...where, status: 'authorized' },
@@ -1720,16 +1737,37 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         .sort((a, b) => b.count - a.count);
       const sharedTotal = shareByChannel.reduce((acc, r) => acc + r.count, 0);
 
+      const [emailAggRows, campaignMap] = await Promise.all([
+        aggregateDiagnosticsByRefCode({ from, to }),
+        loadReferrerCampaignMap(),
+      ]);
+      const referrerNameByRef = new Map(
+        Array.from(campaignMap.entries()).map(([ref, meta]) => [ref, meta.name] as const)
+      );
+
       // Referidos por refCode
       const refMap = new Map<string, number>();
       for (const r of referredRows) {
-        const key = (r.refCode || '').trim() || '—';
+        const key = (r.refCode || '').trim().toLowerCase() || '—';
         refMap.set(key, (refMap.get(key) || 0) + 1);
       }
-      const referredByCode = Array.from(refMap.entries())
-        .map(([refCode, count]) => ({ refCode, count }))
-        .sort((a, b) => b.count - a.count);
+      const referredByCode = enrichAndSortReferrerMetrics(
+        Array.from(refMap.entries()).map(([refCode, count]) => ({
+          refCode,
+          visits: count,
+          count,
+        })),
+        campaignMap,
+        { limit: 20 }
+      ).map((row) => ({
+        refCode: row.refCode,
+        name: row.name,
+        count: row.count,
+        isSponsor: row.isSponsor,
+        registered: row.registered,
+      }));
       const referredTotal = referredRows.length;
+      const sponsorBreakdown = buildSponsorChannelBreakdown(referredRows);
 
       // Compras por source (utm_source || ref_code || source_channel || 'directo')
       const purchaseMap = new Map<string, { count: number; usd: number }>();
@@ -1751,13 +1789,6 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const unlockClickTotal = unlockClickGroups.reduce((acc, g) => acc + g._count._all, 0);
 
-      const [emailAggRows, referralCampaigns] = await Promise.all([
-        aggregateDiagnosticsByRefCode({ from, to }),
-        prisma.referralCampaign.findMany({ select: { refCode: true, name: true, utmMedium: true } }),
-      ]);
-      const referrerNameByRef = new Map(
-        referralCampaigns.map((c) => [c.refCode.toLowerCase(), c.name] as const)
-      );
       const emailsByReferrer = emailAggRows
         .filter((row) => row.unique_emails > 0)
         .map((row) => {
@@ -1767,10 +1798,11 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
             name:
               refCode === SIN_REFERIDOR_SLUG
                 ? SIN_REFERIDOR_LABEL
-                : referrerNameByRef.get(refCode) ?? refCode,
+                : resolveReferrerDisplayName(refCode, referrerNameByRef.get(refCode), referrerNameByRef),
             uniqueEmails: row.unique_emails,
             diagnosticsWithEmail: row.with_email,
-            registered: refCode !== SIN_REFERIDOR_SLUG && referrerNameByRef.has(refCode),
+            registered: refCode !== SIN_REFERIDOR_SLUG && campaignMap.has(refCode),
+            isSponsor: refCode !== SIN_REFERIDOR_SLUG && isSponsorRef(refCode),
           };
         })
         .sort((a, b) => {
@@ -1834,6 +1866,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           returnPct: pct(returnedDomains, contactedDomains.size),
         },
         emailsByReferrer,
+        sponsorBreakdown,
       };
     }
   );

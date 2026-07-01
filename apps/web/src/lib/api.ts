@@ -417,6 +417,23 @@ export interface OutreachStats {
 
 export type ReportWindowDays = 7 | 30 | 90;
 
+export type SponsorChannelBreakdownRow = {
+  refCode: string;
+  name: string;
+  web: { diagnostics: number; withEmail: number };
+  whatsapp: { diagnostics: number; withEmail: number };
+  total: { diagnostics: number; withEmail: number };
+};
+
+export type ReferrerReportRow = {
+  refCode: string;
+  name: string;
+  registered: boolean;
+  active: boolean;
+  isSponsor: boolean;
+  category: 'sponsor' | 'registered' | 'share_followup' | 'inactive_legacy' | 'other';
+};
+
 export interface AcquisitionReport {
   windowDays: number;
   asOf: string;
@@ -437,14 +454,16 @@ export interface AcquisitionReport {
     withEmail: number;
   }>;
   channels: Array<{ channel: string; count: number; share: number }>;
-  topReferrers: Array<{
-    refCode: string;
-    visits: number;
-    completed: number;
-    capturedEmails: number;
-    completionRate: number;
-    latestAt: string;
-  }>;
+  topReferrers: Array<
+    ReferrerReportRow & {
+      visits: number;
+      completed: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
+    }
+  >;
+  sponsorBreakdown: SponsorChannelBreakdownRow[];
   topUtmSources: Array<{ source: string; count: number }>;
   latestDiagnostics: Array<{
     id: string;
@@ -455,6 +474,7 @@ export interface AcquisitionReport {
     status: string;
     tier: string | null;
     refCode: string | null;
+    referrerName: string | null;
     utmSource: string | null;
     sourceChannel: string | null;
   }>;
@@ -963,30 +983,33 @@ export interface PlatformDashboard {
   latestRuns: PlatformDashboardLatestRun[];
   referrals: {
     totalTrackedDiagnostics: number;
-    topReferrers: Array<{
-      refCode: string;
-      visits: number;
-      completedDiagnostics: number;
-      capturedEmails: number;
-      completionRate: number;
-      latestAt: string;
-      topSource: string;
-    }>;
+    topReferrers: Array<
+      ReferrerReportRow & {
+        visits: number;
+        completedDiagnostics: number;
+        capturedEmails: number;
+        completionRate: number;
+        latestAt: string;
+        topSource: string;
+      }
+    >;
     topSources: Array<{
       source: string;
       visits: number;
     }>;
+    sponsorBreakdown: SponsorChannelBreakdownRow[];
   };
   whatsappReferrals: {
     totalDiagnostics: number;
-    topReferrers: Array<{
-      refCode: string;
-      visits: number;
-      completedDiagnostics: number;
-      capturedEmails: number;
-      completionRate: number;
-      latestAt: string;
-    }>;
+    topReferrers: Array<
+      ReferrerReportRow & {
+        visits: number;
+        completedDiagnostics: number;
+        capturedEmails: number;
+        completionRate: number;
+        latestAt: string;
+      }
+    >;
   };
 }
 
