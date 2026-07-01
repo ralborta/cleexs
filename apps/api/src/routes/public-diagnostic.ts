@@ -2,6 +2,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { resolveDiagnosticAttributionFallback } from '../lib/referral-attribution';
+import { resolveWhatsAppSponsorRefFromHistory } from '../lib/sponsor-reattribution';
 import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailDisabled, isOutboundEmailAvailable, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
@@ -2016,6 +2017,11 @@ async function startWhatsAppChannelDiagnostic(params: {
   const serp = true;
   const baseUrl = getAppBaseUrlForPublicLinks();
 
+  let effectiveRef = refCode?.trim().toLowerCase();
+  if (!effectiveRef) {
+    effectiveRef = (await resolveWhatsAppSponsorRefFromHistory(waPhone)) ?? undefined;
+  }
+
   const diagnostic = await prisma.publicDiagnostic.create({
     data: {
       brandName: brandForRun,
@@ -2025,10 +2031,10 @@ async function startWhatsAppChannelDiagnostic(params: {
       sourceChannel: 'whatsapp_yt',
       waPhone,
       setupDraftJson: recipientForSend ? { waRecipient: recipientForSend } : undefined,
-      refCode: (refCode || 'youtube_tv').toLowerCase(),
-      utmSource: (utmSource || 'youtube').toLowerCase(),
-      utmMedium: (utmMedium || 'whatsapp').toLowerCase(),
-      utmCampaign: (utmCampaign || 'qr_tv').toLowerCase(),
+      ...(effectiveRef ? { refCode: effectiveRef } : {}),
+      utmSource: (utmSource || (effectiveRef ? 'auspiciador' : 'youtube')).toLowerCase(),
+      utmMedium: (utmMedium || (effectiveRef ? 'whatsapp' : 'whatsapp')).toLowerCase(),
+      utmCampaign: (utmCampaign || effectiveRef || 'qr_tv').toLowerCase(),
     },
   });
 
