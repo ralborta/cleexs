@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { publicDiagnosticApi } from '@/lib/api';
 import { usePublicFunnelBackToMarketing } from '@/lib/public-funnel-exit';
-import { trackPageview } from '@/lib/track';
+import { getVisitorId, trackPageview } from '@/lib/track';
+import { resolveDiagnosticAttributionForCreate } from '@/lib/diagnostic-attribution';
 import { Search, Globe, Loader2 } from 'lucide-react';
 
 /** Si parece dominio (tiene punto, sin espacios) → true */
@@ -64,13 +65,15 @@ export default function CrearDiagnosticoPage() {
 
   usePublicFunnelBackToMarketing();
 
-  // Pageview para el funnel de conversión interno (anónimo). Una vez por sesión/ruta.
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    resolveDiagnosticAttributionForCreate(sp);
     trackPageview('/diagnostico/crear', {
-      refCode: refParam || undefined,
-      utmSource: utmSourceParam || undefined,
-      utmMedium: utmMediumParam || undefined,
-      utmCampaign: utmCampaignParam || undefined,
+      refCode: sp.get('ref') || sp.get('ref_code') || refParam || undefined,
+      utmSource: sp.get('utm_source') || utmSourceParam || undefined,
+      utmMedium: sp.get('utm_medium') || utmMediumParam || undefined,
+      utmCampaign: sp.get('utm_campaign') || utmCampaignParam || undefined,
     });
   }, [refParam, utmSourceParam, utmMediumParam, utmCampaignParam]);
 
@@ -115,7 +118,18 @@ export default function CrearDiagnosticoPage() {
     autoStartTriggered.current = true;
     setAutoStartRunning(true);
     void startDiagnostic(nextBrand, nextUrl, true);
-  }, [autostart, hasAutostartUrl, urlParam, brandParam, qParam, tier]);
+  }, [
+    autostart,
+    hasAutostartUrl,
+    urlParam,
+    brandParam,
+    qParam,
+    tier,
+    refParam,
+    utmSourceParam,
+    utmMediumParam,
+    utmCampaignParam,
+  ]);
 
   function normalizeUrl(input: string): string {
     const trimmed = input.trim();
@@ -124,78 +138,12 @@ export default function CrearDiagnosticoPage() {
     return `https://${trimmed}`;
   }
 
-  function normalizeTrackingValue(input: string): string | undefined {
-    const cleaned = input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    if (!cleaned) return undefined;
-    return cleaned.slice(0, 120);
-  }
-
-  const ATTRIBUTION_STORAGE_KEY = 'cleexs_diagnostic_attribution';
-
-  /** ref/utm desde URL real + respaldo en sessionStorage (useSearchParams a veces llega tarde o se pierde). */
-  function getAttributionForCreate(): {
-    refCode?: string;
-    utmSource?: string;
-    utmMedium?: string;
-    utmCampaign?: string;
-  } {
-    let ref = refParam || '';
-    let utmSrc = utmSourceParam;
-    let utmMed = utmMediumParam;
-    let utmCamp = utmCampaignParam;
-
-    if (typeof window !== 'undefined') {
-      const sp = new URLSearchParams(window.location.search);
-      ref = sp.get('ref') || sp.get('ref_code') || refParam || '';
-      utmSrc = sp.get('utm_source') || utmSourceParam || '';
-      utmMed = sp.get('utm_medium') || utmMediumParam || '';
-      utmCamp = sp.get('utm_campaign') || utmCampaignParam || '';
-      try {
-        const raw = sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY);
-        if (raw) {
-          const j = JSON.parse(raw) as {
-            ref?: string;
-            utm_source?: string;
-            utm_medium?: string;
-            utm_campaign?: string;
-          };
-          if (!ref) ref = j.ref || '';
-          if (!utmSrc) utmSrc = j.utm_source || '';
-          if (!utmMed) utmMed = j.utm_medium || '';
-          if (!utmCamp) utmCamp = j.utm_campaign || '';
-        }
-      } catch {
-        /* ignore */
-      }
+  function getAttributionForCreate() {
+    if (typeof window === 'undefined') {
+      return resolveDiagnosticAttributionForCreate();
     }
-
-    return {
-      refCode: normalizeTrackingValue(ref),
-      utmSource: normalizeTrackingValue(utmSrc),
-      utmMedium: normalizeTrackingValue(utmMed),
-      utmCampaign: normalizeTrackingValue(utmCamp),
-    };
+    return resolveDiagnosticAttributionForCreate(new URLSearchParams(window.location.search));
   }
-
-  // Guardar atribución en cuanto exista en la URL (para el POST y por si cambia la ruta).
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const sp = new URLSearchParams(window.location.search);
-    const ref = sp.get('ref') || sp.get('ref_code') || '';
-    const utm_source = sp.get('utm_source') || '';
-    const utm_medium = sp.get('utm_medium') || '';
-    const utm_campaign = sp.get('utm_campaign') || '';
-    if (ref || utm_source || utm_medium || utm_campaign) {
-      try {
-        sessionStorage.setItem(
-          ATTRIBUTION_STORAGE_KEY,
-          JSON.stringify({ ref, utm_source, utm_medium, utm_campaign })
-        );
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [refParam, utmSourceParam, utmMediumParam, utmCampaignParam]);
 
   async function startDiagnostic(nextBrandName: string, nextUrl: string, fromAutoStart = false) {
     setError(null);
@@ -209,13 +157,16 @@ export default function CrearDiagnosticoPage() {
     try {
       const urlToSend = normalizeUrl(trimmedUrl);
       const attribution = getAttributionForCreate();
-      const createPromise = publicDiagnosticApi.create({
-        url: urlToSend,
-        brandName: trimmedBrand || undefined,
-        tier,
-        useSerp,
-        tracking: attribution,
-      });
+      const createPromise = publicDiagnosticApi.create(
+        {
+          url: urlToSend,
+          brandName: trimmedBrand || undefined,
+          tier,
+          useSerp,
+          tracking: attribution,
+        },
+        { visitorId: getVisitorId() }
+      );
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );

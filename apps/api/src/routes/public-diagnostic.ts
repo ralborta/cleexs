@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { resolveDiagnosticAttributionFallback } from '../lib/referral-attribution';
 import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
 import { isEmailDisabled, isOutboundEmailAvailable, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
@@ -2280,6 +2281,15 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const { brandName, url, tier: requestedTier, useSerp, refCode, utmSource, utmMedium, utmCampaign } = parsed.data;
+      const visitorIdHeader = request.headers['x-visitor-id'];
+      const visitorId = typeof visitorIdHeader === 'string' ? visitorIdHeader.trim() : undefined;
+      const attribution = await resolveDiagnosticAttributionFallback({
+        refCode: refCode?.trim().toLowerCase(),
+        utmSource: utmSource?.trim().toLowerCase(),
+        utmMedium: utmMedium?.trim().toLowerCase(),
+        utmCampaign: utmCampaign?.trim().toLowerCase(),
+        visitorId,
+      });
       const trimmedBrand = (brandName ?? '').trim();
       const trimmedUrl = (url ?? '').trim();
 
@@ -2313,10 +2323,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           domain,
           status: 'detecting_competitors',
           tier,
-          ...(refCode ? { refCode: refCode.toLowerCase() } : {}),
-          ...(utmSource ? { utmSource: utmSource.toLowerCase() } : {}),
-          ...(utmMedium ? { utmMedium: utmMedium.toLowerCase() } : {}),
-          ...(utmCampaign ? { utmCampaign: utmCampaign.toLowerCase() } : {}),
+          ...(attribution.refCode ? { refCode: attribution.refCode } : {}),
+          ...(attribution.utmSource ? { utmSource: attribution.utmSource } : {}),
+          ...(attribution.utmMedium ? { utmMedium: attribution.utmMedium } : {}),
+          ...(attribution.utmCampaign ? { utmCampaign: attribution.utmCampaign } : {}),
         },
       });
 

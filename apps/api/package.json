@@ -8,7 +8,8 @@
     "build": "tsc",
     "migrate:deploy": "prisma migrate deploy --schema=../../prisma/schema.prisma",
     "start": "npm run migrate:deploy && node dist/index.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "backfill:attribution": "tsx scripts/backfill-diagnostic-attribution.ts"
   },
   "dependencies": {
     "@cleexs/shared": "*",
