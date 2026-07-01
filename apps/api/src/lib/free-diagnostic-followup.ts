@@ -6,6 +6,12 @@ import { prisma } from './prisma';
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
 const CAMPAIGN_PREFIX = 'free-diagnostic-followup';
 
+export const FREE_DIAGNOSTIC_FOLLOWUP_CAMPAIGN_PREFIX = CAMPAIGN_PREFIX;
+
+export function isFreeDiagnosticFollowupCampaignSlug(campaignSlug: string): boolean {
+  return campaignSlug.trim().toLowerCase().startsWith(CAMPAIGN_PREFIX);
+}
+
 export type FreeDiagnosticFollowupCandidate = {
   diagnosticId: string;
   email: string;

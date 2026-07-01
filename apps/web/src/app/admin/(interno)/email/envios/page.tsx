@@ -292,8 +292,8 @@ export default function AdminEmailEnviosPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Marketing</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Estado de envíos</h1>
         <p className="max-w-2xl text-sm text-slate-600">
-          Seguimiento por batch: estado interno Status (enviado / falló) y eventos de Resend (entregado,
-          abierto, rebote…). Los webhooks pueden tardar unos segundos en aparecer.
+          Seguimiento por batch de campañas de marketing (mensual, semanal, pruebas). Los correos
+          transaccionales del diagnóstico free no aparecen aquí.
         </p>
       </header>
 
