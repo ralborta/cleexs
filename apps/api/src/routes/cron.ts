@@ -6,7 +6,7 @@ import {
   wasFreeDiagnosticFollowupSent,
 } from '../lib/free-diagnostic-followup';
 import { resolveMarketingRecipients, sendMarketingEmail, weeklyEmailForRecipient } from '../lib/marketing-email';
-import { runMonthlyScoreEmailBatch } from '../lib/monthly-score-email-sender';
+import { runCustomTemplateBatch, runMonthlyScoreEmailBatch } from '../lib/monthly-score-email-sender';
 import { sendLeadEmail } from '../lib/lead-email-sender';
 import {
   evaluateWeeklyEmailSend,
@@ -338,6 +338,35 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     return runMonthlyScoreEmailBatch(parsed.data);
+  });
+
+  // POST /api/cron/custom-template-batch — listas manuales (pruebas, batches nombrados).
+  fastify.post<{
+    Body: {
+      campaignSlug: string;
+      batchLabel?: string;
+      emails: string[];
+      variant?: 'letter' | 'editorial';
+      subject?: string;
+      dryRun?: boolean;
+    };
+  }>('/custom-template-batch', async (request, reply) => {
+    if (!checkCronSecret(request, reply)) return;
+
+    const schema = z.object({
+      campaignSlug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-_]*$/i),
+      batchLabel: z.string().trim().min(1).max(120).optional(),
+      emails: z.array(z.string().email()).min(1).max(50),
+      variant: z.enum(['letter', 'editorial']).default('editorial'),
+      subject: z.string().trim().min(1).max(180).optional(),
+      dryRun: z.boolean().default(false),
+    });
+    const parsed = schema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    return runCustomTemplateBatch(parsed.data);
   });
 
   // POST /api/cron/free-diagnostic-followup
