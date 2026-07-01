@@ -36,6 +36,7 @@ type ReferralRow = {
   clicks30d: number;
   diagnosticsStarted: number;
   capturedEmails: number;
+  uniqueEmails: number;
   competitorsConfirmed: number;
   completedDiagnostics: number;
   completionRate: number;
@@ -45,13 +46,23 @@ type ReferralRow = {
   latestAt: string;
   createdAt: string | null;
   updatedAt: string | null;
+  isUnattributed?: boolean;
 };
 
 type ReferralDashboard = {
   generatedAt: string;
   windowDays: number;
+  summary?: {
+    totalUniqueEmails: number;
+    attributedUniqueEmails: number;
+    unattributedUniqueEmails: number;
+    note?: string;
+  };
   rows: ReferralRow[];
 };
+
+const SIN_REFERIDOR_SLUG = '__sin_referidor__';
+type ListFilter = 'ranking' | 'campanas' | 'todos';
 
 const field =
   'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-200';
@@ -105,14 +116,23 @@ export default function AdminReferidoresPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [listFilter, setListFilter] = useState<ListFilter>('ranking');
 
-  const rows = dashboard?.rows ?? [];
-  const totalClicks = rows.reduce((sum, row) => sum + row.clicks30d, 0);
-  const totalStarted = rows.reduce((sum, row) => sum + row.diagnosticsStarted, 0);
-  const totalCompleted = rows.reduce((sum, row) => sum + row.completedDiagnostics, 0);
-  const totalEmails = rows.reduce((sum, row) => sum + row.capturedEmails, 0);
-  const overallConversion =
-    totalStarted > 0 ? (totalCompleted / totalStarted) * 100 : 0;
+  const allRows = dashboard?.rows ?? [];
+  const rows = useMemo(() => {
+    if (listFilter === 'todos') return allRows;
+    if (listFilter === 'campanas') return allRows.filter((r) => r.registered);
+    return allRows.filter((r) => r.uniqueEmails > 0 && !r.isUnattributed);
+  }, [allRows, listFilter]);
+
+  const summary = dashboard?.summary;
+  const totalUniqueEmails = summary?.totalUniqueEmails ?? allRows.reduce((s, r) => s + r.uniqueEmails, 0);
+  const attributedUniqueEmails = summary?.attributedUniqueEmails ?? 0;
+  const unattributedUniqueEmails = summary?.unattributedUniqueEmails ?? 0;
+  const totalClicks = allRows.reduce((sum, row) => sum + row.clicks30d, 0);
+  const totalStarted = allRows.reduce((sum, row) => sum + row.diagnosticsStarted, 0);
+  const totalCompleted = allRows.reduce((sum, row) => sum + row.completedDiagnostics, 0);
+  const overallConversion = totalStarted > 0 ? (totalCompleted / totalStarted) * 100 : 0;
 
   const formShortUrl = useMemo(() => {
     const ref = normalizeTrackingValue(form.refCode);
@@ -231,16 +251,15 @@ export default function AdminReferidoresPage() {
     const header = [
       'ref',
       'nombre',
+      'campaña_registrada',
+      'emails_unicos',
+      'diagnosticos_con_email',
       'activo',
       'clicks_30d',
       'puso_url',
-      'dio_email',
-      'cambio_competidores',
       'completados',
       'conversion_pct',
-      'upsell_1',
-      'upsell_2',
-      'agente250',
+      'utm_medium',
       'link_corto',
       'link_destino',
     ];
@@ -250,17 +269,16 @@ export default function AdminReferidoresPage() {
         [
           row.refCode,
           row.name,
+          row.registered ? 'si' : 'no',
+          row.uniqueEmails,
+          row.capturedEmails,
           row.active ? 'si' : 'no',
           row.clicks30d,
           row.diagnosticsStarted,
-          row.capturedEmails,
-          row.competitorsConfirmed,
           row.completedDiagnostics,
           row.completionRate.toFixed(1),
-          row.upsell1,
-          row.upsell2,
-          row.agente250,
-          shortUrlFor(row.refCode),
+          row.utmMedium || '',
+          row.refCode === SIN_REFERIDOR_SLUG ? '' : shortUrlFor(row.refCode),
           row.targetUrl,
         ]
           .map(csvEscape)
@@ -290,7 +308,8 @@ export default function AdminReferidoresPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Referidores</h1>
             <p className="text-sm text-slate-600">
-              Tracking de campañas de tráfico: clicks, embudo y conversión por <code>ref</code>.
+              Ranking de auspiciadores por emails únicos. Cada canal necesita su propio código{' '}
+              <code className="rounded bg-slate-100 px-1 text-xs">ref</code> en el link.
             </p>
           </div>
         </div>
@@ -328,6 +347,13 @@ export default function AdminReferidoresPage() {
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-violet-700">Emails únicos (total)</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-violet-950">{formatNumber(totalUniqueEmails)}</p>
+          <p className="mt-1 text-xs text-violet-800">
+            {formatNumber(attributedUniqueEmails)} con referidor · {formatNumber(unattributedUniqueEmails)} sin ref
+          </p>
+        </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Clicks últimos 30 días</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{formatNumber(totalClicks)}</p>
@@ -336,12 +362,7 @@ export default function AdminReferidoresPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Pusieron URL</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{formatNumber(totalStarted)}</p>
-          <p className="mt-1 text-xs text-slate-500">Diagnósticos iniciados</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Dejaron email</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{formatNumber(totalEmails)}</p>
-          <p className="mt-1 text-xs text-slate-500">{formatNumber(totalCompleted)} diagnósticos completados</p>
+          <p className="mt-1 text-xs text-slate-500">Diagnósticos iniciados (histórico)</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Tasa de finalización</p>
@@ -473,14 +494,34 @@ export default function AdminReferidoresPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <header className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <header className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Campañas y conversión</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Ranking por auspiciador</h2>
               <p className="text-xs text-slate-500">
-                Ventana de clicks: últimos {dashboard?.windowDays ?? 30} días. Diagnósticos: histórico reciente por ref.
+                Ordenado por emails únicos. Clicks: últimos {dashboard?.windowDays ?? 30} días · emails: histórico.
               </p>
             </div>
-            <div className="text-xs text-slate-500">{rows.length} campañas</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {([
+                ['ranking', 'Con emails'],
+                ['campanas', 'Solo campañas'],
+                ['todos', 'Todos'],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setListFilter(key)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    listFilter === key
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <span className="text-xs text-slate-500">{rows.length} filas</span>
+            </div>
           </header>
 
           <div className="overflow-x-auto">
@@ -497,24 +538,24 @@ export default function AdminReferidoresPage() {
               <table className="min-w-full divide-y divide-slate-100 text-sm">
                 <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Referidor</th>
+                    <th className="px-4 py-3">Auspiciador / ref</th>
+                    <th className="px-3 py-3 text-right">Emails únicos</th>
                     <th className="px-3 py-3 text-right">Clicks</th>
                     <th className="px-3 py-3 text-right">URL</th>
-                    <th className="px-3 py-3 text-right">Email</th>
-                    <th className="px-3 py-3 text-right">Compet.</th>
                     <th className="px-3 py-3 text-right">Compl.</th>
                     <th className="px-3 py-3 text-right">% Conv.</th>
-                    <th className="px-3 py-3 text-right">Upsell 1</th>
-                    <th className="px-3 py-3 text-right">Upsell 2</th>
-                    <th className="px-3 py-3 text-right">Agente250</th>
                     <th className="px-4 py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {rows.map((row) => {
-                    const shortUrl = shortUrlFor(row.refCode);
+                    const shortUrl = row.refCode === SIN_REFERIDOR_SLUG ? '' : shortUrlFor(row.refCode);
+                    const isTopEmail = row.uniqueEmails > 0 && listFilter === 'ranking';
                     return (
-                      <tr key={row.refCode} className="align-top hover:bg-slate-50/40">
+                      <tr
+                        key={row.refCode}
+                        className={`align-top hover:bg-slate-50/40 ${isTopEmail ? 'bg-violet-50/30' : ''}`}
+                      >
                         <td className="px-4 py-3">
                           <div className="font-semibold text-slate-900">{row.name}</div>
                           <div className="mt-0.5 font-mono text-xs text-slate-500">{row.refCode}</div>
@@ -536,10 +577,16 @@ export default function AdminReferidoresPage() {
                             <span className="text-slate-400">{formatDate(row.latestAt)}</span>
                           </div>
                         </td>
+                        <td className="px-3 py-3 text-right">
+                          <span className="text-lg font-bold tabular-nums text-violet-700">
+                            {formatNumber(row.uniqueEmails)}
+                          </span>
+                          {row.capturedEmails > row.uniqueEmails ? (
+                            <p className="text-[10px] text-slate-400">{formatNumber(row.capturedEmails)} diag.</p>
+                          ) : null}
+                        </td>
                         <td className="px-3 py-3 text-right tabular-nums text-slate-700">{formatNumber(row.clicks30d)}</td>
                         <td className="px-3 py-3 text-right tabular-nums text-slate-700">{formatNumber(row.diagnosticsStarted)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-slate-700">{formatNumber(row.capturedEmails)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-slate-700">{formatNumber(row.competitorsConfirmed)}</td>
                         <td className="px-3 py-3 text-right tabular-nums text-slate-700">{formatNumber(row.completedDiagnostics)}</td>
                         <td className="px-3 py-3 text-right">
                           <span
@@ -554,10 +601,10 @@ export default function AdminReferidoresPage() {
                             {row.completionRate.toFixed(1)}%
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-right tabular-nums text-slate-500">{formatNumber(row.upsell1)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-slate-500">{formatNumber(row.upsell2)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-slate-500">{formatNumber(row.agente250)}</td>
                         <td className="px-4 py-3">
+                          {row.refCode === SIN_REFERIDOR_SLUG ? (
+                            <span className="text-xs text-slate-400">Sin link de campaña</span>
+                          ) : (
                           <div className="flex flex-wrap gap-1.5">
                             <button
                               type="button"
@@ -615,6 +662,7 @@ export default function AdminReferidoresPage() {
                               </a>
                             )}
                           </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -625,7 +673,8 @@ export default function AdminReferidoresPage() {
           </div>
 
           <footer className="border-t border-slate-100 bg-slate-50/40 px-5 py-3 text-[11px] leading-relaxed text-slate-500">
-            Upsell 1, Upsell 2 y Agente 250 quedan visibles pero en cero hasta que definamos qué acción del producto dispara cada evento.
+            Emails únicos = personas distintas. Si un canal no tiene fila propia, comparte link con otro o el usuario entró sin{' '}
+            <code className="rounded bg-slate-200 px-1">ref</code> en la URL (ver fila «Sin referidor» en Todos).
           </footer>
         </section>
       </div>

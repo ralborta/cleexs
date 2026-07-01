@@ -7,6 +7,12 @@ import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import type { SatelliteModuleResult } from '../lib/satellite-client';
 import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 import { resolveConversionRange } from '@cleexs/shared';
+import {
+  aggregateDiagnosticsByRefCode,
+  normalizeReferralRefCode,
+  SIN_REFERIDOR_LABEL,
+  SIN_REFERIDOR_SLUG,
+} from '../lib/referral-attribution';
 import { primaryRunWhere } from '../lib/run-type-filters';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
@@ -1745,6 +1751,34 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const unlockClickTotal = unlockClickGroups.reduce((acc, g) => acc + g._count._all, 0);
 
+      const [emailAggRows, referralCampaigns] = await Promise.all([
+        aggregateDiagnosticsByRefCode({ from, to }),
+        prisma.referralCampaign.findMany({ select: { refCode: true, name: true, utmMedium: true } }),
+      ]);
+      const referrerNameByRef = new Map(
+        referralCampaigns.map((c) => [c.refCode.toLowerCase(), c.name] as const)
+      );
+      const emailsByReferrer = emailAggRows
+        .filter((row) => row.unique_emails > 0)
+        .map((row) => {
+          const refCode = normalizeReferralRefCode(row.ref_code);
+          return {
+            refCode,
+            name:
+              refCode === SIN_REFERIDOR_SLUG
+                ? SIN_REFERIDOR_LABEL
+                : referrerNameByRef.get(refCode) ?? refCode,
+            uniqueEmails: row.unique_emails,
+            diagnosticsWithEmail: row.with_email,
+            registered: refCode !== SIN_REFERIDOR_SLUG && referrerNameByRef.has(refCode),
+          };
+        })
+        .sort((a, b) => {
+          if (a.refCode === SIN_REFERIDOR_SLUG) return 1;
+          if (b.refCode === SIN_REFERIDOR_SLUG) return -1;
+          return b.uniqueEmails - a.uniqueEmails;
+        });
+
       // Cold outreach: dominios contactados (email enviado) que luego entraron al diagnóstico.
       const contactedDomains = new Set<string>();
       for (const e of sentEmails) {
@@ -1799,6 +1833,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           domainsReturned: returnedDomains,
           returnPct: pct(returnedDomains, contactedDomains.size),
         },
+        emailsByReferrer,
       };
     }
   );
@@ -1864,6 +1899,10 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           domain: true,
           industry: true,
           sourceChannel: true,
+          refCode: true,
+          utmSource: true,
+          utmMedium: true,
+          utmCampaign: true,
           tier: true,
           status: true,
           shareSlug: true,
