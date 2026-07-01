@@ -94,3 +94,50 @@ export async function countGlobalUniqueDiagnosticEmails(options?: {
   `;
   return rows[0]?.n ?? 0;
 }
+
+export type DiagnosticAttributionInput = {
+  refCode?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  visitorId?: string;
+};
+
+/** Si el POST no trae ref, recupera el último pageview del visitante (7 días). */
+export async function resolveDiagnosticAttributionFallback(
+  input: DiagnosticAttributionInput
+): Promise<DiagnosticAttributionInput> {
+  const refCode = input.refCode?.trim().toLowerCase();
+  if (refCode) return { ...input, refCode };
+
+  const visitorId = input.visitorId?.trim();
+  if (!visitorId) return input;
+
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const pageview = await prisma.pageView.findFirst({
+    where: {
+      visitorId,
+      createdAt: { gte: since },
+      refCode: { not: null },
+      NOT: { refCode: '' },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      refCode: true,
+      utmSource: true,
+      utmMedium: true,
+      utmCampaign: true,
+    },
+  });
+
+  if (!pageview?.refCode?.trim()) return input;
+
+  return {
+    refCode: pageview.refCode.trim().toLowerCase(),
+    utmSource: input.utmSource?.trim().toLowerCase() || pageview.utmSource?.trim().toLowerCase() || undefined,
+    utmMedium: input.utmMedium?.trim().toLowerCase() || pageview.utmMedium?.trim().toLowerCase() || undefined,
+    utmCampaign:
+      input.utmCampaign?.trim().toLowerCase() || pageview.utmCampaign?.trim().toLowerCase() || undefined,
+    visitorId,
+  };
+}

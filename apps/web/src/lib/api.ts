@@ -1192,18 +1192,21 @@ export interface PublicDiagnosticShareResponse {
 }
 
 export const publicDiagnosticApi = {
-  create: (input: {
-    url: string;
-    brandName?: string;
-    tier?: 'gold' | 'freemium';
-    useSerp?: boolean;
-    tracking?: {
-      refCode?: string;
-      utmSource?: string;
-      utmMedium?: string;
-      utmCampaign?: string;
-    };
-  }) =>
+  create: (
+    input: {
+      url: string;
+      brandName?: string;
+      tier?: 'gold' | 'freemium';
+      useSerp?: boolean;
+      tracking?: {
+        refCode?: string;
+        utmSource?: string;
+        utmMedium?: string;
+        utmCampaign?: string;
+      };
+    },
+    opts?: { visitorId?: string }
+  ) =>
     api<{ diagnosticId: string }>('/api/public/diagnostic', {
       method: 'POST',
       body: JSON.stringify({
@@ -1216,6 +1219,9 @@ export const publicDiagnosticApi = {
         ...(input.tracking?.utmMedium ? { utmMedium: input.tracking.utmMedium } : {}),
         ...(input.tracking?.utmCampaign ? { utmCampaign: input.tracking.utmCampaign } : {}),
       }),
+      headers: {
+        ...(opts?.visitorId ? { 'x-visitor-id': opts.visitorId } : {}),
+      },
     }),
   start: (
     id: string,
