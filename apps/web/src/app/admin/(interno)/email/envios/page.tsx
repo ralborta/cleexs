@@ -292,7 +292,7 @@ export default function AdminEmailEnviosPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Marketing</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Estado de envíos</h1>
         <p className="max-w-2xl text-sm text-slate-600">
-          Seguimiento por batch: estado interno de Cleexs (enviado / falló) y eventos de Resend (entregado,
+          Seguimiento por batch: estado interno Status (enviado / falló) y eventos de Resend (entregado,
           abierto, rebote…). Los webhooks pueden tardar unos segundos en aparecer.
         </p>
       </header>
@@ -396,7 +396,7 @@ export default function AdminEmailEnviosPage() {
                   </div>
                   <div className="hidden shrink-0 text-right text-xs text-slate-600 sm:block">
                     <p>
-                      Cleexs: {b.totals.sent} enviados · {b.totals.failed} fallos
+                      Status: {b.totals.sent} enviados · {b.totals.failed} fallos
                     </p>
                     <p className="mt-0.5">
                       Resend: {b.resend.delivered} entregados · {b.resend.opened} abiertos
@@ -441,12 +441,12 @@ export default function AdminEmailEnviosPage() {
 
           {activeBatch ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatPill label="Enviados (Cleexs)" value={activeBatch.totals.sent} tone="ok" />
+              <StatPill label="Enviados (Status)" value={activeBatch.totals.sent} tone="ok" />
               <StatPill label="Entregados (Resend)" value={activeBatch.resend.delivered} tone="ok" />
               <StatPill label="Abiertos" value={activeBatch.resend.opened} />
               <StatPill label="Clics" value={activeBatch.resend.clicked} />
               <StatPill label="Rebotes" value={activeBatch.resend.bounced} tone="bad" />
-              <StatPill label="Fallos Cleexs" value={activeBatch.totals.failed} tone="bad" />
+              <StatPill label="Fallos (Status)" value={activeBatch.totals.failed} tone="bad" />
               <StatPill label="Fallos Resend" value={activeBatch.resend.failed} tone="bad" />
               <StatPill label="Sin webhook aún" value={activeBatch.resend.noEventsYet} tone="warn" />
             </div>
@@ -459,7 +459,7 @@ export default function AdminEmailEnviosPage() {
                   <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Destinatario</th>
-                      <th className="px-4 py-3 font-semibold">Cleexs</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-4 py-3 font-semibold">Resend</th>
                       <th className="px-4 py-3 font-semibold">Score</th>
                       <th className="px-4 py-3 font-semibold">Enviado</th>
