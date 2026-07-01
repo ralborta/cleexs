@@ -2,6 +2,13 @@ import { createHash } from 'crypto';
 import type { FastifyRequest } from 'fastify';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import {
+  aggregateDiagnosticsByRefCode,
+  countGlobalUniqueDiagnosticEmails,
+  normalizeReferralRefCode,
+  SIN_REFERIDOR_LABEL,
+  SIN_REFERIDOR_SLUG,
+} from '../lib/referral-attribution';
 import { prisma } from '../lib/prisma';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
@@ -45,13 +52,6 @@ function buildReferralTargetUrl(input: {
   return `${marketingBaseUrl()}/?${search.toString()}`;
 }
 
-function hasConfirmedCompetitors(setupDraftJson: unknown): boolean {
-  if (!setupDraftJson || typeof setupDraftJson !== 'object' || Array.isArray(setupDraftJson)) return false;
-  const draft = setupDraftJson as Record<string, unknown>;
-  const confirmed = draft.confirmedCompetitorUrls;
-  return Array.isArray(confirmed) && confirmed.some((x) => typeof x === 'string' && x.trim());
-}
-
 const campaignBodySchema = z.object({
   name: z.string().trim().min(1).max(160),
   refCode: trackingField,
@@ -71,57 +71,66 @@ const referralRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const [campaigns, clicks, diagnostics] = await Promise.all([
+    const [campaigns, clicks, aggRows, totalUniqueEmailsGlobal] = await Promise.all([
       prisma.referralCampaign.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.referralClick.findMany({
         where: { createdAt: { gte: since30 } },
         select: { refCode: true, createdAt: true },
         take: 10000,
       }),
-      prisma.publicDiagnostic.findMany({
-        where: { refCode: { not: null } },
-        select: {
-          refCode: true,
-          status: true,
-          email: true,
-          setupDraftJson: true,
-          sourceChannel: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10000,
-      }),
+      aggregateDiagnosticsByRefCode(),
+      countGlobalUniqueDiagnosticEmails(),
     ]);
 
-    const campaignByRef = new Map(campaigns.map((c) => [c.refCode, c]));
-    const refs = new Set<string>(campaigns.map((c) => c.refCode));
+    const campaignByRef = new Map(campaigns.map((c) => [c.refCode.toLowerCase(), c]));
+    const aggBySlug = new Map<string, (typeof aggRows)[number]>();
+    for (const row of aggRows) {
+      const slug = normalizeReferralRefCode(row.ref_code);
+      aggBySlug.set(slug, row);
+    }
+
+    const refs = new Set<string>();
+    for (const c of campaigns) refs.add(c.refCode);
     for (const row of clicks) refs.add(row.refCode);
-    for (const row of diagnostics) if (row.refCode) refs.add(row.refCode.trim().toLowerCase());
+    for (const row of aggRows) refs.add(normalizeReferralRefCode(row.ref_code));
+
+    let unattributedUniqueEmails = 0;
 
     const rows = Array.from(refs)
       .map((refCode) => {
         const campaign = campaignByRef.get(refCode);
+        const agg = aggBySlug.get(refCode);
         const refClicks = clicks.filter((c) => c.refCode === refCode);
-        const refDiagnostics = diagnostics.filter((d) => d.refCode?.trim().toLowerCase() === refCode);
-        const completed = refDiagnostics.filter((d) => d.status === 'completed').length;
-        const capturedEmails = refDiagnostics.filter(
-          (d) => d.email && !d.email.endsWith('@whatsapp.cleexs.net')
-        ).length;
-        const competitorsConfirmed = refDiagnostics.filter((d) => hasConfirmedCompetitors(d.setupDraftJson)).length;
+        const diagnosticsStarted = agg?.diagnostics ?? 0;
+        const capturedEmails = agg?.with_email ?? 0;
+        const uniqueEmails = agg?.unique_emails ?? 0;
+        const completedDiagnostics = agg?.completed ?? 0;
+
+        if (refCode === SIN_REFERIDOR_SLUG) {
+          unattributedUniqueEmails = uniqueEmails;
+        }
+
+        const competitorsConfirmed = 0;
         const latestAt =
-          [...refClicks.map((c) => c.createdAt), ...refDiagnostics.map((d) => d.createdAt)].sort(
-            (a, b) => b.getTime() - a.getTime()
-          )[0] ?? campaign?.createdAt ?? new Date(0);
-        const targetUrl = buildReferralTargetUrl({
-          refCode,
-          utmSource: campaign?.utmSource || 'auspiciador',
-          utmMedium: campaign?.utmMedium || 'link',
-          utmCampaign: campaign?.utmCampaign || refCode,
-        });
+          agg?.latest_at ??
+          [...refClicks.map((c) => c.createdAt)].sort((a, b) => b.getTime() - a.getTime())[0] ??
+          campaign?.createdAt ??
+          new Date(0);
+
+        const targetUrl =
+          refCode === SIN_REFERIDOR_SLUG
+            ? ''
+            : buildReferralTargetUrl({
+                refCode,
+                utmSource: campaign?.utmSource || 'auspiciador',
+                utmMedium: campaign?.utmMedium || 'link',
+                utmCampaign: campaign?.utmCampaign || refCode,
+              });
+
         return {
           id: campaign?.id ?? null,
           registered: Boolean(campaign),
-          name: campaign?.name ?? refCode,
+          name: refCode === SIN_REFERIDOR_SLUG ? SIN_REFERIDOR_LABEL : campaign?.name ?? refCode,
           refCode,
           active: campaign?.active ?? false,
           utmSource: campaign?.utmSource ?? null,
@@ -129,25 +138,43 @@ const referralRoutes: FastifyPluginAsync = async (fastify) => {
           utmCampaign: campaign?.utmCampaign ?? null,
           notes: campaign?.notes ?? null,
           targetUrl,
-          shortUrlPath: `/r/${refCode}`,
+          shortUrlPath: refCode === SIN_REFERIDOR_SLUG ? '' : `/r/${refCode}`,
           clicks30d: refClicks.length,
-          diagnosticsStarted: refDiagnostics.length,
+          diagnosticsStarted,
           capturedEmails,
+          uniqueEmails,
           competitorsConfirmed,
-          completedDiagnostics: completed,
+          completedDiagnostics,
           completionRate:
-            refDiagnostics.length > 0 ? (completed / refDiagnostics.length) * 100 : 0,
+            diagnosticsStarted > 0 ? (completedDiagnostics / diagnosticsStarted) * 100 : 0,
           upsell1: 0,
           upsell2: 0,
           agente250: 0,
-          latestAt: latestAt.toISOString(),
+          latestAt: latestAt instanceof Date ? latestAt.toISOString() : new Date(latestAt).toISOString(),
           createdAt: campaign?.createdAt.toISOString() ?? null,
           updatedAt: campaign?.updatedAt.toISOString() ?? null,
+          isUnattributed: refCode === SIN_REFERIDOR_SLUG,
         };
       })
-      .sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime());
+      .sort((a, b) => {
+        if (a.isUnattributed && !b.isUnattributed) return 1;
+        if (!a.isUnattributed && b.isUnattributed) return -1;
+        if (b.uniqueEmails !== a.uniqueEmails) return b.uniqueEmails - a.uniqueEmails;
+        return new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime();
+      });
 
-    return { generatedAt: new Date().toISOString(), windowDays: 30, rows };
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays: 30,
+      summary: {
+        totalUniqueEmails: totalUniqueEmailsGlobal,
+        attributedUniqueEmails: Math.max(0, totalUniqueEmailsGlobal - unattributedUniqueEmails),
+        unattributedUniqueEmails,
+        note:
+          'Emails únicos = personas distintas que dejaron email. Sin referidor = entraron sin ref en el link.',
+      },
+      rows,
+    };
   });
 
   fastify.post('/admin/referrals', async (request, reply) => {

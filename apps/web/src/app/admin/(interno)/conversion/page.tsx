@@ -41,6 +41,13 @@ type Metrics = {
     domainsReturned: number;
     returnPct: number | null;
   };
+  emailsByReferrer?: Array<{
+    refCode: string;
+    name: string;
+    uniqueEmails: number;
+    diagnosticsWithEmail: number;
+    registered: boolean;
+  }>;
 };
 
 type UnlockClickBreakdown = {
@@ -62,6 +69,10 @@ type EmailLead = {
   domain: string | null;
   industry: string | null;
   sourceChannel: string | null;
+  refCode: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
   tier: string | null;
   status: string | null;
   shareSlug: string | null;
@@ -347,6 +358,28 @@ export default function AdminConversionPage() {
         />
       </section>
 
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BreakdownCard title="Emails por auspiciador (ranking)" empty="Sin emails atribuidos a un ref en el rango.">
+          {(data?.emailsByReferrer ?? [])
+            .filter((r) => r.refCode !== '__sin_referidor__')
+            .map((r) => (
+              <Row
+                key={r.refCode}
+                label={r.registered ? r.name : `${r.name} (${r.refCode})`}
+                value={`${fmt(r.uniqueEmails)} únicos`}
+              />
+            ))}
+        </BreakdownCard>
+
+        <BreakdownCard title="Sin referidor en el rango" empty="En este período todo el tráfico tuvo ref.">
+          {(data?.emailsByReferrer ?? [])
+            .filter((r) => r.refCode === '__sin_referidor__')
+            .map((r) => (
+              <Row key={r.refCode} label={r.name} value={`${fmt(r.uniqueEmails)} únicos`} />
+            ))}
+        </BreakdownCard>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-3">
         <BreakdownCard title="Compartido por canal" empty="Sin compartidos en el rango.">
           {(f?.shared.byChannel ?? []).map((r) => (
@@ -505,6 +538,13 @@ function EmailLeadsModal({
                       ) : (
                         <span className="text-sm font-semibold text-slate-400">Sin email</span>
                       )}
+                      {lead.refCode ? (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[10px] font-semibold text-violet-800">
+                          ref={lead.refCode}
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600">sin ref</span>
+                      )}
                       {lead.tier ? (
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
@@ -514,6 +554,11 @@ function EmailLeadsModal({
                           }`}
                         >
                           {lead.tier}
+                        </span>
+                      ) : null}
+                      {lead.utmMedium ? (
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+                          {lead.utmMedium}
                         </span>
                       ) : null}
                     </div>
