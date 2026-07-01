@@ -14,7 +14,8 @@ import { SponsorCampaignHistoryPanel } from '@/components/tools/sponsor-campaign
 import { SponsorTrackingPanel } from '@/components/tools/sponsor-tracking-panel';
 import { SponsorWhatsAppQrModal } from '@/components/tools/sponsor-whatsapp-qr-modal';
 import { patchSponsorCampaignHistory } from '@/lib/sponsor-campaign-history';
-import { Check, Copy, Download, ExternalLink, Link2, MessageCircle, QrCode } from 'lucide-react';
+import { syncSponsorCampaignToServer } from '@/lib/sponsor-campaign-sync';
+import { Check, Copy, Download, ExternalLink, Link2, Loader2, MessageCircle, QrCode, Save } from 'lucide-react';
 
 const fieldCls =
   'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25';
@@ -34,6 +35,8 @@ export function SponsorLinkBuilder() {
   const [waQrOpen, setWaQrOpen] = useState(false);
   const [waInitialMessage, setWaInitialMessage] = useState<string | undefined>();
   const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (refTouched) return;
@@ -86,10 +89,11 @@ export function SponsorLinkBuilder() {
   }, [showQr, generatedUrl]);
 
   const persistCampaign = useCallback(
-    (patch: {
+    async (patch: {
       whatsAppUrl?: string | null;
       whatsAppMessage?: string | null;
       customWaMessage?: string | null;
+      syncToServer?: boolean;
     }) => {
       if (!generatedUrl || !refCode.trim()) return;
       patchSponsorCampaignHistory(refCode, {
@@ -104,16 +108,41 @@ export function SponsorLinkBuilder() {
         whatsAppCustomMessage: patch.customWaMessage,
       });
       setHistoryRefresh((n) => n + 1);
+
+      if (patch.syncToServer === false) return;
+
+      setSaveState('saving');
+      setSaveError(null);
+      const result = await syncSponsorCampaignToServer({
+        refCode,
+        sponsorName,
+        utmSource,
+        utmMedium,
+        utmCampaign: utmCampaign || refCode,
+      });
+      if (result.ok) {
+        setSaveState('saved');
+        setHistoryRefresh((n) => n + 1);
+        window.setTimeout(() => setSaveState('idle'), 2500);
+      } else {
+        setSaveState('error');
+        setSaveError(result.error ?? 'No se pudo guardar');
+      }
     },
     [generatedUrl, refCode, sponsorName, utmSource, utmMedium, utmCampaign, appDiagnosticUrl]
   );
+
+  const saveCampaignToServer = useCallback(async () => {
+    if (!refValid) return;
+    await persistCampaign({});
+  }, [persistCampaign, refValid]);
 
   const copyUrl = useCallback(async () => {
     if (!generatedUrl) return;
     try {
       await navigator.clipboard.writeText(generatedUrl);
       setCopied(true);
-      persistCampaign({});
+      void persistCampaign({});
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       /* ignore */
@@ -126,13 +155,13 @@ export function SponsorLinkBuilder() {
     a.href = qrDataUrl;
     a.download = `cleexs-qr-${refCode}.png`;
     a.click();
-    persistCampaign({});
+    void persistCampaign({});
   }
 
   function openWhatsAppQr(initialMessage?: string) {
     setWaInitialMessage(initialMessage);
     setWaQrOpen(true);
-    persistCampaign({});
+    void persistCampaign({});
   }
 
   function loadCampaignFromHistory(entry: {
@@ -165,8 +194,9 @@ export function SponsorLinkBuilder() {
           Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por{' '}
           <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">ref</code> (web y canal WhatsApp).
         </p>
-        <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Acceso libre temporal. No compartas esta URL públicamente hasta que agreguemos protección.
+        <p className="mt-3 rounded-lg border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+          Cada campaña se guarda en el servidor y aparece en{' '}
+          <strong className="font-semibold">Admin → Referidores</strong> para el ranking de emails.
         </p>
       </header>
 
@@ -273,6 +303,22 @@ export function SponsorLinkBuilder() {
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copiado' : 'Copiar link'}
               </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2"
+                disabled={saveState === 'saving'}
+                onClick={() => void saveCampaignToServer()}
+              >
+                {saveState === 'saving' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : saveState === 'saved' ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {saveState === 'saved' ? 'Guardado' : 'Guardar campaña'}
+              </Button>
               <Button type="button" variant="outline" className="gap-2" asChild>
                 <a href={generatedUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4" />
@@ -280,6 +326,9 @@ export function SponsorLinkBuilder() {
                 </a>
               </Button>
             </div>
+            {saveState === 'error' && saveError ? (
+              <p className="mt-2 text-xs text-rose-600">{saveError}</p>
+            ) : null}
 
             {showQr && (
               <div className="mt-6 flex flex-col items-center gap-3 border-t border-slate-200 pt-6">
@@ -356,7 +405,7 @@ export function SponsorLinkBuilder() {
         refCode={refCode}
         initialCustomMessage={waInitialMessage}
         onWhatsAppReady={({ whatsAppUrl, whatsAppMessage, customMessage }) => {
-          persistCampaign({
+          void persistCampaign({
             whatsAppUrl,
             whatsAppMessage,
             customWaMessage: customMessage,

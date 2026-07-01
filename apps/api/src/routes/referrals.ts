@@ -177,6 +177,53 @@ const referralRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  /** Crear o actualizar campaña por ref_code (desde /tools/auspiciadores o admin). */
+  fastify.put('/admin/referrals/upsert', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+    const parsed = campaignBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.errors.map((e) => e.message).join(', ') });
+    }
+    const body = parsed.data;
+    const refCode = normalizeTracking(body.refCode);
+    const data = {
+      name: body.name.trim(),
+      refCode,
+      utmSource: body.utmSource ? normalizeTracking(body.utmSource) : 'auspiciador',
+      utmMedium: body.utmMedium ? normalizeTracking(body.utmMedium) : 'link',
+      utmCampaign: body.utmCampaign ? normalizeTracking(body.utmCampaign) : refCode,
+      notes: body.notes?.trim() || null,
+      active: body.active ?? true,
+    };
+
+    try {
+      const existing = await prisma.referralCampaign.findUnique({ where: { refCode } });
+      if (existing) {
+        const campaign = await prisma.referralCampaign.update({
+          where: { id: existing.id },
+          data: {
+            name: data.name,
+            utmSource: data.utmSource,
+            utmMedium: data.utmMedium,
+            utmCampaign: data.utmCampaign,
+            notes: data.notes,
+            active: data.active,
+          },
+        });
+        return campaign;
+      }
+      const campaign = await prisma.referralCampaign.create({ data });
+      return reply.code(201).send(campaign);
+    } catch (err) {
+      fastify.log.error({ err }, 'Error upsert referral campaign');
+      return reply.code(500).send({ error: 'No se pudo guardar la campaña.' });
+    }
+  });
+
   fastify.post('/admin/referrals', async (request, reply) => {
     if (!requireAdminSecret(request)) {
       return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({

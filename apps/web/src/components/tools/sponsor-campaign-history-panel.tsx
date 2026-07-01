@@ -7,11 +7,16 @@ import {
   removeSponsorCampaignHistory,
   type SponsorCampaignHistoryEntry,
 } from '@/lib/sponsor-campaign-history';
+import {
+  fetchServerSponsorCampaigns,
+  mergeSponsorCampaignHistory,
+} from '@/lib/sponsor-campaign-sync';
 import { Button } from '@/components/ui/button';
 import {
   Check,
   Copy,
   History,
+  Loader2,
   MessageCircle,
   Pencil,
   Trash2,
@@ -39,13 +44,23 @@ type Props = {
 export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsAppQr }: Props) {
   const [entries, setEntries] = useState<SponsorCampaignHistoryEntry[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const reload = useCallback(() => {
-    setEntries(listSponsorCampaignHistory());
+  const reload = useCallback(async () => {
+    setLoading(true);
+    const local = listSponsorCampaignHistory();
+    try {
+      const server = await fetchServerSponsorCampaigns();
+      setEntries(mergeSponsorCampaignHistory(server, local));
+    } catch {
+      setEntries(local);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload, refreshKey]);
 
   const copyText = useCallback(async (key: string, text: string) => {
@@ -58,15 +73,27 @@ export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsApp
     }
   }, []);
 
+  if (loading && entries.length === 0) {
+    return (
+      <section className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-5">
+        <div className="flex items-center gap-2 text-slate-600">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-slate-400" aria-hidden />
+          <p className="text-sm">Cargando campañas del servidor…</p>
+        </div>
+      </section>
+    );
+  }
+
   if (entries.length === 0) {
     return (
       <section className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-5">
         <div className="flex items-center gap-2 text-slate-600">
           <History className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
           <div>
-            <h2 className="text-sm font-bold text-slate-800">Campañas recientes</h2>
+            <h2 className="text-sm font-bold text-slate-800">Campañas registradas</h2>
             <p className="mt-1 text-xs text-slate-500">
-              Las últimas 3 campañas que copies o generes (guardado en este navegador).
+              Completá el formulario y tocá <strong>Guardar campaña</strong> o copiá el link. Quedan
+              en el servidor y en Admin → Referidores.
             </p>
           </div>
         </div>
@@ -80,10 +107,10 @@ export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsApp
         <div className="flex items-start gap-2">
           <History className="mt-0.5 h-5 w-5 text-primary-600" aria-hidden />
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Campañas recientes</h2>
+            <h2 className="text-lg font-bold text-slate-900">Campañas registradas</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Últimas {entries.length} campañas en este navegador. Copiá de nuevo o cargá en el
-              formulario.
+              {entries.length} campaña{entries.length === 1 ? '' : 's'} en el servidor (visible en
+              Admin → Referidores).
             </p>
           </div>
         </div>
@@ -93,13 +120,17 @@ export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsApp
           size="sm"
           className="text-slate-600"
           onClick={() => {
-            if (window.confirm('¿Borrar todo el historial local de campañas?')) {
+            if (
+              window.confirm(
+                '¿Borrar solo el cache local de este navegador? Las campañas en el servidor no se eliminan.'
+              )
+            ) {
               clearSponsorCampaignHistory();
-              reload();
+              void reload();
             }
           }}
         >
-          Vaciar historial
+          Vaciar cache local
         </Button>
       </div>
 
@@ -139,9 +170,10 @@ export function SponsorCampaignHistoryPanel({ refreshKey, onLoad, onOpenWhatsApp
                     className="h-8 w-8 p-0 text-slate-500 hover:text-rose-600"
                     onClick={() => {
                       removeSponsorCampaignHistory(entry.refCode);
-                      reload();
+                      void reload();
                     }}
-                    aria-label={`Quitar ${entry.refCode}`}
+                    aria-label={`Quitar del cache local ${entry.refCode}`}
+                    title="Quitar del cache local (no borra del servidor)"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
