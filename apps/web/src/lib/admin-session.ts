@@ -1,15 +1,29 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import {
+  adminOpenAccessEnabled,
+  adminRequireAuthEnabled,
+  ADMIN_UI_COOKIE_NAME,
+} from '@/lib/admin-auth-config';
 
-const COOKIE_NAME = 'cleexs_admin_ui';
+const COOKIE_NAME = ADMIN_UI_COOKIE_NAME;
 
-export { COOKIE_NAME };
+export { COOKIE_NAME, adminOpenAccessEnabled, adminRequireAuthEnabled };
 
 function sessionSecret(): string {
-  return (
-    process.env.ADMIN_UI_SESSION_SECRET?.trim() ||
-    process.env.ADMIN_UI_PASSWORD?.trim() ||
-    ''
-  );
+  const password = normalizeEnvSecret(process.env.ADMIN_UI_PASSWORD);
+  const sessionSecretValue = normalizeEnvSecret(process.env.ADMIN_UI_SESSION_SECRET);
+  return sessionSecretValue || password || '';
+}
+
+export function normalizeEnvSecret(value: string | undefined): string {
+  const trimmed = `${value || ''}`.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
 }
 
 /** Token: `${expMs}.${hexSig}` */

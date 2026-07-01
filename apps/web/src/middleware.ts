@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import {
+  ADMIN_UI_COOKIE_NAME,
+  adminRequireAuthEnabled,
+  hasAdminSessionCookie,
+} from '@/lib/admin-auth-config';
 
 /**
  * Rutas públicas para pruebas (sin login).
@@ -57,6 +62,21 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   return false;
 }
 
+function adminLoginRedirect(request: NextRequest): NextResponse | null {
+  const pathname = request.nextUrl.pathname;
+  if (!pathname.startsWith('/admin')) return null;
+  if (pathname.startsWith('/admin/login')) return null;
+  if (!adminRequireAuthEnabled()) return null;
+
+  const token = request.cookies.get(ADMIN_UI_COOKIE_NAME)?.value;
+  if (hasAdminSessionCookie(token)) return null;
+
+  const url = request.nextUrl.clone();
+  url.pathname = '/admin/login';
+  url.search = '';
+  return NextResponse.redirect(url);
+}
+
 function isPublicPath(pathname: string): boolean {
   const path = pathname.replace(/\?.*$/, '').replace(/\/$/, '') || '/';
   if (PUBLIC_PATHS.includes(path)) return true;
@@ -75,6 +95,9 @@ export function middleware(request: NextRequest) {
   if (marketingRedirect) return marketingRedirect;
 
   const pathname = request.nextUrl.pathname;
+  const adminRedirect = adminLoginRedirect(request);
+  if (adminRedirect) return adminRedirect;
+
   const host = request.headers.get('host') || request.nextUrl.hostname || '';
 
   // Subdominio solo para pruebas: raíz y todo lo no permitido → /diagnostico/crear

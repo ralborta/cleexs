@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { COUNTRIES, findCountryByName } from '@/lib/countries';
+import { CountrySelect, countryIsoForDisplay } from '@/components/country/country-select';
 import { CountryFlag } from '@/components/country/country-picker';
+import { findCountryByName } from '@/lib/countries';
 
 const LANGUAGES = [
   { id: 'es', label: 'Español', flagIso: 'ES' },
@@ -54,22 +55,7 @@ export function OnboardingCountryLanguageFields({
   onCountry: (v: string) => void;
 }) {
   const [language, setLanguage] = useState(() => defaultLanguageForCountry(country));
-
-  const countryOptions = useMemo(() => {
-    if (country && !COUNTRIES.some((c) => c.name === country)) {
-      return [
-        { iso: 'XX', name: country, geoMarket: 'global' as const, region: 'América Latina' as const },
-        ...COUNTRIES,
-      ];
-    }
-    return COUNTRIES;
-  }, [country]);
-
-  const selectedCountry = useMemo(
-    () => countryOptions.find((c) => c.name === country) ?? findCountryByName(country),
-    [country, countryOptions]
-  );
-  const countryIso = selectedCountry?.iso ?? 'AR';
+  const countryIso = countryIsoForDisplay(country);
   const selectedLanguage = LANGUAGES.find((l) => l.id === language) ?? LANGUAGES[0];
 
   useEffect(() => {
@@ -82,23 +68,12 @@ export function OnboardingCountryLanguageFields({
         <span className="text-xs font-semibold text-slate-500">País detectado</span>
         <div className="relative mt-1.5">
           <CountryFlag iso={countryIso} className={flagCls} />
-          <select
+          <CountrySelect
             value={country}
-            onChange={(e) => onCountry(e.target.value)}
-            className={selectCls}
-          >
-            {!country ? (
-              <option value="" disabled>
-                Seleccioná un país
-              </option>
-            ) : null}
-            {countryOptions.map((c) => (
-              <option key={c.name} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            onChange={onCountry}
+            suggestedName={country}
+            selectClassName={selectCls}
+          />
         </div>
       </label>
 

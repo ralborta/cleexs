@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { cookies, headers } from 'next/headers';
-import { COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-session';
+import { adminOpenAccessEnabled, COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-session';
 
 function cookieValueFromHeader(raw: string | null | undefined, name: string): string | undefined {
   if (!raw) return undefined;
@@ -51,10 +51,8 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
 // Railway, asi que la proteccion real esta a nivel del backend y de la red.
 // Si en el futuro quisieramos exigir login con cookie de sesion, basta con
 // poner ADMIN_OPEN_ACCESS = false y redesplegar.
-const ADMIN_OPEN_ACCESS = true;
-
-function adminAuthBypassEnabled(): boolean {
-  return ADMIN_OPEN_ACCESS;
+export function adminAuthBypassEnabled(): boolean {
+  return adminOpenAccessEnabled();
 }
 
 /** Valida sesión admin: NextRequest.cookies, cookie store de headers(), cabecera Cookie. */

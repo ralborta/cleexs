@@ -1768,7 +1768,11 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         funnel: {
           homeVisitors: { count: homeVisitors, pageViews: pageViewsTotal },
           urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
-          emailLeft: { count: emailLeft, pct: pct(emailLeft, urlSubmitted) },
+          emailLeft: {
+            count: emailLeft,
+            pct: pct(emailLeft, urlSubmitted),
+            pctOfVisitors: pct(emailLeft, homeVisitors),
+          },
           shared: {
             count: sharedTotal,
             pct: pct(sharedTotal, urlSubmitted),

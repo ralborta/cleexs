@@ -23,12 +23,13 @@ import { addDaysToDayString, formatDayInArgentina } from '@cleexs/shared';
 export const dynamic = 'force-dynamic';
 
 type FunnelStep = { count: number; pct: number | null };
+type EmailLeftStep = FunnelStep & { pctOfVisitors: number | null };
 type Metrics = {
   range: { from: string; to: string };
   funnel: {
     homeVisitors: { count: number; pageViews: number };
     urlSubmitted: FunnelStep;
-    emailLeft: FunnelStep;
+    emailLeft: EmailLeftStep;
     shared: FunnelStep & { byChannel: { channel: string; count: number }[] };
     referred: FunnelStep & { byCode: { refCode: string; count: number }[] };
     unlockClicks: FunnelStep;
@@ -307,8 +308,10 @@ export default function AdminConversionPage() {
           icon={<Mail className="h-4 w-4 text-violet-600" />}
           label="Dejaron email"
           value={fmt(f?.emailLeft.count ?? 0)}
-          pct={pctLabel(f?.emailLeft.pct ?? null)}
-          pctHint="de los que pusieron URL"
+          pctLines={[
+            { pct: f?.emailLeft.pct ?? null, label: 'de URL' },
+            { pct: f?.emailLeft.pctOfVisitors ?? null, label: 'de visitas' },
+          ]}
           onClick={openEmailDetail}
           actionHint="Ver detalle"
         />
@@ -643,6 +646,7 @@ function FunnelCard({
   value,
   pct,
   pctHint,
+  pctLines,
   hint,
   onClick,
   actionHint,
@@ -650,8 +654,9 @@ function FunnelCard({
   icon: React.ReactNode;
   label: string;
   value: string;
-  pct: string;
+  pct?: string;
   pctHint?: string;
+  pctLines?: Array<{ pct: number | null; label: string }>;
   hint?: string;
   onClick?: () => void;
   actionHint?: string;
@@ -662,6 +667,21 @@ function FunnelCard({
       ? 'border-violet-200 hover:border-violet-300 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-200'
       : 'border-slate-200'
   }`;
+  const pctBlock = pctLines?.length ? (
+    <div className="mt-1 min-h-[2.5rem] space-y-0.5">
+      {pctLines.map((line) => (
+        <p key={line.label} className="leading-tight">
+          <span className="text-sm font-semibold text-emerald-600">{pctLabel(line.pct)}</span>{' '}
+          <span className="text-[10px] text-slate-400">{line.label}</span>
+        </p>
+      ))}
+    </div>
+  ) : (
+    <div className="mt-1 min-h-[2.5rem] flex items-baseline gap-1">
+      <span className="text-sm font-semibold text-emerald-600">{pct}</span>
+      {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
+    </div>
+  );
   const inner = (
     <>
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -669,10 +689,7 @@ function FunnelCard({
         <span>{label}</span>
       </div>
       <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
-      <div className="mt-1 flex items-baseline gap-1">
-        <span className="text-sm font-semibold text-emerald-600">{pct}</span>
-        {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
-      </div>
+      {pctBlock}
       {hint ? <p className="mt-0.5 text-[10px] text-slate-400">{hint}</p> : null}
       {clickable && actionHint ? (
         <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
