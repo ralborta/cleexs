@@ -10,7 +10,8 @@
     "start": "npm run migrate:deploy && node dist/index.js",
     "lint": "eslint .",
     "backfill:attribution": "tsx scripts/backfill-diagnostic-attribution.ts",
-    "backfill:referral-campaigns": "tsx scripts/backfill-referral-campaigns.ts"
+    "backfill:referral-campaigns": "tsx scripts/backfill-referral-campaigns.ts",
+    "reattribute:sponsors": "tsx scripts/reattribute-sponsor-diagnostics.ts"
   },
   "dependencies": {
     "@cleexs/shared": "*",
