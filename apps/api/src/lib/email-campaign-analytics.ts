@@ -1,11 +1,13 @@
 import { CleexsEmailSendStatus } from '@prisma/client';
-import { isExcludedFromEmailBatchMonitor } from './email-batch-status';
 import {
-  classifyEmailClickUrl,
-  extractResendClickLink,
-  inferVariantFromMergeSummary,
-  isEmailUtmPurchase,
-} from './email-link-attribution';
+  CONFIGURED_CAMPAIGN_SCOPE_NOTE,
+  isConfiguredMarketingCampaignSlug,
+} from './email-configured-campaigns';
+import { inferVariantFromMergeSummary, isEmailUtmPurchase } from './email-link-attribution';
+import {
+  countRecentResendWebhookEvents,
+  loadAppliedResendFlagsForSendLogs,
+} from './resend-internal-email-events';
 import { prisma } from './prisma';
 
 export type EmailAnalyticsFunnelStep = {
@@ -56,6 +58,8 @@ export type EmailCampaignAnalyticsReport = {
   integrations: {
     resendWebhookSecretConfigured: boolean;
     note: string;
+    scope: string;
+    resendEventsLast7Days: Record<string, number>;
   };
 };
 
@@ -81,9 +85,9 @@ function pct(num: number, den: number): number | null {
 }
 
 function campaignLabel(slug: string, variant: string | null): string {
-  if (slug.startsWith('weekly-')) {
-    const slot = slug.match(/slot(\d)/i)?.[1];
-    return slot ? `Semanal · campaña ${slot}` : 'Semanal';
+  if (slug.startsWith('weekly-auto-w')) {
+    const slot = slug.match(/weekly-auto-w(\d)/i)?.[1];
+    return slot ? `Semanal · campaña ${slot}` : 'Semanal programada';
   }
   if (slug.startsWith('monthly-score')) return variant ? `Mensual · ${variant}` : 'Mensual score';
   if (slug.startsWith('broadcast-')) return 'Broadcast manual';
@@ -99,7 +103,7 @@ async function loadRecipientStates(from: Date, to: Date): Promise<RecipientState
     orderBy: { createdAt: 'desc' },
   });
 
-  const marketingLogs = logs.filter((l) => !isExcludedFromEmailBatchMonitor(l.campaignSlug));
+  const marketingLogs = logs.filter((l) => isConfiguredMarketingCampaignSlug(l.campaignSlug));
   const states: RecipientState[] = marketingLogs.map((log) => ({
     id: log.id,
     recipientEmail: log.recipientEmail.trim().toLowerCase(),
@@ -117,36 +121,29 @@ async function loadRecipientStates(from: Date, to: Date): Promise<RecipientState
     purchaseTemplate: null,
   }));
 
-  const byExternalId = new Map<string, RecipientState>();
   const byEmail = new Map<string, RecipientState[]>();
   for (const row of states) {
-    if (row.externalId) byExternalId.set(row.externalId, row);
     const list = byEmail.get(row.recipientEmail) ?? [];
     list.push(row);
     byEmail.set(row.recipientEmail, list);
   }
 
-  const externalIds = [...byExternalId.keys()];
-  if (externalIds.length > 0) {
-    const events = await prisma.cleexsResendWebhookEvent.findMany({
-      where: { emailId: { in: externalIds } },
-      select: { emailId: true, eventType: true, payload: true },
-      orderBy: { occurredAt: 'asc' },
-    });
+  const resendFlags = await loadAppliedResendFlagsForSendLogs(
+    states.map((row) => ({
+      id: row.id,
+      externalId: row.externalId,
+      recipientEmail: row.recipientEmail,
+      sentAt: row.sentAt,
+    }))
+  );
 
-    for (const ev of events) {
-      if (!ev.emailId) continue;
-      const row = byExternalId.get(ev.emailId);
-      if (!row) continue;
-      const type = ev.eventType.toLowerCase();
-      if (type === 'email.delivered') row.delivered = true;
-      if (type === 'email.opened') row.opened = true;
-      if (type === 'email.clicked') {
-        const link = extractResendClickLink(ev.payload);
-        if (link && classifyEmailClickUrl(link) === 'campaign') row.clickedCampaign = true;
-        else row.clickedOther = true;
-      }
-    }
+  for (const row of states) {
+    const flags = resendFlags.get(row.id);
+    if (!flags) continue;
+    row.delivered = flags.delivered;
+    row.opened = flags.opened;
+    row.clickedCampaign = flags.clickedCampaign;
+    row.clickedOther = flags.clickedOther;
   }
 
   const recipientEmails = [...byEmail.keys()];
@@ -236,6 +233,7 @@ export async function buildEmailCampaignAnalytics(input: {
   }
 
   const byCampaign = Array.from(campaignMap.values()).sort((a, b) => b.sent - a.sent);
+  const resendEventsLast7Days = await countRecentResendWebhookEvents(7);
 
   return {
     ok: true,
@@ -265,6 +263,8 @@ export async function buildEmailCampaignAnalytics(input: {
       resendWebhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
       note:
         'Los links de plantilla llevan utm_campaign + utm_content (cta_plans, cta_diagnostic, etc.). Sin RESEND_WEBHOOK_SECRET los eventos de entrega/apertura/clic no se registran.',
+      scope: CONFIGURED_CAMPAIGN_SCOPE_NOTE,
+      resendEventsLast7Days,
     },
   };
 }

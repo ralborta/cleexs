@@ -46,6 +46,8 @@ type AnalyticsReport = {
   integrations: {
     resendWebhookSecretConfigured: boolean;
     note: string;
+    scope?: string;
+    resendEventsLast7Days?: Record<string, number>;
   };
 };
 
@@ -255,9 +257,24 @@ export function EmailEnviosFunnel() {
           </div>
         </div>
       ) : data?.integrations.resendWebhookSecretConfigured ? (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">
-          <ShieldCheck className="h-4 w-4" />
-          Tracking activo: entregas, aperturas y clics vía Resend · links con utm_campaign + utm_content
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Tracking activo: entregas, aperturas y clics vía Resend · links con utm_campaign + utm_content
+          </div>
+          {data.integrations.scope ? (
+            <p className="text-xs leading-relaxed text-slate-500">{data.integrations.scope}</p>
+          ) : null}
+          {data.integrations.resendEventsLast7Days &&
+          Object.keys(data.integrations.resendEventsLast7Days).length > 0 ? (
+            <p className="text-xs leading-relaxed text-slate-500">
+              Eventos Resend (7 días):{' '}
+              {Object.entries(data.integrations.resendEventsLast7Days)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([type, n]) => `${type.replace(/^email\./, '')} ${n}`)
+                .join(' · ')}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -317,9 +334,9 @@ export function EmailEnviosFunnel() {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Por campaña / template</h2>
+        <h2 className="text-sm font-semibold text-slate-900">Por campaña programada</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Compará semanales, mensuales y broadcasts en el rango {data?.range.from} → {data?.range.to}.
+          Solo secuencia configurada (semanal + mensual). Pruebas manuales no suman acá — ver detalle operativo abajo.
         </p>
         {!data?.byCampaign.length ? (
           <p className="mt-4 text-sm text-slate-500">Sin envíos de marketing en este período.</p>

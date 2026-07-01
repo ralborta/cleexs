@@ -3,6 +3,11 @@ import type { FastifyPluginAsync } from 'fastify';
 import { Webhook } from 'svix';
 import { prisma } from '../lib/prisma';
 import { updateLeadEmailFromResendEvent } from '../lib/lead-email-sender';
+import {
+  backfillInternalSendLogExternalId,
+  extractResendWebhookEmailId,
+  extractResendWebhookRecipients,
+} from '../lib/resend-internal-email-events';
 
 type ResendWebhookBody = {
   type: string;
@@ -65,8 +70,15 @@ const webhooksResendRoutes: FastifyPluginAsync = async (fastify) => {
 
       const eventType = evt.type || 'unknown';
       const data = evt.data ?? {};
-      const emailId = typeof data.email_id === 'string' ? data.email_id : null;
-      const to0 = Array.isArray(data.to) && typeof data.to[0] === 'string' ? data.to[0].toLowerCase() : null;
+      const emailId =
+        typeof data.email_id === 'string' && data.email_id.trim()
+          ? data.email_id.trim()
+          : extractResendWebhookEmailId(evt);
+      const recipientsFromPayload = extractResendWebhookRecipients(evt);
+      const to0 =
+        (Array.isArray(data.to) && typeof data.to[0] === 'string'
+          ? data.to[0].toLowerCase()
+          : null) ?? recipientsFromPayload[0] ?? null;
 
       let occurredAt: Date | null = null;
       try {
@@ -100,6 +112,16 @@ const webhooksResendRoutes: FastifyPluginAsync = async (fastify) => {
           await updateLeadEmailFromResendEvent(emailId, eventType);
         } catch (e) {
           fastify.log.warn({ err: e, emailId, eventType }, 'No se pudo actualizar LeadEmail desde webhook Resend');
+        }
+
+        try {
+          await backfillInternalSendLogExternalId({
+            emailId,
+            recipientEmails: to0 ? [to0, ...recipientsFromPayload] : recipientsFromPayload,
+            occurredAt: occurredAtFinal,
+          });
+        } catch (e) {
+          fastify.log.warn({ err: e, emailId, eventType }, 'No se pudo enlazar log interno con email_id Resend');
         }
       }
 

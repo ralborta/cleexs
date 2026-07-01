@@ -1,5 +1,6 @@
 import { CleexsEmailSendStatus } from '@prisma/client';
 import { isFreeDiagnosticFollowupCampaignSlug, FREE_DIAGNOSTIC_FOLLOWUP_CAMPAIGN_PREFIX } from './free-diagnostic-followup';
+import { loadAppliedResendFlagsForSendLogs } from './resend-internal-email-events';
 import { prisma } from './prisma';
 
 const RESEND_EVENT_ORDER = [
@@ -107,28 +108,33 @@ function summarizeResendEvents(
   };
 }
 
-async function resendEventsByEmailIds(emailIds: string[]) {
-  const unique = [...new Set(emailIds.filter(Boolean))];
-  if (unique.length === 0) return new Map<string, ResendEventSummary>();
-
-  const rows = await prisma.cleexsResendWebhookEvent.findMany({
-    where: { emailId: { in: unique } },
-    select: { emailId: true, eventType: true, occurredAt: true },
-    orderBy: { occurredAt: 'asc' },
-  });
-
-  const grouped = new Map<string, Array<{ eventType: string; occurredAt: Date | null }>>();
-  for (const row of rows) {
-    if (!row.emailId) continue;
-    const arr = grouped.get(row.emailId) ?? [];
-    arr.push({ eventType: row.eventType, occurredAt: row.occurredAt });
-    grouped.set(row.emailId, arr);
-  }
-
+async function resendEventsByEmailIds(
+  logs: Array<{ id: string; externalId: string | null; recipientEmail: string; sentAt: Date | string }>
+): Promise<Map<string, ResendEventSummary>> {
+  const normalized = logs.map((l) => ({
+    id: l.id,
+    externalId: l.externalId,
+    recipientEmail: l.recipientEmail,
+    sentAt: l.sentAt instanceof Date ? l.sentAt : new Date(l.sentAt),
+  }));
+  const flagsMap = await loadAppliedResendFlagsForSendLogs(normalized);
   const out = new Map<string, ResendEventSummary>();
-  for (const id of unique) {
-    const summary = summarizeResendEvents(grouped.get(id) ?? []);
-    if (summary) out.set(id, summary);
+  for (const log of normalized) {
+    const flags = flagsMap.get(log.id);
+    if (!flags || flags.timeline.length === 0) continue;
+    const last = flags.timeline[flags.timeline.length - 1];
+    out.set(log.id, {
+      lastEvent: last?.eventType ?? null,
+      lastEventAt: last?.occurredAt ?? null,
+      delivered: flags.delivered,
+      opened: flags.opened,
+      clicked: flags.clicked,
+      bounced: flags.bounced,
+      complained: flags.complained,
+      failed: flags.failed,
+      deliveryDelayed: flags.deliveryDelayed,
+      timeline: flags.timeline,
+    });
   }
   return out;
 }
@@ -146,10 +152,9 @@ function aggregateResendCounts(
   let noEventsYet = 0;
 
   for (const row of rows) {
-    if (!row.externalId) continue;
-    withExternalId += 1;
+    if (row.externalId) withExternalId += 1;
     if (!row.resend) {
-      noEventsYet += 1;
+      if (row.externalId) noEventsYet += 1;
       continue;
     }
     if (row.resend.delivered) delivered += 1;
@@ -241,18 +246,28 @@ export async function listEmailBatches(limit = 30): Promise<EmailBatchListItem[]
     if (!metaBySlug.has(row.campaignSlug)) metaBySlug.set(row.campaignSlug, row);
   }
 
-  const externalIdLogs =
+  const sendLogsForResend =
     slugs.length > 0
       ? await prisma.cleexsInternalEmailSendLog.findMany({
-          where: { campaignSlug: { in: slugs }, externalId: { not: null } },
-          select: { campaignSlug: true, externalId: true },
+          where: { campaignSlug: { in: slugs }, status: CleexsEmailSendStatus.sent },
+          select: {
+            id: true,
+            campaignSlug: true,
+            externalId: true,
+            recipientEmail: true,
+            createdAt: true,
+          },
         })
       : [];
 
-  const externalIds = externalIdLogs
-    .map((l) => l.externalId)
-    .filter((id): id is string => Boolean(id));
-  const resendMap = await resendEventsByEmailIds(externalIds);
+  const resendMap = await resendEventsByEmailIds(
+    sendLogsForResend.map((l) => ({
+      id: l.id,
+      externalId: l.externalId,
+      recipientEmail: l.recipientEmail,
+      sentAt: l.createdAt,
+    }))
+  );
 
   return grouped.map((g) => {
     const slug = g.campaignSlug;
@@ -269,19 +284,18 @@ export async function listEmailBatches(limit = 30): Promise<EmailBatchListItem[]
     const metaLog = metaBySlug.get(slug);
     const { mode, variant } = inferBatchMeta(metaLog ? [metaLog] : []);
 
-    const recipientRows: EmailBatchRecipientRow[] = externalIdLogs
-      .filter((l) => l.campaignSlug === slug)
-      .map((l, idx) => ({
-        id: `summary-${slug}-${idx}`,
-        recipientEmail: '',
-        cleexsStatus: CleexsEmailSendStatus.sent,
-        cleexsScore: null,
-        externalId: l.externalId,
-        errorMessage: null,
-        sentAt: '',
-        mergeSummary: null,
-        resend: l.externalId ? resendMap.get(l.externalId) ?? null : null,
-      }));
+    const slugLogs = sendLogsForResend.filter((l) => l.campaignSlug === slug);
+    const recipientRows: EmailBatchRecipientRow[] = slugLogs.map((l) => ({
+      id: l.id,
+      recipientEmail: l.recipientEmail,
+      cleexsStatus: CleexsEmailSendStatus.sent,
+      cleexsScore: null,
+      externalId: l.externalId,
+      errorMessage: null,
+      sentAt: l.createdAt.toISOString(),
+      mergeSummary: null,
+      resend: resendMap.get(l.id) ?? null,
+    }));
 
     return {
       campaignSlug: slug,
@@ -329,8 +343,14 @@ export async function getEmailBatchDetail(campaignSlug: string): Promise<{
     orderBy: { createdAt: 'desc' },
   });
 
-  const externalIds = logs.map((l) => l.externalId).filter((id): id is string => Boolean(id));
-  const resendMap = await resendEventsByEmailIds(externalIds);
+  const resendMap = await resendEventsByEmailIds(
+    logs.map((log) => ({
+      id: log.id,
+      externalId: log.externalId,
+      recipientEmail: log.recipientEmail,
+      sentAt: log.createdAt,
+    }))
+  );
 
   const recipients: EmailBatchRecipientRow[] = logs.map((log) => ({
     id: log.id,
@@ -341,7 +361,7 @@ export async function getEmailBatchDetail(campaignSlug: string): Promise<{
     errorMessage: log.errorMessage,
     sentAt: log.createdAt.toISOString(),
     mergeSummary: asRecord(log.mergeSummary),
-    resend: log.externalId ? resendMap.get(log.externalId) ?? null : null,
+    resend: resendMap.get(log.id) ?? null,
   }));
 
   const statuses = logs.map((l) => l.status);
