@@ -1,4 +1,5 @@
 import { CleexsEmailSendStatus } from '@prisma/client';
+import { isFreeDiagnosticFollowupCampaignSlug, FREE_DIAGNOSTIC_FOLLOWUP_CAMPAIGN_PREFIX } from './free-diagnostic-followup';
 import { prisma } from './prisma';
 
 const RESEND_EVENT_ORDER = [
@@ -193,10 +194,22 @@ function inferBatchMeta(logs: Array<{ mergeSummary: unknown }>): { mode: string 
   return { mode: null, variant: null };
 }
 
+/** Envíos transaccionales (free score / link diagnóstico) no son campañas batch. */
+export function isExcludedFromEmailBatchMonitor(campaignSlug: string): boolean {
+  return isFreeDiagnosticFollowupCampaignSlug(campaignSlug);
+}
+
+function batchMonitorWhere() {
+  return {
+    NOT: { campaignSlug: { startsWith: FREE_DIAGNOSTIC_FOLLOWUP_CAMPAIGN_PREFIX } },
+  };
+}
+
 export async function listEmailBatches(limit = 30): Promise<EmailBatchListItem[]> {
   const capped = Math.min(60, Math.max(5, limit));
   const grouped = await prisma.cleexsInternalEmailSendLog.groupBy({
     by: ['campaignSlug'],
+    where: batchMonitorWhere(),
     _count: { _all: true },
     _min: { createdAt: true },
     _max: { createdAt: true },
@@ -287,6 +300,30 @@ export async function getEmailBatchDetail(campaignSlug: string): Promise<{
   recipients: EmailBatchRecipientRow[];
 }> {
   const slug = campaignSlug.trim();
+  if (isExcludedFromEmailBatchMonitor(slug)) {
+    return {
+      batch: {
+        campaignSlug: slug,
+        firstSendAt: null,
+        lastSendAt: null,
+        totals: { total: 0, sent: 0, failed: 0, skipped: 0, pending: 0 },
+        resend: {
+          withExternalId: 0,
+          delivered: 0,
+          opened: 0,
+          clicked: 0,
+          bounced: 0,
+          complained: 0,
+          failed: 0,
+          noEventsYet: 0,
+        },
+        mode: 'free_diagnostic_followup',
+        variant: null,
+      },
+      recipients: [],
+    };
+  }
+
   const logs = await prisma.cleexsInternalEmailSendLog.findMany({
     where: { campaignSlug: slug },
     orderBy: { createdAt: 'desc' },
