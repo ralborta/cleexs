@@ -1,0 +1,73 @@
+name: Custom Template Batch
+
+on:
+  workflow_dispatch:
+    inputs:
+      campaign_slug:
+        description: 'Slug del batch (ej. test-1)'
+        required: true
+        default: 'test-1'
+      batch_label:
+        description: 'Nombre visible del batch'
+        required: true
+        default: 'Test 1'
+      emails:
+        description: 'Emails separados por coma'
+        required: true
+      subject:
+        description: 'Asunto del correo'
+        required: true
+        default: 'Prueba Cleexs'
+      variant:
+        description: 'Plantilla'
+        required: true
+        default: 'editorial'
+        type: choice
+        options:
+          - editorial
+          - letter
+      dry_run:
+        description: 'Solo simular'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  send-custom-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger custom template batch
+        env:
+          CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          CAMPAIGN_SLUG: ${{ inputs.campaign_slug }}
+          BATCH_LABEL: ${{ inputs.batch_label }}
+          EMAILS: ${{ inputs.emails }}
+          SUBJECT: ${{ inputs.subject }}
+          VARIANT: ${{ inputs.variant }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CLEEXS_CRON_SECRET"
+            exit 1
+          fi
+
+          emails_json=$(echo "$EMAILS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | jq -R -s 'split("\n") | map(select(length>0))')
+
+          payload=$(jq -n \
+            --arg campaignSlug "$CAMPAIGN_SLUG" \
+            --arg batchLabel "$BATCH_LABEL" \
+            --arg subject "$SUBJECT" \
+            --arg variant "$VARIANT" \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson emails "$emails_json" \
+            '{campaignSlug:$campaignSlug,batchLabel:$batchLabel,subject:$subject,variant:$variant,dryRun:$dryRun,emails:$emails}')
+
+          curl --fail-with-body -sS \
+            -X POST "$API_URL/api/cron/custom-template-batch" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
