@@ -14,7 +14,7 @@ import { SponsorCampaignHistoryPanel } from '@/components/tools/sponsor-campaign
 import { SponsorTrackingPanel } from '@/components/tools/sponsor-tracking-panel';
 import { SponsorWhatsAppQrModal } from '@/components/tools/sponsor-whatsapp-qr-modal';
 import { patchSponsorCampaignHistory } from '@/lib/sponsor-campaign-history';
-import { syncSponsorCampaignToServer } from '@/lib/sponsor-campaign-sync';
+import { syncSponsorCampaignToServer, migrateRecentLocalSponsorCampaignsToServer } from '@/lib/sponsor-campaign-sync';
 import { Check, Copy, Download, ExternalLink, Link2, Loader2, MessageCircle, QrCode, Save } from 'lucide-react';
 
 const fieldCls =
@@ -37,6 +37,25 @@ export function SponsorLinkBuilder() {
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [migrationNote, setMigrationNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void migrateRecentLocalSponsorCampaignsToServer({ maxAgeDays: 21 }).then((result) => {
+      if (cancelled) return;
+      if (result.migrated > 0) {
+        setMigrationNote(
+          `Migramos ${result.migrated} campaña${result.migrated === 1 ? '' : 's'} del historial local al servidor.`
+        );
+        setHistoryRefresh((n) => n + 1);
+      } else if (result.errors.length > 0) {
+        setMigrationNote(result.errors[0] ?? null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (refTouched) return;
@@ -198,6 +217,11 @@ export function SponsorLinkBuilder() {
           Cada campaña se guarda en el servidor y aparece en{' '}
           <strong className="font-semibold">Admin → Referidores</strong> para el ranking de emails.
         </p>
+        {migrationNote ? (
+          <p className="mt-2 rounded-lg border border-primary-200/80 bg-primary-50 px-3 py-2 text-xs text-primary-900">
+            {migrationNote}
+          </p>
+        ) : null}
       </header>
 
       <form

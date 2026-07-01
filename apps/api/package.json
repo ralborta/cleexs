@@ -9,7 +9,8 @@
     "migrate:deploy": "prisma migrate deploy --schema=../../prisma/schema.prisma",
     "start": "npm run migrate:deploy && node dist/index.js",
     "lint": "eslint .",
-    "backfill:attribution": "tsx scripts/backfill-diagnostic-attribution.ts"
+    "backfill:attribution": "tsx scripts/backfill-diagnostic-attribution.ts",
+    "backfill:referral-campaigns": "tsx scripts/backfill-referral-campaigns.ts"
   },
   "dependencies": {
     "@cleexs/shared": "*",

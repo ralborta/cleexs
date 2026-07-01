@@ -4,6 +4,7 @@ import {
   normalizeTrackingValue,
 } from '@/lib/sponsor-link';
 import type { SponsorCampaignHistoryEntry } from '@/lib/sponsor-campaign-history';
+import { listSponsorCampaignHistory } from '@/lib/sponsor-campaign-history';
 
 export type ServerSponsorCampaign = {
   id: string;
@@ -108,4 +109,83 @@ export function mergeSponsorCampaignHistory(
   return merged.sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
+}
+
+const LOCAL_MIGRATION_FLAG = 'cleexs_sponsor_local_migrated_v1';
+const DEFAULT_MIGRATION_DAYS = 21;
+
+/** Sube al servidor campañas del historial local (últimas N semanas). */
+export async function migrateRecentLocalSponsorCampaignsToServer(options?: {
+  maxAgeDays?: number;
+}): Promise<{ migrated: number; skipped: number; errors: string[] }> {
+  if (typeof window === 'undefined') return { migrated: 0, skipped: 0, errors: [] };
+
+  const maxAgeDays = options?.maxAgeDays ?? DEFAULT_MIGRATION_DAYS;
+  const since = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+  const local = listSponsorCampaignHistory().filter(
+    (entry) => new Date(entry.updatedAt).getTime() >= since
+  );
+
+  if (local.length === 0) {
+    return { migrated: 0, skipped: 0, errors: [] };
+  }
+
+  const server = await fetchServerSponsorCampaigns();
+  const serverRefs = new Set(server.map((c) => c.refCode.toLowerCase()));
+  const pending = local.filter((entry) => !serverRefs.has(entry.refCode.toLowerCase()));
+
+  if (pending.length === 0) {
+    try {
+      window.localStorage.setItem(LOCAL_MIGRATION_FLAG, new Date().toISOString());
+    } catch {
+      /* ignore */
+    }
+    return { migrated: 0, skipped: local.length, errors: [] };
+  }
+
+  try {
+    const res = await fetch('/api/tools/sponsor-campaigns/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        campaigns: pending.map((entry) => ({
+          name: entry.sponsorName.trim() || entry.refCode,
+          refCode: entry.refCode,
+          utmSource: entry.utmSource || 'auspiciador',
+          utmMedium: entry.utmMedium || 'link',
+          utmCampaign: entry.utmCampaign || entry.refCode,
+          notes: `Migrado desde historial local /tools/auspiciadores (${entry.updatedAt.slice(0, 10)})`,
+          active: true,
+        })),
+      }),
+    });
+    const data = (await res.json().catch(() => null)) as {
+      created?: number;
+      updated?: number;
+      errors?: string[];
+      error?: string;
+    } | null;
+
+    if (!res.ok) {
+      return {
+        migrated: 0,
+        skipped: 0,
+        errors: [data?.error || 'No se pudo migrar el historial local'],
+      };
+    }
+
+    const migrated = (data?.created ?? 0) + (data?.updated ?? 0);
+    try {
+      window.localStorage.setItem(LOCAL_MIGRATION_FLAG, new Date().toISOString());
+    } catch {
+      /* ignore */
+    }
+    return {
+      migrated,
+      skipped: local.length - pending.length,
+      errors: data?.errors ?? [],
+    };
+  } catch {
+    return { migrated: 0, skipped: 0, errors: ['Error de red al migrar historial local'] };
+  }
 }
