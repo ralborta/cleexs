@@ -170,6 +170,8 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
   recipient: MarketingEmailRecipient;
   campaignSlug: string;
   variant?: CleexsEmailTemplateVariant;
+  subjectOverride?: string;
+  batchLabel?: string;
 }): Promise<{ provider: 'resend' | 'smtp'; logId: string; externalId?: string | null }> {
   if (isEmailDisabled()) {
     throw Object.assign(new Error('Envíos deshabilitados (DISABLE_EMAILS).'), { statusCode: 400 });
@@ -196,6 +198,7 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
     showScoreBlock: true,
     showReportLinks: variant === 'letter',
   });
+  const subject = input.subjectOverride?.trim() || built.subject;
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   let provider: 'resend' | 'smtp';
@@ -208,7 +211,7 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
       const { data, error } = await resend.emails.send({
         from: buildTransactionalFromAddress(),
         to: [to],
-        subject: built.subject,
+        subject,
         html: built.html,
         text: built.text,
         headers: { 'X-Cleexs-Campaign': input.campaignSlug },
@@ -217,7 +220,7 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
       externalId = data?.id ?? null;
     } else if (isEmailConfigured()) {
       provider = 'smtp';
-      const info = await sendSmtpMail({ to, subject: built.subject, html: built.html, text: built.text });
+      const info = await sendSmtpMail({ to, subject, html: built.html, text: built.text });
       externalId = info.messageId ?? null;
     } else {
       throw Object.assign(new Error('Sin canal de envío.'), { statusCode: 503 });
@@ -233,7 +236,7 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
         tenantId: input.recipient.tenantId,
         cleexsScore: ctx.score ?? input.recipient.cleexsScore,
         scoreBucket: input.recipient.scoreBucket,
-        mergeSummary: { mode: 'monthly_score', variant },
+        mergeSummary: { mode: 'monthly_score', variant, batchLabel: input.batchLabel ?? null },
       },
     });
     throw Object.assign(new Error(msg), { statusCode: 502, logId: row.id });
@@ -248,7 +251,13 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
       tenantId: input.recipient.tenantId,
       cleexsScore: ctx.score ?? input.recipient.cleexsScore,
       scoreBucket: input.recipient.scoreBucket,
-      mergeSummary: { mode: 'monthly_score', variant, provider },
+      mergeSummary: {
+        mode: 'custom_template_batch',
+        variant,
+        provider,
+        batchLabel: input.batchLabel ?? null,
+        subject,
+      },
     },
   });
 
@@ -365,6 +374,139 @@ export async function runMonthlyScoreEmailBatch(input: {
     totalRecipients: recipients.length,
     sent,
     skipped,
+    failed,
+    errors,
+  };
+}
+
+async function resolveMarketingRecipientForEmail(emailRaw: string): Promise<MarketingEmailRecipient> {
+  const email = emailRaw.trim().toLowerCase();
+  const user = await prisma.user.findFirst({
+    where: { email },
+    select: {
+      id: true,
+      tenantId: true,
+      tenant: {
+        select: {
+          plan: { select: { name: true } },
+          brands: { orderBy: { createdAt: 'asc' }, take: 1, select: { id: true, name: true, domain: true } },
+        },
+      },
+    },
+  });
+
+  const brand = user?.tenant?.brands[0];
+  let cleexsScore: number | undefined;
+  let topCompetitor: string | undefined;
+  const tips: string[] = [];
+
+  if (brand?.id) {
+    const report = await prisma.pRIAReport.findFirst({
+      where: { brandId: brand.id },
+      orderBy: { createdAt: 'desc' },
+      select: { priaTotal: true },
+    });
+    if (report) cleexsScore = Math.round(report.priaTotal);
+  }
+
+  const ctx = await diagnosticContextForEmail(email);
+  if (ctx.score != null) cleexsScore = ctx.score ?? cleexsScore;
+  if (ctx.competitors?.[0]?.name) topCompetitor = ctx.competitors[0].name;
+  if (ctx.improvementTip) tips.push(ctx.improvementTip);
+
+  return {
+    email,
+    userId: user?.id,
+    tenantId: user?.tenantId ?? undefined,
+    planName: user?.tenant?.plan?.name,
+    brandName: brand?.name ?? undefined,
+    domain: brand?.domain ?? undefined,
+    cleexsScore,
+    scoreBucket:
+      cleexsScore == null ? undefined : cleexsScore < 40 ? 'low' : cleexsScore < 70 ? 'mid' : 'high',
+    shareUrl: ctx.shareUrl,
+    topCompetitor,
+    tips,
+  };
+}
+
+export async function runCustomTemplateBatch(input: {
+  campaignSlug: string;
+  batchLabel?: string;
+  emails: string[];
+  variant?: CleexsEmailTemplateVariant;
+  subject?: string;
+  dryRun?: boolean;
+}): Promise<Record<string, unknown>> {
+  const campaignSlug = input.campaignSlug.trim();
+  const batchLabel = input.batchLabel?.trim() || campaignSlug;
+  const variant = input.variant ?? 'editorial';
+  const subject = input.subject?.trim();
+  const uniqueEmails = [...new Set(input.emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+
+  if (uniqueEmails.length === 0) {
+    return { ok: false, error: 'Sin destinatarios' };
+  }
+
+  if (input.dryRun) {
+    const sample = await Promise.all(
+      uniqueEmails.slice(0, 15).map(async (email) => {
+        const recipient = await resolveMarketingRecipientForEmail(email);
+        const ctx = await diagnosticContextForEmail(email);
+        return {
+          email,
+          brandName: recipient.brandName ?? null,
+          domain: recipient.domain ?? null,
+          score: ctx.score ?? recipient.cleexsScore ?? null,
+          variant,
+          subject: subject ?? null,
+        };
+      })
+    );
+    return {
+      ok: true,
+      dryRun: true,
+      campaignSlug,
+      batchLabel,
+      variant,
+      subject: subject ?? null,
+      totalRecipients: uniqueEmails.length,
+      sample,
+    };
+  }
+
+  let sent = 0;
+  let failed = 0;
+  const errors: Array<{ email: string; error: string }> = [];
+
+  for (const email of uniqueEmails) {
+    try {
+      const recipient = await resolveMarketingRecipientForEmail(email);
+      await sendMonthlyScoreEmailToRecipient({
+        recipient,
+        campaignSlug,
+        variant,
+        subjectOverride: subject,
+        batchLabel,
+      });
+      sent += 1;
+    } catch (e) {
+      failed += 1;
+      if (errors.length < 20) {
+        errors.push({ email, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+  }
+
+  return {
+    ok: failed === 0,
+    dryRun: false,
+    campaignSlug,
+    batchLabel,
+    variant,
+    subject: subject ?? null,
+    totalRecipients: uniqueEmails.length,
+    sent,
     failed,
     errors,
   };

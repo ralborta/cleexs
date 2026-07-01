@@ -21,6 +21,7 @@ import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, send
 import { Resend } from 'resend';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { getEmailBatchDetail, listEmailBatches } from '../lib/email-batch-status';
+import { runCustomTemplateBatch } from '../lib/monthly-score-email-sender';
 import { prisma } from '../lib/prisma';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
@@ -106,6 +107,15 @@ const templateTestBody = z.object({
 });
 
 const monthlyScoreTestBody = templateTestBody;
+
+const customBatchSendBody = z.object({
+  campaignSlug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-_]*$/i),
+  batchLabel: z.string().trim().min(1).max(120).optional(),
+  emails: z.array(z.string().email()).min(1).max(50),
+  variant: z.enum(['letter', 'editorial']).default('editorial'),
+  subject: z.string().trim().min(1).max(180).optional(),
+  dryRun: z.boolean().default(false),
+});
 
 const broadcastBody = z.object({
   subject: z.string().trim().min(3).max(180),
@@ -721,6 +731,25 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Batch no encontrado' });
     }
     return detail;
+  });
+
+  fastify.post<{ Body: z.infer<typeof customBatchSendBody> }>('/email/batches/send', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = customBatchSendBody.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    if (isEmailDisabled()) {
+      return reply.code(400).send({ error: 'Envíos deshabilitados (DISABLE_EMAILS).' });
+    }
+
+    return runCustomTemplateBatch(parsed.data);
   });
 
   fastify.get('/email/stats', async (request, reply) => {
