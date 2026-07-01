@@ -272,3 +272,59 @@ export function SponsorBreakdownTable({
     </div>
   );
 }
+
+export function EmailFunnelCard({
+  icon,
+  label,
+  value,
+  pct,
+  pctHint,
+  hint,
+  onClick,
+  actionHint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  pct?: string | null;
+  pctHint?: string;
+  hint?: string;
+  onClick?: () => void;
+  actionHint?: string;
+}) {
+  const clickable = typeof onClick === 'function';
+  const className = `group rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+    clickable
+      ? 'border-violet-200 hover:border-violet-300 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-200'
+      : 'border-slate-200'
+  }`;
+  const inner = (
+    <>
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+      <div className="mt-1 min-h-[2.5rem] flex items-baseline gap-1">
+        {pct != null && pct !== '—' ? (
+          <span className="text-sm font-semibold text-emerald-600">{pct}</span>
+        ) : null}
+        {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
+      </div>
+      {hint ? <p className="mt-0.5 text-[10px] text-slate-400">{hint}</p> : null}
+      {clickable && actionHint ? (
+        <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+          {actionHint} →
+        </p>
+      ) : null}
+    </>
+  );
+  if (clickable) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={className}>{inner}</div>;
+}

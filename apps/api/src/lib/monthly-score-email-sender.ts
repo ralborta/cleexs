@@ -1,6 +1,7 @@
 import { CleexsEmailSendStatus, type CleexsEmailTemplateVariant } from '@prisma/client';
 import { Resend } from 'resend';
 import { getAppBaseUrlForPublicLinks } from './app-public-url';
+import { withEmailAttribution } from './email-link-attribution';
 import {
   buildCleexsEmail,
   buildMonthlyScoreDiagnosticUrl,
@@ -147,8 +148,12 @@ async function diagnosticContextForEmail(email: string): Promise<{
 
 function buildLinksForRecipient(
   base: string,
-  diagnosticId?: string,
-  shareUrl?: string
+  input: {
+    campaignSlug: string;
+    variant?: CleexsEmailTemplateVariant;
+    diagnosticId?: string;
+    shareUrl?: string;
+  }
 ): {
   newDiagnosticUrl: string;
   reportUrl?: string;
@@ -157,11 +162,37 @@ function buildLinksForRecipient(
   unsubscribeUrl: string;
 } {
   const origin = base.replace(/\/+$/, '');
+  const medium = 'monthly_score';
+  const variant = input.variant ?? null;
   return {
-    newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(origin),
-    reportUrl: diagnosticId ? `${origin}/ver-resultado?diagnosticId=${diagnosticId}` : undefined,
-    shareUrl: shareUrl ?? undefined,
-    plansUrl: buildMonthlyScorePlansUrl(origin),
+    newDiagnosticUrl: withEmailAttribution(buildMonthlyScoreDiagnosticUrl(origin), {
+      campaignSlug: input.campaignSlug,
+      variant,
+      linkRole: 'cta_diagnostic',
+      medium,
+    }),
+    reportUrl: input.diagnosticId
+      ? withEmailAttribution(`${origin}/ver-resultado?diagnosticId=${input.diagnosticId}`, {
+          campaignSlug: input.campaignSlug,
+          variant,
+          linkRole: 'cta_report',
+          medium,
+        })
+      : undefined,
+    shareUrl: input.shareUrl
+      ? withEmailAttribution(input.shareUrl, {
+          campaignSlug: input.campaignSlug,
+          variant,
+          linkRole: 'cta_share',
+          medium,
+        })
+      : undefined,
+    plansUrl: withEmailAttribution(buildMonthlyScorePlansUrl(origin), {
+      campaignSlug: input.campaignSlug,
+      variant,
+      linkRole: 'cta_plans',
+      medium,
+    }),
     unsubscribeUrl: `${origin}/email/unsubscribe?example=1`,
   };
 }
@@ -193,7 +224,12 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
       competitors: ctx.competitors?.length ? ctx.competitors : input.recipient.topCompetitor ? [{ name: input.recipient.topCompetitor }] : [],
       improvementTip: ctx.improvementTip ?? input.recipient.tips[0] ?? null,
     },
-    links: buildLinksForRecipient(base, ctx.diagnosticId, ctx.shareUrl ?? input.recipient.shareUrl),
+    links: buildLinksForRecipient(base, {
+      campaignSlug: input.campaignSlug,
+      variant,
+      diagnosticId: ctx.diagnosticId,
+      shareUrl: ctx.shareUrl ?? input.recipient.shareUrl,
+    }),
     showFounderSignature: true,
     showScoreBlock: true,
     showReportLinks: variant === 'letter',
