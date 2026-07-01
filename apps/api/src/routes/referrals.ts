@@ -224,6 +224,62 @@ const referralRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  /** Upsert masivo (migración desde historial local /tools/auspiciadores). */
+  fastify.put('/admin/referrals/upsert/bulk', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+    const bulkSchema = z.array(campaignBodySchema).max(50);
+    const parsed = bulkSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.errors.map((e) => e.message).join(', ') });
+    }
+
+    let created = 0;
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const body of parsed.data) {
+      try {
+        const refCode = normalizeTracking(body.refCode);
+        const data = {
+          name: body.name.trim(),
+          refCode,
+          utmSource: body.utmSource ? normalizeTracking(body.utmSource) : 'auspiciador',
+          utmMedium: body.utmMedium ? normalizeTracking(body.utmMedium) : 'link',
+          utmCampaign: body.utmCampaign ? normalizeTracking(body.utmCampaign) : refCode,
+          notes: body.notes?.trim() || null,
+          active: body.active ?? true,
+        };
+        const existing = await prisma.referralCampaign.findUnique({ where: { refCode } });
+        if (existing) {
+          await prisma.referralCampaign.update({
+            where: { id: existing.id },
+            data: {
+              name: data.name,
+              utmSource: data.utmSource,
+              utmMedium: data.utmMedium,
+              utmCampaign: data.utmCampaign,
+              notes: data.notes,
+              active: data.active,
+            },
+          });
+          updated += 1;
+        } else {
+          await prisma.referralCampaign.create({ data });
+          created += 1;
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Error';
+        errors.push(`${body.refCode}: ${msg}`);
+      }
+    }
+
+    return { created, updated, total: parsed.data.length, errors };
+  });
+
   fastify.post('/admin/referrals', async (request, reply) => {
     if (!requireAdminSecret(request)) {
       return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
