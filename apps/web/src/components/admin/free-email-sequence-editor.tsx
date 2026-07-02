@@ -310,7 +310,7 @@ export function FreeEmailSequenceEditor() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <p className="max-w-2xl text-sm text-slate-600">
           Secuencia automática para clientes free post-registro. El contenido de cada mail se guarda en la base de datos;
-          al abrir un paso se carga desde ahí. El envío automático en producción sigue desactivado hasta que lo actives abajo.
+          al abrir un paso se carga desde ahí. Activá &quot;Secuencia activa (prod)&quot; para que el cron envíe según los días configurados.
         </p>
         <button type="button" className={secondaryBtn} onClick={() => void load()} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}

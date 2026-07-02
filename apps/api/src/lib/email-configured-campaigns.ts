@@ -8,6 +8,7 @@ export function isConfiguredMarketingCampaignSlug(campaignSlug: string): boolean
   if (!slug || isExcludedFromEmailBatchMonitor(slug)) return false;
   if (slug.startsWith('weekly-auto-w')) return true;
   if (slug.startsWith('monthly-score-')) return true;
+  if (slug.startsWith('free-onboarding-s')) return true;
   return false;
 }
 
