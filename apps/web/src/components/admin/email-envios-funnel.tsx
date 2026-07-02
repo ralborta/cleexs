@@ -303,7 +303,7 @@ export function EmailEnviosFunnel() {
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <EmailFunnelCard
           icon={<Send className="h-4 w-4 text-violet-600" />}
           label="Enviados"
@@ -325,16 +325,6 @@ export function EmailEnviosFunnel() {
           onClick={() => void openDetail('opened')}
           actionHint="Ver detalle"
         />
-        <div className="sm:col-span-2 xl:col-span-2">
-          <EmailClicksCard
-            total={f?.clicks.count ?? 0}
-            pct={pctLabel(f?.clicks.pct ?? null)}
-            pctHint={f?.clicks.pctHint}
-            breakdown={f?.clicks.breakdown}
-            onOpenTotal={() => void openDetail('clicked')}
-            onOpenRole={(filter) => void openDetail(filter)}
-          />
-        </div>
         <EmailFunnelCard
           icon={<DollarSign className="h-4 w-4 text-emerald-600" />}
           label="Compraron"
@@ -345,6 +335,15 @@ export function EmailEnviosFunnel() {
           actionHint="Ver detalle"
         />
       </section>
+
+      <EmailClicksCard
+        total={f?.clicks.count ?? 0}
+        pct={pctLabel(f?.clicks.pct ?? null)}
+        pctHint={f?.clicks.pctHint}
+        breakdown={f?.clicks.breakdown}
+        onOpenTotal={() => void openDetail('clicked')}
+        onOpenRole={(filter) => void openDetail(filter)}
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900">Por campaña</h2>
@@ -435,44 +434,52 @@ function EmailClicksCard({
   onOpenRole: (filter: DetailFilter) => void;
 }) {
   return (
-    <div className="h-full rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 shadow-sm">
-      <button
-        type="button"
-        onClick={onOpenTotal}
-        className="group w-full text-left focus:outline-none focus:ring-2 focus:ring-violet-200 rounded-lg -m-1 p-1"
-      >
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-violet-700">
-          <MousePointerClick className="h-4 w-4" />
-          <span>Clics</span>
+    <section className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <button
+          type="button"
+          onClick={onOpenTotal}
+          className="group shrink-0 text-left focus:outline-none focus:ring-2 focus:ring-violet-200 rounded-lg -m-1 p-1"
+        >
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-violet-700">
+            <MousePointerClick className="h-4 w-4 shrink-0" />
+            <span>Clics</span>
+          </div>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{fmt(total)}</p>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+            {pct !== '—' ? <span className="text-sm font-semibold text-emerald-600">{pct}</span> : null}
+            {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
+          </div>
+          <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+            Ver detalle →
+          </p>
+        </button>
+
+        <div className="min-w-0 flex-1 border-t border-violet-100 pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Desglose por link
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {CLICK_BREAKDOWN.map(({ role, filter, label }) => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => onOpenRole(filter)}
+                className="flex min-w-0 flex-col gap-1 rounded-xl border border-violet-100/80 bg-white/70 px-3 py-2.5 text-left transition hover:border-violet-200 hover:bg-white focus:outline-none focus:ring-2 focus:ring-violet-200"
+              >
+                <span className="flex min-w-0 items-center gap-1 text-[11px] font-medium leading-tight text-slate-600">
+                  {role === 'share' ? <Share2 className="h-3 w-3 shrink-0 text-sky-500" /> : null}
+                  <span className="truncate">{label}</span>
+                </span>
+                <span className="text-xl font-bold tabular-nums text-slate-900">
+                  {fmt(breakdown?.[role]?.count ?? 0)}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{fmt(total)}</p>
-        <div className="mt-1 flex items-baseline gap-1">
-          {pct !== '—' ? <span className="text-sm font-semibold text-emerald-600">{pct}</span> : null}
-          {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
-        </div>
-        <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
-          Ver detalle →
-        </p>
-      </button>
-      <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-violet-100 pt-3 sm:grid-cols-3 xl:grid-cols-5">
-        {CLICK_BREAKDOWN.map(({ role, filter, label }) => (
-          <button
-            key={role}
-            type="button"
-            onClick={() => onOpenRole(filter)}
-            className="flex items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-violet-100/60 focus:outline-none focus:ring-2 focus:ring-violet-200"
-          >
-            <span className="flex items-center gap-1.5 text-slate-600">
-              {role === 'share' ? <Share2 className="h-3 w-3 text-sky-500" /> : null}
-              {label}
-            </span>
-            <span className="font-semibold tabular-nums text-slate-900">
-              {fmt(breakdown?.[role]?.count ?? 0)}
-            </span>
-          </button>
-        ))}
       </div>
-    </div>
+    </section>
   );
 }
 
