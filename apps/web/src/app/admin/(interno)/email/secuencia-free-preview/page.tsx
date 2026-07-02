@@ -7,10 +7,12 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  Database,
   Eye,
   Loader2,
   Plus,
   RefreshCw,
+  RotateCcw,
   Send,
   Trash2,
 } from 'lucide-react';
@@ -19,6 +21,16 @@ import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 export const dynamic = 'force-dynamic';
 
 type TemplateVariant = 'letter' | 'editorial';
+
+type SuggestedDefault = {
+  sortOrder: number;
+  delayDaysAfterPrevious: number;
+  title: string;
+  subject: string;
+  preheader: string;
+  body: string;
+  templateVariant: TemplateVariant;
+};
 
 type StepRow = {
   id: string;
@@ -60,6 +72,7 @@ export default function FreeSequencePreviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<ConfigRow | null>(null);
   const [steps, setSteps] = useState<StepRow[]>([]);
+  const [suggestedBySortOrder, setSuggestedBySortOrder] = useState<Record<string, SuggestedDefault>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
@@ -83,6 +96,24 @@ export default function FreeSequencePreviewPage() {
 
   const selected = useMemo(() => steps.find((s) => s.id === selectedId) ?? null, [steps, selectedId]);
 
+  const suggestedForSelected = useMemo(() => {
+    if (!selected) return null;
+    return suggestedBySortOrder[String(selected.sortOrder)] ?? null;
+  }, [selected, suggestedBySortOrder]);
+
+  function loadSuggestedContent() {
+    if (!suggestedForSelected) return;
+    setTitle(suggestedForSelected.title);
+    setSubject(suggestedForSelected.subject);
+    setPreheader(suggestedForSelected.preheader);
+    setBody(suggestedForSelected.body);
+    setVariant(suggestedForSelected.templateVariant);
+    if (selected?.sortOrder !== 1) {
+      setDelayDays(suggestedForSelected.delayDaysAfterPrevious);
+    }
+    setHint('Texto sugerido cargado en el editor. Guardá el paso para persistirlo en la base de datos.');
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -93,6 +124,7 @@ export default function FreeSequencePreviewPage() {
       setConfig(json.config);
       const list = (json.steps as StepRow[]) ?? [];
       setSteps(list);
+      setSuggestedBySortOrder((json.suggestedBySortOrder as Record<string, SuggestedDefault>) ?? {});
       if (!selectedId && list[0]) setSelectedId(list[0].id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -217,7 +249,7 @@ export default function FreeSequencePreviewPage() {
     const res = await adminUiFetch('/api/admin-ui/email/free-sequence-preview/steps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: `Paso ${steps.length + 1}`, delayDaysAfterPrevious: 7 }),
+      body: JSON.stringify({ useSuggestedContent: true }),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'No se pudo crear');
@@ -298,7 +330,8 @@ export default function FreeSequencePreviewPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Email · preview</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">Secuencia free · onboarding</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            Solo clientes free. Editá orden, días entre mails y contenido por paso. Templates:{' '}
+            Solo clientes free. El contenido de cada mail (asunto, preheader, cuerpo) se guarda en la base de datos:
+            al abrir un paso se carga desde ahí, lo editás y guardás. Templates fijos:{' '}
             <strong>carta</strong> o <strong>editorial</strong>.
           </p>
         </div>
@@ -360,8 +393,8 @@ export default function FreeSequencePreviewPage() {
         </section>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="space-y-2">
+      <div className="grid gap-6 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
+        <aside className="space-y-2 lg:sticky lg:top-6 lg:self-start">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-sm font-semibold text-slate-900">Pasos</h2>
             <button type="button" className={secondaryBtn} onClick={() => void addStep().catch((e) => setError(String(e)))}>
@@ -409,11 +442,25 @@ export default function FreeSequencePreviewPage() {
         </aside>
 
         {selected ? (
-          <div className="grid gap-6 xl:grid-cols-2">
-            <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Contenido · paso {selected.sortOrder}
-              </h2>
+          <div className="min-w-0 space-y-6">
+            <section className="w-full space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Contenido · paso {selected.sortOrder}
+                  </h2>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                    <Database className="h-3.5 w-3.5" />
+                    Editás acá y guardás — el contenido queda en la base de datos del paso.
+                  </p>
+                </div>
+                {suggestedForSelected ? (
+                  <button type="button" className={secondaryBtn} onClick={loadSuggestedContent}>
+                    <RotateCcw className="h-4 w-4" />
+                    Cargar texto sugerido
+                  </button>
+                ) : null}
+              </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
@@ -499,10 +546,10 @@ export default function FreeSequencePreviewPage() {
                 <input type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} className={field} placeholder="tu@email.com" />
               </label>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
                 <button type="button" className={primaryBtn} disabled={saveBusy} onClick={() => void saveStep()}>
                   {saveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Guardar paso
+                  Guardar en BD
                 </button>
                 <button type="button" className={secondaryBtn} disabled={previewLoading} onClick={() => void refreshPreview()}>
                   {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
@@ -515,10 +562,10 @@ export default function FreeSequencePreviewPage() {
               </div>
             </section>
 
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <section className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm text-slate-600">
                 <Eye className="h-4 w-4 text-violet-600" />
-                Preview · {variant === 'letter' ? 'carta' : 'editorial'} + contenido
+                Preview · {variant === 'letter' ? 'carta' : 'editorial'} + contenido del editor
               </div>
               {preview ? (
                 <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-600">
@@ -534,7 +581,7 @@ export default function FreeSequencePreviewPage() {
                 <iframe
                   title="Preview secuencia free"
                   srcDoc={preview.html}
-                  className="h-[880px] w-full border-0 bg-slate-100"
+                  className="h-[min(880px,70vh)] w-full border-0 bg-slate-100"
                   sandbox="allow-same-origin"
                 />
               ) : (

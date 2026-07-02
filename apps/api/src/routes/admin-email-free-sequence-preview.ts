@@ -62,9 +62,10 @@ const patchStepSchema = z.object({
 });
 
 const createStepSchema = z.object({
-  title: z.string().trim().min(1).max(200),
+  title: z.string().trim().min(1).max(200).optional(),
   delayDaysAfterPrevious: z.number().int().min(0).max(365).optional(),
   templateVariant: z.nativeEnum(CleexsEmailTemplateVariant).optional(),
+  useSuggestedContent: z.boolean().optional(),
 });
 
 const reorderSchema = z.object({

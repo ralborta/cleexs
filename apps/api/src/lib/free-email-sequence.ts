@@ -50,6 +50,18 @@ export type FreeSequenceBundleDto = {
   preview: true;
   config: FreeSequenceConfigDto;
   steps: FreeSequenceStepDto[];
+  suggestedDefaults: FreeSequenceSuggestedDefault[];
+  suggestedBySortOrder: Record<string, FreeSequenceSuggestedDefault>;
+};
+
+export type FreeSequenceSuggestedDefault = {
+  sortOrder: number;
+  delayDaysAfterPrevious: number;
+  title: string;
+  subject: string;
+  preheader: string;
+  body: string;
+  templateVariant: CleexsEmailTemplateVariant;
 };
 
 const DEFAULT_STEPS: Array<Omit<EditableEmailStepContent, 'variant'> & {
@@ -89,6 +101,39 @@ const DEFAULT_STEPS: Array<Omit<EditableEmailStepContent, 'variant'> & {
       'Seguimos acompañando tu evolución.\n\nSi querés ver cómo cambió tu visibilidad en IA, podés generar un nuevo diagnóstico gratis.\n\nY si preferís seguimiento mensual automático, el Plan Conquistar te lo deja resuelto.',
   },
 ];
+
+const GENERIC_STEP_DEFAULT: Omit<FreeSequenceSuggestedDefault, 'sortOrder' | 'delayDaysAfterPrevious' | 'title'> = {
+  subject: 'Novedades de Cleexs para {{brandName}}',
+  preheader: 'Un mensaje para tu cuenta free.',
+  body:
+    'Hola,\n\nTe escribimos con novedades sobre {{domain}}.\n\nTu Cleexs Score sigue siendo {{score}}. Tip: {{tip1}}',
+  templateVariant: CleexsEmailTemplateVariant.letter,
+};
+
+export function getSuggestedDefaultForSortOrder(sortOrder: number): FreeSequenceSuggestedDefault {
+  const match = DEFAULT_STEPS.find((s) => s.sortOrder === sortOrder);
+  if (match) {
+    return {
+      sortOrder: match.sortOrder,
+      delayDaysAfterPrevious: match.delayDaysAfterPrevious,
+      title: match.title,
+      subject: match.subject ?? '',
+      preheader: match.preheader ?? '',
+      body: match.body ?? '',
+      templateVariant: match.templateVariant,
+    };
+  }
+  return {
+    sortOrder,
+    delayDaysAfterPrevious: 7,
+    title: `Paso ${sortOrder}`,
+    ...GENERIC_STEP_DEFAULT,
+  };
+}
+
+export function listFreeSequenceSuggestedDefaults(): FreeSequenceSuggestedDefault[] {
+  return DEFAULT_STEPS.map((s) => getSuggestedDefaultForSortOrder(s.sortOrder));
+}
 
 function formatResendError(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
@@ -191,11 +236,19 @@ export async function ensureFreeEmailSequence(): Promise<FreeEmailSequence & { s
 
 export async function getFreeEmailSequenceBundle(): Promise<FreeSequenceBundleDto> {
   const sequence = await ensureFreeEmailSequence();
+  const sortOrders = new Set(sequence.steps.map((s) => s.sortOrder));
+  const maxOrder = sequence.steps.reduce((m, s) => Math.max(m, s.sortOrder), 0);
+  sortOrders.add(maxOrder + 1);
+  const suggestedBySortOrder = Object.fromEntries(
+    [...sortOrders].map((order) => [String(order), getSuggestedDefaultForSortOrder(order)])
+  );
   return {
     ok: true,
     preview: true,
     config: toConfigDto(sequence),
     steps: sequence.steps.map((s) => toStepDto(s, sequence.steps)),
+    suggestedDefaults: listFreeSequenceSuggestedDefaults(),
+    suggestedBySortOrder,
   };
 }
 
@@ -327,22 +380,26 @@ export async function updateFreeEmailSequenceStep(
 }
 
 export async function createFreeEmailSequenceStep(input: {
-  title: string;
+  title?: string;
   delayDaysAfterPrevious?: number;
   templateVariant?: CleexsEmailTemplateVariant;
+  useSuggestedContent?: boolean;
 }) {
   const sequence = await ensureFreeEmailSequence();
   const maxOrder = sequence.steps.reduce((m, s) => Math.max(m, s.sortOrder), 0);
+  const nextOrder = maxOrder + 1;
+  const suggested = getSuggestedDefaultForSortOrder(nextOrder);
+  const useSuggested = input.useSuggestedContent !== false;
   const created = await prisma.freeEmailSequenceStep.create({
     data: {
       sequenceId: sequence.id,
-      sortOrder: maxOrder + 1,
-      delayDaysAfterPrevious: input.delayDaysAfterPrevious ?? 7,
-      title: input.title.trim(),
-      templateVariant: input.templateVariant ?? CleexsEmailTemplateVariant.letter,
-      subject: '',
-      preheader: '',
-      body: '',
+      sortOrder: nextOrder,
+      delayDaysAfterPrevious: input.delayDaysAfterPrevious ?? suggested.delayDaysAfterPrevious,
+      title: (input.title ?? suggested.title).trim(),
+      templateVariant: input.templateVariant ?? suggested.templateVariant,
+      subject: useSuggested ? suggested.subject : '',
+      preheader: useSuggested ? suggested.preheader : '',
+      body: useSuggested ? suggested.body : '',
       active: true,
     },
   });
