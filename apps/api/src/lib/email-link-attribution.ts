@@ -7,6 +7,16 @@ export type EmailLinkRole =
   | 'cta_share'
   | 'other';
 
+export type EmailClickRole = 'plans' | 'diagnostic' | 'report' | 'share' | 'other';
+
+export const EMAIL_CLICK_ROLE_LABELS: Record<EmailClickRole, string> = {
+  plans: 'Planes',
+  diagnostic: 'Diagnóstico',
+  report: 'Reporte',
+  share: 'Compartir',
+  other: 'Otros',
+};
+
 export type EmailAttributionInput = {
   campaignSlug: string;
   variant?: string | null;
@@ -40,18 +50,48 @@ export function extractResendClickLink(payload: unknown): string | null {
 
 /** CTA comercial (planes / premium) vs otros links del mail. */
 export function classifyEmailClickUrl(url: string): 'campaign' | 'other' {
+  return classifyEmailClickRole(url) === 'plans' ? 'campaign' : 'other';
+}
+
+/** Desglose comercial por tipo de link (utm_content o path). */
+export function classifyEmailClickRole(url: string): EmailClickRole {
   try {
     const u = new URL(url);
     const content = (u.searchParams.get('utm_content') || '').toLowerCase();
-    if (content === 'cta_plans' || content === 'cta_primary') return 'campaign';
+    if (content === 'cta_plans' || content === 'cta_primary') return 'plans';
+    if (content === 'cta_diagnostic') return 'diagnostic';
+    if (content === 'cta_report') return 'report';
+    if (content === 'cta_share') return 'share';
     const path = u.pathname.toLowerCase();
     if (path.includes('/planes') || path.includes('/checkout') || path.includes('/suscrib')) {
-      return 'campaign';
+      return 'plans';
     }
+    if (path.includes('/diagnostic') || path.includes('/diagnostico')) return 'diagnostic';
+    if (path.includes('/share') || path.includes('/compartir') || path.includes('/refer')) {
+      return 'share';
+    }
+    if (path.includes('/report') || path.includes('/informe')) return 'report';
     return 'other';
   } catch {
     return 'other';
   }
+}
+
+export type EmailClickBreakdown = Record<EmailClickRole, boolean>;
+
+export function emptyEmailClickBreakdown(): EmailClickBreakdown {
+  return { plans: false, diagnostic: false, report: false, share: false, other: false };
+}
+
+export function mergeEmailClickBreakdown(
+  current: EmailClickBreakdown,
+  role: EmailClickRole
+): EmailClickBreakdown {
+  return { ...current, [role]: true };
+}
+
+export function hasAnyEmailClick(breakdown: EmailClickBreakdown): boolean {
+  return Object.values(breakdown).some(Boolean);
 }
 
 export function inferVariantFromMergeSummary(mergeSummary: unknown): string | null {

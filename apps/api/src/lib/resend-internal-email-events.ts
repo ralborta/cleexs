@@ -1,5 +1,12 @@
 import { prisma } from './prisma';
-import { classifyEmailClickUrl, extractResendClickLink } from './email-link-attribution';
+import {
+  classifyEmailClickRole,
+  classifyEmailClickUrl,
+  emptyEmailClickBreakdown,
+  extractResendClickLink,
+  mergeEmailClickBreakdown,
+  type EmailClickBreakdown,
+} from './email-link-attribution';
 
 const TRACKED_EVENT_TYPES = [
   'email.sent',
@@ -25,6 +32,7 @@ export type AppliedResendFlags = {
   clicked: boolean;
   clickedCampaign: boolean;
   clickedOther: boolean;
+  clickBreakdown: EmailClickBreakdown;
   bounced: boolean;
   complained: boolean;
   failed: boolean;
@@ -127,6 +135,7 @@ function summarizeEvents(
   let clicked = false;
   let clickedCampaign = false;
   let clickedOther = false;
+  let clickBreakdown = emptyEmailClickBreakdown();
   let bounced = false;
   let complained = false;
   let failed = false;
@@ -142,8 +151,15 @@ function summarizeEvents(
     if (type === 'email.clicked') {
       clicked = true;
       const link = extractResendClickLink(ev.payload);
-      if (link && classifyEmailClickUrl(link) === 'campaign') clickedCampaign = true;
-      else clickedOther = true;
+      if (link) {
+        const role = classifyEmailClickRole(link);
+        clickBreakdown = mergeEmailClickBreakdown(clickBreakdown, role);
+        if (classifyEmailClickUrl(link) === 'campaign') clickedCampaign = true;
+        else clickedOther = true;
+      } else {
+        clickedOther = true;
+        clickBreakdown = mergeEmailClickBreakdown(clickBreakdown, 'other');
+      }
     }
     if (type === 'email.bounced') bounced = true;
     if (type === 'email.complained') complained = true;
@@ -160,6 +176,7 @@ function summarizeEvents(
     clicked,
     clickedCampaign,
     clickedOther,
+    clickBreakdown,
     bounced,
     complained,
     failed,
@@ -178,6 +195,7 @@ function emptyFlags(): AppliedResendFlags {
     clicked: false,
     clickedCampaign: false,
     clickedOther: false,
+    clickBreakdown: emptyEmailClickBreakdown(),
     bounced: false,
     complained: false,
     failed: false,

@@ -4,14 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
-  CheckCircle2,
   DollarSign,
   Eye,
   Loader2,
-  Mail,
   MousePointerClick,
   RefreshCw,
   Send,
+  Share2,
   ShieldCheck,
   X,
 } from 'lucide-react';
@@ -21,16 +20,17 @@ import { EmailFunnelCard } from '@/components/admin/report-ui';
 
 type FunnelStep = { count: number; pct: number | null; pctHint?: string };
 
+type ClickRole = 'plans' | 'diagnostic' | 'report' | 'share' | 'other';
+
 type AnalyticsReport = {
   ok: true;
   range: { from: string; to: string };
   funnel: {
     sent: FunnelStep;
-    delivered: FunnelStep;
     opened: FunnelStep;
-    clickedCampaign: FunnelStep;
-    clickedOther: FunnelStep;
+    clicks: FunnelStep & { breakdown: Record<ClickRole, FunnelStep> };
     purchased: FunnelStep;
+    delivered: FunnelStep;
   };
   byCampaign: Array<{
     campaignSlug: string;
@@ -38,11 +38,11 @@ type AnalyticsReport = {
     label: string;
     kind?: 'scheduled' | 'test';
     sent: number;
-    delivered: number;
     opened: number;
-    clickedCampaign: number;
-    clickedOther: number;
+    clicksTotal: number;
+    clicksBreakdown: Record<ClickRole, number>;
     purchased: number;
+    delivered: number;
   }>;
   integrations: {
     resendWebhookSecretConfigured: boolean;
@@ -56,7 +56,11 @@ type DetailFilter =
   | 'sent'
   | 'delivered'
   | 'opened'
-  | 'clicked_campaign'
+  | 'clicked'
+  | 'clicked_plans'
+  | 'clicked_diagnostic'
+  | 'clicked_report'
+  | 'clicked_share'
   | 'clicked_other'
   | 'purchased';
 
@@ -69,20 +73,32 @@ type RecipientRow = {
   sentAt: string;
   delivered: boolean;
   opened: boolean;
-  clickedCampaign: boolean;
-  clickedOther: boolean;
+  clicked: boolean;
+  clicksBreakdown?: Record<ClickRole, boolean>;
   purchased: boolean;
   purchaseTemplate: string | null;
 };
 
 const FILTER_LABEL: Record<DetailFilter, string> = {
   sent: 'Enviados',
-  delivered: 'Entregados',
+  delivered: 'Entregados (técnico)',
   opened: 'Abiertos',
-  clicked_campaign: 'Clic en campaña (planes)',
+  clicked: 'Clics (total)',
+  clicked_plans: 'Clic en planes',
+  clicked_diagnostic: 'Clic en diagnóstico',
+  clicked_report: 'Clic en reporte',
+  clicked_share: 'Clic en compartir',
   clicked_other: 'Clic en otros links',
   purchased: 'Compraron',
 };
+
+const CLICK_BREAKDOWN: Array<{ role: ClickRole; filter: DetailFilter; label: string }> = [
+  { role: 'plans', filter: 'clicked_plans', label: 'Planes' },
+  { role: 'diagnostic', filter: 'clicked_diagnostic', label: 'Diagnóstico' },
+  { role: 'report', filter: 'clicked_report', label: 'Reporte' },
+  { role: 'share', filter: 'clicked_share', label: 'Compartir' },
+  { role: 'other', filter: 'clicked_other', label: 'Otros' },
+];
 
 function fmt(n: number) {
   return n.toLocaleString('es-AR');
@@ -261,7 +277,7 @@ export function EmailEnviosFunnel() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">
             <ShieldCheck className="h-4 w-4 shrink-0" />
-            Tracking activo: entregas, aperturas y clics vía Resend · links con utm_campaign + utm_content
+            Tracking activo: aperturas y clics vía Resend · links con utm_content (planes, compartir, etc.)
           </div>
           {data.integrations.scope ? (
             <p className="text-xs leading-relaxed text-slate-500">{data.integrations.scope}</p>
@@ -279,31 +295,25 @@ export function EmailEnviosFunnel() {
             <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <p>
-                No hay eventos Resend guardados en los últimos 7 días. Las aperturas no van a aparecer hasta que el
-                webhook en Resend apunte a la API de producción (<code className="font-mono">/api/webhooks/resend</code>
-                ) y esté suscrito a <code className="font-mono">email.delivered</code> y{' '}
-                <code className="font-mono">email.opened</code>.
+                No hay eventos Resend guardados en los últimos 7 días. Mañana validamos con un mail de prueba; hasta
+                entonces aperturas y clics pueden quedar en 0.
               </p>
             </div>
           )}
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <EmailFunnelCard
           icon={<Send className="h-4 w-4 text-violet-600" />}
           label="Enviados"
           value={fmt(f?.sent.count ?? 0)}
+          hint={
+            f?.delivered.count
+              ? `${fmt(f.delivered.count)} entregados (${pctLabel(f.delivered.pct)})`
+              : undefined
+          }
           onClick={() => void openDetail('sent')}
-          actionHint="Ver detalle"
-        />
-        <EmailFunnelCard
-          icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-          label="Entregados"
-          value={fmt(f?.delivered.count ?? 0)}
-          pct={pctLabel(f?.delivered.pct ?? null)}
-          pctHint={f?.delivered.pctHint}
-          onClick={() => void openDetail('delivered')}
           actionHint="Ver detalle"
         />
         <EmailFunnelCard
@@ -315,26 +325,18 @@ export function EmailEnviosFunnel() {
           onClick={() => void openDetail('opened')}
           actionHint="Ver detalle"
         />
+        <div className="sm:col-span-2 xl:col-span-2">
+          <EmailClicksCard
+            total={f?.clicks.count ?? 0}
+            pct={pctLabel(f?.clicks.pct ?? null)}
+            pctHint={f?.clicks.pctHint}
+            breakdown={f?.clicks.breakdown}
+            onOpenTotal={() => void openDetail('clicked')}
+            onOpenRole={(filter) => void openDetail(filter)}
+          />
+        </div>
         <EmailFunnelCard
-          icon={<MousePointerClick className="h-4 w-4 text-violet-600" />}
-          label="Clic campaña"
-          value={fmt(f?.clickedCampaign.count ?? 0)}
-          pct={pctLabel(f?.clickedCampaign.pct ?? null)}
-          pctHint={f?.clickedCampaign.pctHint}
-          onClick={() => void openDetail('clicked_campaign')}
-          actionHint="Ver detalle"
-        />
-        <EmailFunnelCard
-          icon={<Mail className="h-4 w-4 text-sky-600" />}
-          label="Clic otros links"
-          value={fmt(f?.clickedOther.count ?? 0)}
-          pct={pctLabel(f?.clickedOther.pct ?? null)}
-          pctHint={f?.clickedOther.pctHint}
-          onClick={() => void openDetail('clicked_other')}
-          actionHint="Ver detalle"
-        />
-        <EmailFunnelCard
-          icon={<DollarSign className="h-4 w-4 text-rose-600" />}
+          icon={<DollarSign className="h-4 w-4 text-emerald-600" />}
           label="Compraron"
           value={fmt(f?.purchased.count ?? 0)}
           pct={pctLabel(f?.purchased.pct ?? null)}
@@ -358,10 +360,10 @@ export function EmailEnviosFunnel() {
                 <tr>
                   <th className="py-2">Campaña</th>
                   <th className="py-2 text-right">Enviados</th>
-                  <th className="py-2 text-right">Entregados</th>
                   <th className="py-2 text-right">Abiertos</th>
-                  <th className="py-2 text-right">Clic campaña</th>
-                  <th className="py-2 text-right">Clic otros</th>
+                  <th className="py-2 text-right">Clics</th>
+                  <th className="py-2 text-right">Planes</th>
+                  <th className="py-2 text-right">Compartir</th>
                   <th className="py-2 text-right">Compras</th>
                 </tr>
               </thead>
@@ -383,10 +385,12 @@ export function EmailEnviosFunnel() {
                       <div className="font-mono text-[10px] text-slate-400">{row.campaignSlug}</div>
                     </td>
                     <td className="py-2 text-right tabular-nums">{row.sent}</td>
-                    <td className="py-2 text-right tabular-nums">{row.delivered}</td>
                     <td className="py-2 text-right tabular-nums">{row.opened}</td>
-                    <td className="py-2 text-right tabular-nums text-violet-700">{row.clickedCampaign}</td>
-                    <td className="py-2 text-right tabular-nums text-sky-700">{row.clickedOther}</td>
+                    <td className="py-2 text-right tabular-nums text-violet-700">{row.clicksTotal}</td>
+                    <td className="py-2 text-right tabular-nums">{row.clicksBreakdown?.plans ?? 0}</td>
+                    <td className="py-2 text-right tabular-nums text-sky-700">
+                      {row.clicksBreakdown?.share ?? 0}
+                    </td>
                     <td className="py-2 text-right tabular-nums font-medium text-emerald-700">{row.purchased}</td>
                   </tr>
                 ))}
@@ -411,6 +415,63 @@ export function EmailEnviosFunnel() {
           }}
         />
       ) : null}
+    </div>
+  );
+}
+
+function EmailClicksCard({
+  total,
+  pct,
+  pctHint,
+  breakdown,
+  onOpenTotal,
+  onOpenRole,
+}: {
+  total: number;
+  pct: string;
+  pctHint?: string;
+  breakdown?: Record<ClickRole, FunnelStep>;
+  onOpenTotal: () => void;
+  onOpenRole: (filter: DetailFilter) => void;
+}) {
+  return (
+    <div className="h-full rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 shadow-sm">
+      <button
+        type="button"
+        onClick={onOpenTotal}
+        className="group w-full text-left focus:outline-none focus:ring-2 focus:ring-violet-200 rounded-lg -m-1 p-1"
+      >
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-violet-700">
+          <MousePointerClick className="h-4 w-4" />
+          <span>Clics</span>
+        </div>
+        <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{fmt(total)}</p>
+        <div className="mt-1 flex items-baseline gap-1">
+          {pct !== '—' ? <span className="text-sm font-semibold text-emerald-600">{pct}</span> : null}
+          {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
+        </div>
+        <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+          Ver detalle →
+        </p>
+      </button>
+      <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-violet-100 pt-3 sm:grid-cols-3 xl:grid-cols-5">
+        {CLICK_BREAKDOWN.map(({ role, filter, label }) => (
+          <button
+            key={role}
+            type="button"
+            onClick={() => onOpenRole(filter)}
+            className="flex items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-violet-100/60 focus:outline-none focus:ring-2 focus:ring-violet-200"
+          >
+            <span className="flex items-center gap-1.5 text-slate-600">
+              {role === 'share' ? <Share2 className="h-3 w-3 text-sky-500" /> : null}
+              {label}
+            </span>
+            <span className="font-semibold tabular-nums text-slate-900">
+              {fmt(breakdown?.[role]?.count ?? 0)}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -477,6 +538,7 @@ function DetailModal({
                   <th className="pb-2">Campaña</th>
                   <th className="pb-2 text-right">Score</th>
                   {filter === 'purchased' ? <th className="pb-2">Template</th> : null}
+                  {filter.startsWith('clicked') ? <th className="pb-2">Tipo de clic</th> : null}
                   <th className="pb-2">Enviado</th>
                 </tr>
               </thead>
@@ -491,6 +553,13 @@ function DetailModal({
                     <td className="py-2 text-right tabular-nums">{row.cleexsScore ?? '—'}</td>
                     {filter === 'purchased' ? (
                       <td className="py-2 text-xs text-emerald-700">{row.purchaseTemplate || '—'}</td>
+                    ) : null}
+                    {filter.startsWith('clicked') ? (
+                      <td className="py-2 text-xs text-violet-700">
+                        {CLICK_BREAKDOWN.filter(({ role }) => row.clicksBreakdown?.[role])
+                          .map(({ label }) => label)
+                          .join(', ') || '—'}
+                      </td>
                     ) : null}
                     <td className="py-2 text-xs text-slate-500">{fmtDateTime(row.sentAt)}</td>
                   </tr>

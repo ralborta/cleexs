@@ -763,7 +763,11 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       'sent',
       'delivered',
       'opened',
-      'clicked_campaign',
+      'clicked',
+      'clicked_plans',
+      'clicked_diagnostic',
+      'clicked_report',
+      'clicked_share',
       'clicked_other',
       'purchased',
     ]);

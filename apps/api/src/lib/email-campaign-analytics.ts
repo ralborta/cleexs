@@ -4,7 +4,14 @@ import {
   isAdHocEmailTestBatch,
   isEmailBatchAnalyticsSlug,
 } from './email-configured-campaigns';
-import { inferVariantFromMergeSummary, isEmailUtmPurchase } from './email-link-attribution';
+import {
+  emptyEmailClickBreakdown,
+  hasAnyEmailClick,
+  inferVariantFromMergeSummary,
+  isEmailUtmPurchase,
+  type EmailClickBreakdown,
+  type EmailClickRole,
+} from './email-link-attribution';
 import {
   countRecentResendWebhookEvents,
   loadAppliedResendFlagsForSendLogs,
@@ -17,17 +24,20 @@ export type EmailAnalyticsFunnelStep = {
   pctHint?: string;
 };
 
+export type EmailClickBreakdownCounts = Record<EmailClickRole, number>;
+
 export type EmailCampaignAnalyticsRow = {
   campaignSlug: string;
   variant: string | null;
   label: string;
   kind: 'scheduled' | 'test';
   sent: number;
-  delivered: number;
   opened: number;
-  clickedCampaign: number;
-  clickedOther: number;
+  clicksTotal: number;
+  clicksBreakdown: EmailClickBreakdownCounts;
   purchased: number;
+  /** Solo referencia técnica; no es paso principal del embudo comercial. */
+  delivered: number;
 };
 
 export type EmailAnalyticsRecipientRow = {
@@ -39,8 +49,8 @@ export type EmailAnalyticsRecipientRow = {
   sentAt: string;
   delivered: boolean;
   opened: boolean;
-  clickedCampaign: boolean;
-  clickedOther: boolean;
+  clicked: boolean;
+  clicksBreakdown: EmailClickBreakdown;
   purchased: boolean;
   purchaseTemplate: string | null;
 };
@@ -50,11 +60,10 @@ export type EmailCampaignAnalyticsReport = {
   range: { from: string; to: string; timezone: string };
   funnel: {
     sent: EmailAnalyticsFunnelStep;
-    delivered: EmailAnalyticsFunnelStep;
     opened: EmailAnalyticsFunnelStep;
-    clickedCampaign: EmailAnalyticsFunnelStep;
-    clickedOther: EmailAnalyticsFunnelStep;
+    clicks: EmailAnalyticsFunnelStep & { breakdown: Record<EmailClickRole, EmailAnalyticsFunnelStep> };
     purchased: EmailAnalyticsFunnelStep;
+    delivered: EmailAnalyticsFunnelStep;
   };
   byCampaign: EmailCampaignAnalyticsRow[];
   integrations: {
@@ -76,14 +85,23 @@ type RecipientState = {
   status: CleexsEmailSendStatus;
   delivered: boolean;
   opened: boolean;
-  clickedCampaign: boolean;
-  clickedOther: boolean;
+  clickBreakdown: EmailClickBreakdown;
   purchased: boolean;
   purchaseTemplate: string | null;
 };
 
+const CLICK_ROLES: EmailClickRole[] = ['plans', 'diagnostic', 'report', 'share', 'other'];
+
 function pct(num: number, den: number): number | null {
   return den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+}
+
+function emptyClickCounts(): EmailClickBreakdownCounts {
+  return { plans: 0, diagnostic: 0, report: 0, share: 0, other: 0 };
+}
+
+function funnelStep(count: number, den: number, pctHint: string): EmailAnalyticsFunnelStep {
+  return { count, pct: pct(count, den), pctHint };
 }
 
 function campaignLabel(slug: string, variant: string | null): string {
@@ -118,8 +136,7 @@ async function loadRecipientStates(from: Date, to: Date): Promise<RecipientState
     status: log.status,
     delivered: false,
     opened: false,
-    clickedCampaign: false,
-    clickedOther: false,
+    clickBreakdown: emptyEmailClickBreakdown(),
     purchased: false,
     purchaseTemplate: null,
   }));
@@ -145,8 +162,7 @@ async function loadRecipientStates(from: Date, to: Date): Promise<RecipientState
     if (!flags) continue;
     row.delivered = flags.delivered;
     row.opened = flags.opened;
-    row.clickedCampaign = flags.clickedCampaign;
-    row.clickedOther = flags.clickedOther;
+    row.clickBreakdown = flags.clickBreakdown;
   }
 
   const recipientEmails = [...byEmail.keys()];
@@ -196,6 +212,16 @@ async function loadRecipientStates(from: Date, to: Date): Promise<RecipientState
   return states;
 }
 
+function countClickBreakdown(states: RecipientState[]): EmailClickBreakdownCounts {
+  const counts = emptyClickCounts();
+  for (const row of states) {
+    for (const role of CLICK_ROLES) {
+      if (row.clickBreakdown[role]) counts[role] += 1;
+    }
+  }
+  return counts;
+}
+
 export async function buildEmailCampaignAnalytics(input: {
   from: Date;
   to: Date;
@@ -206,8 +232,8 @@ export async function buildEmailCampaignAnalytics(input: {
   const sentCount = states.filter((r) => r.status === CleexsEmailSendStatus.sent).length;
   const deliveredCount = states.filter((r) => r.delivered).length;
   const openedCount = states.filter((r) => r.opened).length;
-  const clickedCampaignCount = states.filter((r) => r.clickedCampaign).length;
-  const clickedOtherCount = states.filter((r) => r.clickedOther).length;
+  const clicksTotal = states.filter((r) => hasAnyEmailClick(r.clickBreakdown)).length;
+  const clickCounts = countClickBreakdown(states);
   const purchasedCount = states.filter((r) => r.purchased).length;
 
   const campaignMap = new Map<string, EmailCampaignAnalyticsRow>();
@@ -223,15 +249,17 @@ export async function buildEmailCampaignAnalytics(input: {
         sent: 0,
         delivered: 0,
         opened: 0,
-        clickedCampaign: 0,
-        clickedOther: 0,
+        clicksTotal: 0,
+        clicksBreakdown: emptyClickCounts(),
         purchased: 0,
       } satisfies EmailCampaignAnalyticsRow);
     if (row.status === CleexsEmailSendStatus.sent) current.sent += 1;
     if (row.delivered) current.delivered += 1;
     if (row.opened) current.opened += 1;
-    if (row.clickedCampaign) current.clickedCampaign += 1;
-    if (row.clickedOther) current.clickedOther += 1;
+    if (hasAnyEmailClick(row.clickBreakdown)) current.clicksTotal += 1;
+    for (const role of CLICK_ROLES) {
+      if (row.clickBreakdown[role]) current.clicksBreakdown[role] += 1;
+    }
     if (row.purchased) current.purchased += 1;
     campaignMap.set(key, current);
   }
@@ -242,34 +270,34 @@ export async function buildEmailCampaignAnalytics(input: {
   });
   const resendEventsLast7Days = await countRecentResendWebhookEvents(7);
 
+  const clickBreakdownFunnel = CLICK_ROLES.reduce(
+    (acc, role) => {
+      acc[role] = funnelStep(clickCounts[role], openedCount || sentCount, 'de abiertos');
+      return acc;
+    },
+    {} as Record<EmailClickRole, EmailAnalyticsFunnelStep>
+  );
+
   return {
     ok: true,
     range: { from: input.fromDay, to: input.toDay, timezone: 'America/Argentina/Buenos_Aires' },
     funnel: {
       sent: { count: sentCount, pct: null },
-      delivered: { count: deliveredCount, pct: pct(deliveredCount, sentCount), pctHint: 'de enviados' },
-      opened: { count: openedCount, pct: pct(openedCount, deliveredCount || sentCount), pctHint: 'de entregados' },
-      clickedCampaign: {
-        count: clickedCampaignCount,
-        pct: pct(clickedCampaignCount, openedCount || deliveredCount || sentCount),
+      opened: funnelStep(openedCount, sentCount, 'de enviados'),
+      clicks: {
+        count: clicksTotal,
+        pct: pct(clicksTotal, openedCount || sentCount),
         pctHint: 'de abiertos',
+        breakdown: clickBreakdownFunnel,
       },
-      clickedOther: {
-        count: clickedOtherCount,
-        pct: pct(clickedOtherCount, openedCount || deliveredCount || sentCount),
-        pctHint: 'de abiertos',
-      },
-      purchased: {
-        count: purchasedCount,
-        pct: pct(purchasedCount, clickedCampaignCount || openedCount || sentCount),
-        pctHint: 'de clic campaña',
-      },
+      purchased: funnelStep(purchasedCount, clicksTotal || openedCount || sentCount, 'de clics'),
+      delivered: funnelStep(deliveredCount, sentCount, 'de enviados'),
     },
     byCampaign,
     integrations: {
       resendWebhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
       note:
-        'Los links de plantilla llevan utm_campaign + utm_content (cta_plans, cta_diagnostic, etc.). Sin RESEND_WEBHOOK_SECRET los eventos de entrega/apertura/clic no se registran.',
+        'Los links llevan utm_content (planes, diagnóstico, reporte, compartir). Sin webhook Resend los clics y aperturas quedan en 0.',
       scope: CONFIGURED_CAMPAIGN_SCOPE_NOTE,
       resendEventsLast7Days,
     },
@@ -280,9 +308,23 @@ export type EmailAnalyticsDetailFilter =
   | 'sent'
   | 'delivered'
   | 'opened'
-  | 'clicked_campaign'
+  | 'clicked'
+  | 'clicked_plans'
+  | 'clicked_diagnostic'
+  | 'clicked_report'
+  | 'clicked_share'
   | 'clicked_other'
   | 'purchased';
+
+function recipientMatchesClickFilter(row: RecipientState, filter: EmailAnalyticsDetailFilter): boolean {
+  if (filter === 'clicked') return hasAnyEmailClick(row.clickBreakdown);
+  if (filter === 'clicked_plans') return row.clickBreakdown.plans;
+  if (filter === 'clicked_diagnostic') return row.clickBreakdown.diagnostic;
+  if (filter === 'clicked_report') return row.clickBreakdown.report;
+  if (filter === 'clicked_share') return row.clickBreakdown.share;
+  if (filter === 'clicked_other') return row.clickBreakdown.other;
+  return false;
+}
 
 export async function listEmailCampaignAnalyticsRecipients(input: {
   from: Date;
@@ -295,9 +337,8 @@ export async function listEmailCampaignAnalyticsRecipients(input: {
     if (input.filter === 'sent') return row.status === CleexsEmailSendStatus.sent;
     if (input.filter === 'delivered') return row.delivered;
     if (input.filter === 'opened') return row.opened;
-    if (input.filter === 'clicked_campaign') return row.clickedCampaign;
-    if (input.filter === 'clicked_other') return row.clickedOther;
     if (input.filter === 'purchased') return row.purchased;
+    if (input.filter.startsWith('clicked')) return recipientMatchesClickFilter(row, input.filter);
     return true;
   });
 
@@ -310,8 +351,8 @@ export async function listEmailCampaignAnalyticsRecipients(input: {
     sentAt: row.sentAt.toISOString(),
     delivered: row.delivered,
     opened: row.opened,
-    clickedCampaign: row.clickedCampaign,
-    clickedOther: row.clickedOther,
+    clicked: hasAnyEmailClick(row.clickBreakdown),
+    clicksBreakdown: row.clickBreakdown,
     purchased: row.purchased,
     purchaseTemplate: row.purchaseTemplate,
   }));
