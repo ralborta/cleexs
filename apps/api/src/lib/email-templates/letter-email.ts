@@ -10,6 +10,7 @@ import {
   normalizedScore,
   resolveCleexsEmailAssets,
   scoreAccent,
+  CLEEXS_LETTER_FONT,
 } from './shared';
 import { getAppBaseUrlForPublicLinks } from '../app-public-url';
 
@@ -97,14 +98,14 @@ function mergeContent(overrides?: Partial<CleexsLetterContent>): CleexsLetterCon
   return { ...defaultCleexsLetterContent(), ...overrides };
 }
 
-const letterFont = "Georgia,'Times New Roman',Times,serif";
+const letterFont = CLEEXS_LETTER_FONT;
 const uiFont = 'Inter,Arial,Helvetica,sans-serif';
 
 function bodyParagraphsHtml(paragraphs: string[], ctx: CleexsEmailPersonalization): string {
   return paragraphs
     .map(
       (p) =>
-        `<p style="margin:0 0 18px;font-size:17px;line-height:1.8;color:#1e293b;font-family:${letterFont};">${escapeHtml(mergeCleexsText(p, ctx))}</p>`
+        `<p style="margin:0 0 20px;font-size:19px;line-height:1.85;color:#1e293b;font-family:${letterFont};">${escapeHtml(mergeCleexsText(p, ctx))}</p>`
     )
     .join('\n');
 }
@@ -284,7 +285,7 @@ function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetter
                     </p>
                     <p style="margin:0 0 8px;font-size:28px;font-weight:800;line-height:1.1;color:#2563eb;font-family:${uiFont};letter-spacing:-.5px;">${escapeHtml(content.planPriceCurrent)}</p>
                     <p style="margin:0 0 12px;font-size:12px;line-height:1.5;color:#64748b;font-family:${uiFont};">${escapeHtml(content.planPriceSuffix)}</p>
-                    <p style="margin:0;font-size:13px;line-height:1.6;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(content.planClosingLine)}</p>
+                    <p style="margin:0;font-size:15px;line-height:1.65;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(content.planClosingLine)}</p>
                   </td>
                   <td width="68%" valign="top" style="padding-left:18px;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;">${bulletRows}</table>
@@ -335,7 +336,7 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
               ${showFounder ? founderSignatureHtml(assets, content.founderTitle) : ''}
               ${reportInsightBoxHtml(input, content, ctx)}
               ${secondaryLinksHtml(input, content)}
-              <p style="margin:24px 0 0;font-size:15px;line-height:1.65;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(postscript)}</p>
+              <p style="margin:24px 0 0;font-size:17px;line-height:1.7;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(postscript)}</p>
             </td>
           </tr>
           ${planSalesBlockHtml(input, content)}
