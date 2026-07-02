@@ -16,8 +16,6 @@ import { getAppBaseUrlForPublicLinks } from '../app-public-url';
 export type CleexsLetterContent = {
   subject: string;
   preheader: string;
-  heroEyebrow: string;
-  heroHeadline: string;
   bodyParagraphs: string[];
   exclusiveLabel: string;
   scoreBenchmarkBadge: string;
@@ -55,14 +53,10 @@ export type CleexsLetterEmailInput = {
   showReportLinks?: boolean;
 };
 
-const ENGINE_CHIPS = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity'] as const;
-
 export function defaultCleexsLetterContent(): CleexsLetterContent {
   return {
     subject: 'Le preguntamos 100 veces a ChatGPT',
     preheader: 'Los mismos nombres aparecían una y otra vez.',
-    heroEyebrow: 'CLEEXS SCORE MENSUAL',
-    heroHeadline: 'Tu visibilidad en motores de IA, medida con claridad.',
     bodyParagraphs: [
       'Esta semana repetimos la misma pregunta decenas de veces. Esperábamos respuestas muy distintas. Pero los mismos nombres aparecían una y otra vez.',
       'Parece haber una especie de grupo favorito. Todavía estamos investigando por qué. Pero si esto es así, entrar en ese grupo puede ser extremadamente valioso.',
@@ -123,39 +117,6 @@ function resolveActionLine(content: CleexsLetterContent, ctx: CleexsEmailPersona
   const custom = (ctx.improvementTip || '').trim();
   if (custom) return mergeCleexsText(custom, ctx);
   return mergeCleexsText(content.actionTemplate, ctx);
-}
-
-function engineChipsHtml(): string {
-  return ENGINE_CHIPS.map(
-    (chip) =>
-      `<span style="display:inline-block;margin:0 8px 8px 0;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);color:#ffffff;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:${uiFont};">${chip}</span>`
-  ).join('');
-}
-
-function heroBlockHtml(content: CleexsLetterContent, assets: CleexsEmailAssets): string {
-  if (assets.heroImageUrl) {
-    return `
-      <tr>
-        <td style="padding:0 0 24px;">
-          <img src="${escapeHtml(assets.heroImageUrl)}" alt="" width="680" style="display:block;width:100%;max-width:680px;height:auto;border:0;border-radius:16px;" />
-        </td>
-      </tr>`;
-  }
-
-  return `
-    <tr>
-      <td style="padding:0 0 24px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:16px;background:linear-gradient(135deg,#0f3fb6 0%,#2563eb 48%,#7dd3fc 125%);box-shadow:0 14px 32px rgba(37,99,235,.22);">
-          <tr>
-            <td style="padding:28px 26px;font-family:${uiFont};color:#ffffff;">
-              <p style="margin:0 0 10px;text-transform:uppercase;letter-spacing:2px;font-size:11px;font-weight:800;opacity:.9;">${escapeHtml(content.heroEyebrow)}</p>
-              <h1 style="margin:0;max-width:520px;font-size:32px;line-height:1.08;letter-spacing:-.8px;font-weight:800;color:#ffffff;font-family:${uiFont};">${escapeHtml(content.heroHeadline)}</h1>
-              <div style="margin-top:20px;">${engineChipsHtml()}</div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>`;
 }
 
 function scoreRingHtml(score: number | null, scoreValue: string, accent: string): string {
@@ -368,7 +329,6 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
               <img src="${escapeHtml(assets.logoUrl)}" alt="Cleexs" width="110" style="display:block;width:110px;height:auto;border:0;" />
             </td>
           </tr>
-          ${heroBlockHtml(content, assets)}
           <tr>
             <td style="padding:0 0 8px;">
               ${bodyParagraphsHtml(content.bodyParagraphs, ctx)}
@@ -396,9 +356,6 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
 
   const text = [
     subject,
-    '',
-    content.heroEyebrow,
-    content.heroHeadline,
     '',
     ...content.bodyParagraphs.map((p) => mergeCleexsText(p, ctx)),
     '',
