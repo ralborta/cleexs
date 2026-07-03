@@ -8,6 +8,7 @@ import {
   Database,
   Eye,
   Loader2,
+  Play,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -89,6 +90,8 @@ export function FreeEmailSequenceEditor() {
   const [saveBusy, setSaveBusy] = useState(false);
   const [testBusy, setTestBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [triggerBusy, setTriggerBusy] = useState(false);
+  const [triggerResult, setTriggerResult] = useState<string | null>(null);
 
   const selected = useMemo(() => steps.find((s) => s.id === selectedId) ?? null, [steps, selectedId]);
 
@@ -296,6 +299,36 @@ export function FreeEmailSequenceEditor() {
     }
   }
 
+  async function triggerBatch(dryRun: boolean) {
+    if (!dryRun && !window.confirm('¿Enviar la secuencia ahora a todos los candidatos de hoy? (force, ignora hora y enabled)')) {
+      return;
+    }
+    setTriggerBusy(true);
+    setTriggerResult(null);
+    setError(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/email/free-sequence-preview/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun, force: true, limit: 50, enrolledWithinDays: 60 }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Corrida falló');
+      if (dryRun) {
+        const steps = (json.steps as Array<{ sortOrder: number; wouldSend?: number; candidates?: number }>) ?? [];
+        const summary = steps.map((s) => `paso ${s.sortOrder}: ${s.wouldSend ?? 0} envíos (${s.candidates ?? 0} candidatos)`).join(' · ');
+        setTriggerResult(json.due === false ? `No corresponde ahora: ${json.reason ?? '—'}` : `Simulación OK — ${summary || 'sin candidatos hoy'}`);
+      } else {
+        setTriggerResult(`Enviados: ${json.sent ?? 0} · omitidos: ${json.skipped ?? 0} · fallidos: ${json.failed ?? 0}`);
+        setHint('Corrida de secuencia completada. Revisá Email · envíos.');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error en corrida');
+    } finally {
+      setTriggerBusy(false);
+    }
+  }
+
   if (loading && steps.length === 0) {
     return (
       <div className="flex items-center justify-center gap-2 py-24 text-slate-500">
@@ -364,6 +397,26 @@ export function FreeEmailSequenceEditor() {
           </label>
         </section>
       ) : null}
+
+      <section className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-900">Probar corrida automática</h2>
+        <p className="mt-1 text-xs text-slate-600">
+          Simulá quién recibiría mail hoy según días desde el diagnóstico. &quot;Enviar ahora&quot; usa force (ignora hora y el checkbox de arriba).
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" className={secondaryBtn} disabled={triggerBusy} onClick={() => void triggerBatch(true)}>
+            {triggerBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+            Simular corrida
+          </button>
+          <button type="button" className={primaryBtn} disabled={triggerBusy} onClick={() => void triggerBatch(false)}>
+            {triggerBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            Enviar ahora (force)
+          </button>
+        </div>
+        {triggerResult ? (
+          <p className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs text-slate-700">{triggerResult}</p>
+        ) : null}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
         <aside className="space-y-2 lg:sticky lg:top-6 lg:self-start">
