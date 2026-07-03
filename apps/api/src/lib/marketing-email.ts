@@ -1,6 +1,7 @@
 import { CleexsEmailSendStatus, type Prisma } from '@prisma/client';
 import { Resend } from 'resend';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { withEmailAttribution } from './email-link-attribution';
 import { prisma } from './prisma';
 
 export type EmailAudienceSegment = 'all' | 'free' | 'premium';
@@ -110,9 +111,33 @@ function paragraphsToHtml(body: string): string {
     .join('');
 }
 
+function resolveTrackedUrls(input: MarketingEmailSendInput) {
+  const r = input.recipient;
+  const medium =
+    typeof input.mergeSummary === 'object' &&
+    input.mergeSummary &&
+    !Array.isArray(input.mergeSummary) &&
+    (input.mergeSummary as { mode?: string }).mode === 'broadcast'
+      ? 'broadcast'
+      : 'weekly_email';
+  const ctaUrl = withEmailAttribution(input.ctaUrl || DEFAULT_CTA_URL, {
+    campaignSlug: input.campaignSlug,
+    linkRole: 'cta_plans',
+    medium,
+  });
+  const trackedShareUrl = r.shareUrl
+    ? withEmailAttribution(r.shareUrl, {
+        campaignSlug: input.campaignSlug,
+        linkRole: 'cta_share',
+        medium,
+      })
+    : null;
+  return { ctaUrl, trackedShareUrl, medium };
+}
+
 function buildMarketingHtml(input: MarketingEmailSendInput): string {
   const r = input.recipient;
-  const ctaUrl = input.ctaUrl || DEFAULT_CTA_URL;
+  const { ctaUrl, trackedShareUrl } = resolveTrackedUrls(input);
   const ctaLabel = input.ctaLabel || DEFAULT_CTA_LABEL;
   const scoreBlock =
     r.cleexsScore != null
@@ -122,8 +147,8 @@ function buildMarketingHtml(input: MarketingEmailSendInput): string {
         </div>`
       : '';
 
-  const footer = r.shareUrl
-    ? `<p style="margin:14px 0 0;font-size:12px;color:#64748b;">Tu reporte público: <a href="${escapeHtml(r.shareUrl)}" style="color:#4f46e5;">${escapeHtml(r.shareUrl)}</a></p>`
+  const footer = trackedShareUrl
+    ? `<p style="margin:14px 0 0;font-size:12px;color:#64748b;">Tu reporte público: <a href="${escapeHtml(trackedShareUrl)}" style="color:#4f46e5;">${escapeHtml(trackedShareUrl)}</a></p>`
     : '';
 
   return `<!DOCTYPE html>
@@ -160,13 +185,14 @@ function buildMarketingHtml(input: MarketingEmailSendInput): string {
 
 function buildMarketingText(input: MarketingEmailSendInput): string {
   const r = input.recipient;
+  const { ctaUrl, trackedShareUrl } = resolveTrackedUrls(input);
   return [
     mergeText(input.subject, r),
     '',
     mergeText(input.body, r),
     '',
-    `Premium: ${input.ctaUrl || DEFAULT_CTA_URL}`,
-    r.shareUrl ? `Reporte: ${r.shareUrl}` : '',
+    `Premium: ${ctaUrl}`,
+    trackedShareUrl ? `Reporte: ${trackedShareUrl}` : '',
     '',
     '— Cleexs',
   ]

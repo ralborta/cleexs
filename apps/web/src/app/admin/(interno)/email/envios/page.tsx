@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
+import { EmailEnviosFunnel } from '@/components/admin/email-envios-funnel';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 const field =
@@ -292,17 +293,22 @@ export default function AdminEmailEnviosPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Marketing</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Estado de envíos</h1>
         <p className="max-w-2xl text-sm text-slate-600">
-          Seguimiento por batch de campañas de marketing (mensual, semanal, pruebas). Los correos
-          transaccionales del diagnóstico free no aparecen aquí.
+          Embudo comercial de campañas de email y detalle operativo por batch (mensual, semanal, pruebas).
         </p>
       </header>
 
-      {error && error !== 'AUTH' ? (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+      <EmailEnviosFunnel />
+
+      <div className="relative py-2">
+        <div className="absolute inset-0 flex items-center" aria-hidden>
+          <div className="w-full border-t border-slate-200" />
         </div>
-      ) : null}
+        <div className="relative flex justify-center">
+          <span className="bg-slate-50 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+            Detalle operativo por batch
+          </span>
+        </div>
+      </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -353,6 +359,13 @@ export default function AdminEmailEnviosPage() {
           </pre>
         ) : null}
       </section>
+
+      {error && error !== 'AUTH' ? (
+        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">

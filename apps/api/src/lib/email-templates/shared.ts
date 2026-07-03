@@ -133,6 +133,9 @@ export function resolveCleexsEmailAssets(
   };
 }
 
+export const CLEEXS_LETTER_FONT =
+  "'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Times New Roman', serif";
+
 export function founderSignatureHtml(assets: CleexsEmailAssets, founderTitle: string): string {
   if (!assets.founderPhotoUrl) return '';
   return `
@@ -141,9 +144,9 @@ export function founderSignatureHtml(assets: CleexsEmailAssets, founderTitle: st
         <td style="padding-right:12px;vertical-align:middle;">
           <img src="${escapeHtml(assets.founderPhotoUrl)}" alt="Gonzalo" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:50%;border:2px solid #e2e8f0;object-fit:cover;" />
         </td>
-        <td style="vertical-align:middle;font-family:Georgia,'Times New Roman',Times,serif;">
-          <strong style="color:#1e293b;font-size:15px;">Gonzalo</strong><br/>
-          <span style="color:#64748b;font-size:13px;">${escapeHtml(founderTitle)} · Cleexs</span>
+        <td style="vertical-align:middle;font-family:${CLEEXS_LETTER_FONT};">
+          <strong style="color:#1e293b;font-size:17px;">Gonzalo</strong><br/>
+          <span style="color:#64748b;font-size:15px;">${escapeHtml(founderTitle)} · Cleexs</span>
         </td>
       </tr>
     </table>`;

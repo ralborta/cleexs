@@ -198,3 +198,133 @@ export function formatDateShort(iso: string | null | undefined): string {
     return iso;
   }
 }
+
+export function ReferrerNameCell({
+  name,
+  refCode,
+  isSponsor,
+}: {
+  name: string;
+  refCode: string;
+  isSponsor?: boolean;
+}) {
+  return (
+    <div>
+      <div className="font-medium text-slate-900">
+        {name}
+        {isSponsor ? (
+          <span className="ml-1.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+            YouTube
+          </span>
+        ) : null}
+      </div>
+      {name !== refCode ? (
+        <div className="font-mono text-[10px] text-slate-400">{refCode}</div>
+      ) : null}
+    </div>
+  );
+}
+
+export function SponsorBreakdownTable({
+  rows,
+  empty = 'Sin tráfico de auspiciadores en la ventana.',
+}: {
+  rows: Array<{
+    refCode: string;
+    name: string;
+    web: { diagnostics: number; withEmail: number };
+    whatsapp: { diagnostics: number; withEmail: number };
+    total: { diagnostics: number; withEmail: number };
+  }>;
+  empty?: string;
+}) {
+  const hasData = rows.some((r) => r.total.diagnostics > 0);
+  if (!hasData) return <p className="text-sm text-slate-500">{empty}</p>;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="text-left text-xs text-slate-500">
+          <tr>
+            <th className="py-2">Auspiciador</th>
+            <th className="py-2 text-right">Web</th>
+            <th className="py-2 text-right">WhatsApp</th>
+            <th className="py-2 text-right">Total</th>
+            <th className="py-2 text-right">Emails</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.refCode} className="border-t border-slate-100">
+              <td className="py-2">
+                <ReferrerNameCell name={row.name} refCode={row.refCode} isSponsor />
+              </td>
+              <td className="py-2 text-right tabular-nums text-slate-900">{row.web.diagnostics}</td>
+              <td className="py-2 text-right tabular-nums text-slate-900">{row.whatsapp.diagnostics}</td>
+              <td className="py-2 text-right tabular-nums font-medium text-slate-900">
+                {row.total.diagnostics}
+              </td>
+              <td className="py-2 text-right tabular-nums text-emerald-700">{row.total.withEmail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function EmailFunnelCard({
+  icon,
+  label,
+  value,
+  pct,
+  pctHint,
+  hint,
+  onClick,
+  actionHint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  pct?: string | null;
+  pctHint?: string;
+  hint?: string;
+  onClick?: () => void;
+  actionHint?: string;
+}) {
+  const clickable = typeof onClick === 'function';
+  const className = `group rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+    clickable
+      ? 'border-violet-200 hover:border-violet-300 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-200'
+      : 'border-slate-200'
+  }`;
+  const inner = (
+    <>
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+      <div className="mt-1 min-h-[2.5rem] flex items-baseline gap-1">
+        {pct != null && pct !== '—' ? (
+          <span className="text-sm font-semibold text-emerald-600">{pct}</span>
+        ) : null}
+        {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
+      </div>
+      {hint ? <p className="mt-0.5 text-[10px] text-slate-400">{hint}</p> : null}
+      {clickable && actionHint ? (
+        <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+          {actionHint} →
+        </p>
+      ) : null}
+    </>
+  );
+  if (clickable) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={className}>{inner}</div>;
+}

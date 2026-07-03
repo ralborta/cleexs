@@ -17,6 +17,8 @@ import {
   ReportMetric,
   ReportRefreshButton,
   ReportSection,
+  ReferrerNameCell,
+  SponsorBreakdownTable,
   WindowDaysToggle,
   formatDate,
   formatDateShort,
@@ -175,6 +177,13 @@ export default function AcquisitionReportPage() {
           </div>
 
           <ReportSection
+            title="Auspiciadores YouTube (Tipito, Herederos, Eldo)"
+            description="Desglose web vs WhatsApp con emails capturados en la ventana."
+          >
+            <SponsorBreakdownTable rows={data.sponsorBreakdown ?? []} />
+          </ReportSection>
+
+          <ReportSection
             title="Top referidores (codigos ref=)"
             description="Cuantos visitantes trajo cada ref code, cuantos completaron y dejaron email."
             action={
@@ -193,7 +202,7 @@ export default function AcquisitionReportPage() {
                 <table className="w-full text-sm">
                   <thead className="text-left text-xs text-slate-500">
                     <tr>
-                      <th className="py-2">Ref</th>
+                      <th className="py-2">Auspiciador</th>
                       <th className="py-2 text-right">Visitas</th>
                       <th className="py-2 text-right">Completados</th>
                       <th className="py-2 text-right">Email</th>
@@ -204,7 +213,13 @@ export default function AcquisitionReportPage() {
                   <tbody>
                     {data.topReferrers.map((row) => (
                       <tr key={row.refCode} className="border-t border-slate-100">
-                        <td className="py-2 font-mono text-xs text-slate-700">{row.refCode}</td>
+                        <td className="py-2">
+                          <ReferrerNameCell
+                            name={row.name}
+                            refCode={row.refCode}
+                            isSponsor={row.isSponsor}
+                          />
+                        </td>
                         <td className="py-2 text-right tabular-nums text-slate-900">{row.visits}</td>
                         <td className="py-2 text-right tabular-nums text-slate-900">{row.completed}</td>
                         <td className="py-2 text-right tabular-nums text-slate-900">{row.capturedEmails}</td>
@@ -261,8 +276,21 @@ export default function AcquisitionReportPage() {
                         <td className="py-2 text-xs text-slate-700">{row.email || '—'}</td>
                         <td className="py-2 text-xs text-slate-600">{row.sourceChannel || 'web'}</td>
                         <td className="py-2 text-xs text-slate-600">
-                          {row.refCode ? <span className="font-mono">{row.refCode}</span> : '—'}
-                          {row.utmSource ? <span className="block text-[10px] text-slate-400">utm: {row.utmSource}</span> : null}
+                          {row.refCode ? (
+                            <>
+                              <span className="font-medium text-slate-800">
+                                {row.referrerName || row.refCode}
+                              </span>
+                              {row.referrerName && row.referrerName !== row.refCode ? (
+                                <span className="block font-mono text-[10px] text-slate-400">{row.refCode}</span>
+                              ) : null}
+                            </>
+                          ) : (
+                            '—'
+                          )}
+                          {row.utmSource ? (
+                            <span className="block text-[10px] text-slate-400">utm: {row.utmSource}</span>
+                          ) : null}
                         </td>
                         <td className="py-2 text-xs">
                           <span

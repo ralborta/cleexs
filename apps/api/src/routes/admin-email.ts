@@ -21,8 +21,14 @@ import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, send
 import { Resend } from 'resend';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { getEmailBatchDetail, listEmailBatches } from '../lib/email-batch-status';
+import {
+  buildEmailCampaignAnalytics,
+  listEmailCampaignAnalyticsRecipients,
+  type EmailAnalyticsDetailFilter,
+} from '../lib/email-campaign-analytics';
 import { runCustomTemplateBatch } from '../lib/monthly-score-email-sender';
 import { prisma } from '../lib/prisma';
+import { resolveConversionRange } from '@cleexs/shared';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
   const secret = process.env.ADMIN_API_SECRET?.trim();
@@ -731,6 +737,52 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Batch no encontrado' });
     }
     return detail;
+  });
+
+  fastify.get<{ Querystring: { from?: string; to?: string } }>('/email/analytics', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const { from, to, fromDay, toDay } = resolveConversionRange(request.query, 7);
+    return buildEmailCampaignAnalytics({ from, to, fromDay, toDay });
+  });
+
+  fastify.get<{
+    Querystring: { from?: string; to?: string; filter?: string };
+  }>('/email/analytics/recipients', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const filterSchema = z.enum([
+      'sent',
+      'delivered',
+      'opened',
+      'clicked',
+      'clicked_plans',
+      'clicked_diagnostic',
+      'clicked_report',
+      'clicked_share',
+      'clicked_other',
+      'purchased',
+    ]);
+    const parsedFilter = filterSchema.safeParse(request.query.filter);
+    if (!parsedFilter.success) {
+      return reply.code(400).send({ error: 'filter inválido' });
+    }
+
+    const { from, to } = resolveConversionRange(request.query, 7);
+    const items = await listEmailCampaignAnalyticsRecipients({
+      from,
+      to,
+      filter: parsedFilter.data as EmailAnalyticsDetailFilter,
+    });
+    return { ok: true, filter: parsedFilter.data, total: items.length, items };
   });
 
   fastify.post<{ Body: z.infer<typeof customBatchSendBody> }>('/email/batches/send', async (request, reply) => {

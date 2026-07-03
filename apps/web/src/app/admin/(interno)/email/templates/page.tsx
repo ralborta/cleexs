@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ExternalLink, Loader2, Mail, RefreshCw, Send } from 'lucide-react';
 import Link from 'next/link';
+import { FreeEmailSequenceEditor } from '@/components/admin/free-email-sequence-editor';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 export const dynamic = 'force-dynamic';
 
+type PageTab = 'secuencia-free' | 'diseno';
 type TemplateVariant = 'letter' | 'editorial';
 
 type PreviewPayload = {
@@ -39,7 +41,7 @@ const tabBtn = (active: boolean) =>
       : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
   }`;
 
-export default function EmailTemplatesPreviewPage() {
+function EmailDesignPreviewPanel() {
   const searchParams = useSearchParams();
   const initialVariant =
     searchParams.get('variant') === 'editorial' ? 'editorial' : ('letter' as TemplateVariant);
@@ -113,22 +115,14 @@ export default function EmailTemplatesPreviewPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Email · plantillas</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">Carta vs Newsletter</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-            <strong>Carta (letter)</strong> — mensaje, firma, recuadro con score + competidores + sugerencia, y cierre
-            de venta Plan 90 días. <strong>Editorial</strong> — newsletter visual para piezas especiales.
-          </p>
-        </div>
-        <Link href="/admin/email" className="text-sm font-medium text-violet-600 hover:text-violet-800">
-          ← Volver a secuencia
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
+        <strong>Carta (letter)</strong> — mensaje, firma, recuadro con score + competidores + sugerencia, y cierre de
+        venta Plan 90 días. <strong>Editorial</strong> — newsletter visual para piezas especiales. Acá solo ves el diseño
+        base (sin contenido de la secuencia).
+      </p>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         <button type="button" className={tabBtn(variant === 'letter')} onClick={() => setVariant('letter')}>
           Carta (letter)
         </button>
@@ -137,7 +131,7 @@ export default function EmailTemplatesPreviewPage() {
         </button>
       </div>
 
-      <div className="mb-6 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_280px]">
+      <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_280px]">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="font-semibold text-slate-700">Score</span>
@@ -182,14 +176,14 @@ export default function EmailTemplatesPreviewPage() {
       </div>
 
       {error ? (
-        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>
       ) : null}
       {hint ? (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{hint}</div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{hint}</div>
       ) : null}
 
       {preview ? (
-        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
           <p>
             <span className="font-semibold text-slate-900">Variante:</span> {preview.variant}
           </p>
@@ -229,6 +223,54 @@ export default function EmailTemplatesPreviewPage() {
           />
         )}
       </section>
+    </div>
+  );
+}
+
+export default function EmailTemplatesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const activeTab: PageTab = useMemo(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'diseno') return 'diseno';
+    if (tab === 'secuencia-free') return 'secuencia-free';
+    if (searchParams.get('variant')) return 'diseno';
+    return 'secuencia-free';
+  }, [searchParams]);
+
+  function setTab(tab: PageTab) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    if (tab === 'secuencia-free') params.delete('variant');
+    router.replace(`/admin/email/templates?${params.toString()}`, { scroll: false });
+  }
+
+  return (
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Email · plantillas</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Plantillas y secuencia free</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+            Editá la secuencia automática para clientes free y previsualizá los diseños carta / editorial.
+          </p>
+        </div>
+        <Link href="/admin/email/envios" className="text-sm font-medium text-violet-600 hover:text-violet-800">
+          Ver envíos →
+        </Link>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button type="button" className={tabBtn(activeTab === 'secuencia-free')} onClick={() => setTab('secuencia-free')}>
+          Secuencia free
+        </button>
+        <button type="button" className={tabBtn(activeTab === 'diseno')} onClick={() => setTab('diseno')}>
+          Diseño carta / editorial
+        </button>
+      </div>
+
+      {activeTab === 'secuencia-free' ? <FreeEmailSequenceEditor /> : <EmailDesignPreviewPanel />}
     </main>
   );
 }

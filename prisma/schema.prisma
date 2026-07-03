@@ -945,6 +945,43 @@ model WeeklyEmailSchedule {
   @@map("weekly_email_schedule")
 }
 
+/// Secuencia automática post-registro para clientes free (preview / admin).
+model FreeEmailSequence {
+  id              String   @id @default(uuid())
+  key             String   @unique @default("free_onboarding")
+  enabled         Boolean  @default(false)
+  sendHourLocal   Int      @default(10) @map("send_hour_local")
+  sendMinuteLocal Int      @default(0) @map("send_minute_local")
+  timezone        String   @default("America/Argentina/Buenos_Aires")
+  notes           String?  @db.Text
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  updatedBy       String?  @map("updated_by")
+
+  steps FreeEmailSequenceStep[]
+
+  @@map("free_email_sequences")
+}
+
+model FreeEmailSequenceStep {
+  id                     String                    @id @default(uuid())
+  sequenceId             String                    @map("sequence_id")
+  sequence               FreeEmailSequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sortOrder              Int                       @map("sort_order")
+  delayDaysAfterPrevious Int                       @default(0) @map("delay_days_after_previous")
+  title                  String
+  subject                String?                   @db.Text
+  preheader              String?                   @db.Text
+  body                   String?                   @db.Text
+  templateVariant        CleexsEmailTemplateVariant @default(letter) @map("template_variant")
+  active                 Boolean                   @default(true)
+  createdAt              DateTime                  @default(now()) @map("created_at")
+  updatedAt              DateTime                  @updatedAt @map("updated_at")
+
+  @@unique([sequenceId, sortOrder])
+  @@index([sequenceId, sortOrder])
+  @@map("free_email_sequence_steps")
+}
+
 model CleexsInternalEmailCampaign {
   id            String                 @id @default(uuid())
   slug          String                 @unique

@@ -9,6 +9,7 @@ import {
   SIN_REFERIDOR_LABEL,
   SIN_REFERIDOR_SLUG,
 } from '../lib/referral-attribution';
+import { resolveReferrerDisplayName } from '../lib/referrer-display';
 import { prisma } from '../lib/prisma';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
@@ -130,7 +131,10 @@ const referralRoutes: FastifyPluginAsync = async (fastify) => {
         return {
           id: campaign?.id ?? null,
           registered: Boolean(campaign),
-          name: refCode === SIN_REFERIDOR_SLUG ? SIN_REFERIDOR_LABEL : campaign?.name ?? refCode,
+          name:
+            refCode === SIN_REFERIDOR_SLUG
+              ? SIN_REFERIDOR_LABEL
+              : resolveReferrerDisplayName(refCode, campaign?.name),
           refCode,
           active: campaign?.active ?? false,
           utmSource: campaign?.utmSource ?? null,

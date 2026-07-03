@@ -10,6 +10,7 @@ import {
   normalizedScore,
   resolveCleexsEmailAssets,
   scoreAccent,
+  CLEEXS_LETTER_FONT,
 } from './shared';
 import { getAppBaseUrlForPublicLinks } from '../app-public-url';
 
@@ -58,7 +59,7 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     subject: 'Le preguntamos 100 veces a ChatGPT',
     preheader: 'Los mismos nombres aparecían una y otra vez.',
     bodyParagraphs: [
-      'Esta semana repetimos la misma pregunta decenas de veces. Esperaba respuestas muy distintas. Pero los mismos nombres aparecían una y otra vez.',
+      'Esta semana repetimos la misma pregunta decenas de veces. Esperábamos respuestas muy distintas. Pero los mismos nombres aparecían una y otra vez.',
       'Parece haber una especie de grupo favorito. Todavía estamos investigando por qué. Pero si esto es así, entrar en ese grupo puede ser extremadamente valioso.',
     ],
     exclusiveLabel: 'Exclusivo para {{domain}}',
@@ -71,7 +72,7 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     reportCtaLabel: 'Ver reporte',
     shareCtaLabel: 'Compartir reporte',
     newDiagnosticCtaLabel: 'Generar nuevo diagnóstico',
-    newDiagnosticHint: 'Gratis · unos minutos · solo si vos lo pedís',
+    newDiagnosticHint: 'Gratis · tarda unos minutos · solo si vos lo pedís',
     postscript: 'PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?',
     planTitle: 'Plan de Ataque: domina ChatGPT en 90 días',
     planBadgeLabel: 'PLAN CONQUISTAR',
@@ -97,13 +98,14 @@ function mergeContent(overrides?: Partial<CleexsLetterContent>): CleexsLetterCon
   return { ...defaultCleexsLetterContent(), ...overrides };
 }
 
-const letterFont = "Georgia,'Times New Roman',Times,serif";
+const letterFont = CLEEXS_LETTER_FONT;
+const uiFont = 'Inter,Arial,Helvetica,sans-serif';
 
 function bodyParagraphsHtml(paragraphs: string[], ctx: CleexsEmailPersonalization): string {
   return paragraphs
     .map(
       (p) =>
-        `<p style="margin:0 0 18px;font-size:17px;line-height:1.8;color:#1e293b;font-family:${letterFont};">${escapeHtml(mergeCleexsText(p, ctx))}</p>`
+        `<p style="margin:0 0 20px;font-size:19px;line-height:1.85;color:#1e293b;font-family:${letterFont};">${escapeHtml(mergeCleexsText(p, ctx))}</p>`
     )
     .join('\n');
 }
@@ -118,16 +120,48 @@ function resolveActionLine(content: CleexsLetterContent, ctx: CleexsEmailPersona
   return mergeCleexsText(content.actionTemplate, ctx);
 }
 
+function scoreRingHtml(score: number | null, scoreValue: string, accent: string): string {
+  const pct = normalizedScore(score) ?? 0;
+  const ringBg = `conic-gradient(${accent} 0 ${pct}%, #dbeafe ${pct}% 100%)`;
+
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:8px auto 0;">
+      <tr>
+        <td width="118" height="118" align="center" valign="middle" style="width:118px;height:118px;border-radius:50%;background:${ringBg};">
+          <table role="presentation" cellspacing="0" cellpadding="0" width="92" height="92" style="width:92px;height:92px;border-radius:50%;background:#ffffff;box-shadow:0 6px 14px rgba(37,99,235,.1);">
+            <tr>
+              <td align="center" valign="middle" style="text-align:center;font-family:${uiFont};">
+                <div style="font-size:36px;line-height:1;font-weight:900;color:${accent};letter-spacing:-1.5px;">${escapeHtml(scoreValue)}</div>
+                <div style="font-size:11px;color:#64748b;font-weight:700;margin-top:2px;">de 100</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>`;
+}
+
 function insightBulletHtml(label: string, text: string): string {
   return `<tr>
-    <td valign="top" width="14" style="padding:0 8px 10px 0;font-size:14px;line-height:1.5;color:#2563eb;font-family:Inter,Arial,sans-serif;">&#8226;</td>
-    <td valign="top" style="padding:0 0 10px;font-size:13px;line-height:1.55;color:#475569;font-family:Inter,Arial,sans-serif;">
+    <td valign="top" width="14" style="padding:0 8px 10px 0;font-size:14px;line-height:1.5;color:#2563eb;font-family:${uiFont};">&#8226;</td>
+    <td valign="top" style="padding:0 0 10px;font-size:13px;line-height:1.55;color:#475569;font-family:${uiFont};">
       <strong style="color:#334155;">${escapeHtml(label)}</strong> ${escapeHtml(text)}
     </td>
   </tr>`;
 }
 
-/** Tarjeta horizontal: score | insight | CTA reporte. */
+function primaryButtonHtml(href: string, label: string): string {
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" align="right">
+      <tr>
+        <td style="border-radius:10px;background:#2563eb;text-align:center;">
+          <a href="${escapeHtml(href)}" style="display:inline-block;padding:11px 16px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${uiFont};white-space:nowrap;">${escapeHtml(label)} &#8594;</a>
+        </td>
+      </tr>
+    </table>`;
+}
+
+/** Tarjeta con gauge circular, insight y CTA reporte. */
 function reportInsightBoxHtml(
   input: CleexsLetterEmailInput,
   content: CleexsLetterContent,
@@ -140,34 +174,30 @@ function reportInsightBoxHtml(
   const accent = scoreAccent(ctx.score);
   const competitors = normalizeEmailCompetitors(ctx.competitors);
   const rivalNames =
-    competitors.length > 0
-      ? competitors.map((c) => c.name).join(', ')
-      : 'ver en tu reporte';
+    competitors.length > 0 ? competitors.map((c) => c.name).join(', ') : 'ver en tu reporte';
   const signal = resolveSignalLine(content, ctx);
   const action = resolveActionLine(content, ctx);
 
   const reportCta =
     input.links.reportUrl && input.showReportLinks !== false
-      ? `<a href="${escapeHtml(input.links.reportUrl)}" style="font-size:14px;font-weight:700;color:#2563eb;text-decoration:none;font-family:Inter,Arial,sans-serif;white-space:nowrap;">${escapeHtml(content.reportCtaLabel)} &#8250;</a>`
+      ? primaryButtonHtml(input.links.reportUrl, content.reportCtaLabel)
       : '';
 
   return `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0 0;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0 0;border:1px solid #e2e8f0;border-radius:14px;background:#ffffff;box-shadow:0 4px 18px rgba(15,23,42,.04);">
       <tr>
-        <td width="26%" valign="top" style="padding:16px 14px;border-right:1px solid #f1f5f9;font-family:Inter,Arial,sans-serif;">
-          <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#2563eb;font-size:10px;font-weight:700;letter-spacing:.02em;">${escapeHtml(content.scoreBenchmarkBadge)}</span>
-          <p style="margin:10px 0 4px;font-size:12px;color:#64748b;">${escapeHtml(content.scoreLabelText)}</p>
-          <p style="margin:0;font-size:40px;font-weight:800;line-height:1;color:${hasScore ? accent : '#94a3b8'};letter-spacing:-1px;">${escapeHtml(scoreNum)}</p>
+        <td width="34%" valign="top" style="padding:18px 16px;border-right:1px solid #f1f5f9;text-align:center;">
+          <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#2563eb;font-size:10px;font-weight:700;letter-spacing:.02em;font-family:${uiFont};">${escapeHtml(content.scoreBenchmarkBadge)}</span>
+          <p style="margin:12px 0 0;font-size:12px;color:#64748b;font-family:${uiFont};">${escapeHtml(content.scoreLabelText)}</p>
+          ${scoreRingHtml(ctx.score, scoreNum, hasScore ? accent : '#94a3b8')}
         </td>
-        <td width="54%" valign="top" style="padding:16px 14px;border-right:1px solid #f1f5f9;">
+        <td width="66%" valign="top" style="padding:18px 16px;">
           <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
             ${insightBulletHtml(content.rivalsLabel, rivalNames)}
             ${insightBulletHtml('Señal:', signal)}
             ${insightBulletHtml('Acción sugerida:', action)}
           </table>
-        </td>
-        <td width="20%" valign="middle" align="center" style="padding:16px 10px;text-align:center;">
-          ${reportCta}
+          ${reportCta ? `<div style="margin-top:14px;text-align:right;">${reportCta}</div>` : ''}
         </td>
       </tr>
     </table>`;
@@ -179,37 +209,33 @@ function secondaryLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetter
   const links: string[] = [];
   if (input.links.shareUrl) {
     links.push(
-      `<a href="${escapeHtml(input.links.shareUrl)}" style="color:#94a3b8;text-decoration:underline;">${escapeHtml(content.shareCtaLabel)}</a>`
+      `<a href="${escapeHtml(input.links.shareUrl)}" style="color:#2563eb;text-decoration:none;font-weight:600;font-family:${uiFont};">${escapeHtml(content.shareCtaLabel)}</a>`
     );
   }
   if (input.showScoreBlock !== false && input.links.newDiagnosticUrl) {
     links.push(
-      `<a href="${escapeHtml(input.links.newDiagnosticUrl)}" style="color:#94a3b8;text-decoration:underline;">${escapeHtml(content.newDiagnosticCtaLabel)}</a>`
+      `<a href="${escapeHtml(input.links.newDiagnosticUrl)}" style="color:#2563eb;text-decoration:none;font-weight:600;font-family:${uiFont};">${escapeHtml(content.newDiagnosticCtaLabel)}</a>`
     );
   }
 
   if (!links.length) return '';
   const hint =
     input.showScoreBlock !== false && input.links.newDiagnosticUrl
-      ? `<span style="display:block;margin-top:6px;font-size:11px;color:#cbd5e1;font-family:${letterFont};">${escapeHtml(content.newDiagnosticHint)}</span>`
+      ? `<span style="display:block;margin-top:6px;font-size:11px;color:#94a3b8;font-family:${uiFont};">${escapeHtml(content.newDiagnosticHint)}</span>`
       : '';
 
-  return `<p style="margin:8px 0 0;font-size:11px;line-height:1.5;color:#cbd5e1;font-family:${letterFont};">${links.join(' · ')}${hint}</p>`;
+  return `<p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:#2563eb;font-family:${uiFont};">${links.join(' · ')}${hint}</p>`;
 }
 
-function planBulletDotHtml(): string {
+function planCheckIconHtml(): string {
   return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>
-    <td width="16" height="16" align="center" valign="middle" style="width:16px;height:16px;border-radius:50%;background:#2563eb;">
-      <table role="presentation" cellspacing="0" cellpadding="0"><tr>
-        <td width="6" height="6" style="width:6px;height:6px;border-radius:50%;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-      </tr></table>
-    </td>
+    <td width="18" height="18" align="center" valign="middle" style="width:18px;height:18px;border-radius:50%;background:#2563eb;color:#ffffff;font-size:11px;line-height:18px;font-weight:700;font-family:${uiFont};">&#10003;</td>
   </tr></table>`;
 }
 
 function planShieldIconHtml(): string {
   return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>
-    <td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;border-radius:9px;background:#1d4ed8;color:#ffffff;font-size:16px;line-height:34px;">&#9819;</td>
+    <td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.18);color:#ffffff;font-size:16px;line-height:34px;">&#9819;</td>
   </tr></table>`;
 }
 
@@ -218,8 +244,8 @@ function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetter
     .map(
       (b) =>
         `<tr>
-          <td width="24" valign="top" style="padding:0 10px 10px 0;">${planBulletDotHtml()}</td>
-          <td valign="top" style="padding:0 0 10px;font-size:14px;line-height:1.55;color:#f8fafc;font-family:${letterFont};">${escapeHtml(b)}</td>
+          <td width="26" valign="top" style="padding:0 10px 10px 0;">${planCheckIconHtml()}</td>
+          <td valign="top" style="padding:0 0 10px;font-size:14px;line-height:1.55;color:#334155;font-family:${uiFont};">${escapeHtml(b)}</td>
         </tr>`
     )
     .join('');
@@ -227,15 +253,15 @@ function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetter
   return `
     <tr>
       <td style="padding:32px 0 0;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:14px;overflow:hidden;border:1px solid #1e3a8a;box-shadow:0 14px 36px rgba(15,23,42,.2);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:14px;overflow:hidden;border:1px solid #bfdbfe;box-shadow:0 10px 28px rgba(37,99,235,.12);">
           <tr>
-            <td style="padding:14px 18px;background:#2563eb;font-family:${letterFont};">
+            <td style="padding:14px 18px;background:#2563eb;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td width="1" valign="middle" style="white-space:nowrap;padding-right:10px;">
                     <table role="presentation" cellspacing="0" cellpadding="0"><tr>
                       <td valign="middle" style="padding-right:8px;">${planShieldIconHtml()}</td>
-                      <td valign="middle" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#dbeafe;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planBadgeLabel)}</td>
+                      <td valign="middle" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#dbeafe;font-family:${uiFont};">${escapeHtml(content.planBadgeLabel)}</td>
                     </tr></table>
                   </td>
                   <td width="1" valign="middle" style="padding:0 14px;">
@@ -243,44 +269,27 @@ function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetter
                       <td width="1" style="width:1px;height:34px;background:rgba(255,255,255,.35);font-size:0;line-height:0;">&nbsp;</td>
                     </tr></table>
                   </td>
-                  <td valign="middle" style="font-size:19px;font-weight:700;line-height:1.3;color:#ffffff;">${escapeHtml(content.planTitle)}</td>
+                  <td valign="middle" style="font-size:18px;font-weight:700;line-height:1.3;color:#ffffff;font-family:${uiFont};">${escapeHtml(content.planTitle)}</td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 18px 18px;background:#0b1220;font-family:${letterFont};">
+            <td style="padding:20px 18px 18px;background:#f8fbff;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td width="30%" valign="top" style="padding-right:16px;border-right:1px solid #1e293b;">
-                    <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#cbd5e1;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planPriceIntro)}</p>
-                    <p style="margin:0 0 2px;font-size:13px;line-height:1.4;color:#64748b;font-family:Inter,Arial,sans-serif;">
+                  <td width="32%" valign="top" style="padding-right:16px;border-right:1px solid #dbeafe;">
+                    <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#64748b;font-family:${uiFont};">${escapeHtml(content.planPriceIntro)}</p>
+                    <p style="margin:0 0 2px;font-size:13px;line-height:1.4;color:#94a3b8;font-family:${uiFont};">
                       <span style="text-decoration:line-through;">${escapeHtml(content.planPriceStrikethrough)}</span>
                     </p>
-                    <p style="margin:0 0 8px;font-size:28px;font-weight:800;line-height:1.1;color:#60a5fa;font-family:Inter,Arial,sans-serif;letter-spacing:-.5px;">${escapeHtml(content.planPriceCurrent)}</p>
-                    <p style="margin:0 0 12px;font-size:12px;line-height:1.5;color:#cbd5e1;font-family:Inter,Arial,sans-serif;">${escapeHtml(content.planPriceSuffix)}</p>
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
-                      <td style="height:1px;background:#1e293b;font-size:0;line-height:0;">&nbsp;</td>
-                    </tr></table>
+                    <p style="margin:0 0 8px;font-size:28px;font-weight:800;line-height:1.1;color:#2563eb;font-family:${uiFont};letter-spacing:-.5px;">${escapeHtml(content.planPriceCurrent)}</p>
+                    <p style="margin:0 0 12px;font-size:12px;line-height:1.5;color:#64748b;font-family:${uiFont};">${escapeHtml(content.planPriceSuffix)}</p>
+                    <p style="margin:0;font-size:15px;line-height:1.65;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(content.planClosingLine)}</p>
                   </td>
-                  <td width="70%" valign="top" style="padding-left:18px;">
+                  <td width="68%" valign="top" style="padding-left:18px;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;">${bulletRows}</table>
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td valign="bottom" style="padding-right:12px;">
-                          <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;font-style:italic;">${escapeHtml(content.planClosingLine)}</p>
-                        </td>
-                        <td width="1" valign="bottom" align="right" style="white-space:nowrap;">
-                          <table role="presentation" cellspacing="0" cellpadding="0" align="right">
-                            <tr>
-                              <td style="border-radius:10px;background:#2563eb;text-align:center;">
-                                <a href="${escapeHtml(input.links.plansUrl)}" style="display:inline-block;padding:12px 18px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;font-family:Inter,Arial,sans-serif;white-space:nowrap;">${escapeHtml(content.planCtaLabel)} &#8594;</a>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
+                    <div style="text-align:right;">${primaryButtonHtml(input.links.plansUrl, content.planCtaLabel)}</div>
                   </td>
                 </tr>
               </table>
@@ -315,24 +324,24 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" style="max-width:560px;">
+        <table role="presentation" width="100%" style="max-width:680px;">
           <tr>
-            <td style="padding:0 0 16px;">
-              <img src="${escapeHtml(assets.logoUrl)}" alt="Cleexs" width="96" style="display:block;width:96px;height:auto;border:0;opacity:.9;" />
+            <td style="padding:0 0 18px;">
+              <img src="${escapeHtml(assets.logoUrl)}" alt="Cleexs" width="110" style="display:block;width:110px;height:auto;border:0;" />
             </td>
           </tr>
           <tr>
-            <td style="padding:0 0 24px;">
+            <td style="padding:0 0 8px;">
               ${bodyParagraphsHtml(content.bodyParagraphs, ctx)}
               ${showFounder ? founderSignatureHtml(assets, content.founderTitle) : ''}
               ${reportInsightBoxHtml(input, content, ctx)}
               ${secondaryLinksHtml(input, content)}
-              <p style="margin:24px 0 0;font-size:15px;line-height:1.65;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(postscript)}</p>
+              <p style="margin:24px 0 0;font-size:17px;line-height:1.7;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(postscript)}</p>
             </td>
           </tr>
           ${planSalesBlockHtml(input, content)}
           <tr>
-            <td style="padding:24px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;font-family:Inter,Arial,sans-serif;">
+            <td style="padding:24px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;font-family:${uiFont};">
               <a href="${escapeHtml(input.links.unsubscribeUrl)}" style="color:#94a3b8;text-decoration:underline;">${escapeHtml(content.unsubscribeLabel)}</a><br/>
               Cleexs · visibilidad en IA
             </td>

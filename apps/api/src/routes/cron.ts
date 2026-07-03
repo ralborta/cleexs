@@ -5,6 +5,7 @@ import {
   sendFreeDiagnosticFollowup,
   wasFreeDiagnosticFollowupSent,
 } from '../lib/free-diagnostic-followup';
+import { runFreeOnboardingEmailBatch } from '../lib/free-email-sequence-sender';
 import { resolveMarketingRecipients, sendMarketingEmail, weeklyEmailForRecipient } from '../lib/marketing-email';
 import { runCustomTemplateBatch, runMonthlyScoreEmailBatch } from '../lib/monthly-score-email-sender';
 import { sendLeadEmail } from '../lib/lead-email-sender';
@@ -468,8 +469,33 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // POST /api/cron/free-onboarding-emails
+  // Secuencia automática free post-diagnóstico (pasos editables en admin).
+  fastify.post<{
+    Body: {
+      dryRun?: boolean;
+      force?: boolean;
+      limit?: number;
+      enrolledWithinDays?: number;
+    };
+  }>('/free-onboarding-emails', async (request, reply) => {
+    if (!checkCronSecret(request, reply)) return;
+
+    const schema = z.object({
+      dryRun: z.boolean().default(false),
+      force: z.boolean().default(false),
+      limit: z.number().int().min(1).max(500).default(100),
+      enrolledWithinDays: z.number().int().min(7).max(180).default(60),
+    });
+    const parsed = schema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    return runFreeOnboardingEmailBatch(parsed.data);
+  });
+
   // POST /api/cron/outreach-shadow
-  // Automatiza cold outreach: genera el email y lo envía.
   // mode='shadow' (default seguro): manda al buzón de revisión (OUTREACH_SHADOW_TO / reply-to), nunca al competidor.
   // mode='real': envía al competidor real. Requiere OUTREACH_DOMAIN_VERIFIED=true y respeta límites diarios/por dominio.
   // El default es 'shadow' a propósito: si el endpoint se dispara sin `mode`, nunca manda real por accidente.

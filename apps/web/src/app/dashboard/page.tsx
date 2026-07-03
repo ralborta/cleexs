@@ -258,7 +258,7 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-primary-50/80 border-b border-border">
-                    <TableHead className="text-muted-foreground font-semibold">Ref</TableHead>
+                    <TableHead className="text-muted-foreground font-semibold">Auspiciador</TableHead>
                     <TableHead className="text-right text-muted-foreground font-semibold">Visitas</TableHead>
                     <TableHead className="text-right text-muted-foreground font-semibold">Completados</TableHead>
                     <TableHead className="text-right text-muted-foreground font-semibold">% cierre</TableHead>
@@ -274,7 +274,12 @@ function PlatformDashboardView({ data }: { data: PlatformDashboard }) {
                   ) : (
                     data.referrals.topReferrers.slice(0, 10).map((row) => (
                       <TableRow key={row.refCode}>
-                        <TableCell className="font-medium text-foreground">{row.refCode}</TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          <div>{row.name}</div>
+                          {row.name !== row.refCode ? (
+                            <div className="text-xs text-muted-foreground font-mono">{row.refCode}</div>
+                          ) : null}
+                        </TableCell>
                         <TableCell className="text-right text-muted-foreground">{row.visits}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{row.completedDiagnostics}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{row.completionRate.toFixed(1)}%</TableCell>

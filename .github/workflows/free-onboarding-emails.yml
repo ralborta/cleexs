@@ -1,0 +1,63 @@
+name: Free Onboarding Emails
+
+on:
+  schedule:
+    # Cada hora — respeta sendHourLocal de la secuencia (AR) en el API.
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview recipients without sending emails'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      force:
+        description: 'Ignore enabled flag and send-hour guard'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      limit:
+        description: 'Maximum recipients per step'
+        required: true
+        default: '100'
+      enrolled_within_days:
+        description: 'Ventana de diagnósticos free (días)'
+        required: true
+        default: '60'
+
+jobs:
+  send-free-onboarding-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger free onboarding sequence
+        env:
+          CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          FORCE: ${{ github.event_name == 'schedule' && 'false' || inputs.force }}
+          LIMIT: ${{ github.event_name == 'schedule' && '100' || inputs.limit }}
+          ENROLLED_WITHIN_DAYS: ${{ github.event_name == 'schedule' && '60' || inputs.enrolled_within_days }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CLEEXS_CRON_SECRET GitHub secret"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --argjson limit "$LIMIT" \
+            --argjson enrolledWithinDays "$ENROLLED_WITHIN_DAYS" \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson force "$FORCE" \
+            '{limit:$limit, enrolledWithinDays:$enrolledWithinDays, dryRun:$dryRun, force:$force}')
+
+          curl --fail-with-body -sS \
+            -X POST "$API_URL/api/cron/free-onboarding-emails" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
