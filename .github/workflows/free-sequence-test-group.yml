@@ -1,0 +1,132 @@
+name: Free Sequence Test Group
+
+# Envío programado de la secuencia free (contenido real desde la BD del admin)
+# a un grupo fijo de prueba. Usa el endpoint ya desplegado /free-sequence-preview/send-test.
+#
+# Horarios acordados (AR = UTC-3):
+#   - Paso 2: hoy 23:30 AR  = 02:30 UTC (cron '30 2 4 7 *')  -> 2026-07-04 02:30 UTC
+#   - Paso 3: mañana 11:30 AR = 14:30 UTC (cron '30 14 4 7 *') -> 2026-07-04 14:30 UTC
+#
+# Requiere el secret de GitHub: CLEEXS_ADMIN_SECRET (= ADMIN_API_SECRET del API en Railway).
+
+on:
+  schedule:
+    - cron: '30 2 4 7 *'   # Paso 2 — 23:30 AR (03-jul)
+    - cron: '30 14 4 7 *'  # Paso 3 — 11:30 AR (04-jul)
+  workflow_dispatch:
+    inputs:
+      sort_order:
+        description: 'Paso de la secuencia a enviar (2 o 3)'
+        required: true
+        default: '2'
+        type: choice
+        options:
+          - '2'
+          - '3'
+      dry_run:
+        description: 'Solo listar destinatarios sin enviar'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  send-test-group:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar paso de secuencia al grupo de prueba
+        env:
+          ADMIN_SECRET: ${{ secrets.CLEEXS_ADMIN_SECRET }}
+          API_URL: https://cleexsapi-production.up.railway.app
+          # El paso se decide por el cron que disparó; en manual se usa el input.
+          SORT_ORDER: >-
+            ${{
+              github.event.schedule == '30 2 4 7 *' && '2'
+              || github.event.schedule == '30 14 4 7 *' && '3'
+              || inputs.sort_order
+            }}
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_SECRET:-}" ]; then
+            echo "::error::Falta el secret CLEEXS_ADMIN_SECRET"
+            exit 1
+          fi
+
+          # Grupo de prueba fijo.
+          EMAILS=(
+            "vuible@gmail.com"
+            "garzuaga@empliados.net"
+            "arzuaga@hotmail.com"
+            "gonzalo@revolucia.net"
+            "info@cleexs.net"
+            "ralborta@gmail.com"
+            "ralborta@kiev-srl.com"
+            "ralborta@nivel41.com"
+          )
+
+          echo "Paso a enviar: $SORT_ORDER | dryRun: $DRY_RUN"
+
+          # 1) Traer el contenido del paso desde la BD (admin).
+          bundle=$(curl --fail-with-body -sS \
+            -X GET "$API_URL/api/admin/email/free-sequence-preview" \
+            -H "x-admin-secret: $ADMIN_SECRET")
+
+          step=$(echo "$bundle" | jq --argjson so "$SORT_ORDER" '.steps[] | select(.sortOrder == $so)')
+          if [ -z "$step" ] || [ "$step" = "null" ]; then
+            echo "::error::No existe el paso $SORT_ORDER en la secuencia"
+            exit 1
+          fi
+
+          subject=$(echo "$step" | jq -r '.subject // ""')
+          preheader=$(echo "$step" | jq -r '.preheader // ""')
+          body=$(echo "$step" | jq -r '.body // ""')
+          variant=$(echo "$step" | jq -r '.templateVariant // "letter"')
+          active=$(echo "$step" | jq -r '.active')
+
+          echo "Asunto: $subject"
+          echo "Variant: $variant | Paso activo: $active"
+
+          if [ -z "$body" ] || [ "$body" = "null" ]; then
+            echo "::error::El paso $SORT_ORDER no tiene cuerpo cargado en la BD. Cargalo en el admin antes de enviar."
+            exit 1
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN — destinatarios (${#EMAILS[@]}):"
+            printf ' - %s\n' "${EMAILS[@]}"
+            exit 0
+          fi
+
+          fail=0
+          for email in "${EMAILS[@]}"; do
+            payload=$(jq -n \
+              --arg to "$email" \
+              --argjson sortOrder "$SORT_ORDER" \
+              --arg variant "$variant" \
+              --arg subject "$subject" \
+              --arg preheader "$preheader" \
+              --arg body "$body" \
+              '{to:$to, sortOrder:$sortOrder, variant:$variant, subject:$subject, preheader:$preheader, body:$body}')
+
+            echo "Enviando paso $SORT_ORDER a $email ..."
+            if ! resp=$(curl --fail-with-body -sS \
+              -X POST "$API_URL/api/admin/email/free-sequence-preview/send-test" \
+              -H "x-admin-secret: $ADMIN_SECRET" \
+              -H "Content-Type: application/json" \
+              -d "$payload"); then
+              echo "::warning::Falló el envío a $email: $resp"
+              fail=1
+            else
+              echo "OK $email -> $resp"
+            fi
+          done
+
+          if [ "$fail" = "1" ]; then
+            echo "::error::Al menos un envío falló"
+            exit 1
+          fi
+          echo "Envío del paso $SORT_ORDER completado para ${#EMAILS[@]} destinatarios."
