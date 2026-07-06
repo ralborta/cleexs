@@ -125,9 +125,21 @@ function pctLabel(p: number | null) {
   return p == null ? '—' : `${p}%`;
 }
 
-function checkoutAttemptsHint(count: number) {
-  if (count === 1) return '1 clickeó en MP';
-  return `${fmt(count)} clickearon en MP`;
+function CheckoutAttemptsHint({ count }: { count: number }) {
+  const numberClass =
+    count > 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-rose-600';
+  if (count === 1) {
+    return (
+      <>
+        <span className={numberClass}>1</span> pendiente en MP
+      </>
+    );
+  }
+  return (
+    <>
+      <span className={numberClass}>{fmt(count)}</span> pendientes en MP
+    </>
+  );
 }
 
 function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
@@ -153,10 +165,10 @@ const CHANNEL_LABEL: Record<string, string> = {
 };
 
 export default function AdminConversionPage() {
-  const initial = useMemo(() => rangeForPreset('hoy'), []);
+  const initial = useMemo(() => rangeForPreset('7'), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [activePreset, setActivePreset] = useState<string | null>('hoy');
+  const [activePreset, setActivePreset] = useState<string | null>('7');
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -380,7 +392,7 @@ export default function AdminConversionPage() {
           value={fmt(f?.purchased.count ?? 0)}
           pct={pctLabel(f?.purchased.pct ?? null)}
           pctHint="de los que pusieron URL"
-          hint={checkoutAttemptsHint(f?.purchased.checkoutAttempts ?? 0)}
+          hint={<CheckoutAttemptsHint count={f?.purchased.checkoutAttempts ?? 0} />}
         />
       </section>
 
@@ -748,7 +760,7 @@ function FunnelCard({
   pct?: string;
   pctHint?: string;
   pctLines?: Array<{ pct: number | null; label: string }>;
-  hint?: string;
+  hint?: React.ReactNode;
   onClick?: () => void;
   actionHint?: string;
 }) {

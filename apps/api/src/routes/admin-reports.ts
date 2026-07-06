@@ -1719,7 +1719,12 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           where: { ...where, status: 'authorized' },
           select: { utmSource: true, refCode: true, sourceChannel: true, amountUsd: true },
         }),
-        prisma.payment.count({ where }),
+        prisma.payment.count({
+          where: {
+            createdAt: { gte: from, lte: to },
+            status: 'pending',
+          },
+        }),
         prisma.leadEmail.findMany({
           where: { status: 'sent', sentAt: { gte: from, lte: to } },
           select: { leadSource: { select: { competitorDomain: true } } },
