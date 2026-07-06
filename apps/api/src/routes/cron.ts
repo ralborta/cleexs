@@ -5,7 +5,7 @@ import {
   sendFreeDiagnosticFollowup,
   wasFreeDiagnosticFollowupSent,
 } from '../lib/free-diagnostic-followup';
-import { runFreeOnboardingEmailBatch } from '../lib/free-email-sequence-sender';
+import { runFreeOnboardingEmailBatch, wasFreeOnboardingStepSent } from '../lib/free-email-sequence-sender';
 import { resolveMarketingRecipients, sendMarketingEmail, weeklyEmailForRecipient } from '../lib/marketing-email';
 import { runCustomTemplateBatch, runMonthlyScoreEmailBatch } from '../lib/monthly-score-email-sender';
 import { sendLeadEmail } from '../lib/lead-email-sender';
@@ -407,6 +407,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
       const pending: typeof candidates = [];
       for (const candidate of candidates) {
         if (!force && (await wasFreeDiagnosticFollowupSent(candidate.diagnosticId))) continue;
+        if (!force && (await wasFreeOnboardingStepSent(candidate.email, 1))) continue;
         pending.push(candidate);
       }
       return {
@@ -433,6 +434,10 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
 
     for (const candidate of candidates) {
       if (!force && (await wasFreeDiagnosticFollowupSent(candidate.diagnosticId))) {
+        skipped += 1;
+        continue;
+      }
+      if (!force && (await wasFreeOnboardingStepSent(candidate.email, 1))) {
         skipped += 1;
         continue;
       }

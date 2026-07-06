@@ -10,7 +10,9 @@ import {
   isEmailConfigured,
   isEmailDisabled,
   isOutboundEmailAvailable,
+  sendDiagnosticLink,
   sendSmtpMail,
+  type DiagnosticAnalysisForEmail,
 } from './email';
 import {
   buildFreeSequencePreviewLinks,
@@ -416,6 +418,83 @@ export async function sendFreeOnboardingStep(input: {
   });
 
   return { sent: true, logId: log.id, subject };
+}
+
+export function buildFreeOnboardingCandidateFromDiagnostic(input: {
+  diagnosticId: string;
+  email: string;
+  brandName: string;
+  domain: string;
+  analysisJson: unknown;
+  shareSlug?: string | null;
+  anchoredAt?: Date;
+}): FreeOnboardingCandidate {
+  const email = input.email.trim().toLowerCase();
+  const base = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
+  const slug = input.shareSlug?.trim();
+  return {
+    diagnosticId: input.diagnosticId,
+    email,
+    brandName: input.brandName,
+    domain: input.domain,
+    anchoredAt: input.anchoredAt ?? new Date(),
+    score: scoreFromAnalysisJson(input.analysisJson),
+    competitors: competitorsFromAnalysis(input.analysisJson),
+    improvementTip: improvementTipFromAnalysis(input.analysisJson),
+    shareUrl: slug ? `${base}/score/${slug}` : undefined,
+  };
+}
+
+/** Paso 1 de la secuencia free, disparado al completar un diagnóstico público. */
+export async function sendFreeOnboardingStep1ForCompletedDiagnostic(input: {
+  diagnosticId: string;
+  email: string;
+  brandName: string;
+  domain: string;
+  analysisJson: unknown;
+  shareSlug?: string | null;
+  anchoredAt?: Date;
+}): Promise<{ sent: boolean; reason?: string; logId?: string; subject?: string }> {
+  if (isEmailDisabled()) return { sent: false, reason: 'emails_disabled' };
+  if (!isOutboundEmailAvailable()) return { sent: false, reason: 'email_not_configured' };
+  if (isPlaceholderEmail(input.email)) return { sent: false, reason: 'placeholder_email' };
+
+  const email = input.email.trim().toLowerCase();
+  if (await isPremiumEmail(email)) return { sent: false, reason: 'premium_user' };
+  if (await wasFreeOnboardingStepSent(email, 1)) return { sent: false, reason: 'already_sent' };
+
+  const sequence = await ensureFreeEmailSequence();
+  const step1 = sequence.steps.find((s) => s.sortOrder === 1 && s.active);
+  if (!step1) return { sent: false, reason: 'step_not_configured' };
+
+  const candidate = buildFreeOnboardingCandidateFromDiagnostic(input);
+  return sendFreeOnboardingStep({ candidate, step: step1 });
+}
+
+export type PostDiagnosticCompletionEmailKind = 'free_onboarding_s1' | 'diagnostic_link' | 'none';
+
+/** Correo post-diagnóstico: secuencia free paso 1 (default) o link legacy para premium / fallback. */
+export async function sendPostDiagnosticCompletionEmail(input: {
+  diagnosticId: string;
+  email: string;
+  brandName: string;
+  domain: string;
+  analysisJson: unknown;
+  shareSlug?: string | null;
+  anchoredAt?: Date;
+  legacyAnalysis?: DiagnosticAnalysisForEmail | null;
+}): Promise<{ sent: boolean; kind: PostDiagnosticCompletionEmailKind; reason?: string }> {
+  const step1 = await sendFreeOnboardingStep1ForCompletedDiagnostic(input);
+  if (step1.sent) return { sent: true, kind: 'free_onboarding_s1' };
+  if (step1.reason === 'already_sent') return { sent: false, kind: 'none', reason: 'already_sent' };
+
+  if (step1.reason === 'premium_user' || step1.reason === 'step_not_configured') {
+    const baseUrl = getAppBaseUrlForPublicLinks();
+    await sendDiagnosticLink(input.email, input.diagnosticId, baseUrl, input.legacyAnalysis);
+    return { sent: true, kind: 'diagnostic_link' };
+  }
+
+  return { sent: false, kind: 'none', reason: step1.reason };
 }
 
 export async function runFreeOnboardingEmailBatch(input: {

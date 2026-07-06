@@ -1,6 +1,9 @@
 import { CleexsEmailSendStatus } from '@prisma/client';
-import { getAppBaseUrlForPublicLinks } from './app-public-url';
-import { sendDiagnosticLink, type DiagnosticAnalysisForEmail, isEmailDisabled, isOutboundEmailAvailable } from './email';
+import { type DiagnosticAnalysisForEmail, isEmailDisabled, isOutboundEmailAvailable } from './email';
+import {
+  sendFreeOnboardingStep1ForCompletedDiagnostic,
+  wasFreeOnboardingStepSent,
+} from './free-email-sequence-sender';
 import { prisma } from './prisma';
 
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
@@ -109,11 +112,24 @@ export async function sendFreeDiagnosticFollowup(
     return { sent: false, reason: 'email_not_configured' };
   }
 
-  const baseUrl = getAppBaseUrlForPublicLinks();
+  if (await wasFreeOnboardingStepSent(candidate.email, 1)) {
+    return { sent: false, reason: 'onboarding_step1_already_sent' };
+  }
+
   const campaignSlug = campaignSlugForDiagnostic(candidate.diagnosticId);
 
   try {
-    await sendDiagnosticLink(candidate.email, candidate.diagnosticId, baseUrl, candidate.analysis);
+    const result = await sendFreeOnboardingStep1ForCompletedDiagnostic({
+      diagnosticId: candidate.diagnosticId,
+      email: candidate.email,
+      brandName: candidate.brandName,
+      domain: candidate.domain,
+      analysisJson: candidate.analysis,
+      anchoredAt: candidate.createdAt,
+    });
+    if (!result.sent) {
+      return { sent: false, reason: result.reason ?? 'not_sent' };
+    }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     await prisma.cleexsInternalEmailSendLog.create({
@@ -144,6 +160,7 @@ export async function sendFreeDiagnosticFollowup(
         brandName: candidate.brandName,
         domain: candidate.domain,
         registeredAt: candidate.createdAt.toISOString(),
+        deliveredAs: 'free_onboarding_s1',
       },
     },
   });
