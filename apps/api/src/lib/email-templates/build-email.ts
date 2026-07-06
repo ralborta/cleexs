@@ -6,6 +6,7 @@ import {
   type CleexsEmailPersonalization,
   buildNewDiagnosticUrl,
   buildPlansUrl,
+  buildPlanConquistarUrl,
   sampleCleexsEmailLinks,
   sampleCleexsPersonalization,
 } from './shared';
@@ -74,6 +75,10 @@ export function buildMonthlyScorePlansUrl(baseUrl?: string): string {
   return buildPlansUrl(baseUrl, 'monthly_score');
 }
 
+export function buildFreeOnboardingPlanConquistarUrl(baseUrl?: string): string {
+  return buildPlanConquistarUrl(baseUrl, 'free_onboarding');
+}
+
 export function buildMonthlyScoreEmailPreviewExample(options?: {
   score?: number;
   assets?: Partial<CleexsEmailAssets>;
@@ -114,6 +119,7 @@ export {
   sampleCleexsEmailLinks,
   buildNewDiagnosticUrl,
   buildPlansUrl,
+  buildPlanConquistarUrl,
 };
 
 export type {

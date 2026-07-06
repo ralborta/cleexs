@@ -24,6 +24,8 @@ const PUBLIC_PATHS = [
   '/privacidad',
   '/legal/cleexs',
   '/contacto',
+  '/email/unsubscribe',
+  '/plan-conquistar',
   '/tools/auspiciadores',
 ];
 
@@ -87,6 +89,8 @@ function isPublicPath(pathname: string): boolean {
   if (path.startsWith('/r/wa')) return true;
   if (path.startsWith('/legal/')) return true;
   if (path === '/terminos' || path === '/privacidad' || path === '/contacto') return true;
+  if (path.startsWith('/email/unsubscribe')) return true;
+  if (path.startsWith('/plan-conquistar')) return true;
   return false;
 }
 

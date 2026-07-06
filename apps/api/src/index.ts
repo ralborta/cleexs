@@ -13,6 +13,7 @@ import promptRoutes from './routes/prompts';
 import runRoutes from './routes/runs';
 import reportRoutes from './routes/reports';
 import publicDiagnosticRoutes from './routes/public-diagnostic';
+import emailUnsubscribeRoutes from './routes/email-unsubscribe';
 import trackingRoutes from './routes/tracking';
 import cronRoutes from './routes/cron';
 import leadsRoutes from './routes/leads';
@@ -119,6 +120,7 @@ async function bootstrap() {
   await server.register(reportRoutes, { prefix: '/api/reports' });
   await server.register(adminReportsRoutes, { prefix: '/api/reports' });
   await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
+  await server.register(emailUnsubscribeRoutes, { prefix: '/api/public' });
   await server.register(trackingRoutes, { prefix: '/api/public' });
   await server.register(cronRoutes, { prefix: '/api/cron' });
   await server.register(leadsRoutes, { prefix: '/api/leads' });

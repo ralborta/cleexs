@@ -153,6 +153,7 @@ function buildLinksForRecipient(
     variant?: CleexsEmailTemplateVariant;
     diagnosticId?: string;
     shareUrl?: string;
+    recipientEmail: string;
   }
 ): {
   newDiagnosticUrl: string;
@@ -193,7 +194,7 @@ function buildLinksForRecipient(
       linkRole: 'cta_plans',
       medium,
     }),
-    unsubscribeUrl: `${origin}/email/unsubscribe?example=1`,
+    unsubscribeUrl: `${origin}/email/unsubscribe?email=${encodeURIComponent(input.recipientEmail)}`,
   };
 }
 
@@ -229,6 +230,7 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
       variant,
       diagnosticId: ctx.diagnosticId,
       shareUrl: ctx.shareUrl ?? input.recipient.shareUrl,
+      recipientEmail: input.recipient.email,
     }),
     showFounderSignature: true,
     showScoreBlock: true,
