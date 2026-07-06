@@ -42,7 +42,10 @@ type Metrics = {
       }>;
     };
     unlockClicks: FunnelStep;
-    purchased: FunnelStep & { bySource: { source: string; count: number; usd: number }[] };
+    purchased: FunnelStep & {
+      checkoutAttempts: number;
+      bySource: { source: string; count: number; usd: number }[];
+    };
   };
   outreach: {
     emailsSent: number;
@@ -120,6 +123,11 @@ function fmtDateTime(value: string) {
 
 function pctLabel(p: number | null) {
   return p == null ? '—' : `${p}%`;
+}
+
+function checkoutAttemptsHint(count: number) {
+  if (count === 1) return '1 clickeó en MP';
+  return `${fmt(count)} clickearon en MP`;
 }
 
 function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
@@ -372,6 +380,7 @@ export default function AdminConversionPage() {
           value={fmt(f?.purchased.count ?? 0)}
           pct={pctLabel(f?.purchased.pct ?? null)}
           pctHint="de los que pusieron URL"
+          hint={checkoutAttemptsHint(f?.purchased.checkoutAttempts ?? 0)}
         />
       </section>
 
