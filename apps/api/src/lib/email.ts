@@ -74,11 +74,45 @@ async function sendTransactionalMessage(opts: {
   });
 }
 
-/** Remitente transaccional (diagnóstico, admin, SMTP). */
+/** Remitente canónico Cleexs (nunca @nivel41.com). */
+export const DEFAULT_CLEEXS_FROM_EMAIL = 'hola@cleexs.net';
+export const DEFAULT_CLEEXS_FROM_NAME = 'Cleexs';
+
+const NIVEL41_EMAIL_DOMAIN = '@nivel41.com';
+
+function extractBareEmailAddress(from: string): string {
+  const trimmed = from.trim();
+  const match = trimmed.match(/<([^>]+)>/);
+  return (match?.[1] || trimmed).trim().toLowerCase();
+}
+
+export function isNivel41EmailAddress(email: string): boolean {
+  return extractBareEmailAddress(email).endsWith(NIVEL41_EMAIL_DOMAIN);
+}
+
+/** Bloquea @nivel41.com en cualquier correo Cleexs (producto, secuencia, outreach). */
+export function sanitizeCleexsFromEmail(rawEmail: string | null | undefined): string {
+  const trimmed = (rawEmail || '').trim().toLowerCase();
+  if (!trimmed || !trimmed.includes('@')) return DEFAULT_CLEEXS_FROM_EMAIL;
+  if (trimmed.endsWith(NIVEL41_EMAIL_DOMAIN)) return DEFAULT_CLEEXS_FROM_EMAIL;
+  return trimmed;
+}
+
+export function buildCleexsFromAddress(input?: {
+  email?: string | null;
+  name?: string | null;
+}): string {
+  const email = sanitizeCleexsFromEmail(
+    input?.email ?? process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_FROM ?? process.env.SMTP_USER
+  );
+  const name =
+    (input?.name ?? process.env.SMTP_FROM_NAME ?? DEFAULT_CLEEXS_FROM_NAME).trim() || DEFAULT_CLEEXS_FROM_NAME;
+  return `"${name}" <${email}>`;
+}
+
+/** Remitente transaccional (diagnóstico, admin, secuencia free, marketing). */
 export function buildTransactionalFromAddress(): string {
-  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@cleexs.com';
-  const fromName = process.env.SMTP_FROM_NAME;
-  return fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
+  return buildCleexsFromAddress();
 }
 
 /** Envío SMTP genérico (misma config que diagnóstico). */

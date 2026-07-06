@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { buildCleexsFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
 
 function escapeHtml(value: string): string {
   return value
@@ -71,9 +71,7 @@ export async function sendPlanConquistarPremiumWelcomeEmail(input: {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (apiKey) {
     const resend = new Resend(apiKey);
-    const from = process.env.SMTP_FROM_EMAIL
-      ? `"${process.env.SMTP_FROM_NAME || 'Cleexs'}" <${process.env.SMTP_FROM_EMAIL}>`
-      : buildTransactionalFromAddress();
+    const from = buildCleexsFromAddress();
     const { error } = await resend.emails.send({
       from,
       to: input.to,
