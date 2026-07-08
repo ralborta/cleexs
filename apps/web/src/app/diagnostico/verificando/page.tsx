@@ -95,6 +95,7 @@ function VerificandoContent() {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
   const tierQParam = searchParams.get('tier');
+  const prefilledEmailParam = (searchParams.get('email') ?? '').trim();
   const [diagnostic, setDiagnostic] = useState<Awaited<ReturnType<typeof publicDiagnosticApi.get>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryLoading, setRetryLoading] = useState(false);
@@ -361,7 +362,7 @@ function VerificandoContent() {
     setupWizardInitRef.current = d.id;
     if (!contextConfirmedRef.current) setPublicSetupStep(1);
     setSetupHumanOk(false);
-    setSetupEmail('');
+    setSetupEmail(d.email?.trim() || prefilledEmailParam || '');
     setStartAnalysisError(null);
     const draft = d.setupDraft;
     setSetupCountry((prev) => prev || draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '');
@@ -370,7 +371,7 @@ function VerificandoContent() {
       setSetupEngines(draft.selectedEngines.filter(Boolean));
     }
     // Las URLs de competidores las hidrata el efecto que sigue el setupDraft (evita quedar en blanco si el primer poll llega sin borrador).
-  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft]);
+  }, [normalizedDiagnosticStatus, diagnostic?.id, diagnostic?.setupDraft, diagnostic?.email, prefilledEmailParam]);
 
   useEffect(() => {
     if (normalizedDiagnosticStatus !== 'awaiting_user') return;

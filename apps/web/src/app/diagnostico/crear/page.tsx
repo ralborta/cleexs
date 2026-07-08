@@ -6,6 +6,8 @@
  * Query desde marketing (cleexs.net) o enlaces directos (app.cleexs.net):
  *   ?url=dominio.com   → prefill URL
  *   ?brand=NombreMarca → prefill marca
+ *   ?email=correo@...  → prefill email en verificando (p. ej. email mensual)
+ *   ?autostart=1       → crea diagnóstico y pasa a verificando si hay URL
  *   ?q=valor           → si parece dominio (ej. tiene punto) prefill URL, sino prefill marca
  * No requiere login; el middleware mantiene esta ruta como pública.
  */
@@ -35,6 +37,7 @@ export default function CrearDiagnosticoPage() {
   const tierParam = searchParams.get('tier');
   const autostartParam = searchParams.get('autostart');
   const manualParam = searchParams.get('manual');
+  const emailParam = searchParams.get('email') ?? '';
   const refParam = searchParams.get('ref') ?? searchParams.get('ref_code') ?? '';
   const utmSourceParam = searchParams.get('utm_source') ?? '';
   const utmMediumParam = searchParams.get('utm_medium') ?? '';
@@ -171,7 +174,11 @@ export default function CrearDiagnosticoPage() {
         setTimeout(() => reject(new Error('TIMEOUT_DIAGNOSTIC_CREATE')), 25000)
       );
       const { diagnosticId } = await Promise.race([createPromise, timeoutPromise]);
-      router.replace(`/diagnostico/verificando?diagnosticId=${diagnosticId}${tier ? `&tier=${tier}` : ''}`);
+      const verifyParams = new URLSearchParams({ diagnosticId });
+      if (tier) verifyParams.set('tier', tier);
+      const emailTrimmed = emailParam.trim();
+      if (emailTrimmed.includes('@')) verifyParams.set('email', emailTrimmed);
+      router.replace(`/diagnostico/verificando?${verifyParams.toString()}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       setError(

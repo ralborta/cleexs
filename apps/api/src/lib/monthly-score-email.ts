@@ -4,10 +4,12 @@ export {
   buildMonthlyScoreEmail,
   buildMonthlyScoreEmailPreviewExample,
   buildMonthlyScoreDiagnosticUrl,
+  buildMonthlyScoreViewUrl,
   buildMonthlyScorePlansUrl,
   buildLetterEmail,
   buildEditorialEmail,
   defaultCleexsEditorialContent,
+  defaultMonthlyScoreEditorialContent,
   defaultCleexsLetterContent,
 } from './email-templates/build-email';
 

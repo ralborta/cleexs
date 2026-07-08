@@ -36,6 +36,8 @@ export type CleexsEditorialEmailInput = {
   assets?: Partial<CleexsEmailAssets>;
   content?: Partial<CleexsEditorialContent>;
   showFounderSignature?: boolean;
+  /** Si es false, no se muestra el anillo de score (p. ej. email mensual: ver al clickear). */
+  showScoreBlock?: boolean;
 };
 
 const ENGINE_CHIPS = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity'] as const;
@@ -54,6 +56,32 @@ const METRICS = [
     body: 'Cómo quedás parado frente a otros proveedores del mercado.',
   },
 ] as const;
+
+export function defaultMonthlyScoreEditorialContent(): CleexsEditorialContent {
+  return {
+    subject: 'Tu Cleexs Score fue actualizado',
+    preheader: 'Entrá con un click para ver tu score actualizado en Cleexs.',
+    heroEyebrow: 'Cleexs Score Mensual',
+    headline: 'Tu nuevo Cleexs Score está listo.',
+    introParagraphs: [
+      'Actualizamos tu medición de visibilidad en motores de IA. El número y el detalle no están en este mail: al entrar arrancamos el diagnóstico con la URL de {{domain}} y ahí ves tu score nuevo.',
+      'Tocá el botón de abajo para abrir tu Cleexs Score actualizado de {{brandName}}.',
+    ],
+    scoreTitle: 'Tu Cleexs Score',
+    scoreDescription: 'El score actualizado te espera en el reporte.',
+    scoreMissingText: 'Sin score reciente',
+    ctaLabel: 'Ver mi Cleexs Score',
+    ctaHint: 'Arranca solo con tu URL · tarda unos minutos · sin costo',
+    editorialTitle: 'Aparecer bien en IA dejó de ser algo decorativo.',
+    editorialBody:
+      'Los que miden hoy empiezan a entender qué dicen los motores de IA, dónde pierden presencia y qué señales necesitan fortalecer antes que el resto reaccione.',
+    planTitle: 'Con Plan Conquistar seguís tu score mes a mes.',
+    planPitch:
+      'Comparás con competidores, ves más motores de IA y dejás de adivinar cómo te están recomendando.',
+    planCtaLabel: 'Ver Plan Conquistar',
+    unsubscribeLabel: 'Dejar de recibir los emails de Cleexs',
+  };
+}
 
 export function defaultCleexsEditorialContent(): CleexsEditorialContent {
   return {
@@ -186,6 +214,19 @@ function heroBlock(content: CleexsEditorialContent, assets: CleexsEmailAssets): 
       </tr>`;
 }
 
+function scoreTeaserHtml(content: CleexsEditorialContent): string {
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0 22px;background:linear-gradient(180deg,#f8fbff,#eef5ff);border:1px solid #cfe0ff;border-radius:18px;">
+      <tr>
+        <td style="padding:24px;font-family:Inter,Arial,Helvetica,sans-serif;text-align:center;">
+          <p style="margin:0 0 6px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:#2563eb;">Cleexs Score</p>
+          <h2 style="margin:0 0 8px;font-size:22px;letter-spacing:-.4px;color:#172033;">${escapeHtml(content.scoreTitle)}</h2>
+          <p style="margin:0;font-size:15px;color:#667895;line-height:1.55;">${escapeHtml(content.scoreDescription)}</p>
+        </td>
+      </tr>
+    </table>`;
+}
+
 function scoreRingHtml(score: number | null, scoreValue: string, accent: string): string {
   const pct = normalizedScore(score) ?? 0;
   const ringBg = `conic-gradient(${accent} 0 ${pct}%, #d8e6ff ${pct}% 100%)`;
@@ -215,6 +256,7 @@ export function buildEditorialEmail(input: CleexsEditorialEmailInput): CleexsEma
   const { value: scoreValue } = scoreDisplay(ctx.score, content);
   const accent = scoreAccent(ctx.score);
   const showFounder = input.showFounderSignature !== false && Boolean(assets.founderPhotoUrl);
+  const showScoreBlock = input.showScoreBlock !== false;
   const preheader = mergeCleexsText(content.preheader, ctx);
 
   const introHtml = content.introParagraphs
@@ -277,7 +319,9 @@ export function buildEditorialEmail(input: CleexsEditorialEmailInput): CleexsEma
             <td style="background:#ffffff;border:1px solid #dde7f4;border-radius:18px;padding:28px;box-shadow:0 12px 28px rgba(15,23,42,.06);">
               ${introHtml}
 
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0 22px;background:linear-gradient(180deg,#f8fbff,#eef5ff);border:1px solid #cfe0ff;border-radius:18px;">
+              ${
+                showScoreBlock
+                  ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0 22px;background:linear-gradient(180deg,#f8fbff,#eef5ff);border:1px solid #cfe0ff;border-radius:18px;">
                 <tr>
                   <td class="score-wrap-left" width="170" valign="middle" align="center" style="padding:24px 12px 24px 24px;">
                     ${scoreRingHtml(ctx.score, scoreValue, accent)}
@@ -287,7 +331,9 @@ export function buildEditorialEmail(input: CleexsEditorialEmailInput): CleexsEma
                     <p style="margin:0;font-size:15px;color:#667895;line-height:1.55;">${escapeHtml(content.scoreDescription)}</p>
                   </td>
                 </tr>
-              </table>
+              </table>`
+                  : scoreTeaserHtml(content)
+              }
 
               ${metricsHtml()}
 
@@ -348,9 +394,9 @@ export function buildEditorialEmail(input: CleexsEditorialEmailInput): CleexsEma
     '',
     ...content.introParagraphs.map((p) => mergeCleexsText(p, ctx)),
     '',
-    `${content.scoreTitle}: ${scoreValue}`,
-    content.scoreDescription,
-    '',
+    ...(showScoreBlock
+      ? [`${content.scoreTitle}: ${scoreValue}`, content.scoreDescription, '']
+      : [content.scoreDescription, '']),
     `${content.ctaLabel}: ${input.links.newDiagnosticUrl}`,
     content.ctaHint,
     '',

@@ -1,4 +1,5 @@
 import type { CleexsEmailTemplateVariant } from './shared';
+import { getAppBaseUrlForPublicLinks } from '../app-public-url';
 import {
   type CleexsEmailAssets,
   type CleexsEmailBuilt,
@@ -14,6 +15,7 @@ import { buildLetterEmail, defaultCleexsLetterContent, type CleexsLetterContent 
 import {
   buildEditorialEmail,
   defaultCleexsEditorialContent,
+  defaultMonthlyScoreEditorialContent,
   type CleexsEditorialContent,
 } from './editorial-email';
 
@@ -48,6 +50,7 @@ export function buildCleexsEmail(input: BuildCleexsEmailInput): CleexsEmailBuilt
     assets: input.assets,
     content: input.editorialContent,
     showFounderSignature: input.showFounderSignature,
+    showScoreBlock: input.showScoreBlock,
   });
 }
 
@@ -67,6 +70,23 @@ export function buildCleexsEmailPreviewExample(options?: {
   });
 }
 
+export function buildMonthlyScoreViewUrl(
+  baseUrl?: string,
+  input?: { domain?: string; brandName?: string; email?: string }
+): string {
+  const base = (baseUrl ?? getAppBaseUrlForPublicLinks()).trim().replace(/\/+$/, '');
+  const params = new URLSearchParams({
+    utm_source: 'email',
+    utm_medium: 'monthly_score',
+    utm_campaign: 'monthly_score_update',
+    autostart: '1',
+  });
+  if (input?.domain) params.set('url', input.domain);
+  if (input?.brandName) params.set('brand', input.brandName);
+  if (input?.email) params.set('email', input.email);
+  return `${base}/diagnostico/crear?${params.toString()}`;
+}
+
 export function buildMonthlyScoreDiagnosticUrl(baseUrl?: string): string {
   return buildNewDiagnosticUrl(baseUrl, 'monthly_score');
 }
@@ -81,11 +101,30 @@ export function buildFreeOnboardingPlanConquistarUrl(baseUrl?: string): string {
 
 export function buildMonthlyScoreEmailPreviewExample(options?: {
   score?: number;
+  domain?: string;
+  brandName?: string;
   assets?: Partial<CleexsEmailAssets>;
 }): CleexsEmailBuilt {
-  return buildCleexsEmailPreviewExample({
+  const base = getAppBaseUrlForPublicLinks();
+  return buildCleexsEmail({
     variant: 'editorial',
-    score: options?.score,
+    personalization: sampleCleexsPersonalization({
+      score: options?.score ?? 62,
+      domain: options?.domain,
+      brandName: options?.brandName,
+    }),
+    links: {
+      ...sampleCleexsEmailLinks(base),
+      newDiagnosticUrl: buildMonthlyScoreViewUrl(base, {
+        domain: options?.domain ?? 'empliados.net',
+        brandName: options?.brandName ?? 'Empliados',
+        email: 'ejemplo@cleexs.net',
+      }),
+    },
+    assets: options?.assets,
+    editorialContent: defaultMonthlyScoreEditorialContent(),
+    showFounderSignature: true,
+    showScoreBlock: false,
   });
 }
 
@@ -97,6 +136,7 @@ export function buildMonthlyScoreEmail(input: {
   assets?: Partial<CleexsEmailAssets>;
   content?: Partial<CleexsEditorialContent>;
   showFounderSignature?: boolean;
+  showScoreBlock?: boolean;
 }): CleexsEmailBuilt {
   return buildEditorialEmail({
     personalization: { score: input.score },
@@ -106,8 +146,9 @@ export function buildMonthlyScoreEmail(input: {
       unsubscribeUrl: input.unsubscribeUrl,
     },
     assets: input.assets,
-    content: input.content,
+    content: input.content ?? defaultMonthlyScoreEditorialContent(),
     showFounderSignature: input.showFounderSignature,
+    showScoreBlock: input.showScoreBlock ?? false,
   });
 }
 
@@ -116,6 +157,7 @@ export {
   buildEditorialEmail,
   defaultCleexsLetterContent,
   defaultCleexsEditorialContent,
+  defaultMonthlyScoreEditorialContent,
   sampleCleexsEmailLinks,
   buildNewDiagnosticUrl,
   buildPlansUrl,

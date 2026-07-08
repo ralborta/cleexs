@@ -14,6 +14,9 @@ import {
   buildCleexsEmailPreviewExample,
   buildMonthlyScoreDiagnosticUrl,
   buildMonthlyScorePlansUrl,
+  buildMonthlyScoreViewUrl,
+  buildMonthlyScoreEmailPreviewExample,
+  defaultMonthlyScoreEditorialContent,
 } from '../lib/monthly-score-email';
 import { resolveMarketingRecipients, sendMarketingEmail } from '../lib/marketing-email';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
@@ -470,8 +473,7 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
     }
 
-    const built = buildCleexsEmailPreviewExample({
-      variant: 'editorial',
+    const built = buildMonthlyScoreEmailPreviewExample({
       score: parsed.data.score,
       domain: parsed.data.domain,
       brandName: parsed.data.brandName,
@@ -514,12 +516,12 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(400).send({ error: 'Query inválido', details: parsed.error.flatten() });
     }
 
-    const built = buildCleexsEmailPreviewExample({
-      variant: 'editorial',
+    const built = buildMonthlyScoreEmailPreviewExample({
       score: parsed.data.score,
       domain: parsed.data.domain,
       brandName: parsed.data.brandName,
     });
+    const base = getAppBaseUrlForPublicLinks();
     return {
       ok: true,
       variant: built.variant,
@@ -530,7 +532,16 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       sampleScore: parsed.data.score,
       sampleDomain: parsed.data.domain,
       sampleBrandName: parsed.data.brandName,
-      newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(),
+      scoreViewUrl: buildMonthlyScoreViewUrl(base, {
+        domain: parsed.data.domain,
+        brandName: parsed.data.brandName,
+        email: 'ejemplo@cleexs.net',
+      }),
+      newDiagnosticUrl: buildMonthlyScoreViewUrl(base, {
+        domain: parsed.data.domain,
+        brandName: parsed.data.brandName,
+        email: 'ejemplo@cleexs.net',
+      }),
       plansUrl: buildMonthlyScorePlansUrl(),
     };
   });
@@ -656,26 +667,32 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
 
       const base = getAppBaseUrlForPublicLinks();
       const variant = parsed.data.variant ?? 'editorial';
+      const monthlyEditorial = variant === 'editorial';
+      const to = parsed.data.to.trim().toLowerCase();
       const built = buildCleexsEmail({
         variant,
         personalization: {
-          score: parsed.data.score ?? 62,
+          score: monthlyEditorial ? null : parsed.data.score ?? 62,
           domain: parsed.data.domain ?? 'empliados.net',
           brandName: parsed.data.brandName ?? 'Empliados',
         },
         links: {
-          newDiagnosticUrl: buildMonthlyScoreDiagnosticUrl(base),
+          newDiagnosticUrl: buildMonthlyScoreViewUrl(base, {
+            domain: parsed.data.domain ?? 'empliados.net',
+            brandName: parsed.data.brandName ?? 'Empliados',
+            email: to,
+          }),
           reportUrl: `${base.replace(/\/+$/, '')}/ver-resultado?diagnosticId=preview-example`,
           shareUrl: `${base.replace(/\/+$/, '')}/score/ejemplo-preview`,
           plansUrl: buildMonthlyScorePlansUrl(base),
           unsubscribeUrl: `${base.replace(/\/+$/, '')}/email/unsubscribe?example=1`,
         },
+        editorialContent: monthlyEditorial ? defaultMonthlyScoreEditorialContent() : undefined,
         showFounderSignature: true,
-        showScoreBlock: true,
+        showScoreBlock: !monthlyEditorial,
         showReportLinks: variant === 'letter',
       });
 
-      const to = parsed.data.to.trim().toLowerCase();
       const from = buildTransactionalFromAddress();
       const apiKey = process.env.RESEND_API_KEY?.trim();
 
