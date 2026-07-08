@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Globe2, MessageCircle, UserRound, Users } from 'lucide-react';
+import { ChevronDown, Download, Globe2, MessageCircle, UserRound, Users } from 'lucide-react';
 import { internalReportsApi, type OnboardingProfileReport, type ReportWindowDays } from '@/lib/api';
 import {
   ReportErrorBanner,
@@ -57,18 +57,22 @@ export default function OnboardingProfileReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [windowDays, setWindowDays] = useState<ReportWindowDays>(30);
+  const [countryFilter, setCountryFilter] = useState('');
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await internalReportsApi.onboardingProfile(windowDays);
+      const res = await internalReportsApi.onboardingProfile(
+        windowDays,
+        countryFilter.trim() || undefined
+      );
       setData(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar el reporte de onboarding.');
     } finally {
       setLoading(false);
     }
-  }, [windowDays]);
+  }, [windowDays, countryFilter]);
 
   useEffect(() => {
     setLoading(true);
@@ -82,10 +86,35 @@ export default function OnboardingProfileReportPage() {
           <h2 className="text-lg font-semibold text-slate-900">Onboarding · perfil de leads</h2>
           <p className="text-xs text-slate-500">
             Diagnósticos que dejaron al menos un dato del wizard (país, nombre o cómo llegó) en los
-            últimos {windowDays} días.
+            últimos {windowDays} días
+            {countryFilter.trim() ? (
+              <>
+                {' '}
+                · filtro: <span className="font-medium text-slate-700">{countryFilter}</span>
+              </>
+            ) : null}
+            .
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Globe2 className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              disabled={loading}
+              aria-label="Filtrar por país"
+              className="appearance-none rounded-xl border border-slate-200 bg-white py-1.5 pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"
+            >
+              <option value="">Todos los países</option>
+              {(data?.availableCountries ?? []).map((row) => (
+                <option key={row.country} value={row.country}>
+                  {row.country} ({row.count})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          </div>
           <WindowDaysToggle value={windowDays} onChange={setWindowDays} disabled={loading} />
           {data && data.rows.length > 0 ? (
             <button
@@ -161,7 +190,11 @@ export default function OnboardingProfileReportPage() {
 
           <ReportSection
             title="Leads con datos de onboarding"
-            description={`${data.rows.length} diagnóstico${data.rows.length === 1 ? '' : 's'} en la ventana.`}
+            description={
+              countryFilter.trim()
+                ? `${data.rows.length} diagnóstico${data.rows.length === 1 ? '' : 's'} en ${countryFilter} (ventana ${windowDays}d).`
+                : `${data.rows.length} diagnóstico${data.rows.length === 1 ? '' : 's'} en la ventana.`
+            }
           >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -180,7 +213,9 @@ export default function OnboardingProfileReportPage() {
                   {data.rows.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-6 text-center text-sm text-slate-500">
-                        Nadie dejó datos del onboarding en este período.
+                        {countryFilter.trim()
+                          ? `Sin leads con datos de onboarding para ${countryFilter} en este período.`
+                          : 'Nadie dejó datos del onboarding en este período.'}
                       </td>
                     </tr>
                   ) : (

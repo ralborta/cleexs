@@ -336,8 +336,12 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   // 1b) Perfil de onboarding (país, nombre, cómo llegó)
   // ----------------------------------------------------------------
   fastify.get('/internal/onboarding-profile', async (request) => {
-    const parsed = windowDaysSchema.safeParse(request.query);
+    const querySchema = windowDaysSchema.extend({
+      country: z.string().trim().max(120).optional(),
+    });
+    const parsed = querySchema.safeParse(request.query);
     const windowDays = parsed.success ? parsed.data.windowDays : 30;
+    const countryFilter = parsed.success ? parsed.data.country?.trim() || '' : '';
     const fromDate = startOfDay(new Date());
     fromDate.setDate(fromDate.getDate() - (windowDays - 1));
 
@@ -356,22 +360,11 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     const totalDiagnosticsInWindow = diagnosticsInWindow.length;
-    let withCountry = 0;
-    let withName = 0;
-    let withHowFound = 0;
-    const howFoundMap = new Map<string, number>();
 
-    const rows = diagnosticsInWindow
+    const allRows = diagnosticsInWindow
       .map((row) => {
         const profile = onboardingProfileFromDraft(row.setupDraftJson);
         if (!profile.hasAny) return null;
-        if (profile.hasCountry) withCountry += 1;
-        if (profile.hasName) withName += 1;
-        if (profile.hasHowFound) {
-          withHowFound += 1;
-          const key = profile.howFoundUs!;
-          howFoundMap.set(key, (howFoundMap.get(key) || 0) + 1);
-        }
         const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() || null;
         return {
           id: row.id,
@@ -393,6 +386,33 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       })
       .filter((row): row is NonNullable<typeof row> => row !== null);
 
+    const countryCountMap = new Map<string, number>();
+    for (const row of allRows) {
+      if (!row.country) continue;
+      countryCountMap.set(row.country, (countryCountMap.get(row.country) || 0) + 1);
+    }
+    const availableCountries = Array.from(countryCountMap.entries())
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country, 'es'));
+
+    const countryFilterKey = countryFilter.toLocaleLowerCase('es');
+    const rows = countryFilterKey
+      ? allRows.filter((row) => (row.country || '').toLocaleLowerCase('es') === countryFilterKey)
+      : allRows;
+
+    let withCountry = 0;
+    let withName = 0;
+    let withHowFound = 0;
+    const howFoundMap = new Map<string, number>();
+    for (const row of rows) {
+      if (row.hasCountry) withCountry += 1;
+      if (row.hasName) withName += 1;
+      if (row.hasHowFound && row.howFoundUs) {
+        withHowFound += 1;
+        howFoundMap.set(row.howFoundUs, (howFoundMap.get(row.howFoundUs) || 0) + 1);
+      }
+    }
+
     const withProfileData = rows.length;
     const howFoundBreakdown = Array.from(howFoundMap.entries())
       .map(([code, count]) => ({
@@ -406,6 +426,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       windowDays,
       asOf: new Date().toISOString(),
+      selectedCountry: countryFilter || null,
+      availableCountries,
       totals: {
         diagnosticsInWindow: totalDiagnosticsInWindow,
         withProfileData,

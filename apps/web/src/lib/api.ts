@@ -483,6 +483,8 @@ export interface AcquisitionReport {
 export interface OnboardingProfileReport {
   windowDays: number;
   asOf: string;
+  selectedCountry: string | null;
+  availableCountries: Array<{ country: string; count: number }>;
   totals: {
     diagnosticsInWindow: number;
     withProfileData: number;
@@ -799,8 +801,11 @@ export interface AdminPaymentsReport {
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
-  onboardingProfile: (windowDays: ReportWindowDays = 30) =>
-    api<OnboardingProfileReport>(`/api/reports/internal/onboarding-profile?windowDays=${windowDays}`),
+  onboardingProfile: (windowDays: ReportWindowDays = 30, country?: string) => {
+    const qs = new URLSearchParams({ windowDays: String(windowDays) });
+    if (country?.trim()) qs.set('country', country.trim());
+    return api<OnboardingProfileReport>(`/api/reports/internal/onboarding-profile?${qs.toString()}`);
+  },
   cleexsScore: (windowDays: ReportWindowDays = 30) =>
     api<CleexsScoreReport>(`/api/reports/internal/cleexs-score?windowDays=${windowDays}`),
   emailOutreach: (windowDays: ReportWindowDays = 30) =>
