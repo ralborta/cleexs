@@ -1,6 +1,8 @@
 import { CleexsEmailSendStatus, type Prisma } from '@prisma/client';
 import { Resend } from 'resend';
+import { getAppBaseUrlForPublicLinks } from './app-public-url';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 import { withEmailAttribution } from './email-link-attribution';
 import { prisma } from './prisma';
 
@@ -135,9 +137,15 @@ function resolveTrackedUrls(input: MarketingEmailSendInput) {
   return { ctaUrl, trackedShareUrl, medium };
 }
 
+function marketingUnsubscribeUrl(recipientEmail: string, medium: string): string {
+  const base = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
+  const from = medium === 'broadcast' ? 'broadcast' : 'weekly';
+  return `${base}/email/unsubscribe?email=${encodeURIComponent(recipientEmail)}&from=${from}`;
+}
+
 function buildMarketingHtml(input: MarketingEmailSendInput): string {
   const r = input.recipient;
-  const { ctaUrl, trackedShareUrl } = resolveTrackedUrls(input);
+  const { ctaUrl, trackedShareUrl, medium } = resolveTrackedUrls(input);
   const ctaLabel = input.ctaLabel || DEFAULT_CTA_LABEL;
   const scoreBlock =
     r.cleexsScore != null
@@ -150,6 +158,7 @@ function buildMarketingHtml(input: MarketingEmailSendInput): string {
   const footer = trackedShareUrl
     ? `<p style="margin:14px 0 0;font-size:12px;color:#64748b;">Tu reporte público: <a href="${escapeHtml(trackedShareUrl)}" style="color:#4f46e5;">${escapeHtml(trackedShareUrl)}</a></p>`
     : '';
+  const unsubscribeUrl = marketingUnsubscribeUrl(r.email, medium);
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -173,7 +182,8 @@ function buildMarketingHtml(input: MarketingEmailSendInput): string {
           ${footer}
         </td></tr>
         <tr><td style="padding:16px 26px;border-top:1px solid #f1f5f9;font-size:11px;line-height:1.5;color:#94a3b8;">
-          Recibís este email porque dejaste tus datos en Cleexs. Si querés pausar estos mensajes, respondé este correo con “baja”.
+          Recibís este email porque dejaste tus datos en Cleexs.
+          <a href="${escapeHtml(unsubscribeUrl)}" style="color:#64748b;text-decoration:underline;">Gestionar lo que recibo</a>
           <br/>Ref: ${escapeHtml(input.campaignSlug)}
         </td></tr>
       </table>
@@ -204,6 +214,9 @@ export async function sendMarketingEmail(input: MarketingEmailSendInput): Promis
   const to = input.recipient.email.trim().toLowerCase();
   if (isEmailDisabled()) {
     throw Object.assign(new Error('Envíos deshabilitados (DISABLE_EMAILS).'), { statusCode: 400 });
+  }
+  if (await isEmailUnsubscribedFromCategory(to, 'content')) {
+    throw Object.assign(new Error('Destinatario dado de baja de contenido.'), { statusCode: 400, code: 'unsubscribed_content' });
   }
 
   const subject = mergeText(input.subject, input.recipient).slice(0, 180);

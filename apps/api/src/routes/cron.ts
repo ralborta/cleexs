@@ -294,6 +294,10 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
         });
         sent += 1;
       } catch (e) {
+        if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed_content') {
+          skipped += 1;
+          continue;
+        }
         failed += 1;
         if (errors.length < 20) errors.push({ email: recipient.email, error: e instanceof Error ? e.message : String(e) });
       }

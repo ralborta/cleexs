@@ -20,7 +20,7 @@ import {
 } from './free-email-sequence';
 import { buildMonthlyScoreDiagnosticUrl, buildFreeOnboardingPlanConquistarUrl } from './email-templates/build-email';
 import { prisma } from './prisma';
-import { isEmailUnsubscribed } from './email-unsubscribe';
+import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
 export const FREE_ONBOARDING_CAMPAIGN_PREFIX = 'free-onboarding-s';
@@ -299,7 +299,7 @@ function buildLinksForCandidate(input: {
       linkRole: 'cta_plans',
       medium,
     }),
-    unsubscribeUrl: `${origin}/email/unsubscribe?email=${encodeURIComponent(input.candidate.email)}`,
+    unsubscribeUrl: `${origin}/email/unsubscribe?email=${encodeURIComponent(input.candidate.email)}&from=free_sequence`,
   };
 }
 
@@ -314,7 +314,7 @@ export async function sendFreeOnboardingStep(input: {
   if (!isOutboundEmailAvailable()) return { sent: false, reason: 'email_not_configured' };
 
   const to = input.candidate.email;
-  if (await isEmailUnsubscribed(to)) return { sent: false, reason: 'unsubscribed' };
+  if (await isEmailUnsubscribedFromCategory(to, 'content')) return { sent: false, reason: 'unsubscribed' };
 
   const campaignSlug = freeOnboardingCampaignSlug(input.step.sortOrder);
   const variant = input.step.templateVariant;
