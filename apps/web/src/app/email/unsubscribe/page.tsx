@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
+import { CLEEXS_MARKETING_URL } from '@/lib/site';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 
@@ -168,9 +168,9 @@ function UnsubscribeContent() {
         )}
 
         <p className="mt-8">
-          <Link href="/diagnostico/crear" className="text-sm font-medium text-primary-600 hover:underline">
+          <a href={CLEEXS_MARKETING_URL} className="text-sm font-medium text-primary-600 hover:underline">
             Volver a Cleexs
-          </Link>
+          </a>
         </p>
       </div>
     );
@@ -237,7 +237,7 @@ function UnsubscribeContent() {
               {status === 'loading' ? 'Guardando…' : 'Actualizar lo que recibo'}
             </Button>
             <Button type="button" variant="outline" asChild>
-              <Link href="/diagnostico/crear">Volver a Cleexs</Link>
+              <a href={CLEEXS_MARKETING_URL}>Volver a Cleexs</a>
             </Button>
           </div>
 

@@ -28,6 +28,7 @@ export function shouldHidePublicChrome(pathname: string | null): boolean {
   if (pathname.startsWith('/admin')) return true;
   if (pathMatchesPrefix(pathname, TOOLS_PATH_PREFIX)) return true;
   if (pathMatchesPrefix(pathname, WA_RESULT_PATH_PREFIX)) return true;
+  if (pathMatchesPrefix(pathname, '/email')) return true;
   return false;
 }
 
