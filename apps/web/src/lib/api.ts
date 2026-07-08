@@ -480,6 +480,45 @@ export interface AcquisitionReport {
   }>;
 }
 
+export interface OnboardingProfileReport {
+  windowDays: number;
+  asOf: string;
+  totals: {
+    diagnosticsInWindow: number;
+    withProfileData: number;
+    withCountry: number;
+    withName: number;
+    withHowFound: number;
+    profileRate: number;
+    countryRate: number;
+    nameRate: number;
+    howFoundRate: number;
+  };
+  howFoundBreakdown: Array<{
+    code: string;
+    label: string;
+    count: number;
+    share: number;
+  }>;
+  rows: Array<{
+    id: string;
+    createdAt: string;
+    brandName: string;
+    domain: string;
+    email: string | null;
+    status: string;
+    country: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string | null;
+    howFoundUs: string | null;
+    howFoundLabel: string | null;
+    hasCountry: boolean;
+    hasName: boolean;
+    hasHowFound: boolean;
+  }>;
+}
+
 export interface CleexsScoreReport {
   windowDays: number;
   asOf: string;
@@ -760,6 +799,8 @@ export interface AdminPaymentsReport {
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
+  onboardingProfile: (windowDays: ReportWindowDays = 30) =>
+    api<OnboardingProfileReport>(`/api/reports/internal/onboarding-profile?windowDays=${windowDays}`),
   cleexsScore: (windowDays: ReportWindowDays = 30) =>
     api<CleexsScoreReport>(`/api/reports/internal/cleexs-score?windowDays=${windowDays}`),
   emailOutreach: (windowDays: ReportWindowDays = 30) =>

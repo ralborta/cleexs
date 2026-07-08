@@ -133,6 +133,62 @@ function envBool(name: string): boolean {
   return process.env[name]?.toString().trim().toLowerCase() === 'true';
 }
 
+const HOW_FOUND_US_LABELS: Record<string, string> = {
+  google: 'Búsqueda en Google',
+  redes: 'Redes sociales',
+  recomendacion: 'Recomendación',
+  whatsapp: 'WhatsApp',
+  podcast: 'Podcast o video',
+  otro: 'Otro',
+};
+
+function onboardingProfileFromDraft(json: unknown): {
+  country: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  howFoundUs: string | null;
+  hasCountry: boolean;
+  hasName: boolean;
+  hasHowFound: boolean;
+  hasAny: boolean;
+} {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) {
+    return {
+      country: null,
+      firstName: null,
+      lastName: null,
+      howFoundUs: null,
+      hasCountry: false,
+      hasName: false,
+      hasHowFound: false,
+      hasAny: false,
+    };
+  }
+  const o = json as Record<string, unknown>;
+  const country = typeof o.confirmedCountry === 'string' ? o.confirmedCountry.trim() : '';
+  const firstName = typeof o.firstName === 'string' ? o.firstName.trim() : '';
+  const lastName = typeof o.lastName === 'string' ? o.lastName.trim() : '';
+  const howFoundUs = typeof o.howFoundUs === 'string' ? o.howFoundUs.trim() : '';
+  const hasCountry = Boolean(country);
+  const hasName = Boolean(firstName || lastName);
+  const hasHowFound = Boolean(howFoundUs);
+  return {
+    country: country || null,
+    firstName: firstName || null,
+    lastName: lastName || null,
+    howFoundUs: howFoundUs || null,
+    hasCountry,
+    hasName,
+    hasHowFound,
+    hasAny: hasCountry || hasName || hasHowFound,
+  };
+}
+
+function howFoundUsLabel(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return HOW_FOUND_US_LABELS[code] || code;
+}
+
 const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   // 1) Reporte de Adquisicion y Funnel
   // ----------------------------------------------------------------
@@ -274,6 +330,95 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       sponsorBreakdown,
       topUtmSources,
       latestDiagnostics: latest,
+    };
+  });
+
+  // 1b) Perfil de onboarding (país, nombre, cómo llegó)
+  // ----------------------------------------------------------------
+  fastify.get('/internal/onboarding-profile', async (request) => {
+    const parsed = windowDaysSchema.safeParse(request.query);
+    const windowDays = parsed.success ? parsed.data.windowDays : 30;
+    const fromDate = startOfDay(new Date());
+    fromDate.setDate(fromDate.getDate() - (windowDays - 1));
+
+    const diagnosticsInWindow = await prisma.publicDiagnostic.findMany({
+      where: { createdAt: { gte: fromDate } },
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+        email: true,
+        domain: true,
+        brandName: true,
+        setupDraftJson: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalDiagnosticsInWindow = diagnosticsInWindow.length;
+    let withCountry = 0;
+    let withName = 0;
+    let withHowFound = 0;
+    const howFoundMap = new Map<string, number>();
+
+    const rows = diagnosticsInWindow
+      .map((row) => {
+        const profile = onboardingProfileFromDraft(row.setupDraftJson);
+        if (!profile.hasAny) return null;
+        if (profile.hasCountry) withCountry += 1;
+        if (profile.hasName) withName += 1;
+        if (profile.hasHowFound) {
+          withHowFound += 1;
+          const key = profile.howFoundUs!;
+          howFoundMap.set(key, (howFoundMap.get(key) || 0) + 1);
+        }
+        const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() || null;
+        return {
+          id: row.id,
+          createdAt: row.createdAt.toISOString(),
+          brandName: row.brandName,
+          domain: row.domain,
+          email: row.email,
+          status: row.status,
+          country: profile.country,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          displayName,
+          howFoundUs: profile.howFoundUs,
+          howFoundLabel: howFoundUsLabel(profile.howFoundUs),
+          hasCountry: profile.hasCountry,
+          hasName: profile.hasName,
+          hasHowFound: profile.hasHowFound,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    const withProfileData = rows.length;
+    const howFoundBreakdown = Array.from(howFoundMap.entries())
+      .map(([code, count]) => ({
+        code,
+        label: howFoundUsLabel(code) || code,
+        count,
+        share: withHowFound ? (count / withHowFound) * 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      windowDays,
+      asOf: new Date().toISOString(),
+      totals: {
+        diagnosticsInWindow: totalDiagnosticsInWindow,
+        withProfileData,
+        withCountry,
+        withName,
+        withHowFound,
+        profileRate: totalDiagnosticsInWindow ? (withProfileData / totalDiagnosticsInWindow) * 100 : 0,
+        countryRate: totalDiagnosticsInWindow ? (withCountry / totalDiagnosticsInWindow) * 100 : 0,
+        nameRate: totalDiagnosticsInWindow ? (withName / totalDiagnosticsInWindow) * 100 : 0,
+        howFoundRate: totalDiagnosticsInWindow ? (withHowFound / totalDiagnosticsInWindow) * 100 : 0,
+      },
+      howFoundBreakdown,
+      rows,
     };
   });
 
