@@ -21,7 +21,7 @@ import {
 } from './email-templates/shared';
 import { withEmailAttribution } from './email-link-attribution';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
-import { isEmailUnsubscribed } from './email-unsubscribe';
+import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 import { prisma } from './prisma';
 
 export const FREE_SEQUENCE_KEY = 'free_onboarding';
@@ -300,7 +300,7 @@ export async function resolveFreeSequenceLinksForEmail(input: {
     select: { id: true, shareSlug: true },
   });
 
-  const unsubscribeUrl = `${origin}/email/unsubscribe?email=${encodeURIComponent(normalizedEmail)}`;
+  const unsubscribeUrl = `${origin}/email/unsubscribe?email=${encodeURIComponent(normalizedEmail)}&from=free_sequence`;
 
   if (!row) {
     return { ...base, unsubscribeUrl };
@@ -504,7 +504,7 @@ export async function sendFreeEmailSequenceStepTest(input: {
   }
 
   const to = input.to.trim().toLowerCase();
-  if (await isEmailUnsubscribed(to)) {
+  if (await isEmailUnsubscribedFromCategory(to, 'content')) {
     throw Object.assign(new Error('El destinatario está dado de baja de emails de Cleexs.'), { statusCode: 400 });
   }
 

@@ -92,7 +92,7 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     planClosingLine: 'Plan de acción concreto para empezar mañana con tu equipo.',
     planCtaLabel: 'Empezar ahora',
     founderTitle: 'Fundador',
-    unsubscribeLabel: 'Dejar de recibir los emails de Cleexs',
+  unsubscribeLabel: 'Gestionar lo que recibo',
   };
 }
 

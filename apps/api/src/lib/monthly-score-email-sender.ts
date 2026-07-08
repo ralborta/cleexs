@@ -16,7 +16,7 @@ import {
   isOutboundEmailAvailable,
   sendSmtpMail,
 } from './email';
-import { isEmailUnsubscribed } from './email-unsubscribe';
+import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 import {
   resolveMarketingRecipients,
   type EmailAudienceSegment,
@@ -209,7 +209,7 @@ function buildLinksForRecipient(
       linkRole: 'cta_plans',
       medium,
     }),
-    unsubscribeUrl: `${origin}/email/unsubscribe?email=${encodeURIComponent(input.recipientEmail)}`,
+    unsubscribeUrl: `${origin}/email/unsubscribe?email=${encodeURIComponent(input.recipientEmail)}&from=monthly_score`,
   };
 }
 
@@ -228,8 +228,11 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
   }
 
   const to = input.recipient.email.trim().toLowerCase();
-  if (await isEmailUnsubscribed(to)) {
-    throw Object.assign(new Error('Destinatario dado de baja de marketing.'), { statusCode: 400, code: 'unsubscribed' });
+  if (await isEmailUnsubscribedFromCategory(to, 'monthlyScore')) {
+    throw Object.assign(new Error('Destinatario dado de baja del Cleexs Score mensual.'), {
+      statusCode: 400,
+      code: 'unsubscribed_monthly',
+    });
   }
 
   const variant = input.variant ?? defaultMonthlyScoreVariant();
@@ -421,7 +424,7 @@ export async function runMonthlyScoreEmailBatch(input: {
       await sendMonthlyScoreEmailToRecipient({ recipient, campaignSlug, variant });
       sent += 1;
     } catch (e) {
-      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed') {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed_monthly') {
         skipped += 1;
         continue;
       }
@@ -558,7 +561,7 @@ export async function runCustomTemplateBatch(input: {
       });
       sent += 1;
     } catch (e) {
-      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed') {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed_monthly') {
         continue;
       }
       failed += 1;

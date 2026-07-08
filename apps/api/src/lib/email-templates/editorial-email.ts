@@ -79,7 +79,7 @@ export function defaultMonthlyScoreEditorialContent(): CleexsEditorialContent {
     planPitch:
       'Comparás con competidores, ves más motores de IA y dejás de adivinar cómo te están recomendando.',
     planCtaLabel: 'Ver Plan Conquistar',
-    unsubscribeLabel: 'Dejar de recibir los emails de Cleexs',
+  unsubscribeLabel: 'Gestionar lo que recibo',
   };
 }
 
@@ -106,7 +106,7 @@ export function defaultCleexsEditorialContent(): CleexsEditorialContent {
     planPitch:
       'Comparás con competidores, ves más motores de IA y dejás de adivinar cómo te están recomendando.',
     planCtaLabel: 'Ver Plan Conquistar',
-    unsubscribeLabel: 'Dejar de recibir los emails de Cleexs',
+  unsubscribeLabel: 'Gestionar lo que recibo',
   };
 }
 
