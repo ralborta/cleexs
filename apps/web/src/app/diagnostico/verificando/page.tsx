@@ -23,6 +23,7 @@ import {
 import { useSmoothProgress } from '@/lib/use-smooth-progress';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/diagnostico/onboarding-wizard';
+import { defaultLanguageForCountry } from '@/components/diagnostico/onboarding-country-language-fields';
 import type { SetupStep } from '@/components/diagnostico/onboarding-setup-wizard';
 import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
@@ -122,7 +123,12 @@ function VerificandoContent() {
   const [publicSetupStep, setPublicSetupStep] = useState<SetupStep>(1);
   const [setupCountry, setSetupCountry] = useState('');
   const [setupIndustry, setSetupIndustry] = useState('');
+  const [setupLanguage, setSetupLanguage] = useState('');
+  const [setupFirstName, setSetupFirstName] = useState('');
+  const [setupLastName, setSetupLastName] = useState('');
+  const [setupHowFound, setSetupHowFound] = useState('');
   const [setupEngines, setSetupEngines] = useState<string[]>([]);
+  const humanVerifiedAtRef = useRef<string | null>(null);
   const [introContinued, setIntroContinued] = useState(false);
   /** Timestamp cuando el backend entra en detecting_competitors (para timeout de UI). */
   const [competitorDetectSince, setCompetitorDetectSince] = useState<number | null>(null);
@@ -331,7 +337,12 @@ function VerificandoContent() {
     setLegacyPublicStep(1);
     setSetupCountry('');
     setSetupIndustry('');
+    setSetupLanguage('');
+    setSetupFirstName('');
+    setSetupLastName('');
+    setSetupHowFound('');
     setSetupEngines([]);
+    humanVerifiedAtRef.current = null;
     setIntroContinued(false);
     contextConfirmedRef.current = false;
     runningStartElapsedRef.current = null;
@@ -346,6 +357,13 @@ function VerificandoContent() {
       (prev) => prev || draft.confirmedCountry || draft.suggestedCountry || draft.marketCountry || ''
     );
     setSetupIndustry((prev) => prev || draft.confirmedIndustry || draft.suggestedIndustry || '');
+    setSetupLanguage((prev) => prev || draft.selectedLanguage || '');
+    setSetupFirstName((prev) => prev || draft.firstName || '');
+    setSetupLastName((prev) => prev || draft.lastName || '');
+    setSetupHowFound((prev) => prev || draft.howFoundUs || '');
+    if (draft.humanVerifiedAt && !humanVerifiedAtRef.current) {
+      humanVerifiedAtRef.current = draft.humanVerifiedAt;
+    }
   }, [diagnostic?.setupDraft]);
 
   useEffect(() => {
@@ -365,8 +383,20 @@ function VerificandoContent() {
     setSetupEmail(d.email?.trim() || prefilledEmailParam || '');
     setStartAnalysisError(null);
     const draft = d.setupDraft;
-    setSetupCountry((prev) => prev || draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '');
+    const hydratedCountry =
+      draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '';
+    setSetupCountry((prev) => prev || hydratedCountry);
     setSetupIndustry((prev) => prev || draft?.confirmedIndustry || draft?.suggestedIndustry || '');
+    setSetupLanguage(
+      (prev) =>
+        prev ||
+        draft?.selectedLanguage ||
+        (hydratedCountry ? defaultLanguageForCountry(hydratedCountry) : '')
+    );
+    setSetupFirstName((prev) => prev || draft?.firstName || '');
+    setSetupLastName((prev) => prev || draft?.lastName || '');
+    setSetupHowFound((prev) => prev || draft?.howFoundUs || '');
+    if (draft?.humanVerifiedAt) humanVerifiedAtRef.current = draft.humanVerifiedAt;
     if (draft?.selectedEngines?.length) {
       setSetupEngines(draft.selectedEngines.filter(Boolean));
     }
@@ -499,6 +529,11 @@ function VerificandoContent() {
     return () => clearTimeout(t);
   }, [activeStepForCards, visibleStepCards]);
 
+  const handleSetupCountry = useCallback((v: string) => {
+    setSetupCountry(v);
+    setSetupLanguage(defaultLanguageForCountry(v));
+  }, []);
+
   // Confirma país + rubro → arranca detección/progreso y avanza al paso de motores.
   const handleConfirmContext = useCallback(async () => {
     if (!diagnosticId) return;
@@ -517,6 +552,7 @@ function VerificandoContent() {
         country: c,
         industry: ind,
         engines: setupEngines,
+        ...(setupLanguage.trim() ? { language: setupLanguage.trim() } : {}),
       });
       trackOnboarding('onboarding_context_confirmed', { diagnosticId });
       setPublicSetupStep(4);
@@ -525,7 +561,7 @@ function VerificandoContent() {
     } finally {
       setContextLoading(false);
     }
-  }, [diagnosticId, setupCountry, setupIndustry, setupEngines]);
+  }, [diagnosticId, setupCountry, setupIndustry, setupEngines, setupLanguage]);
 
   const handleToggleEngine = useCallback((id: string) => {
     setSetupEngines((prev) =>
@@ -621,6 +657,8 @@ function VerificandoContent() {
             ? setupEngines
             : ['chatgpt', ...setupEngines]
           : ['chatgpt'];
+      const legalAcceptedAt = new Date().toISOString();
+      const humanVerifiedAt = humanVerifiedAtRef.current || legalAcceptedAt;
       await publicDiagnosticApi.start(
         diagnosticId,
         {
@@ -631,6 +669,12 @@ function VerificandoContent() {
             : {}),
           ...(setupCountry.trim() ? { country: setupCountry.trim() } : {}),
           ...(setupIndustry.trim() ? { industry: setupIndustry.trim() } : {}),
+          ...(setupLanguage.trim() ? { language: setupLanguage.trim() } : {}),
+          ...(setupFirstName.trim() ? { firstName: setupFirstName.trim() } : {}),
+          ...(setupLastName.trim() ? { lastName: setupLastName.trim() } : {}),
+          ...(setupHowFound.trim() ? { howFoundUs: setupHowFound.trim() } : {}),
+          humanVerifiedAt,
+          legalAcceptedAt,
           engines: enginesPayload,
         },
         { visitorId: vid }
@@ -685,6 +729,22 @@ function VerificandoContent() {
               ...(setupIndustry.trim() || draft?.confirmedIndustry
                 ? { industry: setupIndustry.trim() || draft?.confirmedIndustry }
                 : {}),
+              ...(setupLanguage.trim() || draft?.selectedLanguage
+                ? { language: setupLanguage.trim() || draft?.selectedLanguage }
+                : {}),
+              ...(setupFirstName.trim() || draft?.firstName
+                ? { firstName: setupFirstName.trim() || draft?.firstName }
+                : {}),
+              ...(setupLastName.trim() || draft?.lastName
+                ? { lastName: setupLastName.trim() || draft?.lastName }
+                : {}),
+              ...(setupHowFound.trim() || draft?.howFoundUs
+                ? { howFoundUs: setupHowFound.trim() || draft?.howFoundUs }
+                : {}),
+              ...(draft?.humanVerifiedAt || humanVerifiedAtRef.current
+                ? { humanVerifiedAt: humanVerifiedAtRef.current || draft?.humanVerifiedAt }
+                : {}),
+              ...(draft?.legalAcceptedAt ? { legalAcceptedAt: draft.legalAcceptedAt } : {}),
               ...(setupEngines.length
                 ? { engines: setupEngines }
                 : draft?.selectedEngines?.length
@@ -732,6 +792,10 @@ function VerificandoContent() {
     competitorUrls,
     setupCountry,
     setupIndustry,
+    setupLanguage,
+    setupFirstName,
+    setupLastName,
+    setupHowFound,
     setupEngines,
   ]);
 
@@ -740,6 +804,7 @@ function VerificandoContent() {
     switch (publicSetupStep) {
       case 1:
         if (!setupHumanOk) return;
+        if (!humanVerifiedAtRef.current) humanVerifiedAtRef.current = new Date().toISOString();
         if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
         setPublicSetupStep(2);
         return;
@@ -1128,9 +1193,17 @@ function VerificandoContent() {
                 <OnboardingWizard
                   step={publicSetupStep - 1}
                   country={setupCountry}
-                  onCountry={setSetupCountry}
+                  onCountry={handleSetupCountry}
                   industry={setupIndustry}
                   onIndustry={setSetupIndustry}
+                  language={setupLanguage}
+                  onLanguage={setSetupLanguage}
+                  firstName={setupFirstName}
+                  onFirstName={setSetupFirstName}
+                  lastName={setupLastName}
+                  onLastName={setSetupLastName}
+                  howFound={setupHowFound}
+                  onHowFound={setSetupHowFound}
                   engines={setupEngines}
                   onToggleEngine={handleToggleEngine}
                   competitorUrls={competitorUrls}

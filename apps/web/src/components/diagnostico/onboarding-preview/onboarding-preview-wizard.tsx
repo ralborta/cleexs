@@ -18,7 +18,7 @@ import {
   OnboardingPreviewNav,
   OnboardingPreviewTrustFooter,
 } from './onboarding-preview-frame';
-import { OnboardingCountryLanguageFields } from '@/components/diagnostico/onboarding-country-language-fields';
+import { OnboardingCountryLanguageFields, defaultLanguageForCountry } from '@/components/diagnostico/onboarding-country-language-fields';
 
 const ENGINES = [
   { id: 'chatgpt', label: 'ChatGPT', logo: '/engines/chatgpt.png' },
@@ -70,6 +70,12 @@ export function OnboardingPreviewWizard({
   const [lastName, setLastName] = useState('');
   const [howFound, setHowFound] = useState('');
   const [previewCountry, setPreviewCountry] = useState(mock.country);
+  const [previewLanguage, setPreviewLanguage] = useState(() => defaultLanguageForCountry(mock.country));
+
+  const handlePreviewCountry = (v: string) => {
+    setPreviewCountry(v);
+    setPreviewLanguage(defaultLanguageForCountry(v));
+  };
 
   const toggleEngine = (id: string) => {
     setEngines((prev) =>
@@ -118,7 +124,9 @@ export function OnboardingPreviewWizard({
           {idx === 0 && (
             <OnboardingCountryLanguageFields
               country={previewCountry}
-              onCountry={setPreviewCountry}
+              onCountry={handlePreviewCountry}
+              language={previewLanguage}
+              onLanguage={setPreviewLanguage}
             />
           )}
 

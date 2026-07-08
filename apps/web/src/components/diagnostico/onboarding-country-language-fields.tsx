@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { CountrySelect, countryIsoForDisplay } from '@/components/country/country-select';
 import { CountryFlag } from '@/components/country/country-picker';
@@ -50,17 +49,16 @@ const flagCls =
 export function OnboardingCountryLanguageFields({
   country,
   onCountry,
+  language,
+  onLanguage,
 }: {
   country: string;
   onCountry: (v: string) => void;
+  language: string;
+  onLanguage: (v: string) => void;
 }) {
-  const [language, setLanguage] = useState(() => defaultLanguageForCountry(country));
   const countryIso = countryIsoForDisplay(country);
   const selectedLanguage = LANGUAGES.find((l) => l.id === language) ?? LANGUAGES[0];
-
-  useEffect(() => {
-    setLanguage(defaultLanguageForCountry(country));
-  }, [country]);
 
   return (
     <div className="space-y-4">
@@ -83,7 +81,7 @@ export function OnboardingCountryLanguageFields({
           <CountryFlag iso={selectedLanguage.flagIso} className={flagCls} />
           <select
             value={language}
-            onChange={(e) => setLanguage(e.target.value)}
+            onChange={(e) => onLanguage(e.target.value)}
             className={selectCls}
             aria-label="Idioma del análisis"
           >

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Briefcase,
   Check,
@@ -64,6 +63,14 @@ export type OnboardingWizardProps = {
   filledCompetitorCount: number;
   email: string;
   onEmail: (v: string) => void;
+  language: string;
+  onLanguage: (v: string) => void;
+  firstName: string;
+  onFirstName: (v: string) => void;
+  lastName: string;
+  onLastName: (v: string) => void;
+  howFound: string;
+  onHowFound: (v: string) => void;
   onBack: () => void;
   onNext: () => void;
   nextLoading?: boolean;
@@ -89,6 +96,14 @@ export function OnboardingWizard({
   filledCompetitorCount,
   email,
   onEmail,
+  language,
+  onLanguage,
+  firstName,
+  onFirstName,
+  lastName,
+  onLastName,
+  howFound,
+  onHowFound,
   onBack,
   onNext,
   nextLoading,
@@ -98,9 +113,6 @@ export function OnboardingWizard({
   const idx = Math.min(Math.max(step, 1), 5) - 1;
   const meta = STEPS[idx]!;
   const Icon = meta.icon;
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [howFound, setHowFound] = useState('');
 
   const canNext =
     idx === 0
@@ -156,7 +168,12 @@ export function OnboardingWizard({
 
         <div className="mt-5">
           {idx === 0 && (
-            <OnboardingCountryLanguageFields country={country} onCountry={onCountry} />
+            <OnboardingCountryLanguageFields
+              country={country}
+              onCountry={onCountry}
+              language={language}
+              onLanguage={onLanguage}
+            />
           )}
 
           {idx === 1 && (
@@ -281,7 +298,7 @@ export function OnboardingWizard({
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
                     placeholder="Tu nombre"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => onFirstName(e.target.value)}
                   />
                 </label>
                 <label className="block">
@@ -291,7 +308,7 @@ export function OnboardingWizard({
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
                     placeholder="Tu apellido"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => onLastName(e.target.value)}
                   />
                 </label>
               </div>
@@ -301,7 +318,7 @@ export function OnboardingWizard({
                   <select
                     className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 shadow-sm"
                     value={howFound}
-                    onChange={(e) => setHowFound(e.target.value)}
+                    onChange={(e) => onHowFound(e.target.value)}
                   >
                     {HOW_FOUND_OPTIONS.map((opt) => (
                       <option key={opt.value || 'empty'} value={opt.value}>

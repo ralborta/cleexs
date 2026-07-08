@@ -1260,6 +1260,18 @@ function parsePublicSetupDraft(json: unknown): {
   confirmedIndustry?: string;
   /** Motores de IA elegidos (free: todos disponibles; se registran para plan pago). */
   selectedEngines?: string[];
+  /** Idioma elegido en el wizard (es, pt, en, …). */
+  selectedLanguage?: string;
+  /** Perfil opcional del paso de email. */
+  firstName?: string;
+  lastName?: string;
+  howFoundUs?: string;
+  /** ISO: usuario marcó verificación humana. */
+  humanVerifiedAt?: string;
+  /** ISO: aceptó términos al iniciar el análisis. */
+  legalAcceptedAt?: string;
+  confirmedCompetitorUrls?: string[];
+  confirmedAt?: string;
 } | null {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
   const o = json as Record<string, unknown>;
@@ -1278,6 +1290,16 @@ function parsePublicSetupDraft(json: unknown): {
   const selectedEngines = Array.isArray(o.selectedEngines)
     ? o.selectedEngines.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
     : undefined;
+  const selectedLanguage = typeof o.selectedLanguage === 'string' ? o.selectedLanguage.trim() : undefined;
+  const firstName = typeof o.firstName === 'string' ? o.firstName.trim() : undefined;
+  const lastName = typeof o.lastName === 'string' ? o.lastName.trim() : undefined;
+  const howFoundUs = typeof o.howFoundUs === 'string' ? o.howFoundUs.trim() : undefined;
+  const humanVerifiedAt = typeof o.humanVerifiedAt === 'string' ? o.humanVerifiedAt : undefined;
+  const legalAcceptedAt = typeof o.legalAcceptedAt === 'string' ? o.legalAcceptedAt : undefined;
+  const confirmedCompetitorUrls = Array.isArray(o.confirmedCompetitorUrls)
+    ? o.confirmedCompetitorUrls.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : undefined;
+  const confirmedAt = typeof o.confirmedAt === 'string' ? o.confirmedAt : undefined;
   return {
     suggestedCompetitorUrls,
     marketCountry,
@@ -1288,6 +1310,14 @@ function parsePublicSetupDraft(json: unknown): {
     confirmedCountry,
     confirmedIndustry,
     selectedEngines,
+    selectedLanguage: selectedLanguage || undefined,
+    firstName: firstName || undefined,
+    lastName: lastName || undefined,
+    howFoundUs: howFoundUs || undefined,
+    humanVerifiedAt,
+    legalAcceptedAt,
+    confirmedCompetitorUrls,
+    confirmedAt,
   };
 }
 
@@ -2391,6 +2421,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       country?: string;
       industry?: string;
       engines?: string[];
+      language?: string;
+      firstName?: string;
+      lastName?: string;
+      howFoundUs?: string;
+      humanVerifiedAt?: string;
+      legalAcceptedAt?: string;
     };
   }>('/diagnostic/:id/start', async (request, reply) => {
     try {
@@ -2405,6 +2441,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         country: z.string().trim().max(120).optional(),
         industry: z.string().trim().max(160).optional(),
         engines: z.array(z.string().trim().max(40)).max(10).optional(),
+        language: z.string().trim().max(12).optional(),
+        firstName: z.string().trim().max(80).optional(),
+        lastName: z.string().trim().max(80).optional(),
+        howFoundUs: z.string().trim().max(40).optional(),
+        humanVerifiedAt: z.string().max(40).optional(),
+        legalAcceptedAt: z.string().max(40).optional(),
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -2414,6 +2456,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       }
       const { id } = request.params;
       const { email, competitorUrls, useSerp: useSerpBody, country, industry, engines } = parsed.data;
+      const {
+        language: languageBody,
+        firstName,
+        lastName,
+        howFoundUs,
+        humanVerifiedAt,
+        legalAcceptedAt,
+      } = parsed.data;
 
       const diagnostic = await prisma.publicDiagnostic.findUnique({ where: { id } });
       if (!diagnostic) {
@@ -2487,18 +2537,32 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const selectedEngines =
         (engines && engines.length ? engines : draft?.selectedEngines)?.filter(Boolean) ?? [];
 
+      const selectedLanguage = languageBody?.trim() || draft?.selectedLanguage?.trim() || '';
+      const profileFirstName = firstName?.trim() || draft?.firstName?.trim() || '';
+      const profileLastName = lastName?.trim() || draft?.lastName?.trim() || '';
+      const profileHowFound = howFoundUs?.trim() || draft?.howFoundUs?.trim() || '';
+      const verifiedAt = humanVerifiedAt || draft?.humanVerifiedAt;
+      const legalAt = legalAcceptedAt || new Date().toISOString();
+
       await prisma.publicDiagnostic.update({
         where: { id },
         data: {
           email,
           status: 'running',
+          ...(confirmedIndustry ? { industry: confirmedIndustry } : {}),
           setupDraftJson: {
-            ...(draft ?? {}),
+            ...setupDraftJsonRecord(diagnostic.setupDraftJson),
             confirmedCompetitorUrls: competitorUrls,
             confirmedAt: new Date().toISOString(),
             ...(confirmedCountry ? { confirmedCountry } : {}),
             ...(confirmedIndustry ? { confirmedIndustry } : {}),
             ...(selectedEngines.length ? { selectedEngines } : {}),
+            ...(selectedLanguage ? { selectedLanguage } : {}),
+            ...(profileFirstName ? { firstName: profileFirstName } : {}),
+            ...(profileLastName ? { lastName: profileLastName } : {}),
+            ...(profileHowFound ? { howFoundUs: profileHowFound } : {}),
+            ...(verifiedAt ? { humanVerifiedAt: verifiedAt } : {}),
+            legalAcceptedAt: legalAt,
           },
         },
       });
@@ -2547,13 +2611,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Si cambió país o rubro respecto a lo sugerido, re-detecta competidores con el nuevo contexto.
   fastify.post<{
     Params: { id: string };
-    Body: { country?: string; industry?: string; engines?: string[] };
+    Body: { country?: string; industry?: string; engines?: string[]; language?: string };
   }>('/diagnostic/:id/confirm-context', async (request, reply) => {
     try {
       const schema = z.object({
         country: z.string().trim().max(120).optional(),
         industry: z.string().trim().max(160).optional(),
         engines: z.array(z.string().trim().max(40)).max(10).optional(),
+        language: z.string().trim().max(12).optional(),
       });
       const parsed = schema.safeParse(request.body ?? {});
       if (!parsed.success) {
@@ -2574,16 +2639,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const confirmedCountry = parsed.data.country?.trim() || draft?.suggestedCountry?.trim() || '';
       const confirmedIndustry = parsed.data.industry?.trim() || draft?.suggestedIndustry?.trim() || '';
       const selectedEngines = (parsed.data.engines ?? draft?.selectedEngines ?? []).filter(Boolean);
+      const selectedLanguage = parsed.data.language?.trim() || draft?.selectedLanguage?.trim() || '';
 
       await prisma.publicDiagnostic.update({
         where: { id },
         data: {
           status: 'detecting_competitors',
+          ...(confirmedIndustry ? { industry: confirmedIndustry } : {}),
           setupDraftJson: {
             ...setupDraftJsonRecord(diagnostic.setupDraftJson),
             ...(confirmedCountry ? { confirmedCountry } : {}),
             ...(confirmedIndustry ? { confirmedIndustry } : {}),
             ...(selectedEngines.length ? { selectedEngines } : {}),
+            ...(selectedLanguage ? { selectedLanguage } : {}),
           },
         },
       });
@@ -2629,6 +2697,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               ...(confirmedCountry ? { confirmedCountry } : {}),
               ...(confirmedIndustry ? { confirmedIndustry } : {}),
               ...(selectedEngines.length ? { selectedEngines } : {}),
+              ...(selectedLanguage ? { selectedLanguage } : {}),
             },
           },
         });

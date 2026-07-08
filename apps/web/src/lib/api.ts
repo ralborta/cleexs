@@ -1134,6 +1134,13 @@ export interface PublicDiagnosticSetupDraft {
   confirmedCompetitorUrls?: string[];
   /** ISO timestamp: la detección automática ya terminó (aunque sea sin resultados). */
   competitorRescueAttemptedAt?: string;
+  /** Idioma elegido en el wizard. */
+  selectedLanguage?: string;
+  firstName?: string;
+  lastName?: string;
+  howFoundUs?: string;
+  humanVerifiedAt?: string;
+  legalAcceptedAt?: string;
 }
 
 export interface PublicDiagnostic {
@@ -1255,6 +1262,12 @@ export const publicDiagnosticApi = {
       country?: string;
       industry?: string;
       engines?: string[];
+      language?: string;
+      firstName?: string;
+      lastName?: string;
+      howFoundUs?: string;
+      humanVerifiedAt?: string;
+      legalAcceptedAt?: string;
     },
     opts?: { visitorId?: string }
   ) =>
@@ -1267,7 +1280,7 @@ export const publicDiagnosticApi = {
     }),
   confirmContext: (
     id: string,
-    body: { country?: string; industry?: string; engines?: string[] }
+    body: { country?: string; industry?: string; engines?: string[]; language?: string }
   ) =>
     api<{
       ok: boolean;
