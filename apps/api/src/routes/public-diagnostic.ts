@@ -5,7 +5,8 @@ import { resolveDiagnosticAttributionFallback } from '../lib/referral-attributio
 import { resolveWhatsAppSponsorRefFromHistory } from '../lib/sponsor-reattribution';
 import { prisma } from '../lib/prisma';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
-import { isEmailDisabled, isOutboundEmailAvailable, sendDiagnosticLink, sendShareCleexsFollowUpEmail } from '../lib/email';
+import { isEmailDisabled, isOutboundEmailAvailable, sendShareCleexsFollowUpEmail } from '../lib/email';
+import { sendPostDiagnosticCompletionEmail } from '../lib/free-email-sequence-sender';
 import {
   executeRun,
   executeRunGemini,
@@ -1194,9 +1195,10 @@ async function executePublicDiagnosticPipeline(params: {
     }
   }
 
-  void ensureShareSlug(diagnosticId).catch((err) =>
-    log.warn({ err, diagnosticId }, 'No se pudo asignar share_slug')
-  );
+  const shareSlug = await ensureShareSlug(diagnosticId).catch((err) => {
+    log.warn({ err, diagnosticId }, 'No se pudo asignar share_slug');
+    return null;
+  });
 
   const current = await prisma.publicDiagnostic.findUnique({
     where: { id: diagnosticId },
@@ -1204,21 +1206,34 @@ async function executePublicDiagnosticPipeline(params: {
   const emailForNotify = current?.email?.trim() || '';
   const isWaPlaceholderEmail = emailForNotify.endsWith('@whatsapp.cleexs.net');
   if (emailForNotify && !isWaPlaceholderEmail) {
-    const baseUrl = getAppBaseUrlForPublicLinks();
     try {
       if (!isEmailDisabled() && isOutboundEmailAvailable()) {
-        await sendDiagnosticLink(
-          emailForNotify,
+        const legacyAnalysis = analysisJson
+          ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
+          : null;
+        const result = await sendPostDiagnosticCompletionEmail({
           diagnosticId,
-          baseUrl,
-          analysisJson ? (analysisJson as import('../lib/email').DiagnosticAnalysisForEmail) : null
-        );
-        try {
-          await sendShareCleexsFollowUpEmail(emailForNotify, diagnosticId, baseUrl, current!.brandName);
-        } catch (shareErr) {
-          log.error({ err: shareErr, diagnosticId }, 'Error al enviar email de compartir');
+          email: emailForNotify,
+          brandName: current!.brandName,
+          domain: current!.domain,
+          analysisJson,
+          shareSlug,
+          anchoredAt: current!.updatedAt,
+          legacyAnalysis,
+        });
+        if (result.sent && result.kind === 'diagnostic_link') {
+          try {
+            await sendShareCleexsFollowUpEmail(emailForNotify, diagnosticId, getAppBaseUrlForPublicLinks(), current!.brandName);
+          } catch (shareErr) {
+            log.error({ err: shareErr, diagnosticId }, 'Error al enviar email de compartir');
+          }
         }
-        log.info({ diagnosticId, email: emailForNotify }, 'Email enviado');
+        if (result.sent) {
+          log.info(
+            { diagnosticId, email: emailForNotify, kind: result.kind },
+            'Email post-diagnóstico enviado'
+          );
+        }
       }
     } catch (mailErr) {
       log.error({ err: mailErr, diagnosticId }, 'Error al enviar email');
@@ -2653,30 +2668,58 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     let emailSent: boolean | null = null;
     let emailError: 'provider_rejected' | 'send_failed' | undefined;
     if (diagnostic.status === 'completed') {
-      const baseUrl = getAppBaseUrlForPublicLinks();
       try {
         if (!isEmailDisabled() && isOutboundEmailAvailable()) {
           const fresh = await prisma.publicDiagnostic.findUnique({
             where: { id },
-            select: { analysisJson: true, tier: true, domain: true },
+            select: {
+              analysisJson: true,
+              tier: true,
+              domain: true,
+              brandName: true,
+              shareSlug: true,
+              updatedAt: true,
+            },
           });
           const isFirstRun = fresh ? await isFirstRunForDomain(id, fresh.domain) : false;
           const isGold = fresh?.tier === 'gold';
           const includeAnalysis = isFirstRun || isGold;
-          const analysis =
+          const legacyAnalysis =
             includeAnalysis &&
             fresh?.analysisJson &&
             typeof fresh.analysisJson === 'object' &&
             !Array.isArray(fresh.analysisJson)
               ? (fresh.analysisJson as import('../lib/email').DiagnosticAnalysisForEmail)
               : null;
-          await sendDiagnosticLink(email, id, baseUrl, analysis);
-          try {
-            await sendShareCleexsFollowUpEmail(email, id, baseUrl, diagnostic.brandName);
-          } catch (shareErr) {
-            fastify.log.error({ err: shareErr, diagnosticId: id }, 'Error al enviar email de compartir');
+          const shareSlug =
+            fresh?.shareSlug ??
+            (await ensureShareSlug(id).catch((err) => {
+              fastify.log.warn({ err, diagnosticId: id }, 'No se pudo asignar share_slug');
+              return null;
+            }));
+          const result = await sendPostDiagnosticCompletionEmail({
+            diagnosticId: id,
+            email,
+            brandName: fresh?.brandName ?? diagnostic.brandName,
+            domain: fresh?.domain ?? diagnostic.domain,
+            analysisJson: fresh?.analysisJson,
+            shareSlug,
+            anchoredAt: fresh?.updatedAt ?? diagnostic.updatedAt,
+            legacyAnalysis,
+          });
+          if (result.sent && result.kind === 'diagnostic_link') {
+            try {
+              await sendShareCleexsFollowUpEmail(
+                email,
+                id,
+                getAppBaseUrlForPublicLinks(),
+                diagnostic.brandName
+              );
+            } catch (shareErr) {
+              fastify.log.error({ err: shareErr, diagnosticId: id }, 'Error al enviar email de compartir');
+            }
           }
-          emailSent = true;
+          emailSent = result.sent;
         } else {
           emailSent = false;
         }

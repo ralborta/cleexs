@@ -63,7 +63,7 @@ export function classifyEmailClickRole(url: string): EmailClickRole {
     if (content === 'cta_report') return 'report';
     if (content === 'cta_share') return 'share';
     const path = u.pathname.toLowerCase();
-    if (path.includes('/planes') || path.includes('/checkout') || path.includes('/suscrib')) {
+    if (path.includes('/planes') || path.includes('/plan-conquistar') || path.includes('/checkout') || path.includes('/suscrib')) {
       return 'plans';
     }
     if (path.includes('/diagnostic') || path.includes('/diagnostico')) return 'diagnostic';

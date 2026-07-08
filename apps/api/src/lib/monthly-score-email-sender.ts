@@ -4,8 +4,9 @@ import { getAppBaseUrlForPublicLinks } from './app-public-url';
 import { withEmailAttribution } from './email-link-attribution';
 import {
   buildCleexsEmail,
-  buildMonthlyScoreDiagnosticUrl,
   buildMonthlyScorePlansUrl,
+  buildMonthlyScoreViewUrl,
+  defaultMonthlyScoreEditorialContent,
 } from './monthly-score-email';
 import type { CleexsEmailCompetitor } from './email-templates/shared';
 import {
@@ -15,6 +16,7 @@ import {
   isOutboundEmailAvailable,
   sendSmtpMail,
 } from './email';
+import { isEmailUnsubscribed } from './email-unsubscribe';
 import {
   resolveMarketingRecipients,
   type EmailAudienceSegment,
@@ -52,8 +54,8 @@ function monthlySendHourUtc(): number {
 }
 
 export function defaultMonthlyScoreVariant(): CleexsEmailTemplateVariant {
-  const raw = (process.env.MONTHLY_SCORE_EMAIL_VARIANT || 'letter').trim().toLowerCase();
-  return raw === 'editorial' ? 'editorial' : 'letter';
+  const raw = (process.env.MONTHLY_SCORE_EMAIL_VARIANT || 'editorial').trim().toLowerCase();
+  return raw === 'letter' ? 'letter' : 'editorial';
 }
 
 export function evaluateMonthlyScoreSend(options: { force?: boolean; now?: Date }): {
@@ -106,6 +108,8 @@ function competitorsFromAnalysis(value: unknown): CleexsEmailCompetitor[] {
 
 async function diagnosticContextForEmail(email: string): Promise<{
   diagnosticId?: string;
+  domain?: string;
+  brandName?: string;
   score?: number | null;
   competitors?: CleexsEmailCompetitor[];
   shareUrl?: string;
@@ -120,6 +124,8 @@ async function diagnosticContextForEmail(email: string): Promise<{
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true,
+      domain: true,
+      brandName: true,
       analysisJson: true,
       shareSlug: true,
     },
@@ -139,6 +145,8 @@ async function diagnosticContextForEmail(email: string): Promise<{
 
   return {
     diagnosticId: row.id,
+    domain: row.domain ?? undefined,
+    brandName: row.brandName ?? undefined,
     score,
     competitors: competitorsFromAnalysis(analysis),
     shareUrl: row.shareSlug ? `${base}/score/${row.shareSlug}` : undefined,
@@ -152,7 +160,10 @@ function buildLinksForRecipient(
     campaignSlug: string;
     variant?: CleexsEmailTemplateVariant;
     diagnosticId?: string;
+    domain?: string;
+    brandName?: string;
     shareUrl?: string;
+    recipientEmail: string;
   }
 ): {
   newDiagnosticUrl: string;
@@ -164,8 +175,13 @@ function buildLinksForRecipient(
   const origin = base.replace(/\/+$/, '');
   const medium = 'monthly_score';
   const variant = input.variant ?? null;
+  const scoreViewUrl = buildMonthlyScoreViewUrl(origin, {
+    domain: input.domain,
+    brandName: input.brandName,
+    email: input.recipientEmail,
+  });
   return {
-    newDiagnosticUrl: withEmailAttribution(buildMonthlyScoreDiagnosticUrl(origin), {
+    newDiagnosticUrl: withEmailAttribution(scoreViewUrl, {
       campaignSlug: input.campaignSlug,
       variant,
       linkRole: 'cta_diagnostic',
@@ -193,7 +209,7 @@ function buildLinksForRecipient(
       linkRole: 'cta_plans',
       medium,
     }),
-    unsubscribeUrl: `${origin}/email/unsubscribe?example=1`,
+    unsubscribeUrl: `${origin}/email/unsubscribe?email=${encodeURIComponent(input.recipientEmail)}`,
   };
 }
 
@@ -212,13 +228,18 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
   }
 
   const to = input.recipient.email.trim().toLowerCase();
+  if (await isEmailUnsubscribed(to)) {
+    throw Object.assign(new Error('Destinatario dado de baja de marketing.'), { statusCode: 400, code: 'unsubscribed' });
+  }
+
   const variant = input.variant ?? defaultMonthlyScoreVariant();
   const base = getAppBaseUrlForPublicLinks();
   const ctx = await diagnosticContextForRecipient(input.recipient, to);
+  const monthlyEditorial = variant === 'editorial';
   const built = buildCleexsEmail({
     variant,
     personalization: {
-      score: ctx.score ?? input.recipient.cleexsScore ?? null,
+      score: monthlyEditorial ? null : ctx.score ?? input.recipient.cleexsScore ?? null,
       brandName: input.recipient.brandName ?? 'tu marca',
       domain: input.recipient.domain ?? 'tu sitio',
       competitors: ctx.competitors?.length ? ctx.competitors : input.recipient.topCompetitor ? [{ name: input.recipient.topCompetitor }] : [],
@@ -228,10 +249,14 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
       campaignSlug: input.campaignSlug,
       variant,
       diagnosticId: ctx.diagnosticId,
+      domain: input.recipient.domain ?? ctx.domain,
+      brandName: input.recipient.brandName ?? ctx.brandName,
       shareUrl: ctx.shareUrl ?? input.recipient.shareUrl,
+      recipientEmail: input.recipient.email,
     }),
+    editorialContent: monthlyEditorial ? defaultMonthlyScoreEditorialContent() : undefined,
     showFounderSignature: true,
-    showScoreBlock: true,
+    showScoreBlock: !monthlyEditorial,
     showReportLinks: variant === 'letter',
   });
   const subject = input.subjectOverride?.trim() || built.subject;
@@ -308,6 +333,8 @@ async function diagnosticContextForRecipient(
   if (fromDiagnostic.diagnosticId || fromDiagnostic.score != null) return fromDiagnostic;
   return {
     score: recipient.cleexsScore ?? null,
+    domain: recipient.domain,
+    brandName: recipient.brandName,
     competitors: recipient.topCompetitor ? [{ name: recipient.topCompetitor }] : [],
     improvementTip: recipient.tips[0] ?? null,
     shareUrl: recipient.shareUrl,
@@ -394,6 +421,10 @@ export async function runMonthlyScoreEmailBatch(input: {
       await sendMonthlyScoreEmailToRecipient({ recipient, campaignSlug, variant });
       sent += 1;
     } catch (e) {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed') {
+        skipped += 1;
+        continue;
+      }
       failed += 1;
       if (errors.length < 20) {
         errors.push({ email: recipient.email, error: e instanceof Error ? e.message : String(e) });
@@ -527,6 +558,9 @@ export async function runCustomTemplateBatch(input: {
       });
       sent += 1;
     } catch (e) {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'unsubscribed') {
+        continue;
+      }
       failed += 1;
       if (errors.length < 20) {
         errors.push({ email, error: e instanceof Error ? e.message : String(e) });

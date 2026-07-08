@@ -19,7 +19,8 @@ import {
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
-import { addDaysToDayString, formatDayInArgentina } from '@cleexs/shared';
+import { internalReportsApi } from '@/lib/api';
+import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDayInArgentina } from '@cleexs/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,10 @@ type Metrics = {
       }>;
     };
     unlockClicks: FunnelStep;
-    purchased: FunnelStep & { bySource: { source: string; count: number; usd: number }[] };
+    purchased: FunnelStep & {
+      checkoutAttempts: number;
+      bySource: { source: string; count: number; usd: number }[];
+    };
   };
   outreach: {
     emailsSent: number;
@@ -122,6 +126,40 @@ function pctLabel(p: number | null) {
   return p == null ? '—' : `${p}%`;
 }
 
+function CheckoutAttemptsHint({ count }: { count: number }) {
+  const numberClass =
+    count > 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-rose-600';
+  if (count === 1) {
+    return (
+      <>
+        <span className={numberClass}>1</span> pendiente en MP
+      </>
+    );
+  }
+  return (
+    <>
+      <span className={numberClass}>{fmt(count)}</span> pendientes en MP
+    </>
+  );
+}
+
+async function countPendingMpInRange(fromDay: string, toDay: string): Promise<number> {
+  const fromMs = argentinaDayStartUtc(fromDay).getTime();
+  const toMs = argentinaDayEndUtc(toDay).getTime();
+  const inRange = (createdAt: string) => {
+    const t = new Date(createdAt).getTime();
+    return t >= fromMs && t <= toMs;
+  };
+
+  const first = await internalReportsApi.payments({ status: 'pending', pageSize: 100, page: 1 });
+  let items = [...first.items];
+  for (let page = 2; page <= first.pagination.totalPages; page += 1) {
+    const next = await internalReportsApi.payments({ status: 'pending', pageSize: 100, page });
+    items = items.concat(next.items);
+  }
+  return items.filter((p) => inRange(p.createdAt)).length;
+}
+
 function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
   const today = formatDayInArgentina();
   if (preset === 'hoy') {
@@ -145,10 +183,10 @@ const CHANNEL_LABEL: Record<string, string> = {
 };
 
 export default function AdminConversionPage() {
-  const initial = useMemo(() => rangeForPreset('hoy'), []);
+  const initial = useMemo(() => rangeForPreset('15'), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [activePreset, setActivePreset] = useState<string | null>('hoy');
+  const [activePreset, setActivePreset] = useState<string | null>('15');
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -201,10 +239,18 @@ export default function AdminConversionPage() {
     setLoading(true);
     try {
       const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-      const res = await adminUiFetch(`/api/admin-ui/conversion${qs}`);
+      const [res, pendingMp] = await Promise.all([
+        adminUiFetch(`/api/admin-ui/conversion${qs}`),
+        countPendingMpInRange(from, to),
+      ]);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar métricas');
-      setData(json as Metrics);
+      const metrics = json as Metrics;
+      metrics.funnel.purchased = {
+        ...metrics.funnel.purchased,
+        checkoutAttempts: pendingMp,
+      };
+      setData(metrics);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -372,6 +418,7 @@ export default function AdminConversionPage() {
           value={fmt(f?.purchased.count ?? 0)}
           pct={pctLabel(f?.purchased.pct ?? null)}
           pctHint="de los que pusieron URL"
+          hint={<CheckoutAttemptsHint count={f?.purchased.checkoutAttempts ?? 0} />}
         />
       </section>
 
@@ -739,7 +786,7 @@ function FunnelCard({
   pct?: string;
   pctHint?: string;
   pctLines?: Array<{ pct: number | null; label: string }>;
-  hint?: string;
+  hint?: React.ReactNode;
   onClick?: () => void;
   actionHint?: string;
 }) {

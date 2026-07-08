@@ -118,6 +118,21 @@ export function buildPlansUrl(baseUrl = getAppBaseUrlForPublicLinks(), medium = 
   return `${trimBase(baseUrl)}/planes?utm_source=email&utm_medium=${encodeURIComponent(medium)}&utm_campaign=plan_conquistar`;
 }
 
+/** Upsell Plan Conquistar (CTA «Empezar ahora» en secuencia free). */
+export function buildPlanConquistarUrl(
+  baseUrl = getAppBaseUrlForPublicLinks(),
+  medium = 'cleexs_email',
+  campaign = 'plan_conquistar'
+): string {
+  const base = trimBase(baseUrl);
+  const params = new URLSearchParams({
+    utm_source: 'email',
+    utm_medium: medium,
+    utm_campaign: campaign,
+  });
+  return `${base}/plan-conquistar?${params.toString()}`;
+}
+
 export function resolveCleexsEmailAssets(
   baseUrl = getAppBaseUrlForPublicLinks(),
   overrides?: Partial<CleexsEmailAssets>
@@ -133,8 +148,10 @@ export function resolveCleexsEmailAssets(
   };
 }
 
-export const CLEEXS_LETTER_FONT =
-  "'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Times New Roman', serif";
+export const CLEEXS_EMAIL_FONT = 'Inter, Arial, Helvetica, sans-serif';
+
+/** @deprecated Usar CLEEXS_EMAIL_FONT */
+export const CLEEXS_LETTER_FONT = CLEEXS_EMAIL_FONT;
 
 export function founderSignatureHtml(assets: CleexsEmailAssets, founderTitle: string): string {
   if (!assets.founderPhotoUrl) return '';
@@ -157,10 +174,8 @@ export function sampleCleexsEmailLinks(baseUrl = getAppBaseUrlForPublicLinks()):
   const base = trimBase(baseUrl);
   return {
     newDiagnosticUrl: buildNewDiagnosticUrl(base, 'monthly_score'),
-    reportUrl: `${base}/ver-resultado?diagnosticId=preview-example`,
-    shareUrl: `${base}/score/ejemplo-preview`,
-    plansUrl: buildPlansUrl(base, 'monthly_score'),
-    unsubscribeUrl: `${base}/email/unsubscribe?example=1`,
+    plansUrl: buildPlanConquistarUrl(base, 'monthly_score'),
+    unsubscribeUrl: `${base}/email/unsubscribe?preview=1`,
   };
 }
 

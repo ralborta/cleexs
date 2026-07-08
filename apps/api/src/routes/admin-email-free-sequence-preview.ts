@@ -104,7 +104,7 @@ const adminEmailFreeSequencePreviewRoutes: FastifyPluginAsync = async (fastify) 
       return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
     }
     const { variant, subject, preheader, body, sortOrder, score, domain, brandName } = parsed.data;
-    return buildFreeSequencePreview({
+    return await buildFreeSequencePreview({
       content: { variant, subject, preheader, body },
       sortOrder,
       score,

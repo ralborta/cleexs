@@ -1,8 +1,5 @@
 import {
-  type CleexsEmailAssets,
-  type CleexsEmailBuilt,
-  type CleexsEmailLinks,
-  type CleexsEmailPersonalization,
+  CLEEXS_EMAIL_FONT,
   escapeHtml,
   founderSignatureHtml,
   mergeCleexsText,
@@ -10,9 +7,14 @@ import {
   normalizedScore,
   resolveCleexsEmailAssets,
   scoreAccent,
-  CLEEXS_LETTER_FONT,
 } from './shared';
 import { getAppBaseUrlForPublicLinks } from '../app-public-url';
+import type {
+  CleexsEmailAssets,
+  CleexsEmailBuilt,
+  CleexsEmailLinks,
+  CleexsEmailPersonalization,
+} from './shared';
 
 export type CleexsLetterContent = {
   subject: string;
@@ -98,8 +100,8 @@ function mergeContent(overrides?: Partial<CleexsLetterContent>): CleexsLetterCon
   return { ...defaultCleexsLetterContent(), ...overrides };
 }
 
-const letterFont = CLEEXS_LETTER_FONT;
-const uiFont = 'Inter,Arial,Helvetica,sans-serif';
+const letterFont = CLEEXS_EMAIL_FONT;
+const uiFont = CLEEXS_EMAIL_FONT;
 
 function bodyParagraphsHtml(paragraphs: string[], ctx: CleexsEmailPersonalization): string {
   return paragraphs

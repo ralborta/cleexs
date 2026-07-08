@@ -11,12 +11,17 @@ import {
   type EditableEmailStepContent,
 } from './email-templates/build-from-content';
 import {
+  buildFreeOnboardingPlanConquistarUrl,
   buildMonthlyScoreDiagnosticUrl,
-  buildMonthlyScorePlansUrl,
 } from './email-templates/build-email';
-import { sampleCleexsEmailLinks, sampleCleexsPersonalization } from './email-templates/shared';
+import {
+  sampleCleexsEmailLinks,
+  sampleCleexsPersonalization,
+  type CleexsEmailLinks,
+} from './email-templates/shared';
 import { withEmailAttribution } from './email-link-attribution';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { isEmailUnsubscribed } from './email-unsubscribe';
 import { prisma } from './prisma';
 
 export const FREE_SEQUENCE_KEY = 'free_onboarding';
@@ -252,7 +257,7 @@ export async function getFreeEmailSequenceBundle(): Promise<FreeSequenceBundleDt
   };
 }
 
-export function buildFreeSequencePreviewLinks(campaignSlug: string, variant: CleexsEmailTemplateVariant) {
+export function buildFreeSequencePreviewLinks(campaignSlug: string, variant: CleexsEmailTemplateVariant): CleexsEmailLinks {
   const origin = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
   const medium = 'free_onboarding';
   return {
@@ -262,19 +267,7 @@ export function buildFreeSequencePreviewLinks(campaignSlug: string, variant: Cle
       linkRole: 'cta_diagnostic',
       medium,
     }),
-    reportUrl: withEmailAttribution(`${origin}/ver-resultado?diagnosticId=preview`, {
-      campaignSlug,
-      variant,
-      linkRole: 'cta_report',
-      medium,
-    }),
-    shareUrl: withEmailAttribution(`${origin}/score/ejemplo`, {
-      campaignSlug,
-      variant,
-      linkRole: 'cta_share',
-      medium,
-    }),
-    plansUrl: withEmailAttribution(buildMonthlyScorePlansUrl(origin), {
+    plansUrl: withEmailAttribution(buildFreeOnboardingPlanConquistarUrl(origin), {
       campaignSlug,
       variant,
       linkRole: 'cta_plans',
@@ -284,12 +277,63 @@ export function buildFreeSequencePreviewLinks(campaignSlug: string, variant: Cle
   };
 }
 
-export function buildFreeSequencePreview(input: {
+const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
+
+/** Links reales para un destinatario (último diagnóstico completado con ese email). */
+export async function resolveFreeSequenceLinksForEmail(input: {
+  email: string;
+  campaignSlug: string;
+  variant: CleexsEmailTemplateVariant;
+}): Promise<CleexsEmailLinks> {
+  const origin = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
+  const medium = 'free_onboarding';
+  const base = buildFreeSequencePreviewLinks(input.campaignSlug, input.variant);
+  const normalizedEmail = input.email.trim().toLowerCase();
+
+  const row = await prisma.publicDiagnostic.findFirst({
+    where: {
+      email: normalizedEmail,
+      status: 'completed',
+      NOT: { email: { endsWith: WA_PLACEHOLDER_EMAIL_DOMAIN } },
+    },
+    orderBy: { updatedAt: 'desc' },
+    select: { id: true, shareSlug: true },
+  });
+
+  const unsubscribeUrl = `${origin}/email/unsubscribe?email=${encodeURIComponent(normalizedEmail)}`;
+
+  if (!row) {
+    return { ...base, unsubscribeUrl };
+  }
+
+  return {
+    newDiagnosticUrl: base.newDiagnosticUrl,
+    plansUrl: base.plansUrl,
+    unsubscribeUrl,
+    reportUrl: withEmailAttribution(`${origin}/ver-resultado?diagnosticId=${row.id}`, {
+      campaignSlug: input.campaignSlug,
+      variant: input.variant,
+      linkRole: 'cta_report',
+      medium,
+    }),
+    shareUrl: row.shareSlug?.trim()
+      ? withEmailAttribution(`${origin}/score/${row.shareSlug.trim()}`, {
+          campaignSlug: input.campaignSlug,
+          variant: input.variant,
+          linkRole: 'cta_share',
+          medium,
+        })
+      : undefined,
+  };
+}
+
+export async function buildFreeSequencePreview(input: {
   content: EditableEmailStepContent;
   score?: number;
   domain?: string;
   brandName?: string;
   sortOrder?: number;
+  recipientEmail?: string;
 }) {
   const personalization = sampleCleexsPersonalization({
     score: input.score,
@@ -297,10 +341,16 @@ export function buildFreeSequencePreview(input: {
     brandName: input.brandName,
   });
   const campaignSlug = `free-onboarding-s${input.sortOrder ?? 1}`;
-  const links = {
-    ...sampleCleexsEmailLinks(),
-    ...buildFreeSequencePreviewLinks(campaignSlug, input.content.variant),
-  };
+  const links = input.recipientEmail
+    ? await resolveFreeSequenceLinksForEmail({
+        email: input.recipientEmail,
+        campaignSlug,
+        variant: input.content.variant,
+      })
+    : {
+        ...sampleCleexsEmailLinks(),
+        ...buildFreeSequencePreviewLinks(campaignSlug, input.content.variant),
+      };
   const built = buildCleexsEmailFromEditableContent({
     content: input.content,
     personalization,
@@ -454,12 +504,17 @@ export async function sendFreeEmailSequenceStepTest(input: {
   }
 
   const to = input.to.trim().toLowerCase();
-  const built = buildFreeSequencePreview({
+  if (await isEmailUnsubscribed(to)) {
+    throw Object.assign(new Error('El destinatario está dado de baja de emails de Cleexs.'), { statusCode: 400 });
+  }
+
+  const built = await buildFreeSequencePreview({
     content: input.content,
     score: input.score,
     domain: input.domain,
     brandName: input.brandName,
     sortOrder: input.sortOrder,
+    recipientEmail: to,
   });
 
   const apiKey = process.env.RESEND_API_KEY?.trim();

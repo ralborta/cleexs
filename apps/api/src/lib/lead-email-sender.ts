@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import type { LeadContact, LeadEmail, LeadSource } from '@prisma/client';
-import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { buildCleexsFromAddress, buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
 import { prisma } from './prisma';
 
 type LeadEmailWithRelations = LeadEmail & {
@@ -52,12 +52,14 @@ function domainOf(email: string): string {
 function getOutreachFromAddress(): string {
   const fromEmail = process.env.OUTREACH_FROM_EMAIL?.trim();
   const fromName = process.env.OUTREACH_FROM_NAME?.trim() || 'Cleexs';
-  if (fromEmail) return `"${fromName}" <${fromEmail}>`;
+  if (fromEmail) return buildCleexsFromAddress({ email: fromEmail, name: fromName });
   return buildTransactionalFromAddress();
 }
 
 function getReplyTo(): string | undefined {
-  return process.env.OUTREACH_REPLY_TO?.trim() || process.env.SMTP_FROM_EMAIL?.trim() || undefined;
+  const replyTo = process.env.OUTREACH_REPLY_TO?.trim() || process.env.SMTP_FROM_EMAIL?.trim();
+  if (!replyTo) return undefined;
+  return replyTo.toLowerCase().endsWith('@nivel41.com') ? undefined : replyTo;
 }
 
 function getUnsubscribeUrl(emailId: string): string {

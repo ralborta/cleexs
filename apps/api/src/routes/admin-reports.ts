@@ -1699,6 +1699,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         shareGroups,
         referredRows,
         purchases,
+        checkoutAttempts,
         sentEmails,
         unlockClickGroups,
       ] = await Promise.all([
@@ -1717,6 +1718,12 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         prisma.subscription.findMany({
           where: { ...where, status: 'authorized' },
           select: { utmSource: true, refCode: true, sourceChannel: true, amountUsd: true },
+        }),
+        prisma.payment.count({
+          where: {
+            createdAt: { gte: from, lte: to },
+            status: 'pending',
+          },
         }),
         prisma.leadEmail.findMany({
           where: { status: 'sent', sentAt: { gte: from, lte: to } },
@@ -1856,6 +1863,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           purchased: {
             count: purchasedTotal,
             pct: pct(purchasedTotal, urlSubmitted),
+            checkoutAttempts,
             bySource: purchasesBySource,
           },
         },
