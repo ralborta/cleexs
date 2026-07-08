@@ -24,6 +24,11 @@ export function pathMatchesPrefix(pathname: string, prefix: string): boolean {
 }
 
 export function shouldHidePublicChrome(pathname: string | null): boolean {
+  return shouldHidePublicHeader(pathname);
+}
+
+/** Header global: oculto en admin, tools, WhatsApp y páginas de email (tienen layout propio). */
+export function shouldHidePublicHeader(pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname.startsWith('/admin')) return true;
   if (pathMatchesPrefix(pathname, TOOLS_PATH_PREFIX)) return true;
@@ -34,8 +39,10 @@ export function shouldHidePublicChrome(pathname: string | null): boolean {
 
 /** Footer global: oculto en flujos de producto largos (portales, resultado, diagnóstico). */
 export function shouldHidePublicFooter(pathname: string | null): boolean {
-  if (shouldHidePublicChrome(pathname)) return true;
   if (!pathname) return false;
+  if (pathname.startsWith('/admin')) return true;
+  if (pathMatchesPrefix(pathname, TOOLS_PATH_PREFIX)) return true;
+  if (pathMatchesPrefix(pathname, WA_RESULT_PATH_PREFIX)) return true;
   if (pathname.startsWith('/portal-crecimiento') || pathname.startsWith('/portal-cliente')) return true;
   if (pathname.startsWith('/ver-resultado')) return true;
   if (pathname.startsWith('/diagnostico')) return true;
