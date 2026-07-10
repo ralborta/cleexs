@@ -118,7 +118,7 @@ export function buildPlansUrl(baseUrl = getAppBaseUrlForPublicLinks(), medium = 
   return `${trimBase(baseUrl)}/planes?utm_source=email&utm_medium=${encodeURIComponent(medium)}&utm_campaign=plan_conquistar`;
 }
 
-/** Upsell Plan Conquistar (CTA «Empezar ahora» en secuencia free). */
+/** Upsell Plan Conquistar (CTA «Ver cómo es» en secuencia free). */
 export function buildPlanConquistarUrl(
   baseUrl = getAppBaseUrlForPublicLinks(),
   medium = 'cleexs_email',

@@ -78,10 +78,11 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     postscript: 'PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?',
     planTitle: 'Plan de Ataque: domina ChatGPT en 90 días',
     planBadgeLabel: 'PLAN CONQUISTAR',
-    planPriceIntro: 'Por un único pago de',
-    planPriceStrikethrough: '$199',
-    planPriceCurrent: 'USD 99',
-    planPriceSuffix: 'dólares accedés a:',
+    /** @deprecated Ya no se muestra en la caja (pitch sin precio). */
+    planPriceIntro: '',
+    planPriceStrikethrough: '',
+    planPriceCurrent: '',
+    planPriceSuffix: '',
     planBullets: [
       'Las 20 acciones con mayor impacto para tu empresa.',
       'Priorizadas por facilidad e impacto.',
@@ -90,7 +91,7 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
       'Hoja de ruta semana por semana.',
     ],
     planClosingLine: 'Plan de acción concreto para empezar mañana con tu equipo.',
-    planCtaLabel: 'Empezar ahora',
+    planCtaLabel: 'Ver cómo es',
     founderTitle: 'Fundador',
   unsubscribeLabel: 'Gestionar lo que recibo',
   };
@@ -278,23 +279,9 @@ function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetter
           </tr>
           <tr>
             <td style="padding:20px 18px 18px;background:#f8fbff;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td width="32%" valign="top" style="padding-right:16px;border-right:1px solid #dbeafe;">
-                    <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#64748b;font-family:${uiFont};">${escapeHtml(content.planPriceIntro)}</p>
-                    <p style="margin:0 0 2px;font-size:13px;line-height:1.4;color:#94a3b8;font-family:${uiFont};">
-                      <span style="text-decoration:line-through;">${escapeHtml(content.planPriceStrikethrough)}</span>
-                    </p>
-                    <p style="margin:0 0 8px;font-size:28px;font-weight:800;line-height:1.1;color:#2563eb;font-family:${uiFont};letter-spacing:-.5px;">${escapeHtml(content.planPriceCurrent)}</p>
-                    <p style="margin:0 0 12px;font-size:12px;line-height:1.5;color:#64748b;font-family:${uiFont};">${escapeHtml(content.planPriceSuffix)}</p>
-                    <p style="margin:0;font-size:15px;line-height:1.65;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(content.planClosingLine)}</p>
-                  </td>
-                  <td width="68%" valign="top" style="padding-left:18px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;">${bulletRows}</table>
-                    <div style="text-align:right;">${primaryButtonHtml(input.links.plansUrl, content.planCtaLabel)}</div>
-                  </td>
-                </tr>
-              </table>
+              <p style="margin:0 0 14px;font-size:16px;line-height:1.65;color:#334155;font-style:italic;font-family:${letterFont};">${escapeHtml(content.planClosingLine)}</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:14px;">${bulletRows}</table>
+              <div style="text-align:right;">${primaryButtonHtml(input.links.plansUrl, content.planCtaLabel)}</div>
             </td>
           </tr>
         </table>
@@ -373,9 +360,8 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
     postscript,
     '',
     content.planTitle,
-    `${content.planPriceIntro} ${content.planPriceStrikethrough} ${content.planPriceCurrent} ${content.planPriceSuffix}`,
-    ...content.planBullets.map((b) => `• ${b}`),
     content.planClosingLine,
+    ...content.planBullets.map((b) => `• ${b}`),
     `${content.planCtaLabel}: ${input.links.plansUrl}`,
     '',
     content.unsubscribeLabel,
