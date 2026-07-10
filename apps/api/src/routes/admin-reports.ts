@@ -9,7 +9,6 @@ import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 import { resolveConversionRange } from '@cleexs/shared';
 import {
   aggregateDiagnosticsByRefCode,
-  isPlaceholderDiagnosticEmail,
   normalizeReferralRefCode,
   SIN_REFERIDOR_LABEL,
   SIN_REFERIDOR_SLUG,
@@ -1879,8 +1878,10 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       const [
         pageViewsTotal,
         visitorGroups,
-        diagnosticsInRange,
+        urlSubmitted,
+        emailLeft,
         shareGroups,
+        referredRows,
         purchases,
         checkoutAttempts,
         sentEmails,
@@ -1891,19 +1892,13 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           by: ['visitorId'],
           where: { ...where, visitorId: { not: null } },
         }),
-        prisma.publicDiagnostic.findMany({
-          where,
-          select: {
-            domain: true,
-            email: true,
-            refCode: true,
-            sourceChannel: true,
-            utmMedium: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        }),
+        prisma.publicDiagnostic.count({ where }),
+        prisma.publicDiagnostic.count({ where: { ...where, email: { not: null } } }),
         prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
+        prisma.publicDiagnostic.findMany({
+          where: { ...where, refCode: { not: null } },
+          select: { refCode: true, sourceChannel: true, email: true, utmMedium: true },
+        }),
         prisma.subscription.findMany({
           where: { ...where, status: 'authorized' },
           select: { utmSource: true, refCode: true, sourceChannel: true, amountUsd: true },
@@ -1924,35 +1919,6 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           _count: { _all: true },
         }),
       ]);
-
-      // Un sitio = un lead. Mismo dominio no se cuenta dos veces (email con varias empresas sí).
-      const uniqueByDomain = new Map<
-        string,
-        {
-          domain: string;
-          email: string | null;
-          refCode: string | null;
-          sourceChannel: string | null;
-          utmMedium: string | null;
-        }
-      >();
-      for (const row of diagnosticsInRange) {
-        const key = (row.domain || '').trim().toLowerCase();
-        if (!key || uniqueByDomain.has(key)) continue;
-        uniqueByDomain.set(key, {
-          domain: key,
-          email: row.email,
-          refCode: row.refCode,
-          sourceChannel: row.sourceChannel,
-          utmMedium: row.utmMedium,
-        });
-      }
-      const uniqueDomainRows = Array.from(uniqueByDomain.values());
-      const urlSubmitted = uniqueDomainRows.length;
-      const emailLeft = uniqueDomainRows.filter(
-        (row) => Boolean(row.email?.trim()) && !isPlaceholderDiagnosticEmail(row.email)
-      ).length;
-      const referredRows = uniqueDomainRows.filter((row) => Boolean((row.refCode || '').trim()));
 
       const homeVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
 
@@ -2149,12 +2115,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     async (request) => {
       const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
 
-      const rowsRaw = await prisma.publicDiagnostic.findMany({
-        where: {
-          createdAt: { gte: from, lte: to },
-          email: { not: null },
-          NOT: { email: { endsWith: '@whatsapp.cleexs.net' } },
-        },
+      const rows = await prisma.publicDiagnostic.findMany({
+        where: { createdAt: { gte: from, lte: to }, email: { not: null } },
         select: {
           id: true,
           email: true,
@@ -2172,20 +2134,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
-        take: 1000,
+        take: 500,
       });
-
-      // Un dominio = un lead en el detalle (el más reciente).
-      const seenDomains = new Set<string>();
-      const rows = [];
-      for (const row of rowsRaw) {
-        const key = (row.domain || '').trim().toLowerCase();
-        if (!key || seenDomains.has(key)) continue;
-        if (isPlaceholderDiagnosticEmail(row.email)) continue;
-        seenDomains.add(key);
-        rows.push(row);
-        if (rows.length >= 500) break;
-      }
 
       return {
         ok: true,

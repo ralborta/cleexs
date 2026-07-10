@@ -376,7 +376,7 @@ export default function AdminConversionPage() {
           label="Pusieron URL"
           value={fmt(f?.urlSubmitted.count ?? 0)}
           pct={pctLabel(f?.urlSubmitted.pct ?? null)}
-          pctHint="de visitantes · dominios únicos"
+          pctHint="de visitantes"
         />
         <FunnelCard
           icon={<Mail className="h-4 w-4 text-violet-600" />}
@@ -387,7 +387,7 @@ export default function AdminConversionPage() {
             { pct: f?.emailLeft.pctOfVisitors ?? null, label: 'de visitas' },
           ]}
           onClick={openEmailDetail}
-          actionHint="Ver detalle · 1 por dominio"
+          actionHint="Ver detalle"
         />
         <FunnelCard
           icon={<Share2 className="h-4 w-4 text-amber-600" />}
