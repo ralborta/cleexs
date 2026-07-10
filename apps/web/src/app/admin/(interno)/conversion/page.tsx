@@ -210,7 +210,29 @@ export default function AdminConversionPage() {
       const res = await adminUiFetch(`/api/admin-ui/conversion/emails${qs}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
-      setEmailLeads((json as EmailLeadsResponse).items ?? []);
+      const payload = json as EmailLeadsResponse;
+      const items = payload.items ?? [];
+      setEmailLeads(items);
+      // La tarjeta y el modal deben mostrar el mismo número (evita desfasaje por cache/carga vieja).
+      const count = typeof payload.total === 'number' ? payload.total : items.length;
+      setData((prev) => {
+        if (!prev) return prev;
+        const url = prev.funnel.urlSubmitted.count;
+        const visitors = prev.funnel.homeVisitors.count;
+        const pct = (num: number, den: number): number | null =>
+          den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+        return {
+          ...prev,
+          funnel: {
+            ...prev.funnel,
+            emailLeft: {
+              count,
+              pct: pct(count, url),
+              pctOfVisitors: pct(count, visitors),
+            },
+          },
+        };
+      });
     } catch (e) {
       setEmailLeadsError(e instanceof Error ? e.message : 'Error');
     } finally {

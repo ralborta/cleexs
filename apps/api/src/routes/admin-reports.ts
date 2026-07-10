@@ -1879,7 +1879,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         pageViewsTotal,
         visitorGroups,
         urlSubmitted,
-        emailLeft,
+        emailLeadRows,
         shareGroups,
         referredRows,
         purchases,
@@ -1893,7 +1893,15 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           where: { ...where, visitorId: { not: null } },
         }),
         prisma.publicDiagnostic.count({ where }),
-        prisma.publicDiagnostic.count({ where: { ...where, email: { not: null } } }),
+        // Misma fuente que /conversion-metrics/emails (tarjeta = detalle).
+        prisma.publicDiagnostic.findMany({
+          where: {
+            ...where,
+            email: { not: null },
+            NOT: { email: '' },
+          },
+          select: { id: true },
+        }),
         prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
         prisma.publicDiagnostic.findMany({
           where: { ...where, refCode: { not: null } },
@@ -1919,6 +1927,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           _count: { _all: true },
         }),
       ]);
+
+      const emailLeft = emailLeadRows.length;
 
       const homeVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
 
@@ -2116,7 +2126,11 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
 
       const rows = await prisma.publicDiagnostic.findMany({
-        where: { createdAt: { gte: from, lte: to }, email: { not: null } },
+        where: {
+          createdAt: { gte: from, lte: to },
+          email: { not: null },
+          NOT: { email: '' },
+        },
         select: {
           id: true,
           email: true,
