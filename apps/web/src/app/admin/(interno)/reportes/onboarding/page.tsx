@@ -85,8 +85,8 @@ export default function OnboardingProfileReportPage() {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Onboarding · perfil de leads</h2>
           <p className="text-xs text-slate-500">
-            Diagnósticos que dejaron al menos un dato del wizard (país, nombre o cómo llegó) en los
-            últimos {windowDays} días
+            Un lead por dominio (sin duplicar el mismo sitio). Un email con varias empresas sí puede
+            aparecer más de una vez. Ventana: últimos {windowDays} días
             {countryFilter.trim() ? (
               <>
                 {' '}
@@ -137,11 +137,15 @@ export default function OnboardingProfileReportPage() {
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <ReportMetric
-              label="Con algún dato"
+              label="Dominios únicos"
               value={data.totals.withProfileData}
               Icon={Users}
               tone="violet"
-              hint={`${formatPercent(data.totals.profileRate)} de ${data.totals.diagnosticsInWindow} diagnósticos`}
+              hint={
+                data.totals.duplicateDomainsSkipped > 0
+                  ? `${data.totals.duplicateDomainsSkipped} duplicado${data.totals.duplicateDomainsSkipped === 1 ? '' : 's'} omitido${data.totals.duplicateDomainsSkipped === 1 ? '' : 's'} · ${formatPercent(data.totals.profileRate)} del período`
+                  : `${formatPercent(data.totals.profileRate)} de ${data.totals.diagnosticsInWindow} diagnósticos`
+              }
             />
             <ReportMetric
               label="Con país"
@@ -192,8 +196,8 @@ export default function OnboardingProfileReportPage() {
             title="Leads con datos de onboarding"
             description={
               countryFilter.trim()
-                ? `${data.rows.length} diagnóstico${data.rows.length === 1 ? '' : 's'} en ${countryFilter} (ventana ${windowDays}d).`
-                : `${data.rows.length} diagnóstico${data.rows.length === 1 ? '' : 's'} en la ventana.`
+                ? `${data.rows.length} dominio${data.rows.length === 1 ? '' : 's'} único${data.rows.length === 1 ? '' : 's'} en ${countryFilter} (ventana ${windowDays}d).`
+                : `${data.rows.length} dominio${data.rows.length === 1 ? '' : 's'} único${data.rows.length === 1 ? '' : 's'} en la ventana.`
             }
           >
             <div className="overflow-x-auto">

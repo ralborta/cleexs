@@ -491,6 +491,7 @@ export interface OnboardingProfileReport {
     withCountry: number;
     withName: number;
     withHowFound: number;
+    duplicateDomainsSkipped: number;
     profileRate: number;
     countryRate: number;
     nameRate: number;

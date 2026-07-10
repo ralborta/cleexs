@@ -2368,6 +2368,27 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
 
+      // Un dominio = un diagnóstico activo. Mismo email con otro sitio sí puede crear otro.
+      const existingForDomain = await prisma.publicDiagnostic.findFirst({
+        where: {
+          domain,
+          status: { not: 'failed' },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, status: true, tier: true },
+      });
+      if (existingForDomain) {
+        // Si piden gold y el existente es freemium, dejamos crear uno nuevo (upgrade de corrida).
+        const wantsGoldUpgrade = tier === 'gold' && existingForDomain.tier !== 'gold';
+        if (!wantsGoldUpgrade) {
+          return reply.code(200).send({
+            diagnosticId: existingForDomain.id,
+            reused: true,
+            status: existingForDomain.status,
+          });
+        }
+      }
+
       const diagnostic = await prisma.publicDiagnostic.create({
         data: {
           brandName: brandForRun,

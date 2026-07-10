@@ -361,7 +361,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const totalDiagnosticsInWindow = diagnosticsInWindow.length;
 
-    const allRows = diagnosticsInWindow
+    const allRowsRaw = diagnosticsInWindow
       .map((row) => {
         const profile = onboardingProfileFromDraft(row.setupDraftJson);
         if (!profile.hasAny) return null;
@@ -385,6 +385,22 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         };
       })
       .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    // Un lead = un dominio. Mismo email con otra empresa/dominio sí puede aparecer.
+    // Si el mismo dominio aparece varias veces, nos quedamos con el más reciente.
+    const seenDomains = new Set<string>();
+    const allRows: typeof allRowsRaw = [];
+    let duplicateDomainsSkipped = 0;
+    for (const row of allRowsRaw) {
+      const key = row.domain.trim().toLowerCase();
+      if (!key) continue;
+      if (seenDomains.has(key)) {
+        duplicateDomainsSkipped += 1;
+        continue;
+      }
+      seenDomains.add(key);
+      allRows.push(row);
+    }
 
     const countryCountMap = new Map<string, number>();
     for (const row of allRows) {
@@ -434,6 +450,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         withCountry,
         withName,
         withHowFound,
+        duplicateDomainsSkipped,
         profileRate: totalDiagnosticsInWindow ? (withProfileData / totalDiagnosticsInWindow) * 100 : 0,
         countryRate: totalDiagnosticsInWindow ? (withCountry / totalDiagnosticsInWindow) * 100 : 0,
         nameRate: totalDiagnosticsInWindow ? (withName / totalDiagnosticsInWindow) * 100 : 0,
