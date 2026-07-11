@@ -467,7 +467,8 @@ export async function sendFreeOnboardingStep1ForCompletedDiagnostic(input: {
   if (await wasFreeOnboardingStepSent(email, 1)) return { sent: false, reason: 'already_sent' };
 
   const sequence = await ensureFreeEmailSequence();
-  const step1 = sequence.steps.find((s) => s.sortOrder === 1 && s.active);
+  // Día 0 = disparo al completar free. No depende de `active` (eso gobierna el cron de pasos 2+).
+  const step1 = sequence.steps.find((s) => s.sortOrder === 1);
   if (!step1) return { sent: false, reason: 'step_not_configured' };
 
   const candidate = buildFreeOnboardingCandidateFromDiagnostic(input);
@@ -476,7 +477,10 @@ export async function sendFreeOnboardingStep1ForCompletedDiagnostic(input: {
 
 export type PostDiagnosticCompletionEmailKind = 'free_onboarding_s1' | 'diagnostic_link' | 'none';
 
-/** Correo post-diagnóstico: secuencia free paso 1 (default) o link legacy para premium / fallback. */
+/**
+ * Correo post-diagnóstico free: solo secuencia paso 1 (carta + score).
+ * El mail legacy `sendDiagnosticLink` queda solo para usuarios premium.
+ */
 export async function sendPostDiagnosticCompletionEmail(input: {
   diagnosticId: string;
   email: string;
@@ -491,7 +495,8 @@ export async function sendPostDiagnosticCompletionEmail(input: {
   if (step1.sent) return { sent: true, kind: 'free_onboarding_s1' };
   if (step1.reason === 'already_sent') return { sent: false, kind: 'none', reason: 'already_sent' };
 
-  if (step1.reason === 'premium_user' || step1.reason === 'step_not_configured') {
+  // Solo premium recibe el mail viejo de link; free nunca cae a ese template.
+  if (step1.reason === 'premium_user') {
     const baseUrl = getAppBaseUrlForPublicLinks();
     await sendDiagnosticLink(input.email, input.diagnosticId, baseUrl, input.legacyAnalysis);
     return { sent: true, kind: 'diagnostic_link' };

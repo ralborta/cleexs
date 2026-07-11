@@ -522,6 +522,12 @@ export function FreeEmailSequenceEditor() {
                 <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
                 Paso activo
               </label>
+              {selected.sortOrder === 1 ? (
+                <p className="-mt-2 text-[10px] text-slate-500">
+                  El paso 1 se envía siempre al completar el diagnóstico free (carta + score). El checkbox no lo
+                  apaga; sirve de referencia. Los pasos 2+ sí respetan “activo” en el cron.
+                </p>
+              ) : null}
 
               <label className="block">
                 <span className={labelCls}>Asunto</span>
