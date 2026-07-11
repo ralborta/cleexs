@@ -150,6 +150,8 @@ export interface DiagnosticAnalysis {
   debilidades: string[];
   sugerencias: string[];
   proximosPasos: string[];
+  /** Cleexs Score real (PRIA 0–100). Se guarda en free para mails y lectores del JSON. */
+  cleexsScore?: number;
   /** true cuando el diagnóstico era Gold pero Gemini no estaba disponible (solo OpenAI) */
   goldFallback?: true;
 }
@@ -215,7 +217,8 @@ export async function generateDiagnosticAnalysis(
 
   if (tier === 'freemium') {
     const analysis = await generateWithOpenAI(contextText);
-    return analysis;
+    // Persistir el Cleexs Score real (PRIA) en el JSON free: el mail y otros readers lo buscan acá.
+    return analysis ? { ...analysis, cleexsScore: Math.round(ctx.cleexsScore) } : null;
   }
 
   // Gold: 4 LLMs en paralelo. OpenAI + Gemini son obligatorios (legacy).
@@ -229,7 +232,11 @@ export async function generateDiagnosticAnalysis(
 
   if (!openaiAnalysis) return null;
   if (!geminiAnalysis) {
-    return { ...openaiAnalysis, goldFallback: true as const };
+    return {
+      ...openaiAnalysis,
+      goldFallback: true as const,
+      cleexsScore: Math.round(ctx.cleexsScore),
+    };
   }
 
   const perspectivaAmbos = await generatePerspectivaAmbos(

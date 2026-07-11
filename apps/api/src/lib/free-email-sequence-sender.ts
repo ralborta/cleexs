@@ -113,16 +113,55 @@ export function cumulativeDaysForStep(steps: Array<Pick<FreeEmailSequenceStep, '
   return total;
 }
 
+function clampScore(n: number): number {
+  return Math.round(Math.max(0, Math.min(100, n)));
+}
+
+/** Score desde analysisJson: gold metrics, cleexsScore free, o promedio de intenciones. */
 function scoreFromAnalysisJson(value: unknown): number | null {
   if (!value || typeof value !== 'object') return null;
   const root = value as {
     metrics?: { cleexsScore?: unknown };
     cleexsScore?: unknown;
     score?: unknown;
+    comentariosPorIntencion?: Array<{ score?: unknown }>;
   };
   const raw = root.metrics?.cleexsScore ?? root.cleexsScore ?? root.score;
   const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
-  return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : null;
+  if (Number.isFinite(n)) return clampScore(n);
+
+  const byIntention = (root.comentariosPorIntencion || [])
+    .map((i) => i.score)
+    .filter((s): s is number => typeof s === 'number' && Number.isFinite(s));
+  if (!byIntention.length) return null;
+  return clampScore(byIntention.reduce((a, b) => a + b, 0) / byIntention.length);
+}
+
+/** Fuente de verdad del Cleexs Score: PRIA del run; fallback al analysisJson. */
+async function resolveCleexsScoreForDiagnostic(input: {
+  diagnosticId: string;
+  analysisJson: unknown;
+  runId?: string | null;
+}): Promise<number | null> {
+  let runId = input.runId ?? null;
+  if (!runId) {
+    const diag = await prisma.publicDiagnostic.findUnique({
+      where: { id: input.diagnosticId },
+      select: { runId: true },
+    });
+    runId = diag?.runId ?? null;
+  }
+  if (runId) {
+    const report = await prisma.pRIAReport.findFirst({
+      where: { runId },
+      orderBy: { createdAt: 'desc' },
+      select: { priaTotal: true },
+    });
+    if (report?.priaTotal != null && Number.isFinite(report.priaTotal)) {
+      return clampScore(report.priaTotal);
+    }
+  }
+  return scoreFromAnalysisJson(input.analysisJson);
 }
 
 function competitorsFromAnalysis(value: unknown): CleexsEmailCompetitor[] {
@@ -228,6 +267,7 @@ export async function resolveFreeOnboardingCandidates(input: {
       updatedAt: true,
       analysisJson: true,
       shareSlug: true,
+      runId: true,
     },
   });
 
@@ -249,7 +289,11 @@ export async function resolveFreeOnboardingCandidates(input: {
       brandName: row.brandName,
       domain: row.domain,
       anchoredAt: row.updatedAt,
-      score: scoreFromAnalysisJson(row.analysisJson),
+      score: await resolveCleexsScoreForDiagnostic({
+        diagnosticId: row.id,
+        analysisJson: row.analysisJson,
+        runId: row.runId,
+      }),
       competitors: competitorsFromAnalysis(row.analysisJson),
       improvementTip: improvementTipFromAnalysis(row.analysisJson),
       shareUrl: row.shareSlug ? `${base}/score/${row.shareSlug}` : undefined,
@@ -423,7 +467,7 @@ export async function sendFreeOnboardingStep(input: {
   return { sent: true, logId: log.id, subject };
 }
 
-export function buildFreeOnboardingCandidateFromDiagnostic(input: {
+export async function buildFreeOnboardingCandidateFromDiagnostic(input: {
   diagnosticId: string;
   email: string;
   brandName: string;
@@ -431,7 +475,8 @@ export function buildFreeOnboardingCandidateFromDiagnostic(input: {
   analysisJson: unknown;
   shareSlug?: string | null;
   anchoredAt?: Date;
-}): FreeOnboardingCandidate {
+  runId?: string | null;
+}): Promise<FreeOnboardingCandidate> {
   const email = input.email.trim().toLowerCase();
   const base = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
   const slug = input.shareSlug?.trim();
@@ -441,7 +486,11 @@ export function buildFreeOnboardingCandidateFromDiagnostic(input: {
     brandName: input.brandName,
     domain: input.domain,
     anchoredAt: input.anchoredAt ?? new Date(),
-    score: scoreFromAnalysisJson(input.analysisJson),
+    score: await resolveCleexsScoreForDiagnostic({
+      diagnosticId: input.diagnosticId,
+      analysisJson: input.analysisJson,
+      runId: input.runId,
+    }),
     competitors: competitorsFromAnalysis(input.analysisJson),
     improvementTip: improvementTipFromAnalysis(input.analysisJson),
     shareUrl: slug ? `${base}/score/${slug}` : undefined,
@@ -471,7 +520,7 @@ export async function sendFreeOnboardingStep1ForCompletedDiagnostic(input: {
   const step1 = sequence.steps.find((s) => s.sortOrder === 1);
   if (!step1) return { sent: false, reason: 'step_not_configured' };
 
-  const candidate = buildFreeOnboardingCandidateFromDiagnostic(input);
+  const candidate = await buildFreeOnboardingCandidateFromDiagnostic(input);
   return sendFreeOnboardingStep({ candidate, step: step1 });
 }
 
