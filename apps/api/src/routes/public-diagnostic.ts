@@ -2375,12 +2375,46 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
           status: { not: 'failed' },
         },
         orderBy: { createdAt: 'desc' },
-        select: { id: true, status: true, tier: true },
+        select: {
+          id: true,
+          status: true,
+          tier: true,
+          refCode: true,
+          utmSource: true,
+          utmMedium: true,
+          utmCampaign: true,
+        },
       });
       if (existingForDomain) {
         // Si piden gold y el existente es freemium, dejamos crear uno nuevo (upgrade de corrida).
         const wantsGoldUpgrade = tier === 'gold' && existingForDomain.tier !== 'gold';
         if (!wantsGoldUpgrade) {
+          // Si esta visita trae atribución y el diagnóstico reusado no, sellarlo ahora.
+          // Evita perder Herederos/Eldo/etc. cuando el dominio ya existía.
+          const patch: {
+            refCode?: string;
+            utmSource?: string;
+            utmMedium?: string;
+            utmCampaign?: string;
+          } = {};
+          if (attribution.refCode && !existingForDomain.refCode?.trim()) {
+            patch.refCode = attribution.refCode;
+          }
+          if (attribution.utmSource && !existingForDomain.utmSource?.trim()) {
+            patch.utmSource = attribution.utmSource;
+          }
+          if (attribution.utmMedium && !existingForDomain.utmMedium?.trim()) {
+            patch.utmMedium = attribution.utmMedium;
+          }
+          if (attribution.utmCampaign && !existingForDomain.utmCampaign?.trim()) {
+            patch.utmCampaign = attribution.utmCampaign;
+          }
+          if (Object.keys(patch).length > 0) {
+            await prisma.publicDiagnostic.update({
+              where: { id: existingForDomain.id },
+              data: patch,
+            });
+          }
           return reply.code(200).send({
             diagnosticId: existingForDomain.id,
             reused: true,

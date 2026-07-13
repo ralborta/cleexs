@@ -59,13 +59,19 @@ export type PageViewAttribution = {
   sourceChannel?: string;
 };
 
-// Evita doble disparo por re-render dentro de la misma sesión/ruta.
-const firedPaths = new Set<string>();
+// Evita doble disparo por re-render. Si el 1er fire llegó sin UTM (hydration),
+// permitimos un 2º fire cuando sí haya atribución.
+const firedPaths = new Map<string, boolean>();
 
 export function trackPageview(path: string, attribution?: PageViewAttribution): void {
   if (typeof window === 'undefined') return;
-  if (firedPaths.has(path)) return;
-  firedPaths.add(path);
+  const hasAttr = Boolean(
+    attribution?.refCode || attribution?.utmSource || attribution?.utmMedium || attribution?.utmCampaign
+  );
+  const prior = firedPaths.get(path);
+  if (prior === true) return;
+  if (prior === false && !hasAttr) return;
+  firedPaths.set(path, hasAttr);
   post('/api/public/track/pageview', {
     path,
     visitorId: getVisitorId(),

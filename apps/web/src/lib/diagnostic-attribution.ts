@@ -1,5 +1,6 @@
 const ATTRIBUTION_STORAGE_KEY = 'cleexs_diagnostic_attribution';
 const FIRST_TOUCH_STORAGE_KEY = 'cleexs_first_touch_attribution';
+const ATTRIBUTION_COOKIE = 'cleexs_attr';
 const FIRST_TOUCH_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export type DiagnosticAttribution = {
@@ -8,6 +9,46 @@ export type DiagnosticAttribution = {
   utmMedium?: string;
   utmCampaign?: string;
 };
+
+function normalizeTrackingValue(input: string): string | undefined {
+  const cleaned = input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  if (!cleaned) return undefined;
+  return cleaned.slice(0, 120);
+}
+
+function readAttributionCookie(): DiagnosticAttribution {
+  if (typeof document === 'undefined') return {};
+  try {
+    const match = document.cookie.match(new RegExp(`(?:^|; )${ATTRIBUTION_COOKIE}=([^;]*)`));
+    if (!match?.[1]) return {};
+    const j = JSON.parse(decodeURIComponent(match[1])) as {
+      ref?: string;
+      utm_source?: string;
+      utm_medium?: string;
+      utm_campaign?: string;
+    };
+    return {
+      refCode: normalizeTrackingValue(j.ref || ''),
+      utmSource: normalizeTrackingValue(j.utm_source || ''),
+      utmMedium: normalizeTrackingValue(j.utm_medium || ''),
+      utmCampaign: normalizeTrackingValue(j.utm_campaign || ''),
+    };
+  } catch {
+    return {};
+  }
+}
+
+function writeAttributionCookie(ref: string, utm_source: string, utm_medium: string, utm_campaign: string) {
+  if (typeof document === 'undefined') return;
+  if (!ref && !utm_source && !utm_medium && !utm_campaign) return;
+  try {
+    const value = encodeURIComponent(JSON.stringify({ ref, utm_source, utm_medium, utm_campaign }));
+    // Compartido entre cleexs.net y app.cleexs.net
+    document.cookie = `${ATTRIBUTION_COOKIE}=${value};path=/;domain=.cleexs.net;max-age=${60 * 60 * 24 * 30};SameSite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
 
 /**
  * Videos de YouTube conocidos → campaña de auspiciador.
@@ -25,12 +66,6 @@ const YOUTUBE_VIDEO_TO_CAMPAIGN: Record<
     utmCampaign: 'herederos',
   },
 };
-
-function normalizeTrackingValue(input: string): string | undefined {
-  const cleaned = input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-  if (!cleaned) return undefined;
-  return cleaned.slice(0, 120);
-}
 
 function readSessionAttribution(): DiagnosticAttribution {
   if (typeof window === 'undefined') return {};
@@ -92,6 +127,7 @@ function writeAttributionStores(ref: string, utm_source: string, utm_medium: str
   } catch {
     /* ignore */
   }
+  writeAttributionCookie(ref, utm_source, utm_medium, utm_campaign);
   if (!ref && !utm_source) return;
   try {
     const existing = localStorage.getItem(FIRST_TOUCH_STORAGE_KEY);
@@ -206,18 +242,19 @@ export function captureDiagnosticAttributionFromUrl(searchParams?: URLSearchPara
   };
 }
 
-/** Mejor esfuerzo: URL → session → first-touch → referrer YouTube. */
+/** Mejor esfuerzo: URL → session → cookie (.cleexs.net) → first-touch → referrer YouTube. */
 export function resolveDiagnosticAttributionForCreate(searchParams?: URLSearchParams): DiagnosticAttribution {
   const fromUrl = captureDiagnosticAttributionFromUrl(searchParams);
   const fromSession = readSessionAttribution();
+  const fromCookie = readAttributionCookie();
   const fromFirstTouch = readFirstTouchAttribution();
   const fromReferrer = attributionFromDocumentReferrer();
 
-  const merged = mergeAttribution(fromUrl, fromSession, fromFirstTouch, fromReferrer);
+  const merged = mergeAttribution(fromUrl, fromSession, fromCookie, fromFirstTouch, fromReferrer);
 
-  // Si solo vino por referrer, persistir para el resto del flujo / first-touch.
+  // Si solo vino por referrer/cookie, persistir para el resto del flujo / first-touch.
   if (
-    fromReferrer.utmSource &&
+    (fromReferrer.utmSource || fromCookie.refCode || fromCookie.utmSource) &&
     !fromUrl.refCode &&
     !fromUrl.utmSource &&
     !fromSession.refCode &&
