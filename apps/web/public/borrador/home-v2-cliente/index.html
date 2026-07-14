@@ -4,22 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Cleexs — Borrador Home v2 (revisión)</title>
+  <title>Cleexs — Home v2 CLIENTE (comparar)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy: #071f52;
-      --navy-mid: #0b3a8a;
-      --blue: #1d4ed8;
-      --blue-bright: #3b82f6;
-      --cyan: #22d3ee;
-      --sky: #7dd3fc;
+      --brand-blue: #1646E8;
+      --blue: #1646E8;
+      --blue-bright: #1646E8;
+      --blue-btn: #0f39c9;
+      --accent-line: #9ec0ff;
       --white: #ffffff;
       --ink: #0f172a;
       --muted: #94a3b8;
-      --line: rgba(255,255,255,.14);
+      --line: rgba(255,255,255,.18);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,12 +28,7 @@
       color: var(--white);
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
-      background:
-        radial-gradient(1100px 560px at 12% -10%, rgba(56, 189, 248, 0.28) 0%, transparent 55%),
-        radial-gradient(900px 500px at 92% 8%, rgba(37, 99, 235, 0.45) 0%, transparent 50%),
-        radial-gradient(800px 480px at 50% 100%, rgba(14, 165, 233, 0.18) 0%, transparent 55%),
-        linear-gradient(165deg, #041536 0%, #0a2f78 48%, #0b3d9e 100%);
-      background-attachment: fixed;
+      background-color: #1646E8;
       min-height: 100vh;
     }
 
@@ -56,27 +50,24 @@
       margin: 0 auto;
     }
 
-    /* Header moderno (mismo que antes — sin tocar estructura del menú) */
+    /* Header plano — como mock del cliente: sin cajita / blur / hover pill */
     header.site-header {
-      position: sticky;
-      top: 0;
+      position: relative;
       z-index: 40;
-      padding: 12px 0 4px;
-      background: linear-gradient(180deg, rgba(4,21,54,.92) 0%, rgba(4,21,54,.55) 70%, transparent 100%);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      padding: 22px 0 8px;
+      background: transparent;
     }
 
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 18px;
-      padding: 10px 14px 10px 16px;
-      border-radius: 16px;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.14);
-      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+      gap: 24px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      border-radius: 0;
     }
 
     .brand {
@@ -84,39 +75,34 @@
       align-items: center;
       gap: 9px;
       font-weight: 800;
-      font-size: 1.12rem;
+      font-size: 1.2rem;
       letter-spacing: -0.045em;
       flex-shrink: 0;
     }
     .brand img {
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       display: block;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      border-radius: 7px;
     }
     .brand span { color: #fff; }
 
     .nav {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 4px;
+      justify-content: flex-end;
+      gap: 2px;
       flex: 1;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       font-weight: 500;
+      margin-right: 8px;
     }
     .nav a {
-      color: rgba(255,255,255,.82);
-      padding: 8px 12px;
-      border-radius: 999px;
-      transition: background .15s ease, color .15s ease;
+      color: rgba(255,255,255,.95);
+      padding: 6px 14px;
       white-space: nowrap;
     }
-    .nav a:hover {
-      color: #fff;
-      background: rgba(255,255,255,.12);
-    }
+    .nav a:hover { color: #fff; opacity: 0.85; }
     .nav .chev {
       display: inline-flex;
       align-items: center;
@@ -125,65 +111,43 @@
     .nav .chev svg {
       width: 12px;
       height: 12px;
-      opacity: .75;
+      opacity: .85;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 0.88rem;
+      gap: 14px;
+      font-size: 0.95rem;
       flex-shrink: 0;
     }
     .btn-ghost {
-      color: rgba(255,255,255,.88);
-      padding: 8px 12px;
-      border-radius: 999px;
+      color: rgba(255,255,255,.95);
+      padding: 6px 4px;
       font-weight: 500;
-      transition: background .15s ease, color .15s ease;
     }
-    .btn-ghost:hover {
-      color: #fff;
-      background: rgba(255,255,255,.1);
-    }
-    .btn-contact {
-      color: rgba(255,255,255,.9);
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-weight: 500;
-      border: 1px solid rgba(255,255,255,.22);
-      transition: background .15s ease, border-color .15s ease;
-    }
-    .btn-contact:hover {
-      background: rgba(255,255,255,.1);
-      border-color: rgba(255,255,255,.4);
-    }
+    .btn-ghost:hover { opacity: 0.85; }
     .btn-pill {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 9px 16px;
-      border-radius: 999px;
+      padding: 10px 18px;
+      border-radius: 10px;
       background: #fff;
-      color: #1d4ed8;
+      color: #1646E8;
       font-weight: 700;
       border: 0;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(0,0,0,.15);
-      transition: transform .15s ease, box-shadow .15s ease;
     }
-    .btn-pill:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(0,0,0,.2);
-    }
+    .btn-pill:hover { opacity: 0.94; }
 
     .nav-toggle {
       display: none;
       width: 40px;
       height: 40px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.2);
-      background: rgba(255,255,255,.08);
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.25);
+      background: transparent;
       color: #fff;
       align-items: center;
       justify-content: center;
@@ -191,28 +155,43 @@
     }
 
     @media (max-width: 900px) {
-      .nav, .btn-ghost, .btn-contact { display: none; }
+      .nav, .btn-ghost { display: none; }
       .nav-toggle { display: inline-flex; }
-      .header { padding: 8px 10px 8px 12px; }
     }
 
     /* Hero */
     .hero {
-      padding: 40px 0 56px;
+      padding: 28px 0 64px;
       text-align: center;
     }
 
     .hero h1 {
-      font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+      font-size: clamp(3.1rem, 8vw, 5.4rem);
       font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1.08;
-      max-width: 16ch;
-      margin: 0 auto 22px;
+      letter-spacing: -0.045em;
+      line-height: 1.02;
+      max-width: 14ch;
+      margin: 0 auto 28px;
+    }
+    .hero h1 .line {
+      display: block;
+    }
+    .hero h1 .mark {
+      position: relative;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .hero h1 .mark .swoosh {
+      position: absolute;
+      left: -2%;
+      bottom: -0.12em;
+      width: 108%;
+      height: 0.28em;
+      pointer-events: none;
+      overflow: visible;
     }
     .hero h1 .accent {
-      color: #67e8f9;
-      text-shadow: 0 0 40px rgba(34, 211, 238, 0.25);
+      color: #9ec0ff;
     }
 
     .engines {
@@ -220,33 +199,34 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 8px 0;
-      margin-bottom: 26px;
-      font-size: 0.88rem;
-      color: rgba(255,255,255,.85);
+      gap: 18px 36px;
+      margin-bottom: 28px;
+      font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+      font-weight: 500;
+      color: #fff;
     }
     .engines span {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 14px;
+      gap: 10px;
+      padding: 0;
+      border: 0;
     }
-    .engines span + span { border-left: 1px solid rgba(255,255,255,.2); }
+    .engines span + span { border-left: 0; }
     .engines img {
-      width: 28px;
-      height: 28px;
+      width: 34px;
+      height: 34px;
       object-fit: contain;
-      border-radius: 6px;
+      border-radius: 8px;
       background: #fff;
-      padding: 3px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      padding: 4px;
     }
 
     .hero-lead {
-      max-width: 38ch;
-      margin: 0 auto 30px;
-      font-size: clamp(1.2rem, 2.4vw, 1.45rem);
-      color: rgba(255,255,255,.94);
+      max-width: 40ch;
+      margin: 0 auto 32px;
+      font-size: clamp(1.15rem, 2.2vw, 1.4rem);
+      color: rgba(255,255,255,.96);
       line-height: 1.45;
       font-weight: 500;
       letter-spacing: -0.015em;
@@ -286,13 +266,13 @@
       border: 0;
       cursor: pointer;
       border-radius: 999px;
-      background: var(--blue-bright);
+      background: #0f39c9;
       color: #fff;
       font-weight: 700;
       padding: 12px 18px;
       white-space: nowrap;
     }
-    .cta-box .btn-go:hover { background: #1d4ed8; }
+    .cta-box .btn-go:hover { background: #0c2fa8; }
 
     @media (max-width: 560px) {
       .cta-box {
@@ -505,15 +485,15 @@
 </head>
 <body>
   <div class="draft-bar">
-    <strong>VERSIÓN ANTERIOR</strong> — borrador Home v2 (antes del feedback de azul sólido / título Figma).
-    Comparar con la versión cliente:
-    <a href="/borrador/home-v2-cliente/" style="color:#7c2d12;font-weight:700;text-decoration:underline">ver versión cliente</a>
+    <strong>VERSIÓN CLIENTE</strong> — azul #1646E8, título con efecto, menú plano, LLMs sin líneas.
+    Comparar con la versión anterior:
+    <a href="/borrador/home-v2/" style="color:#7c2d12;font-weight:700;text-decoration:underline">ver versión anterior</a>
   </div>
 
   <header class="site-header">
     <div class="wrap header">
       <a class="brand" href="#">
-        <img src="/borrador/home-v2/assets/CleexsMark.svg" alt="" width="30" height="30" />
+        <img src="/borrador/home-v2/assets/CleexsMark.svg" alt="" width="28" height="28" />
         <span>cleexs</span>
       </a>
       <nav class="nav" aria-label="Principal">
@@ -528,7 +508,6 @@
         </a>
       </nav>
       <div class="header-actions">
-        <a class="btn-contact" href="https://app.cleexs.net/contacto">Contacto</a>
         <a class="btn-ghost" href="https://app.cleexs.net">Iniciar sesión</a>
         <a class="btn-pill" href="#cta">Empezar gratis</a>
         <button type="button" class="nav-toggle" aria-label="Menú">
@@ -543,7 +522,30 @@
   <main>
     <section class="hero" id="cta">
       <div class="wrap">
-        <h1>Conseguí clientes desde <span class="accent">ChatGPT</span>.</h1>
+        <h1>
+          <span class="line">
+            <span class="mark">Conseguí
+              <svg class="swoosh" viewBox="0 0 220 18" fill="none" aria-hidden="true">
+                <defs>
+                  <linearGradient id="swooshGrad" x1="0" y1="0" x2="220" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="55%" stop-color="#c4b5fd"/>
+                    <stop offset="100%" stop-color="#a855f7"/>
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M4 12 C 48 4, 95 3, 140 7 C 175 10, 200 12, 216 9"
+                  stroke="url(#swooshGrad)"
+                  stroke-width="3.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            clientes
+          </span>
+          <span class="line accent">desde ChatGPT.</span>
+        </h1>
 
         <div class="engines" aria-label="Motores de IA">
           <span><img src="/borrador/home-v2/assets/chatgpt.png" alt="" /> ChatGPT</span>
@@ -618,7 +620,7 @@
             <svg class="swoosh" viewBox="0 0 220 18" fill="none" aria-hidden="true">
               <path
                 d="M4 11 C 40 4, 90 2, 140 6 C 170 9, 198 12, 214 10"
-                stroke="#7dd3fc"
+                stroke="#c4b5fd"
                 stroke-width="3.2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
