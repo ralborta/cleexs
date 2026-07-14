@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Cleexs — Borrador Home v2 (revisión)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #0b2a6b;
+      --blue: #1d4ed8;
+      --blue-bright: #2563eb;
+      --sky: #93c5fd;
+      --white: #ffffff;
+      --ink: #0f172a;
+      --muted: #94a3b8;
+      --line: rgba(255,255,255,.14);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+
+    .draft-bar {
+      background: #fff7ed;
+      color: #9a3412;
+      font-size: 13px;
+      padding: 10px 16px;
+      text-align: center;
+      border-bottom: 1px solid #fed7aa;
+    }
+    .draft-bar strong { color: #7c2d12; }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    /* Header moderno */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding: 12px 0 4px;
+      background: linear-gradient(180deg, rgba(11,42,107,.92) 0%, rgba(11,42,107,.55) 70%, transparent 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 10px 14px 10px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 800;
+      font-size: 1.12rem;
+      letter-spacing: -0.045em;
+      flex-shrink: 0;
+    }
+    .brand img {
+      width: 30px;
+      height: 30px;
+      display: block;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .brand span { color: #fff; }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex: 1;
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+    .nav a {
+      color: rgba(255,255,255,.82);
+      padding: 8px 12px;
+      border-radius: 999px;
+      transition: background .15s ease, color .15s ease;
+      white-space: nowrap;
+    }
+    .nav a:hover {
+      color: #fff;
+      background: rgba(255,255,255,.12);
+    }
+    .nav .chev {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav .chev svg {
+      width: 12px;
+      height: 12px;
+      opacity: .75;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      flex-shrink: 0;
+    }
+    .btn-ghost {
+      color: rgba(255,255,255,.88);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 500;
+      transition: background .15s ease, color .15s ease;
+    }
+    .btn-ghost:hover {
+      color: #fff;
+      background: rgba(255,255,255,.1);
+    }
+    .btn-contact {
+      color: rgba(255,255,255,.9);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 500;
+      border: 1px solid rgba(255,255,255,.22);
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .btn-contact:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.4);
+    }
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: #fff;
+      color: #1d4ed8;
+      font-weight: 700;
+      border: 0;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,.15);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .btn-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
+
+    .nav-toggle {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .nav, .btn-ghost, .btn-contact { display: none; }
+      .nav-toggle { display: inline-flex; }
+      .header { padding: 8px 10px 8px 12px; }
+    }
+
+    /* Hero */
+    .hero {
+      padding: 36px 0 56px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      max-width: 16ch;
+      margin: 0 auto 22px;
+    }
+    .hero h1 .accent { color: #7dd3fc; }
+
+    .engines {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px 0;
+      margin-bottom: 22px;
+      font-size: 0.88rem;
+      color: rgba(255,255,255,.85);
+    }
+    .engines span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+    }
+    .engines span + span { border-left: 1px solid rgba(255,255,255,.2); }
+    .engines img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #fff;
+      padding: 3px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    }
+
+    .hero-lead {
+      max-width: 46ch;
+      margin: 0 auto 28px;
+      font-size: 1.05rem;
+      color: rgba(255,255,255,.86);
+      line-height: 1.55;
+    }
+
+    .cta-box {
+      width: min(640px, 100%);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: #fff;
+      border-radius: 999px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.18);
+    }
+    .cta-box .ico {
+      width: 40px;
+      display: grid;
+      place-items: center;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+    .cta-box input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: #0f172a;
+      font-size: 1rem;
+      padding: 10px 4px;
+    }
+    .cta-box input::placeholder { color: #94a3b8; }
+    .cta-box .btn-go {
+      flex-shrink: 0;
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      background: var(--blue-bright);
+      color: #fff;
+      font-weight: 700;
+      padding: 12px 18px;
+      white-space: nowrap;
+    }
+    .cta-box .btn-go:hover { background: #1d4ed8; }
+
+    @media (max-width: 560px) {
+      .cta-box {
+        flex-direction: column;
+        border-radius: 18px;
+        align-items: stretch;
+        padding: 12px;
+      }
+      .cta-box .ico { display: none; }
+      .cta-box .btn-go { width: 100%; border-radius: 12px; }
+    }
+
+    .trust {
+      margin: 22px auto 0;
+      width: min(520px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      align-items: center;
+      gap: 0;
+      padding: 12px 16px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 14px;
+      background: rgba(255,255,255,.04);
+    }
+    .trust-divider {
+      width: 1px;
+      align-self: stretch;
+      background: rgba(255,255,255,.28);
+      margin: 2px 0;
+    }
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 2px 10px;
+      font-size: 0.82rem;
+      line-height: 1.25;
+      color: rgba(255,255,255,.92);
+      text-align: left;
+    }
+    .trust-item strong {
+      display: block;
+      font-weight: 700;
+      color: #fff;
+    }
+    .trust-item span {
+      display: block;
+      color: rgba(255,255,255,.78);
+      font-weight: 500;
+    }
+    .trust-ico {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      color: #fff;
+    }
+    .trust-ico svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+    @media (max-width: 520px) {
+      .trust {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
+      }
+      .trust-divider {
+        width: 100%;
+        height: 1px;
+        margin: 0;
+      }
+    }
+
+    /* Descubrís — fondo azul continuo; solo la tarjeta blanca “flota” */
+    .section-discover {
+      padding: 56px 0 72px;
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .discover {
+      display: grid;
+      grid-template-columns: 0.95fr 1.2fr;
+      gap: 36px;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .discover { grid-template-columns: 1fr; }
+    }
+
+    .discover-title {
+      position: relative;
+      display: inline-block;
+      font-size: clamp(2rem, 3.4vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 28px;
+      color: #fff;
+    }
+    .discover-title .swoosh {
+      position: absolute;
+      left: 0;
+      bottom: -10px;
+      width: 118%;
+      height: 18px;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .bullets {
+      list-style: none;
+      margin: 0;
+      display: grid;
+      gap: 18px;
+    }
+    .bullets li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      font-size: 1.05rem;
+      color: rgba(255,255,255,.95);
+      line-height: 1.4;
+      font-weight: 500;
+    }
+    .ico-tile {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    }
+    .ico-tile svg { width: 20px; height: 20px; display: block; }
+    .ico-tile.a { background: #7c3aed; }
+    .ico-tile.b { background: #f97316; }
+    .ico-tile.c { background: #14b8a6; }
+    .ico-tile.d { background: #2563eb; }
+
+    .report-float {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.28),
+        0 2px 0 rgba(255,255,255,.08) inset;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.35);
+      line-height: 0;
+    }
+    .report-float img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* FAQ */
+    .faq-wrap { padding: 64px 0 80px; }
+    .faq-wrap h2 {
+      text-align: center;
+      font-size: clamp(1.7rem, 3vw, 2.2rem);
+      margin-bottom: 28px;
+      letter-spacing: -0.03em;
+    }
+    .faq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 720px) {
+      .faq-grid { grid-template-columns: 1fr; }
+    }
+    details.faq {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    details.faq summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+      font-size: 0.92rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq summary::after { content: "+"; font-weight: 700; opacity: .7; }
+    details.faq[open] summary::after { content: "–"; }
+    details.faq p {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,.78);
+      line-height: 1.55;
+    }
+
+    .footer-note {
+      text-align: center;
+      padding: 0 0 40px;
+      font-size: 12px;
+      color: rgba(255,255,255,.5);
+    }
+
+    .preserve {
+      margin: 0 auto 40px;
+      width: min(1120px, calc(100% - 32px));
+      background: rgba(255,255,255,.06);
+      border: 1px dashed rgba(255,255,255,.25);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 12px;
+      color: rgba(255,255,255,.75);
+      line-height: 1.55;
+    }
+    .preserve code {
+      font-size: 11px;
+      background: rgba(0,0,0,.25);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="draft-bar">
+    <strong>BORRADOR PÚBLICO</strong> — Home Cleexs v2 (conversión). Logo oficial Cleexs.
+    Página de muestra para aprobación. No es la Home en producción. Aún no es WordPress/Elementor.
+  </div>
+
+  <header class="site-header">
+    <div class="wrap header">
+      <a class="brand" href="#">
+        <img src="/borrador/home-v2/assets/CleexsMark.svg" alt="" width="30" height="30" />
+        <span>cleexs</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="#producto">Producto</a>
+        <a href="#como">Cómo funciona</a>
+        <a href="#precios">Precios</a>
+        <a class="chev" href="#faq">
+          Recursos
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </nav>
+      <div class="header-actions">
+        <a class="btn-contact" href="https://app.cleexs.net/contacto">Contacto</a>
+        <a class="btn-ghost" href="https://app.cleexs.net">Iniciar sesión</a>
+        <a class="btn-pill" href="#cta">Empezar gratis</a>
+        <button type="button" class="nav-toggle" aria-label="Menú">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="cta">
+      <div class="wrap">
+        <h1>Conseguí clientes desde <span class="accent">ChatGPT</span>.</h1>
+
+        <div class="engines" aria-label="Motores de IA">
+          <span><img src="/borrador/home-v2/assets/chatgpt.png" alt="" /> ChatGPT</span>
+          <span><img src="/borrador/home-v2/assets/gemini.png" alt="" /> Gemini</span>
+          <span><img src="/borrador/home-v2/assets/claude.png" alt="" /> Claude</span>
+          <span><img src="/borrador/home-v2/assets/perplexity.png" alt="" /> Perplexity</span>
+        </div>
+
+        <p class="hero-lead">
+          Tus próximos clientes ya no buscan. Preguntan.
+          La pregunta del millón es: ¿ChatGPT te recomienda a vos… o a tus competidores?
+          Ingresá el sitio web de tu empresa y descubrilo gratis.
+        </p>
+
+        <div class="cta-box" role="search">
+          <span class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M3 12h18M12 3c2.5 2.8 4 6 4 9s-1.5 6.2-4 9c-2.5-2.8-4-6-4-9s1.5-6.2 4-9Z" stroke="currentColor" stroke-width="1.7"/>
+            </svg>
+          </span>
+          <input
+            id="input-checkear-visibilidad"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            placeholder="tuempresa.com"
+            aria-label="Sitio web de tu empresa"
+          />
+          <button type="button" class="btn-go" data-checkear-visibilidad="1">
+            Quiero saberlo →
+          </button>
+        </div>
+
+        <div class="trust" aria-label="Confianza">
+          <div class="trust-item">
+            <span class="trust-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>
+                <path d="M9 12l2 2 4-4"/>
+              </svg>
+            </span>
+            <div>
+              <strong>+1.000 empresas ya</strong>
+              <span>hicieron su diagnóstico</span>
+            </div>
+          </div>
+          <div class="trust-divider" aria-hidden="true"></div>
+          <div class="trust-item">
+            <span class="trust-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="8" width="18" height="13" rx="2"/>
+                <path d="M12 8v13"/>
+                <path d="M3 12h18"/>
+                <path d="M12 8c-1.8-2.2-4-3-5.5-2.5S4.5 8 6 9.5"/>
+                <path d="M12 8c1.8-2.2 4-3 5.5-2.5S19.5 8 18 9.5"/>
+              </svg>
+            </span>
+            <div>
+              <strong>100% gratis.</strong>
+              <span>Sin compromiso.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-discover" id="producto">
+      <div class="wrap discover">
+        <div>
+          <h2 class="discover-title">
+            Descubrís:
+            <svg class="swoosh" viewBox="0 0 220 18" fill="none" aria-hidden="true">
+              <path
+                d="M4 11 C 40 4, 90 2, 140 6 C 170 9, 198 12, 214 10"
+                stroke="#7dd3fc"
+                stroke-width="3.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </h2>
+          <ul class="bullets">
+            <li>
+              <span class="ico-tile a" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </span>
+              Quién se está llevando los clientes que podrían ser tuyos.
+            </li>
+            <li>
+              <span class="ico-tile b" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="7"/>
+                  <path d="M21 21l-4.3-4.3"/>
+                </svg>
+              </span>
+              Las preguntas donde hoy estás perdiendo oportunidades.
+            </li>
+            <li>
+              <span class="ico-tile c" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9"/>
+                </svg>
+              </span>
+              Por qué ChatGPT elige recomendar a otras empresas.
+            </li>
+            <li>
+              <span class="ico-tile d" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19V10"/>
+                  <path d="M10 19V5"/>
+                  <path d="M16 19v-7"/>
+                  <path d="M22 19V8"/>
+                  <path d="M2 19h20"/>
+                </svg>
+              </span>
+              Qué hacer para empezar a cambiar eso.
+            </li>
+          </ul>
+        </div>
+
+        <div class="report-float">
+          <img
+            src="/borrador/home-v2/assets/plataforma-preview.png"
+            alt="Vista previa del portal Cleexs (marca del cliente difuminada)"
+            width="1024"
+            height="577"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    </section>
+
+    <section class="faq-wrap" id="faq">
+      <div class="wrap">
+        <h2>Preguntas frecuentes</h2>
+        <div class="faq-grid">
+          <details class="faq">
+            <summary>¿Qué es Cleexs?</summary>
+            <p>Cleexs mide si ChatGPT y otras IAs recomiendan tu empresa cuando alguien pregunta por tu rubro — y qué hacer para aparecer.</p>
+          </details>
+          <details class="faq">
+            <summary>¿Qué es el Cleexs Score?</summary>
+            <p>Un índice 0–100 de cómo de visible y elegible sos en las respuestas de IA frente a tus competidores.</p>
+          </details>
+          <details class="faq">
+            <summary>¿Esto es SEO?</summary>
+            <p>No solo. Es AEO: optimización para motores de respuesta (ChatGPT, Gemini, etc.), complementario al SEO clásico.</p>
+          </details>
+          <details class="faq">
+            <summary>¿Es gratis?</summary>
+            <p>El diagnóstico inicial es gratis. Después podés profundizar con planes si querés un plan de acción completo.</p>
+          </details>
+          <details class="faq">
+            <summary>¿Qué motores analizan?</summary>
+            <p>El free se apoya en ChatGPT; los planes amplían a otros motores de IA.</p>
+          </details>
+          <details class="faq">
+            <summary>¿Qué pasa con mi URL?</summary>
+            <p>Se usa para identificar tu marca y correr el diagnóstico. No publicamos tu reporte sin que vos lo compartas.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="preserve">
+    <strong>A preservar al pasar a WP/Elementor (poco, pero crítico):</strong>
+    script de atribución <code>ref</code>/<code>utm_*</code> + cookie/sesión; redirect a
+    <code>https://app.cleexs.net/diagnostico/crear?q=…</code>; IDs
+    <code>#input-checkear-visibilidad</code> y <code>[data-checkear-visibilidad]</code>;
+    logo Cleexs oficial (no el del mock de Figma). Sin análisis pesado en el load de la home.
+  </div>
+
+  <p class="footer-note">Cleexs · borrador local · noindex</p>
+
+  <!--
+    SCRIPT CRÍTICO (mismo contrato que WP actual)
+    - Guarda/reenvía ref + UTM
+    - Infiera YouTube/Herederos desde referrer si hace falta
+    - Manda a la app con ?q=
+  -->
+  <script>
+  (function () {
+    var APP = 'https://app.cleexs.net/diagnostico/crear';
+    var STORAGE_KEY = 'cleexs_diagnostic_attribution';
+
+    function attributionFromReferrer() {
+      try {
+        var refUrl = document.referrer ? new URL(document.referrer) : null;
+        if (!refUrl) return null;
+        var host = refUrl.hostname.replace(/^www\./, '').toLowerCase();
+        var isYt =
+          host === 'youtube.com' ||
+          host === 'm.youtube.com' ||
+          host === 'youtu.be' ||
+          host === 'youtube-nocookie.com';
+        if (!isYt) return null;
+        var videoId = refUrl.searchParams.get('v') || '';
+        if (videoId && videoId.toLowerCase() === 'h6tusfuydqo') {
+          return {
+            ref: 'herederos',
+            utm_source: 'auspiciador',
+            utm_medium: 'youtube',
+            utm_campaign: 'herederos',
+          };
+        }
+        return {
+          ref: '',
+          utm_source: 'youtube',
+          utm_medium: 'referral',
+          utm_campaign: videoId ? 'yt_' + videoId.toLowerCase() : 'youtube_organic',
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function attributionFromLanding() {
+      var sp = new URLSearchParams(window.location.search);
+      var ref = sp.get('ref') || sp.get('ref_code') || '';
+      var utm_source = sp.get('utm_source') || '';
+      var utm_medium = sp.get('utm_medium') || '';
+      var utm_campaign = sp.get('utm_campaign') || '';
+      if (!ref && !utm_source && !utm_medium && !utm_campaign) {
+        var fromRef = attributionFromReferrer();
+        if (fromRef) {
+          ref = fromRef.ref || '';
+          utm_source = fromRef.utm_source || '';
+          utm_medium = fromRef.utm_medium || '';
+          utm_campaign = fromRef.utm_campaign || '';
+        }
+      }
+      if (ref || utm_source || utm_medium || utm_campaign) {
+        try {
+          sessionStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ ref: ref, utm_source: utm_source, utm_medium: utm_medium, utm_campaign: utm_campaign })
+          );
+        } catch (e) {}
+      }
+      return { ref: ref, utm_source: utm_source, utm_medium: utm_medium, utm_campaign: utm_campaign };
+    }
+
+    function appendAttribution(params) {
+      var a = attributionFromLanding();
+      if (a.ref) params.set('ref', a.ref);
+      if (a.utm_source) params.set('utm_source', a.utm_source);
+      if (a.utm_medium) params.set('utm_medium', a.utm_medium);
+      if (a.utm_campaign) params.set('utm_campaign', a.utm_campaign);
+    }
+
+    function go() {
+      var input = document.getElementById('input-checkear-visibilidad');
+      var valor = (input && input.value ? input.value : '').trim();
+      if (!valor) {
+        if (input) input.focus();
+        return;
+      }
+      var params = new URLSearchParams();
+      appendAttribution(params);
+      params.set('q', valor);
+      window.location.href = APP + '?' + params.toString();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      attributionFromLanding();
+      var btn = document.querySelector('[data-checkear-visibilidad]');
+      var input = document.getElementById('input-checkear-visibilidad');
+      if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); go(); });
+      if (input) input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); go(); }
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
