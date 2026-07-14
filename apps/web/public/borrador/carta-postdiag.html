@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Borrador · Bloque post-diagnóstico en la carta — Cleexs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --body: #1e293b;
+      --line: #e2e8f0;
+      --soft: #f1f5f9;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --navy: #0f2a5c;
+      --paper: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "DM Sans", Helvetica, Arial, sans-serif;
+      background: #e8eef5;
+      color: var(--ink);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding: 32px 16px 64px;
+    }
+
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    .banner {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .banner strong { color: #7c2d12; }
+
+    h1.page-title {
+      font-size: 1.55rem;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      color: var(--navy);
+    }
+    .page-lede {
+      color: var(--muted);
+      font-size: 0.98rem;
+      max-width: 62ch;
+      margin-bottom: 28px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+
+    /* —— Carta email (contexto) —— */
+    .email-shell {
+      max-width: 640px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .email-inner {
+      padding: 36px 40px 28px;
+    }
+
+    @media (max-width: 640px) {
+      .email-inner { padding: 28px 20px; }
+    }
+
+    .hi {
+      font-size: 19px;
+      line-height: 1.85;
+      color: var(--body);
+      margin-bottom: 20px;
+    }
+
+    .para {
+      font-size: 19px;
+      line-height: 1.85;
+      color: var(--body);
+      margin-bottom: 20px;
+    }
+
+    .excl {
+      display: inline-block;
+      margin: 8px 0 20px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .founder {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 28px 0 18px;
+    }
+    .founder img, .founder .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: linear-gradient(145deg, #93c5fd, #2563eb);
+      flex-shrink: 0;
+    }
+    .founder .name { font-weight: 700; font-size: 15px; }
+    .founder .role { font-size: 13px; color: var(--muted); }
+
+    /* —— BLOQUE PROPUESTO (gráfico arriba + comentario Gonzalo abajo) —— */
+    .block-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
+      margin: 8px 0 8px;
+    }
+
+    .block-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px 0;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .pill.draft {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .viz-area {
+      padding: 8px 16px 18px;
+      text-align: center;
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .viz-title {
+      margin: 10px 0 4px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .viz-svg-wrap {
+      margin: 8px auto 0;
+      max-width: 100%;
+    }
+    .viz-svg-wrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+    }
+
+    /* Comentario Gonzalo — genérico, NO IA */
+    .comment-area {
+      padding: 16px 18px 18px;
+      background: #fff;
+    }
+
+    .comment-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .comment-meta .mini-av {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: linear-gradient(145deg, #93c5fd, #1d4ed8);
+      flex-shrink: 0;
+    }
+    .comment-meta span {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .comment-box {
+      background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+      border-left: 3px solid var(--blue);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #1e3a8a;
+    }
+    .comment-box .placeholder {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .cta-row {
+      margin-top: 14px;
+      text-align: right;
+    }
+    .cta {
+      display: inline-block;
+      padding: 11px 16px;
+      border-radius: 10px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .link-new {
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .link-new a { color: var(--blue); font-weight: 600; text-decoration: none; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .pd {
+      margin-top: 18px;
+      font-style: italic;
+      color: #475569;
+      font-size: 15px;
+    }
+
+    .plan {
+      margin-top: 28px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #bfdbfe;
+    }
+    .plan-head {
+      background: var(--blue);
+      color: #fff;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .plan-badge {
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      opacity: 0.95;
+    }
+    .plan-body {
+      background: #fff;
+      padding: 16px 18px 18px;
+      font-size: 14px;
+      color: var(--body);
+    }
+    .plan-body ul { margin: 10px 0 0; padding: 0; list-style: none; }
+    .plan-body li {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      align-items: flex-start;
+    }
+    .plan-body .check {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: 11px; display: grid; place-items: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* —— Explicación lateral / abajo —— */
+    .howto {
+      background: #fff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 20px 22px;
+    }
+    .howto h2 {
+      font-size: 1.05rem;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+    .howto ol {
+      padding-left: 18px;
+      color: var(--body);
+      font-size: 0.92rem;
+    }
+    .howto li { margin-bottom: 8px; }
+    .howto code {
+      font-size: 12px;
+      background: var(--soft);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .variants {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    @media (max-width: 760px) {
+      .variants { grid-template-columns: 1fr; }
+    }
+
+    .variant-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .callout {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--blue-soft);
+      border-radius: 10px;
+      font-size: 13px;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="banner">
+      <strong>BORRADOR PARA APROBACIÓN</strong> — Página de muestra (no es el producto final).
+      Objetivo: revisar el layout (<strong>gráfico arriba + comentario de Gonzalo abajo</strong>).
+      Si se aprueba, el siguiente paso es que Gonzalo pueda <strong>editar ese comentario desde una plantilla</strong> (texto humano, no IA).
+    </div>
+
+    <h1 class="page-title">Dónde va el bloque en la carta y cómo se lee</h1>
+    <p class="page-lede">
+      Misma carta que hoy (firma de Gonzalo → caja insight → CTAs → Plan Conquistar).
+      Cambiamos el interior de la caja: en vez de score a la izquierda + bullets a la derecha,
+      apilamos <em>visualización</em> + <em>comentario escrito por Gonzalo</em>.
+    </p>
+
+    <div class="layout">
+
+      <!-- ========== CARTA ========== -->
+      <div class="email-shell">
+        <div class="email-inner">
+          <p class="hi">Hola {{firstName}},</p>
+          <p class="para">
+            Esta semana repetimos la misma pregunta decenas de veces. Esperábamos respuestas muy distintas.
+            Pero los mismos nombres aparecían una y otra vez.
+          </p>
+          <p class="para">
+            Parece haber una especie de grupo favorito. Todavía estamos investigando por qué.
+            Pero si esto es así, entrar en ese grupo puede ser extremadamente valioso.
+          </p>
+
+          <span class="excl">Exclusivo para {{domain}}</span>
+
+          <div class="founder">
+            <img src="/gonzalo-founder.png" alt="Gonzalo" width="44" height="44" />
+            <div>
+              <div class="name">Gonzalo</div>
+              <div class="role">Fundador · Cleexs</div>
+            </div>
+          </div>
+
+          <!-- ===== BLOQUE NUEVO (reemplaza el score card actual) ===== -->
+          <div class="block-card">
+            <div class="block-label-row">
+              <span class="pill">Post-diagnóstico · bloque variable</span>
+              <span class="pill draft">comentario ≠ IA</span>
+            </div>
+
+            <!-- ARRIBA: gráfica (dato del diagnóstico) -->
+            <div class="viz-area">
+              <p class="viz-title">Mejor vs peor intención</p>
+              <div class="viz-svg-wrap">
+                <svg viewBox="0 0 520 168" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Barras de intención">
+                  <defs>
+                    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stop-color="#ecfdf5"/>
+                      <stop offset="100%" stop-color="#fff7ed"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="520" height="168" rx="12" fill="url(#bg)"/>
+                  <!-- Calidad -->
+                  <rect x="48" y="28" width="72" height="108" rx="10" fill="#fff"/>
+                  <rect x="58" y="58" width="52" height="68" rx="7" fill="#10b981"/>
+                  <text x="84" y="50" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="14" font-weight="800" fill="#059669">78</text>
+                  <text x="84" y="152" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" font-weight="600" fill="#047857">Calidad</text>
+                  <!-- Urgencia -->
+                  <rect x="148" y="28" width="72" height="108" rx="10" fill="#fff"/>
+                  <rect x="158" y="78" width="52" height="48" rx="7" fill="#60a5fa"/>
+                  <text x="184" y="70" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="14" font-weight="800" fill="#2563eb">54</text>
+                  <text x="184" y="152" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" font-weight="600" fill="#64748b">Urgencia</text>
+                  <!-- Consider -->
+                  <rect x="248" y="28" width="72" height="108" rx="10" fill="#fff"/>
+                  <rect x="258" y="90" width="52" height="36" rx="7" fill="#93c5fd"/>
+                  <text x="284" y="82" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="14" font-weight="800" fill="#3b82f6">41</text>
+                  <text x="284" y="152" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" font-weight="600" fill="#64748b">Consider.</text>
+                  <!-- Precio -->
+                  <rect x="348" y="28" width="72" height="108" rx="10" fill="#fff" stroke="#fdba74" stroke-width="2"/>
+                  <rect x="358" y="112" width="52" height="14" rx="7" fill="#f97316"/>
+                  <text x="384" y="104" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="14" font-weight="800" fill="#ea580c">22</text>
+                  <text x="384" y="152" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" font-weight="700" fill="#c2410c">Precio</text>
+                  <!-- PEOR -->
+                  <rect x="440" y="56" width="56" height="44" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+                  <text x="468" y="74" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9" font-weight="800" fill="#c2410c">PEOR</text>
+                  <text x="468" y="90" text-anchor="middle" font-size="14" fill="#ea580c">↓</text>
+                </svg>
+              </div>
+            </div>
+
+            <!-- ABAJO: comentario genérico de Gonzalo -->
+            <div class="comment-area">
+              <div class="comment-meta">
+                <img class="mini-av" src="/gonzalo-founder.png" alt="" width="22" height="22" style="object-fit:cover;" />
+                <span>Comentario de Gonzalo · plantilla editable (próximo paso)</span>
+              </div>
+              <div class="comment-box">
+                Cuando una intención está tan lejos de las otras, ChatGPT te “encasilla”:
+                te recomienda en un ángulo y te olvida en el otro. El trabajo no es subir el score promedio
+                — es cerrar esa brecha. Acá lo peor es <strong>Precio</strong>: ahí es donde el rubro
+                te está eligiendo a otros.
+              </div>
+              <div class="cta-row">
+                <a class="cta" href="#">Ver reporte →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="link-new">
+            <a href="#">Generar nuevo diagnóstico</a>
+            <div class="hint">Gratis · tarda unos minutos · solo si vos lo pedís</div>
+          </div>
+          <p class="pd">PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?</p>
+
+          <div class="plan">
+            <div class="plan-head">
+              <span class="plan-badge">★ PLAN CONQUISTAR</span>
+              <span>Plan de Ataque: domina ChatGPT en 90 días</span>
+            </div>
+            <div class="plan-body">
+              <strong>Plan de acción concreto para empezar mañana con tu equipo.</strong>
+              <ul>
+                <li><span class="check">✓</span> Las 20 acciones con mayor impacto para tu empresa.</li>
+                <li><span class="check">✓</span> Priorizadas por facilidad e impacto.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== CÓMO FUNCIONA ========== -->
+      <div class="howto">
+        <h2>Cómo funciona (para alinear con Gonzalo)</h2>
+        <ol>
+          <li><strong>Arriba:</strong> un gráfico/dato del diagnóstico (intenciones, share, embudo, alertas, etc.). Puede cambiar según el mail de la secuencia.</li>
+          <li><strong>Abajo:</strong> un comentario <em>genérico</em> escrito por Gonzalo — no sale del análisis IA. Es copy de plantilla (con huecos tipo “Precio”, “rival X” si hace falta).</li>
+          <li><strong>Dónde vive en el mail:</strong> en el mismo lugar que hoy ocupa la caja “Cleexs Score + Rivales / Señal / Acción”.</li>
+          <li><strong>Lo que NO es:</strong> no es el resumen automático del reporte ni bullets armados por el modelo.</li>
+        </ol>
+
+        <div class="callout">
+          Flujo mental: <code>dato del reporte → gráfico</code> + <code>texto humano de Gonzalo → comentario</code>.
+          Se elige qué bloque (de los ~12) va en cada mail de la secuencia; Gonzalo escribe el párrafo de ese bloque una sola vez en la plantilla.
+          <br /><br />
+          <strong>Si se aprueba este borrador:</strong> armamos la opción para que Gonzalo cambie esos comentarios desde admin / plantilla de email (sin tocar código).
+        </div>
+
+        <p class="variant-note" style="margin-top:22px;">Otras variantes del mismo molde (solo para imaginar la secuencia):</p>
+        <div class="variants">
+          <!-- variante embudo -->
+          <div class="block-card">
+            <div class="viz-area" style="padding-top:14px;">
+              <span class="pill">Ej. bloque Embudo</span>
+              <p class="viz-title">Mención → Top 3 → #1</p>
+              <svg viewBox="0 0 320 110" xmlns="http://www.w3.org/2000/svg">
+                <path d="M40 12 L280 12 L250 40 L70 40 Z" fill="#2563eb"/>
+                <text x="160" y="32" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans,sans-serif" font-weight="700">Mención 70%</text>
+                <path d="M70 48 L250 48 L220 76 L100 76 Z" fill="#3b82f6"/>
+                <text x="160" y="68" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans,sans-serif" font-weight="700">Top 3 35%</text>
+                <path d="M100 84 L220 84 L195 108 L125 108 Z" fill="#f97316"/>
+                <text x="160" y="102" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans,sans-serif" font-weight="700">#1 8%</text>
+              </svg>
+            </div>
+            <div class="comment-area">
+              <div class="comment-meta"><div class="mini-av"></div><span>Comentario Gonzalo</span></div>
+              <div class="comment-box">
+                <span class="placeholder">[Gonzalo escribe acá el texto genérico del embudo — ej. “Te mencionan, pero no te eligen…”]</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- variante share -->
+          <div class="block-card">
+            <div class="viz-area" style="padding-top:14px;">
+              <span class="pill">Ej. bloque Cuota de voz</span>
+              <p class="viz-title">Quién se lleva las recomendaciones</p>
+              <svg viewBox="0 0 320 110" xmlns="http://www.w3.org/2000/svg">
+                <rect x="20" y="18" width="200" height="14" rx="7" fill="#94a3b8"/>
+                <text x="230" y="29" font-size="11" font-family="DM Sans,sans-serif" fill="#475569">38%</text>
+                <rect x="20" y="44" width="120" height="14" rx="7" fill="#cbd5e1"/>
+                <text x="230" y="55" font-size="11" font-family="DM Sans,sans-serif" fill="#475569">22%</text>
+                <rect x="20" y="70" width="70" height="14" rx="7" fill="#2563eb"/>
+                <text x="230" y="81" font-size="11" font-family="DM Sans,sans-serif" fill="#2563eb" font-weight="700">12% vos</text>
+              </svg>
+            </div>
+            <div class="comment-area">
+              <div class="comment-meta"><div class="mini-av"></div><span>Comentario Gonzalo</span></div>
+              <div class="comment-box">
+                <span class="placeholder">[Gonzalo escribe acá el texto genérico de share / rivales]</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

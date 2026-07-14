@@ -27,6 +27,7 @@ const PUBLIC_PATHS = [
   '/email/unsubscribe',
   '/plan-conquistar',
   '/tools/auspiciadores',
+  '/borrador',
 ];
 
 /**
@@ -61,6 +62,7 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname === '/terminos' || pathname === '/privacidad' || pathname === '/contacto') return true;
   if (pathname.startsWith('/admin')) return true;
   if (pathname.startsWith('/tools/auspiciadores')) return true;
+  if (pathname.startsWith('/borrador')) return true;
   return false;
 }
 
@@ -91,6 +93,7 @@ function isPublicPath(pathname: string): boolean {
   if (path === '/terminos' || path === '/privacidad' || path === '/contacto') return true;
   if (path.startsWith('/email/unsubscribe')) return true;
   if (path.startsWith('/plan-conquistar')) return true;
+  if (path.startsWith('/borrador')) return true;
   return false;
 }
 
@@ -119,7 +122,8 @@ export function middleware(request: NextRequest) {
       pathname === '/terminos' ||
       pathname === '/privacidad' ||
       pathname === '/contacto' ||
-      pathname.startsWith('/admin');
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/borrador');
     if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
       url.pathname = '/diagnostico/crear';
@@ -140,6 +144,6 @@ export const config = {
     /*
      * Match all paths except static files and api.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|borrador/).*)',
   ],
 };
