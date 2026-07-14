@@ -10,10 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy: #0b2a6b;
+      --navy: #071f52;
+      --navy-mid: #0b3a8a;
       --blue: #1d4ed8;
-      --blue-bright: #2563eb;
-      --sky: #93c5fd;
+      --blue-bright: #3b82f6;
+      --cyan: #22d3ee;
+      --sky: #7dd3fc;
       --white: #ffffff;
       --ink: #0f172a;
       --muted: #94a3b8;
@@ -24,10 +26,16 @@
 
     body {
       font-family: "DM Sans", system-ui, sans-serif;
-      background: var(--navy);
       color: var(--white);
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(1100px 560px at 12% -10%, rgba(56, 189, 248, 0.28) 0%, transparent 55%),
+        radial-gradient(900px 500px at 92% 8%, rgba(37, 99, 235, 0.45) 0%, transparent 50%),
+        radial-gradient(800px 480px at 50% 100%, rgba(14, 165, 233, 0.18) 0%, transparent 55%),
+        linear-gradient(165deg, #041536 0%, #0a2f78 48%, #0b3d9e 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
     }
 
     a { color: inherit; text-decoration: none; }
@@ -48,27 +56,27 @@
       margin: 0 auto;
     }
 
-    /* Header moderno */
+    /* Header simple — sin cajita */
     header.site-header {
       position: sticky;
       top: 0;
       z-index: 40;
-      padding: 12px 0 4px;
-      background: linear-gradient(180deg, rgba(11,42,107,.92) 0%, rgba(11,42,107,.55) 70%, transparent 100%);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      padding: 14px 0 6px;
+      background: linear-gradient(180deg, rgba(4, 21, 54, .75) 0%, rgba(4, 21, 54, .2) 85%, transparent 100%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 18px;
-      padding: 10px 14px 10px 16px;
-      border-radius: 16px;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.14);
-      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+      gap: 16px;
+      padding: 4px 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      border-radius: 0;
     }
 
     .brand {
@@ -85,7 +93,6 @@
       height: 30px;
       display: block;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.2);
     }
     .brand span { color: #fff; }
 
@@ -93,63 +100,34 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 6px;
       flex: 1;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       font-weight: 500;
     }
     .nav a {
-      color: rgba(255,255,255,.82);
-      padding: 8px 12px;
-      border-radius: 999px;
-      transition: background .15s ease, color .15s ease;
+      color: rgba(255,255,255,.78);
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: color .15s ease;
       white-space: nowrap;
     }
-    .nav a:hover {
-      color: #fff;
-      background: rgba(255,255,255,.12);
-    }
-    .nav .chev {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .nav .chev svg {
-      width: 12px;
-      height: 12px;
-      opacity: .75;
-    }
+    .nav a:hover { color: #fff; }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 0.88rem;
+      gap: 10px;
+      font-size: 0.9rem;
       flex-shrink: 0;
     }
     .btn-ghost {
-      color: rgba(255,255,255,.88);
-      padding: 8px 12px;
-      border-radius: 999px;
+      color: rgba(255,255,255,.85);
+      padding: 6px 8px;
       font-weight: 500;
-      transition: background .15s ease, color .15s ease;
     }
-    .btn-ghost:hover {
-      color: #fff;
-      background: rgba(255,255,255,.1);
-    }
-    .btn-contact {
-      color: rgba(255,255,255,.9);
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-weight: 500;
-      border: 1px solid rgba(255,255,255,.22);
-      transition: background .15s ease, border-color .15s ease;
-    }
-    .btn-contact:hover {
-      background: rgba(255,255,255,.1);
-      border-color: rgba(255,255,255,.4);
-    }
+    .btn-ghost:hover { color: #fff; }
+
     .btn-pill {
       display: inline-flex;
       align-items: center;
@@ -161,12 +139,12 @@
       font-weight: 700;
       border: 0;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(0,0,0,.15);
+      box-shadow: 0 6px 18px rgba(0,0,0,.18);
       transition: transform .15s ease, box-shadow .15s ease;
     }
     .btn-pill:hover {
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
     }
 
     .nav-toggle {
@@ -183,14 +161,13 @@
     }
 
     @media (max-width: 900px) {
-      .nav, .btn-ghost, .btn-contact { display: none; }
+      .nav, .btn-ghost { display: none; }
       .nav-toggle { display: inline-flex; }
-      .header { padding: 8px 10px 8px 12px; }
     }
 
     /* Hero */
     .hero {
-      padding: 36px 0 56px;
+      padding: 40px 0 56px;
       text-align: center;
     }
 
@@ -202,7 +179,10 @@
       max-width: 16ch;
       margin: 0 auto 22px;
     }
-    .hero h1 .accent { color: #7dd3fc; }
+    .hero h1 .accent {
+      color: #67e8f9;
+      text-shadow: 0 0 40px rgba(34, 211, 238, 0.25);
+    }
 
     .engines {
       display: inline-flex;
@@ -210,7 +190,7 @@
       justify-content: center;
       align-items: center;
       gap: 8px 0;
-      margin-bottom: 22px;
+      margin-bottom: 26px;
       font-size: 0.88rem;
       color: rgba(255,255,255,.85);
     }
@@ -232,11 +212,13 @@
     }
 
     .hero-lead {
-      max-width: 46ch;
-      margin: 0 auto 28px;
-      font-size: 1.05rem;
-      color: rgba(255,255,255,.86);
-      line-height: 1.55;
+      max-width: 38ch;
+      margin: 0 auto 30px;
+      font-size: clamp(1.2rem, 2.4vw, 1.45rem);
+      color: rgba(255,255,255,.94);
+      line-height: 1.45;
+      font-weight: 500;
+      letter-spacing: -0.015em;
     }
 
     .cta-box {
@@ -292,74 +274,59 @@
       .cta-box .btn-go { width: 100%; border-radius: 12px; }
     }
 
+    /* Trust bajo el input — desapercibido: sin caja, sin |, texto chico */
     .trust {
-      margin: 22px auto 0;
-      width: min(520px, 100%);
-      display: grid;
-      grid-template-columns: 1fr 1px 1fr;
+      margin: 18px auto 0;
+      width: min(480px, 100%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       align-items: center;
-      gap: 0;
-      padding: 12px 16px;
-      border: 1px solid rgba(255,255,255,.35);
-      border-radius: 14px;
-      background: rgba(255,255,255,.04);
-    }
-    .trust-divider {
-      width: 1px;
-      align-self: stretch;
-      background: rgba(255,255,255,.28);
-      margin: 2px 0;
+      gap: 10px 28px;
+      padding: 0;
+      border: 0;
+      background: transparent;
     }
     .trust-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 2px 10px;
-      font-size: 0.82rem;
-      line-height: 1.25;
-      color: rgba(255,255,255,.92);
+      gap: 7px;
+      font-size: 0.72rem;
+      line-height: 1.3;
+      color: rgba(255,255,255,.62);
       text-align: left;
     }
     .trust-item strong {
       display: block;
-      font-weight: 700;
-      color: #fff;
+      font-weight: 600;
+      color: rgba(255,255,255,.78);
     }
     .trust-item span {
       display: block;
-      color: rgba(255,255,255,.78);
+      color: rgba(255,255,255,.55);
       font-weight: 500;
     }
     .trust-ico {
-      width: 28px;
-      height: 28px;
+      width: 18px;
+      height: 18px;
       flex-shrink: 0;
       display: grid;
       place-items: center;
-      color: #fff;
+      color: rgba(255,255,255,.55);
+      opacity: 0.9;
     }
     .trust-ico svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       display: block;
     }
-    @media (max-width: 520px) {
-      .trust {
-        grid-template-columns: 1fr;
-        gap: 10px;
-        padding: 12px;
-      }
-      .trust-divider {
-        width: 100%;
-        height: 1px;
-        margin: 0;
-      }
-    }
 
-    /* Descubrís — fondo azul continuo; solo la tarjeta blanca “flota” */
+    /* Descubrís — misma base azul, un tono más denso */
     .section-discover {
       padding: 56px 0 72px;
-      background: var(--navy);
+      background:
+        linear-gradient(180deg, rgba(4, 21, 54, 0.35) 0%, transparent 40%),
+        #061a45;
       color: #fff;
     }
 
@@ -521,17 +488,10 @@
       </a>
       <nav class="nav" aria-label="Principal">
         <a href="#producto">Producto</a>
-        <a href="#como">Cómo funciona</a>
         <a href="#precios">Precios</a>
-        <a class="chev" href="#faq">
-          Recursos
-          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
+        <a href="https://app.cleexs.net/contacto">Contacto</a>
       </nav>
       <div class="header-actions">
-        <a class="btn-contact" href="https://app.cleexs.net/contacto">Contacto</a>
         <a class="btn-ghost" href="https://app.cleexs.net">Iniciar sesión</a>
         <a class="btn-pill" href="#cta">Empezar gratis</a>
         <button type="button" class="nav-toggle" aria-label="Menú">
@@ -590,11 +550,10 @@
               </svg>
             </span>
             <div>
-              <strong>+1.000 empresas ya</strong>
+              <strong>+1.600 empresas ya</strong>
               <span>hicieron su diagnóstico</span>
             </div>
           </div>
-          <div class="trust-divider" aria-hidden="true"></div>
           <div class="trust-item">
             <span class="trust-ico" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
