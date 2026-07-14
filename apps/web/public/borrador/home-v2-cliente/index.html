@@ -199,23 +199,28 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 18px 40px;
-      margin-bottom: 28px;
-      font-size: clamp(1.05rem, 1.8vw, 1.25rem);
-      font-weight: 500;
-      color: rgba(255,255,255,.88);
+      gap: 14px 36px;
+      margin-bottom: 30px;
+      font-size: clamp(1.12rem, 2vw, 1.35rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #fff;
     }
     .engines span {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 11px;
       padding: 0;
       border: 0;
+      line-height: 1;
     }
     .engines span + span { border-left: 0; }
-    .engines img {
-      width: 36px;
-      height: 36px;
+    .engines img,
+    .engines svg.engine-logo {
+      width: 34px;
+      height: 34px;
+      display: block;
+      flex-shrink: 0;
       object-fit: contain;
       border-radius: 0;
       background: transparent;
@@ -549,10 +554,10 @@
         </h1>
 
         <div class="engines" aria-label="Motores de IA">
-          <span><img src="/borrador/home-v2-cliente/assets/chatgpt.png" alt="" /> ChatGPT</span>
-          <span><img src="/borrador/home-v2-cliente/assets/gemini.png" alt="" /> Gemini</span>
-          <span><img src="/borrador/home-v2-cliente/assets/claude.png" alt="" /> Claude</span>
-          <span><img src="/borrador/home-v2-cliente/assets/perplexity.svg" alt="" /> Perplexity</span>
+          <span><img class="engine-logo" src="/borrador/home-v2-cliente/assets/chatgpt.svg" alt="" width="34" height="34" /> ChatGPT</span>
+          <span><img class="engine-logo" src="/borrador/home-v2-cliente/assets/gemini.svg" alt="" width="34" height="34" /> Gemini</span>
+          <span><img class="engine-logo" src="/borrador/home-v2-cliente/assets/claude.svg" alt="" width="34" height="34" /> Claude</span>
+          <span><img class="engine-logo" src="/borrador/home-v2-cliente/assets/perplexity.svg" alt="" width="34" height="34" /> Perplexity</span>
         </div>
 
         <p class="hero-lead">
