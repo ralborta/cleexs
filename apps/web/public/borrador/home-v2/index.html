@@ -310,6 +310,21 @@
       color: #0f172a;
       font-size: 1rem;
       padding: 10px 4px;
+      caret-color: #2563eb;
+    }
+    .cta-box input:focus {
+      animation: url-caret-blink 1s steps(1, end) infinite;
+    }
+    @keyframes url-caret-blink {
+      0%, 49% { caret-color: #2563eb; }
+      50%, 100% { caret-color: transparent; }
+    }
+    .cta-box.is-attract {
+      animation: url-box-pulse 1.6s ease-in-out 2;
+    }
+    @keyframes url-box-pulse {
+      0%, 100% { box-shadow: 0 16px 40px rgba(0,0,0,.18); }
+      50% { box-shadow: 0 16px 40px rgba(37, 99, 235, 0.35), 0 0 0 3px rgba(37, 99, 235, 0.28); }
     }
     .cta-box input::placeholder { color: #94a3b8; }
     .cta-box .btn-go {
@@ -639,6 +654,7 @@
             type="text"
             inputmode="url"
             autocomplete="off"
+            autofocus
             placeholder="tuempresa.com"
             aria-label="Sitio web de tu empresa"
           />
@@ -919,9 +935,22 @@
       var btn = document.querySelector('[data-checkear-visibilidad]');
       var input = document.getElementById('input-checkear-visibilidad');
       if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); go(); });
-      if (input) input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); go(); }
-      });
+      if (input) {
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); go(); }
+        });
+        // Cursor en el campo URL + parpadeo visible del caret
+        requestAnimationFrame(function () {
+          input.focus({ preventScroll: false });
+          var box = input.closest('.cta-box');
+          if (box) {
+            box.classList.add('is-attract');
+            box.addEventListener('animationend', function () {
+              box.classList.remove('is-attract');
+            }, { once: true });
+          }
+        });
+      }
     });
   })();
   </script>

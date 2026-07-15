@@ -604,6 +604,7 @@
             type="text"
             inputmode="url"
             autocomplete="off"
+            autofocus
             placeholder="tuempresa.com"
             aria-label="Sitio web de tu empresa"
           />
@@ -884,9 +885,15 @@
       var btn = document.querySelector('[data-checkear-visibilidad]');
       var input = document.getElementById('input-checkear-visibilidad');
       if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); go(); });
-      if (input) input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); go(); }
-      });
+      if (input) {
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); go(); }
+        });
+        // Focus normal al campo URL (sin efecto de parpadeo)
+        requestAnimationFrame(function () {
+          input.focus({ preventScroll: false });
+        });
+      }
     });
   })();
   </script>
