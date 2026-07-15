@@ -33,7 +33,10 @@
     }
 
     a { color: inherit; text-decoration: none; }
-    button, input { font: inherit; }
+    button, input {
+      font-family: inherit;
+      font-size: inherit;
+    }
 
     .draft-bar {
       background: #fff7ed;
@@ -266,11 +269,9 @@
       border-radius: 999px;
       background: #2157FF;
       color: #fff;
-      font-family: "DM Sans", system-ui, sans-serif;
-      font-size: 1.125rem;
-      font-weight: 800;
-      letter-spacing: -0.015em;
-      padding: 13px 20px;
+      font: 800 1.25rem/1.15 "DM Sans", system-ui, sans-serif;
+      letter-spacing: -0.02em;
+      padding: 14px 22px;
       white-space: nowrap;
     }
     .cta-box .btn-go:hover { background: #1a46d9; }
@@ -283,7 +284,12 @@
         padding: 12px;
       }
       .cta-box .ico { display: none; }
-      .cta-box .btn-go { width: 100%; border-radius: 12px; }
+      .cta-box .btn-go {
+        width: 100%;
+        border-radius: 12px;
+        font-size: 1.2rem;
+        padding: 15px 20px;
+      }
     }
 
     @media (max-width: 767px) {
