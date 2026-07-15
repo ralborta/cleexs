@@ -328,6 +328,9 @@
     }
     .cta-box input::placeholder { color: #94a3b8; }
     .cta-box .btn-go {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
       flex-shrink: 0;
       border: 0;
       cursor: pointer;
@@ -337,8 +340,69 @@
       font-weight: 700;
       padding: 12px 18px;
       white-space: nowrap;
+      transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
     }
-    .cta-box .btn-go:hover { background: #1d4ed8; }
+    .cta-box .btn-go .btn-go-label {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+    }
+    .cta-box .btn-go .btn-go-arrow {
+      display: inline-block;
+      transition: transform .35s ease;
+    }
+    /* Luz sutil que viaja hacia la flecha */
+    .cta-box .btn-go::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: linear-gradient(
+        105deg,
+        transparent 0%,
+        transparent 38%,
+        rgba(255, 255, 255, 0.08) 46%,
+        rgba(255, 255, 255, 0.38) 50%,
+        rgba(255, 255, 255, 0.08) 54%,
+        transparent 62%,
+        transparent 100%
+      );
+      transform: translateX(-120%);
+      animation: btn-go-shine 3.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes btn-go-shine {
+      0%, 18% { transform: translateX(-120%); opacity: 0; }
+      28% { opacity: 1; }
+      55% { transform: translateX(120%); opacity: 1; }
+      56%, 100% { transform: translateX(120%); opacity: 0; }
+    }
+    @keyframes btn-go-arrow-nudge {
+      0%, 45%, 100% { transform: translateX(0); }
+      52% { transform: translateX(3px); }
+      60% { transform: translateX(0); }
+    }
+    .cta-box .btn-go .btn-go-arrow {
+      animation: btn-go-arrow-nudge 3.4s ease-in-out infinite;
+    }
+    .cta-box .btn-go:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
+    }
+    .cta-box .btn-go:hover .btn-go-arrow {
+      transform: translateX(4px);
+      animation: none;
+    }
+    .cta-box .btn-go:hover::before {
+      animation-duration: 1.6s;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cta-box .btn-go::before,
+      .cta-box .btn-go .btn-go-arrow { animation: none; }
+    }
 
     @media (max-width: 560px) {
       .cta-box {
@@ -659,7 +723,7 @@
             aria-label="Sitio web de tu empresa"
           />
           <button type="button" class="btn-go" data-checkear-visibilidad="1">
-            Quiero saberlo →
+            <span class="btn-go-label">Quiero saberlo <span class="btn-go-arrow" aria-hidden="true">→</span></span>
           </button>
         </div>
 
