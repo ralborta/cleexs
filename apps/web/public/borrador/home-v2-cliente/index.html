@@ -431,7 +431,6 @@
     .ico-tile.d { background: #2563eb; }
 
     .report-float {
-      position: relative;
       background: #fff;
       border-radius: 18px;
       box-shadow:
@@ -440,47 +439,11 @@
       overflow: hidden;
       border: 1px solid rgba(255,255,255,.35);
       line-height: 0;
-      container-type: inline-size;
     }
     .report-float img {
       width: 100%;
       height: auto;
       display: block;
-    }
-    /* Tapar solo la fila de marca del cliente en la captura (sin tocar tabs) */
-    .preview-brand-mask {
-      position: absolute;
-      left: 5.15%;
-      top: 11.05%;
-      width: 8.7%;
-      height: 1.55%;
-      background: #f8fafc;
-      pointer-events: none;
-    }
-    .preview-brand-mask-2 {
-      position: absolute;
-      left: 5.15%;
-      top: 11.62%;
-      width: 6.35%;
-      height: 0.55%;
-      background: #f8fafc;
-      pointer-events: none;
-    }
-    .preview-brand-text {
-      position: absolute;
-      left: 5.65%;
-      top: 11.12%;
-      font-size: 1.05cqw;
-      font-weight: 700;
-      line-height: 1;
-      color: #0f172a;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    .preview-brand-text .domain {
-      font-weight: 400;
-      font-size: 0.92cqw;
-      color: #64748b;
     }
 
     /* FAQ */
@@ -762,15 +725,10 @@
           <img
             src="/borrador/home-v2-cliente/assets/diagnostico-preview.png"
             alt="Vista previa del resultado del diagnóstico Cleexs"
-            width="993"
-            height="835"
+            width="878"
+            height="1024"
             loading="lazy"
           />
-          <span class="preview-brand-mask" aria-hidden="true"></span>
-          <span class="preview-brand-mask-2" aria-hidden="true"></span>
-          <span class="preview-brand-text" aria-hidden="true">
-            Tu empresa <span class="domain">· tuempresa.com</span>
-          </span>
         </div>
       </div>
     </section>
