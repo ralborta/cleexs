@@ -892,26 +892,10 @@
       window.scrollTo(0, 0);
     }
 
-    function focusInput(input, opts) {
-      if (!input) return;
-      var preventScroll = opts && opts.preventScroll !== undefined
-        ? opts.preventScroll
-        : isMobileInput();
-      try {
-        input.focus({ preventScroll: preventScroll });
-      } catch (e) {
-        input.focus();
-      }
-      if (isMobileInput()) keepHeroVisible();
-    }
-
     function go() {
       var input = document.getElementById('input-checkear-visibilidad');
       var valor = (input && input.value ? input.value : '').trim();
-      if (!valor) {
-        focusInput(input);
-        return;
-      }
+      if (!valor) return;
       var params = new URLSearchParams();
       appendAttribution(params);
       params.set('q', valor);
@@ -920,6 +904,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       attributionFromLanding();
+      window.scrollTo(0, 0);
       var btn = document.querySelector('[data-checkear-visibilidad]');
       var input = document.getElementById('input-checkear-visibilidad');
       if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); go(); });
@@ -933,11 +918,6 @@
           requestAnimationFrame(keepHeroVisible);
           window.setTimeout(keepHeroVisible, 280);
         });
-        if (!isMobileInput()) {
-          requestAnimationFrame(function () {
-            focusInput(input, { preventScroll: true });
-          });
-        }
       }
 
       if (window.visualViewport && isMobileInput()) {
