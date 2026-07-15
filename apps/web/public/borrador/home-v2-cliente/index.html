@@ -266,8 +266,11 @@
       border-radius: 999px;
       background: #2157FF;
       color: #fff;
-      font-weight: 700;
-      padding: 12px 18px;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 1.125rem;
+      font-weight: 800;
+      letter-spacing: -0.015em;
+      padding: 13px 20px;
       white-space: nowrap;
     }
     .cta-box .btn-go:hover { background: #1a46d9; }
@@ -281,6 +284,30 @@
       }
       .cta-box .ico { display: none; }
       .cta-box .btn-go { width: 100%; border-radius: 12px; }
+    }
+
+    @media (max-width: 767px) {
+      .hero {
+        padding-top: 12px;
+        padding-bottom: 48px;
+      }
+      .hero h1 {
+        font-size: clamp(2.35rem, 10.5vw, 3.25rem);
+        margin-bottom: 18px;
+      }
+      .engines {
+        gap: 10px 18px;
+        margin-bottom: 18px;
+        font-size: 0.92rem;
+      }
+      .hero-lead {
+        font-size: 1.02rem;
+        margin-bottom: 22px;
+      }
+      .cta-box input {
+        font-size: 16px;
+        scroll-margin-top: 0;
+      }
     }
 
     /* Trust bajo el input — desapercibido: sin caja, sin |, texto chico */
@@ -589,7 +616,6 @@
             type="text"
             inputmode="url"
             autocomplete="off"
-            autofocus
             placeholder="tuempresa.com"
             aria-label="Sitio web de tu empresa"
           />
@@ -852,11 +878,32 @@
       if (a.utm_campaign) params.set('utm_campaign', a.utm_campaign);
     }
 
+    function isMobileInput() {
+      return window.matchMedia('(max-width: 767px), (pointer: coarse)').matches;
+    }
+
+    function keepHeroVisible() {
+      window.scrollTo(0, 0);
+    }
+
+    function focusInput(input, opts) {
+      if (!input) return;
+      var preventScroll = opts && opts.preventScroll !== undefined
+        ? opts.preventScroll
+        : isMobileInput();
+      try {
+        input.focus({ preventScroll: preventScroll });
+      } catch (e) {
+        input.focus();
+      }
+      if (isMobileInput()) keepHeroVisible();
+    }
+
     function go() {
       var input = document.getElementById('input-checkear-visibilidad');
       var valor = (input && input.value ? input.value : '').trim();
       if (!valor) {
-        if (input) input.focus();
+        focusInput(input);
         return;
       }
       var params = new URLSearchParams();
@@ -874,9 +921,22 @@
         input.addEventListener('keydown', function (e) {
           if (e.key === 'Enter') { e.preventDefault(); go(); }
         });
-        // Focus normal al campo URL (sin efecto de parpadeo)
-        requestAnimationFrame(function () {
-          input.focus({ preventScroll: false });
+        input.addEventListener('focus', function () {
+          if (!isMobileInput()) return;
+          keepHeroVisible();
+          requestAnimationFrame(keepHeroVisible);
+          window.setTimeout(keepHeroVisible, 280);
+        });
+        if (!isMobileInput()) {
+          requestAnimationFrame(function () {
+            focusInput(input, { preventScroll: true });
+          });
+        }
+      }
+
+      if (window.visualViewport && isMobileInput()) {
+        window.visualViewport.addEventListener('resize', function () {
+          if (document.activeElement === input) keepHeroVisible();
         });
       }
     });
