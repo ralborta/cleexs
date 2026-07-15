@@ -90,56 +90,54 @@
     .nav {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      gap: 2px;
+      justify-content: center;
+      gap: 4px;
       flex: 1;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 500;
-      margin-right: 8px;
     }
     .nav a {
-      color: rgba(255,255,255,.95);
-      padding: 6px 14px;
+      color: rgba(255,255,255,.88);
+      padding: 6px 12px;
       white-space: nowrap;
+      transition: color .15s ease;
     }
-    .nav a:hover { color: #fff; opacity: 0.85; }
-    .nav .chev {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .nav .chev svg {
-      width: 12px;
-      height: 12px;
-      opacity: .85;
-    }
+    .nav a:hover { color: #fff; }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 14px;
-      font-size: 0.95rem;
+      gap: 12px;
+      font-size: 0.9rem;
       flex-shrink: 0;
     }
     .btn-ghost {
-      color: rgba(255,255,255,.95);
-      padding: 6px 4px;
+      color: #9ec0ff;
+      padding: 6px 8px;
       font-weight: 500;
+      white-space: nowrap;
+      transition: color .15s ease;
     }
-    .btn-ghost:hover { opacity: 0.85; }
+    .btn-ghost:hover { color: #c7ddff; }
     .btn-pill {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 10px 18px;
-      border-radius: 10px;
-      background: #fff;
-      color: #002284;
-      font-weight: 700;
-      border: 0;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 0.86rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.28);
       cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s ease, border-color .15s ease;
     }
-    .btn-pill:hover { opacity: 0.94; }
+    .btn-pill:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.42);
+    }
 
     .nav-toggle {
       display: none;
@@ -522,15 +520,9 @@
         <span>Cleexs</span>
       </a>
       <nav class="nav" aria-label="Principal">
-        <a href="#producto">Producto</a>
-        <a href="#como">Cómo funciona</a>
-        <a href="#precios">Precios</a>
-        <a class="chev" href="#faq">
-          Recursos
-          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
+        <a href="#faq">Preguntas frecuentes</a>
+        <a href="https://cleexs.net/#planes">Precios</a>
+        <a href="https://app.cleexs.net/contacto">Contáctenos</a>
       </nav>
       <div class="header-actions">
         <a class="btn-ghost" href="https://app.cleexs.net">Iniciar sesión</a>
