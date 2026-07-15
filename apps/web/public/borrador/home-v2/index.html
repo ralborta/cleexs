@@ -251,26 +251,45 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 8px 0;
+      gap: 10px;
       margin-bottom: 26px;
       font-size: 0.88rem;
-      color: rgba(255,255,255,.85);
+      color: rgba(255,255,255,.92);
     }
     .engines span {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 0 14px;
+      padding: 7px 12px 7px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 8px 20px rgba(0, 0, 0, 0.12);
+      backdrop-filter: blur(14px) saturate(1.35);
+      -webkit-backdrop-filter: blur(14px) saturate(1.35);
+      transition: transform .2s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .engines span + span { border-left: 1px solid rgba(255,255,255,.2); }
+    .engines span:hover {
+      transform: translateY(-2px) scale(1.03);
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.42);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        0 12px 26px rgba(0, 0, 0, 0.16);
+    }
+    .engines span + span { border-left: 1px solid rgba(255, 255, 255, 0.28); }
     .engines img {
       width: 28px;
       height: 28px;
       object-fit: contain;
-      border-radius: 6px;
-      background: #fff;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
       padding: 3px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 2px 8px rgba(0, 0, 0, 0.12);
     }
 
     .hero-lead {
@@ -515,19 +534,33 @@
       font-weight: 500;
     }
     .ico-tile {
-      width: 40px;
-      height: 40px;
-      border-radius: 11px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       display: grid;
       place-items: center;
       flex-shrink: 0;
-      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+        0 10px 22px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .ico-tile svg { width: 20px; height: 20px; display: block; }
-    .ico-tile.a { background: #7c3aed; }
-    .ico-tile.b { background: #f97316; }
-    .ico-tile.c { background: #14b8a6; }
-    .ico-tile.d { background: #2563eb; }
+    .bullets li:hover .ico-tile {
+      transform: translateY(-2px) scale(1.05);
+      border-color: rgba(255, 255, 255, 0.55);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        0 14px 28px rgba(0, 0, 0, 0.22);
+    }
+    .ico-tile svg { width: 20px; height: 20px; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
+    .ico-tile.a { background: linear-gradient(145deg, rgba(167, 139, 250, 0.55), rgba(124, 58, 237, 0.42)); }
+    .ico-tile.b { background: linear-gradient(145deg, rgba(251, 146, 60, 0.55), rgba(249, 115, 22, 0.42)); }
+    .ico-tile.c { background: linear-gradient(145deg, rgba(45, 212, 191, 0.55), rgba(20, 184, 166, 0.42)); }
+    .ico-tile.d { background: linear-gradient(145deg, rgba(96, 165, 250, 0.55), rgba(37, 99, 235, 0.42)); }
 
     .report-float {
       background: #fff;
