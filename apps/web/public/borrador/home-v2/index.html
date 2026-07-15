@@ -251,58 +251,25 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 18px 28px;
+      gap: 16px 32px;
       margin-bottom: 26px;
-      font-size: 0.88rem;
+      font-size: 1rem;
       font-weight: 500;
-      color: rgba(255,255,255,.9);
+      color: rgba(255,255,255,.92);
     }
     .engines span {
       display: inline-flex;
       align-items: center;
-      gap: 9px;
+      gap: 10px;
       padding: 0;
-      background: transparent;
-      border: 0;
-      box-shadow: none;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      transition: transform .2s ease;
-    }
-    .engines span:hover {
-      transform: translateY(-1px);
-      background: transparent;
-      border: 0;
-      box-shadow: none;
-    }
-    /* Burbuja simple para el logo (sin animaciones) */
-    .engine-logo-glass {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      flex-shrink: 0;
-      background: rgba(255, 255, 255, 0.14);
-      border: 1px solid rgba(255, 255, 255, 0.38);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.45),
-        0 4px 12px rgba(0, 0, 0, 0.12);
-      backdrop-filter: blur(12px) saturate(1.4);
-      -webkit-backdrop-filter: blur(12px) saturate(1.4);
     }
     .engines img {
       display: block;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       object-fit: contain;
       object-position: center;
-      margin: 0;
-      border-radius: 0;
-      background: transparent;
-      padding: 0;
-      box-shadow: none;
+      flex-shrink: 0;
     }
 
     .hero-lead {
@@ -729,10 +696,10 @@
         <h1>Conseguí clientes desde <span class="accent">ChatGPT</span>.</h1>
 
         <div class="engines" aria-label="Motores de IA">
-          <span><span class="engine-logo-glass"><img src="/borrador/home-v2/assets/chatgpt.png" alt="" /></span> ChatGPT</span>
-          <span><span class="engine-logo-glass"><img src="/borrador/home-v2/assets/gemini.png" alt="" /></span> Gemini</span>
-          <span><span class="engine-logo-glass"><img src="/borrador/home-v2/assets/claude.png" alt="" /></span> Claude</span>
-          <span><span class="engine-logo-glass"><img src="/borrador/home-v2/assets/perplexity.png" alt="" /></span> Perplexity</span>
+          <span><img src="/borrador/home-v2/assets/chatgpt.svg" alt="" width="24" height="24" /> ChatGPT</span>
+          <span><img src="/borrador/home-v2/assets/gemini.svg" alt="" width="24" height="24" /> Gemini</span>
+          <span><img src="/borrador/home-v2/assets/claude.svg" alt="" width="24" height="24" /> Claude</span>
+          <span><img src="/borrador/home-v2/assets/perplexity.svg" alt="" width="24" height="24" /> Perplexity</span>
         </div>
 
         <p class="hero-lead">
