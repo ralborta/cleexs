@@ -19,6 +19,7 @@ import {
   ensureFreeEmailSequence,
 } from './free-email-sequence';
 import { buildMonthlyScoreDiagnosticUrl, buildFreeOnboardingPlanConquistarUrl } from './email-templates/build-email';
+import { composeFreeSequenceBodyWithInsight, isFreeEmailInsightKey } from './free-email-insights';
 import { prisma } from './prisma';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 
@@ -34,6 +35,7 @@ export type FreeOnboardingCandidate = {
   score: number | null;
   competitors: CleexsEmailCompetitor[];
   improvementTip: string | null;
+  analysisJson?: unknown;
   shareUrl?: string;
   userId?: string;
   tenantId?: string;
@@ -296,6 +298,7 @@ export async function resolveFreeOnboardingCandidates(input: {
       }),
       competitors: competitorsFromAnalysis(row.analysisJson),
       improvementTip: improvementTipFromAnalysis(row.analysisJson),
+      analysisJson: row.analysisJson,
       shareUrl: row.shareSlug ? `${base}/score/${row.shareSlug}` : undefined,
     });
 
@@ -351,7 +354,7 @@ export async function sendFreeOnboardingStep(input: {
   candidate: FreeOnboardingCandidate;
   step: Pick<
     FreeEmailSequenceStep,
-    'sortOrder' | 'subject' | 'preheader' | 'body' | 'templateVariant'
+    'sortOrder' | 'subject' | 'preheader' | 'body' | 'templateVariant' | 'insightKey'
   >;
 }): Promise<{ sent: boolean; reason?: string; logId?: string; subject?: string }> {
   if (isEmailDisabled()) return { sent: false, reason: 'emails_disabled' };
@@ -361,12 +364,22 @@ export async function sendFreeOnboardingStep(input: {
   if (await isEmailUnsubscribedFromCategory(to, 'content')) return { sent: false, reason: 'unsubscribed' };
 
   const campaignSlug = freeOnboardingCampaignSlug(input.step.sortOrder);
-  const variant = input.step.templateVariant;
+  const insightKey = isFreeEmailInsightKey(input.step.insightKey) ? input.step.insightKey : null;
+  const variant = insightKey ? CleexsEmailTemplateVariant.letter : input.step.templateVariant;
+  const composedBody = composeFreeSequenceBodyWithInsight({
+    insightKey,
+    comment: input.step.body,
+    analysisJson: input.candidate.analysisJson,
+    brandName: input.candidate.brandName,
+    domain: input.candidate.domain,
+    score: input.candidate.score,
+    topCompetitor: input.candidate.competitors[0]?.name ?? null,
+  });
   const content = {
     variant,
     subject: input.step.subject,
     preheader: input.step.preheader,
-    body: input.step.body,
+    body: composedBody || input.step.body,
   };
 
   const personalization = {
@@ -493,6 +506,7 @@ export async function buildFreeOnboardingCandidateFromDiagnostic(input: {
     }),
     competitors: competitorsFromAnalysis(input.analysisJson),
     improvementTip: improvementTipFromAnalysis(input.analysisJson),
+    analysisJson: input.analysisJson,
     shareUrl: slug ? `${base}/score/${slug}` : undefined,
   };
 }

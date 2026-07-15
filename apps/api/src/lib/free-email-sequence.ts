@@ -22,6 +22,11 @@ import {
 import { withEmailAttribution } from './email-link-attribution';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
+import {
+  composeFreeSequenceBodyWithInsight,
+  FREE_EMAIL_INSIGHT_CATALOG,
+  isFreeEmailInsightKey,
+} from './free-email-insights';
 import { prisma } from './prisma';
 
 export const FREE_SEQUENCE_KEY = 'free_onboarding';
@@ -34,6 +39,7 @@ export type FreeSequenceStepDto = {
   subject: string | null;
   preheader: string | null;
   body: string | null;
+  insightKey: string | null;
   templateVariant: CleexsEmailTemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -57,6 +63,13 @@ export type FreeSequenceBundleDto = {
   steps: FreeSequenceStepDto[];
   suggestedDefaults: FreeSequenceSuggestedDefault[];
   suggestedBySortOrder: Record<string, FreeSequenceSuggestedDefault>;
+  insightCatalog: Array<{
+    key: string;
+    sortOrder: number;
+    title: string;
+    description: string;
+    sampleLine: string;
+  }>;
 };
 
 export type FreeSequenceSuggestedDefault = {
@@ -171,6 +184,7 @@ function toStepDto(step: FreeEmailSequenceStep, allSteps: FreeEmailSequenceStep[
     subject: step.subject,
     preheader: step.preheader,
     body: step.body,
+    insightKey: step.insightKey,
     templateVariant: step.templateVariant,
     active: step.active,
     cumulativeDaysLabel: cumulativeDaysLabel(sorted, index),
@@ -254,6 +268,7 @@ export async function getFreeEmailSequenceBundle(): Promise<FreeSequenceBundleDt
     steps: sequence.steps.map((s) => toStepDto(s, sequence.steps)),
     suggestedDefaults: listFreeSequenceSuggestedDefaults(),
     suggestedBySortOrder,
+    insightCatalog: FREE_EMAIL_INSIGHT_CATALOG,
   };
 }
 
@@ -334,6 +349,7 @@ export async function buildFreeSequencePreview(input: {
   brandName?: string;
   sortOrder?: number;
   recipientEmail?: string;
+  insightKey?: string | null;
 }) {
   const personalization = sampleCleexsPersonalization({
     score: input.score,
@@ -351,13 +367,32 @@ export async function buildFreeSequencePreview(input: {
         ...sampleCleexsEmailLinks(),
         ...buildFreeSequencePreviewLinks(campaignSlug, input.content.variant),
       };
+
+  const insightKey = isFreeEmailInsightKey(input.insightKey) ? input.insightKey : null;
+  const composedBody = composeFreeSequenceBodyWithInsight({
+    insightKey,
+    comment: input.content.body,
+    brandName: personalization.brandName,
+    domain: personalization.domain,
+    score: personalization.score,
+    topCompetitor: personalization.competitors?.[0]
+      ? typeof personalization.competitors[0] === 'string'
+        ? personalization.competitors[0]
+        : personalization.competitors[0].name
+      : null,
+  });
+
   const built = buildCleexsEmailFromEditableContent({
-    content: input.content,
+    content: {
+      ...input.content,
+      variant: insightKey ? CleexsEmailTemplateVariant.letter : input.content.variant,
+      body: composedBody || input.content.body,
+    },
     personalization,
     links,
     showFounderSignature: true,
-    showScoreBlock: input.content.variant === 'letter',
-    showReportLinks: input.content.variant === 'letter',
+    showScoreBlock: (insightKey ? 'letter' : input.content.variant) === 'letter',
+    showReportLinks: (insightKey ? 'letter' : input.content.variant) === 'letter',
   });
   return {
     ok: true as const,
@@ -370,6 +405,16 @@ export async function buildFreeSequencePreview(input: {
     sampleDomain: personalization.domain ?? 'empliados.net',
     sampleBrandName: personalization.brandName ?? 'Empliados',
     campaignSlug,
+    insightKey,
+    insightPreviewLine: insightKey
+      ? composeFreeSequenceBodyWithInsight({
+          insightKey,
+          comment: '',
+          brandName: personalization.brandName,
+          domain: personalization.domain,
+          score: personalization.score,
+        }).replace(/^Dato de tu reporte:\n/, '')
+      : null,
   };
 }
 
@@ -403,6 +448,7 @@ export async function updateFreeEmailSequenceStep(
     subject: string | null;
     preheader: string | null;
     body: string | null;
+    insightKey: string | null;
     templateVariant: CleexsEmailTemplateVariant;
     active: boolean;
   }>
@@ -410,6 +456,11 @@ export async function updateFreeEmailSequenceStep(
   const sequence = await ensureFreeEmailSequence();
   const existing = sequence.steps.find((s) => s.id === stepId);
   if (!existing) throw Object.assign(new Error('Paso no encontrado'), { statusCode: 404 });
+
+  let insightKey: string | null | undefined = input.insightKey;
+  if (insightKey !== undefined && insightKey !== null && !isFreeEmailInsightKey(insightKey)) {
+    throw Object.assign(new Error('insightKey inválido'), { statusCode: 400 });
+  }
 
   const updated = await prisma.freeEmailSequenceStep.update({
     where: { id: stepId },
@@ -420,7 +471,12 @@ export async function updateFreeEmailSequenceStep(
       ...(input.subject !== undefined ? { subject: input.subject } : {}),
       ...(input.preheader !== undefined ? { preheader: input.preheader } : {}),
       ...(input.body !== undefined ? { body: input.body } : {}),
-      ...(input.templateVariant !== undefined ? { templateVariant: input.templateVariant } : {}),
+      ...(insightKey !== undefined ? { insightKey } : {}),
+      ...(input.templateVariant !== undefined
+        ? { templateVariant: insightKey ? CleexsEmailTemplateVariant.letter : input.templateVariant }
+        : insightKey
+          ? { templateVariant: CleexsEmailTemplateVariant.letter }
+          : {}),
       ...(input.active !== undefined ? { active: input.active } : {}),
     },
   });
@@ -498,6 +554,7 @@ export async function sendFreeEmailSequenceStepTest(input: {
   score?: number;
   domain?: string;
   brandName?: string;
+  insightKey?: string | null;
 }) {
   if (isEmailDisabled()) {
     throw Object.assign(new Error('Envíos deshabilitados (DISABLE_EMAILS).'), { statusCode: 400 });
@@ -515,6 +572,7 @@ export async function sendFreeEmailSequenceStepTest(input: {
     brandName: input.brandName,
     sortOrder: input.sortOrder,
     recipientEmail: to,
+    insightKey: input.insightKey,
   });
 
   const apiKey = process.env.RESEND_API_KEY?.trim();

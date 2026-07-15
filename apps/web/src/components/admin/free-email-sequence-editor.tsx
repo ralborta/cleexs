@@ -29,6 +29,14 @@ type SuggestedDefault = {
   templateVariant: TemplateVariant;
 };
 
+type InsightCatalogItem = {
+  key: string;
+  sortOrder: number;
+  title: string;
+  description: string;
+  sampleLine: string;
+};
+
 type StepRow = {
   id: string;
   sortOrder: number;
@@ -37,6 +45,7 @@ type StepRow = {
   subject: string | null;
   preheader: string | null;
   body: string | null;
+  insightKey: string | null;
   templateVariant: TemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -70,6 +79,7 @@ export function FreeEmailSequenceEditor() {
   const [config, setConfig] = useState<ConfigRow | null>(null);
   const [steps, setSteps] = useState<StepRow[]>([]);
   const [suggestedBySortOrder, setSuggestedBySortOrder] = useState<Record<string, SuggestedDefault>>({});
+  const [insightCatalog, setInsightCatalog] = useState<InsightCatalogItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
@@ -78,6 +88,7 @@ export function FreeEmailSequenceEditor() {
   const [subject, setSubject] = useState('');
   const [preheader, setPreheader] = useState('');
   const [body, setBody] = useState('');
+  const [insightKey, setInsightKey] = useState<string>('');
   const [active, setActive] = useState(true);
 
   const [score, setScore] = useState(62);
@@ -99,6 +110,11 @@ export function FreeEmailSequenceEditor() {
     if (!selected) return null;
     return suggestedBySortOrder[String(selected.sortOrder)] ?? null;
   }, [selected, suggestedBySortOrder]);
+
+  const selectedInsight = useMemo(
+    () => insightCatalog.find((i) => i.key === insightKey) ?? null,
+    [insightCatalog, insightKey]
+  );
 
   function loadSuggestedContent() {
     if (!suggestedForSelected) return;
@@ -124,6 +140,7 @@ export function FreeEmailSequenceEditor() {
       const list = (json.steps as StepRow[]) ?? [];
       setSteps(list);
       setSuggestedBySortOrder((json.suggestedBySortOrder as Record<string, SuggestedDefault>) ?? {});
+      setInsightCatalog((json.insightCatalog as InsightCatalogItem[]) ?? []);
       if (!selectedId && list[0]) setSelectedId(list[0].id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -144,6 +161,7 @@ export function FreeEmailSequenceEditor() {
     setSubject(selected.subject ?? '');
     setPreheader(selected.preheader ?? '');
     setBody(selected.body ?? '');
+    setInsightKey(selected.insightKey ?? '');
     setActive(selected.active);
   }, [selected?.id]);
 
@@ -151,14 +169,16 @@ export function FreeEmailSequenceEditor() {
     if (!selected) return;
     setPreviewLoading(true);
     try {
+      const effectiveVariant: TemplateVariant = insightKey ? 'letter' : variant;
       const res = await adminUiFetch('/api/admin-ui/email/free-sequence-preview/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          variant,
+          variant: effectiveVariant,
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          insightKey: insightKey || null,
           sortOrder: selected.sortOrder,
           score,
           domain,
@@ -174,13 +194,13 @@ export function FreeEmailSequenceEditor() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [selected, variant, subject, preheader, body, score, domain, brandName]);
+  }, [selected, variant, subject, preheader, body, insightKey, score, domain, brandName]);
 
   useEffect(() => {
     if (!selected) return undefined;
     const t = window.setTimeout(() => void refreshPreview(), 400);
     return () => window.clearTimeout(t);
-  }, [selected, variant, subject, preheader, body, score, domain, brandName, refreshPreview]);
+  }, [selected, variant, subject, preheader, body, insightKey, score, domain, brandName, refreshPreview]);
 
   async function saveStep() {
     if (!selected) return;
@@ -188,16 +208,18 @@ export function FreeEmailSequenceEditor() {
     setHint(null);
     setError(null);
     try {
+      const effectiveVariant: TemplateVariant = insightKey ? 'letter' : variant;
       const res = await adminUiFetch(`/api/admin-ui/email/free-sequence-preview/steps/${selected.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
           delayDaysAfterPrevious: delayDays,
-          templateVariant: variant,
+          templateVariant: effectiveVariant,
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          insightKey: insightKey || null,
           active,
         }),
       });
@@ -279,10 +301,11 @@ export function FreeEmailSequenceEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: testEmail.trim(),
-          variant,
+          variant: insightKey ? 'letter' : variant,
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          insightKey: insightKey || null,
           sortOrder: selected.sortOrder,
           score,
           domain,
@@ -508,13 +531,17 @@ export function FreeEmailSequenceEditor() {
                 <label className="block">
                   <span className={labelCls}>Template</span>
                   <select
-                    value={variant}
+                    value={insightKey ? 'letter' : variant}
+                    disabled={Boolean(insightKey)}
                     onChange={(e) => setVariant(e.target.value as TemplateVariant)}
                     className={field}
                   >
                     <option value="letter">Carta (letter)</option>
                     <option value="editorial">Newsletter (editorial)</option>
                   </select>
+                  {insightKey ? (
+                    <p className="mt-1 text-[10px] text-slate-400">Con insight elegido, el diseño queda fijo en carta.</p>
+                  ) : null}
                 </label>
               </div>
 
@@ -529,6 +556,35 @@ export function FreeEmailSequenceEditor() {
                 </p>
               ) : null}
 
+              <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
+                <p className={labelCls}>Insight del reporte (de los 12)</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Elegí el dato automático. Después escribí el comentario humano abajo.
+                </p>
+                <select
+                  value={insightKey}
+                  onChange={(e) => {
+                    setInsightKey(e.target.value);
+                    if (e.target.value) setVariant('letter');
+                  }}
+                  className={field}
+                >
+                  <option value="">Sin insight (solo texto libre)</option>
+                  {insightCatalog.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.sortOrder}. {item.title}
+                    </option>
+                  ))}
+                </select>
+                {selectedInsight ? (
+                  <div className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs text-slate-700">
+                    <p className="font-semibold text-violet-800">{selectedInsight.title}</p>
+                    <p className="mt-1 text-slate-500">{selectedInsight.description}</p>
+                    <p className="mt-2 italic text-slate-600">Ejemplo: {selectedInsight.sampleLine}</p>
+                  </div>
+                ) : null}
+              </div>
+
               <label className="block">
                 <span className={labelCls}>Asunto</span>
                 <input value={subject} onChange={(e) => setSubject(e.target.value)} className={field} />
@@ -538,20 +594,27 @@ export function FreeEmailSequenceEditor() {
                 <input value={preheader} onChange={(e) => setPreheader(e.target.value)} className={field} />
               </label>
               <label className="block">
-                <span className={labelCls}>Cuerpo</span>
+                <span className={labelCls}>{insightKey ? 'Comentario (texto humano)' : 'Cuerpo'}</span>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  rows={12}
+                  rows={insightKey ? 8 : 12}
                   className={`${field} font-mono text-[13px] leading-relaxed`}
+                  placeholder={
+                    insightKey
+                      ? 'Escribí el mensaje alrededor del dato del insight…'
+                      : undefined
+                  }
                 />
                 <p className="mt-1 text-[10px] text-slate-500">
+                  {insightKey
+                    ? 'El mail combina: dato del insight (automático) + este comentario. '
+                    : ''}
                   Párrafos separados con línea en blanco. Variables:{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{tip1}}'}</code>
+                  <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
                 </p>
               </label>
 
@@ -594,7 +657,8 @@ export function FreeEmailSequenceEditor() {
             <section className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm text-slate-600">
                 <Eye className="h-4 w-4 text-violet-600" />
-                Preview · {variant === 'letter' ? 'carta' : 'editorial'} + contenido del editor
+                Preview · {(insightKey || variant === 'letter') ? 'carta' : 'editorial'}
+                {selectedInsight ? ` · ${selectedInsight.title}` : ''} + contenido del editor
               </div>
               {preview ? (
                 <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-600">
