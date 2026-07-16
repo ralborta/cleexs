@@ -561,7 +561,7 @@ export function FreeEmailSequenceEditor() {
               <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
                 <p className={labelCls}>Insight del reporte (de los 12)</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Elegí el tipo → se carga un texto demo editable abajo. El preview usa ese texto en la tarjeta.
+                  Elegí el tipo. El texto de abajo es editable y es lo que aparece en la tarjeta del mail.
                 </p>
                 <select
                   value={insightKey}
@@ -583,10 +583,28 @@ export function FreeEmailSequenceEditor() {
                   ))}
                 </select>
                 {selectedInsight ? (
-                  <div className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs text-slate-700">
+                  <div className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-3 text-xs text-slate-700">
                     <p className="font-semibold text-violet-800">{selectedInsight.title}</p>
                     <p className="mt-1 text-slate-500">{selectedInsight.description}</p>
-                    <p className="mt-2 italic text-slate-600">Demo base: {selectedInsight.sampleLine}</p>
+                    <label className="mt-3 block">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">
+                        Texto en la tarjeta (editable)
+                      </span>
+                      <textarea
+                        value={body}
+                        onChange={(e) => setBody(e.target.value)}
+                        rows={4}
+                        className={`${field} mt-1.5 font-mono text-[13px] leading-relaxed`}
+                        placeholder="Editá este texto: es lo que se ve en la tarjeta del preview…"
+                      />
+                    </label>
+                    <p className="mt-1.5 text-[10px] text-slate-500">
+                      Al cambiar de insight se reemplaza con el demo nuevo. Variables:{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
+                    </p>
                   </div>
                 ) : null}
               </div>
@@ -599,30 +617,24 @@ export function FreeEmailSequenceEditor() {
                 <span className={labelCls}>Preheader</span>
                 <input value={preheader} onChange={(e) => setPreheader(e.target.value)} className={field} />
               </label>
-              <label className="block">
-                <span className={labelCls}>{insightKey ? 'Comentario editable (va a la tarjeta)' : 'Cuerpo'}</span>
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={insightKey ? 8 : 12}
-                  className={`${field} font-mono text-[13px] leading-relaxed`}
-                  placeholder={
-                    insightKey
-                      ? 'Editá el demo del insight. Esto es lo que se ve en la tarjeta del mail…'
-                      : undefined
-                  }
-                />
-                <p className="mt-1 text-[10px] text-slate-500">
-                  {insightKey
-                    ? 'Al cambiar de insight se reemplaza este texto con el demo nuevo. Guardá para persistir tu versión. '
-                    : ''}
-                  Párrafos separados con línea en blanco. Variables:{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
-                </p>
-              </label>
+              {!insightKey ? (
+                <label className="block">
+                  <span className={labelCls}>Cuerpo</span>
+                  <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    rows={12}
+                    className={`${field} font-mono text-[13px] leading-relaxed`}
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    Párrafos separados con línea en blanco. Variables:{' '}
+                    <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
+                    <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
+                    <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
+                    <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
+                  </p>
+                </label>
+              ) : null}
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <label className="block text-sm">
