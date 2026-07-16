@@ -43,13 +43,20 @@ export function PlanPaymentPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState(customerEmail?.trim() || '');
+  const [hasPortalSession, setHasPortalSession] = useState(false);
 
   useEffect(() => {
     if (customerEmail?.trim()) setEmailInput(customerEmail.trim());
   }, [customerEmail]);
 
-  const hasPortalSession =
-    typeof window !== 'undefined' && Boolean(sessionStorage.getItem(TOKEN_KEY));
+  useEffect(() => {
+    try {
+      setHasPortalSession(Boolean(sessionStorage.getItem(TOKEN_KEY)));
+    } catch {
+      setHasPortalSession(false);
+    }
+  }, []);
+
   const needsEmailField = !hasPortalSession && !diagnosticId?.trim();
 
   const plan = useMemo(() => APP_PLANS.find((p) => p.id === planId) ?? APP_PLANS[1], [planId]);
@@ -194,7 +201,11 @@ export function PlanPaymentPanel({
           type="button"
           className="mt-6 w-full bg-primary-600 hover:bg-primary-700"
           onClick={() => void startCheckout()}
-          disabled={submitting || plan.id !== 'crecimiento'}
+          disabled={
+            submitting ||
+            plan.id !== 'crecimiento' ||
+            (needsEmailField && !emailInput.trim().includes('@'))
+          }
         >
           {submitting ? 'Redirigiendo a Mercado Pago…' : 'Pagar con Mercado Pago'}
         </Button>
