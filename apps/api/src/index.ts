@@ -25,6 +25,7 @@ import adminEmailRoutes from './routes/admin-email';
 import adminEmailFreeSequencePreviewRoutes from './routes/admin-email-free-sequence-preview';
 import adminDashboardRoutes from './routes/admin-dashboard';
 import adminReportsRoutes from './routes/admin-reports';
+import adminMonitorRoutes from './routes/admin-monitor';
 import webhooksResendRoutes from './routes/webhooks-resend';
 import webhooksMercadoPagoRoutes from './routes/webhooks-mercadopago';
 import authPortalRoutes from './routes/auth-portal';
@@ -119,6 +120,7 @@ async function bootstrap() {
   await server.register(runRoutes, { prefix: '/api/runs' });
   await server.register(reportRoutes, { prefix: '/api/reports' });
   await server.register(adminReportsRoutes, { prefix: '/api/reports' });
+  await server.register(adminMonitorRoutes, { prefix: '/api/reports' });
   await server.register(publicDiagnosticRoutes, { prefix: '/api/public' });
   await server.register(emailUnsubscribeRoutes, { prefix: '/api/public' });
   await server.register(trackingRoutes, { prefix: '/api/public' });

@@ -1054,6 +1054,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         builderbot: {
           configured: envFlag('BUILDERBOT_BOT_ID') && envFlag('BUILDERBOT_API_KEY'),
           baseUrl: envValue('BUILDERBOT_BASE_URL', 'https://app.builderbot.cloud'),
+          baileysBotUrl: envValue('BAILEYS_BOT_URL') || null,
+          baileysPublicUrl: envValue('BAILEYS_BOT_PUBLIC_URL') || envValue('BAILEYS_BOT_URL') || null,
         },
         whatsapp: {
           apiKeyConfigured: envFlag('WHATSAPP_CHANNEL_API_KEY'),

@@ -666,7 +666,7 @@ export interface SystemConfigReport {
     firecrawl: { configured: boolean };
     hunter: { configured: boolean };
     serper: { configured: boolean };
-    builderbot: { configured: boolean; baseUrl: string };
+    builderbot: { configured: boolean; baseUrl: string; baileysBotUrl?: string | null; baileysPublicUrl?: string | null };
     whatsapp: { apiKeyConfigured: boolean; dailyLimit: number };
     satellite: { enabled: boolean; baseUrl: string | null };
     database: { configured: boolean };
