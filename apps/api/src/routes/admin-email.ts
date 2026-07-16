@@ -414,7 +414,9 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  fastify.get<{ Querystring: { limit?: string; campaignSlug?: string } }>('/email/logs', async (request, reply) => {
+  fastify.get<{
+    Querystring: { limit?: string; campaignSlug?: string; recipientEmail?: string };
+  }>('/email/logs', async (request, reply) => {
     if (!requireAdminSecret(request)) {
       return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
         error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
@@ -423,9 +425,11 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
 
     const limit = Math.min(200, Math.max(1, Number(request.query.limit) || 50));
     const campaignSlug = (request.query.campaignSlug || '').trim();
+    const recipientEmail = (request.query.recipientEmail || '').trim().toLowerCase();
 
     const where: Prisma.CleexsInternalEmailSendLogWhereInput = {};
     if (campaignSlug) where.campaignSlug = campaignSlug;
+    if (recipientEmail) where.recipientEmail = recipientEmail;
 
     const rows = await prisma.cleexsInternalEmailSendLog.findMany({
       where,
@@ -433,6 +437,86 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
       take: limit,
     });
     return rows;
+  });
+
+  /** Contenido HTML del envío vía Resend (on-demand, sin guardar en Cleexs). */
+  fastify.get<{ Params: { logId: string } }>('/email/logs/:logId/content', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const logId = (request.params.logId || '').trim();
+    if (!logId) return reply.code(400).send({ error: 'logId requerido' });
+
+    const log = await prisma.cleexsInternalEmailSendLog.findUnique({ where: { id: logId } });
+    if (!log) return reply.code(404).send({ error: 'Envío no encontrado' });
+
+    const externalId = (log.externalId || '').trim();
+    const looksLikeResendId =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(externalId);
+
+    if (!externalId || !looksLikeResendId) {
+      return reply.code(404).send({
+        error:
+          'Este envío no tiene ID de Resend (quizá fue por SMTP o falló el envío). No se puede recuperar el HTML.',
+        log: {
+          id: log.id,
+          recipientEmail: log.recipientEmail,
+          campaignSlug: log.campaignSlug,
+          status: log.status,
+          externalId: log.externalId,
+          createdAt: log.createdAt,
+        },
+      });
+    }
+
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    if (!apiKey) {
+      return reply.code(503).send({ error: 'RESEND_API_KEY no configurada' });
+    }
+
+    try {
+      const resend = new Resend(apiKey);
+      const { data, error } = await resend.emails.get(externalId);
+      if (error || !data) {
+        return reply.code(502).send({
+          error: error?.message || 'Resend no devolvió el email (¿más de ~30 días?).',
+          externalId,
+        });
+      }
+
+      return {
+        ok: true as const,
+        source: 'resend' as const,
+        log: {
+          id: log.id,
+          recipientEmail: log.recipientEmail,
+          campaignSlug: log.campaignSlug,
+          status: log.status,
+          cleexsScore: log.cleexsScore,
+          externalId: log.externalId,
+          createdAt: log.createdAt.toISOString(),
+        },
+        email: {
+          id: data.id,
+          from: data.from,
+          to: data.to,
+          subject: data.subject,
+          html: data.html ?? null,
+          text: data.text ?? null,
+          createdAt: data.created_at,
+          lastEvent: data.last_event ?? null,
+        },
+        retentionNote: 'Resend suele retener el contenido ~30 días.',
+      };
+    } catch (e) {
+      return reply.code(502).send({
+        error: e instanceof Error ? e.message : 'Error al consultar Resend',
+        externalId,
+      });
+    }
   });
 
   fastify.post<{ Body: z.infer<typeof createLogBody> }>('/email/logs', async (request, reply) => {

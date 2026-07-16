@@ -1,7 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, Download, Globe2, MessageCircle, UserRound, Users } from 'lucide-react';
+import {
+  ChevronDown,
+  Download,
+  Eye,
+  Globe2,
+  Loader2,
+  Mail,
+  MessageCircle,
+  UserRound,
+  Users,
+  X,
+} from 'lucide-react';
 import { internalReportsApi, type OnboardingProfileReport, type ReportWindowDays } from '@/lib/api';
 import {
   ReportErrorBanner,
@@ -13,6 +24,7 @@ import {
   formatDate,
   formatPercent,
 } from '@/components/admin/report-ui';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
 const STATUS_BADGES: Record<string, string> = {
   pending: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
@@ -21,6 +33,40 @@ const STATUS_BADGES: Record<string, string> = {
   running: 'bg-sky-100 text-sky-800 ring-1 ring-sky-200',
   completed: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
   failed: 'bg-red-100 text-red-800 ring-1 ring-red-200',
+};
+
+type SendLogRow = {
+  id: string;
+  recipientEmail: string;
+  campaignSlug: string;
+  scoreBucket: string | null;
+  cleexsScore: number | null;
+  status: string;
+  externalId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+type ResendContentPayload = {
+  ok: boolean;
+  retentionNote?: string;
+  log: {
+    id: string;
+    recipientEmail: string;
+    campaignSlug: string;
+    status: string;
+    createdAt: string;
+  };
+  email: {
+    id: string;
+    from: string;
+    to: string[] | string;
+    subject: string;
+    html: string | null;
+    text: string | null;
+    createdAt: string;
+    lastEvent: string | null;
+  };
 };
 
 function downloadCsv(rows: OnboardingProfileReport['rows']) {
@@ -52,12 +98,28 @@ function downloadCsv(rows: OnboardingProfileReport['rows']) {
   URL.revokeObjectURL(url);
 }
 
+function looksLikeResendId(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
 export default function OnboardingProfileReportPage() {
   const [data, setData] = useState<OnboardingProfileReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [windowDays, setWindowDays] = useState<ReportWindowDays>(30);
   const [countryFilter, setCountryFilter] = useState('');
+
+  const [mailsOpen, setMailsOpen] = useState(false);
+  const [mailsEmail, setMailsEmail] = useState<string | null>(null);
+  const [mailsBrand, setMailsBrand] = useState<string | null>(null);
+  const [mailsLoading, setMailsLoading] = useState(false);
+  const [mailsError, setMailsError] = useState<string | null>(null);
+  const [mails, setMails] = useState<SendLogRow[]>([]);
+
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<ResendContentPayload | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -78,6 +140,62 @@ export default function OnboardingProfileReportPage() {
     setLoading(true);
     void load();
   }, [load]);
+
+  async function openMails(email: string, brandName: string) {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return;
+    setMailsOpen(true);
+    setMailsEmail(normalized);
+    setMailsBrand(brandName);
+    setMailsLoading(true);
+    setMailsError(null);
+    setMails([]);
+    setPreview(null);
+    setPreviewError(null);
+    try {
+      const qs = new URLSearchParams({
+        recipientEmail: normalized,
+        limit: '50',
+      });
+      const res = await adminUiFetch(`/api/admin-ui/email/logs?${qs.toString()}`);
+      const json = await res.json().catch(() => ([]));
+      if (!res.ok) {
+        throw new Error((json as { error?: string }).error || `Error ${res.status}`);
+      }
+      setMails(Array.isArray(json) ? (json as SendLogRow[]) : []);
+    } catch (e) {
+      setMailsError(e instanceof Error ? e.message : 'No se pudieron cargar los envíos');
+    } finally {
+      setMailsLoading(false);
+    }
+  }
+
+  function closeMails() {
+    setMailsOpen(false);
+    setMailsEmail(null);
+    setMailsBrand(null);
+    setMails([]);
+    setPreview(null);
+    setPreviewError(null);
+  }
+
+  async function viewMailContent(logId: string) {
+    setPreviewLoadingId(logId);
+    setPreviewError(null);
+    setPreview(null);
+    try {
+      const res = await adminUiFetch(`/api/admin-ui/email/logs/${encodeURIComponent(logId)}/content`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((json as { error?: string }).error || `Error ${res.status}`);
+      }
+      setPreview(json as ResendContentPayload);
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : 'No se pudo cargar el correo');
+    } finally {
+      setPreviewLoadingId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -211,12 +329,13 @@ export default function OnboardingProfileReportPage() {
                     <th className="py-2">Nombre</th>
                     <th className="py-2">Cómo llegó</th>
                     <th className="py-2">Estado</th>
+                    <th className="py-2">Mails</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-6 text-center text-sm text-slate-500">
+                      <td colSpan={8} className="py-6 text-center text-sm text-slate-500">
                         {countryFilter.trim()
                           ? `Sin leads con datos de onboarding para ${countryFilter} en este período.`
                           : 'Nadie dejó datos del onboarding en este período.'}
@@ -245,6 +364,20 @@ export default function OnboardingProfileReportPage() {
                             {row.status}
                           </span>
                         </td>
+                        <td className="py-2">
+                          {row.email ? (
+                            <button
+                              type="button"
+                              onClick={() => void openMails(row.email!, row.brandName)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-violet-700 shadow-sm hover:bg-violet-50"
+                            >
+                              <Eye className="h-3 w-3" />
+                              View
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -253,6 +386,137 @@ export default function OnboardingProfileReportPage() {
             </div>
           </ReportSection>
         </>
+      ) : null}
+
+      {mailsOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Mail className="h-4 w-4 text-violet-600" />
+                  Mails enviados
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {mailsBrand ? `${mailsBrand} · ` : ''}
+                  {mailsEmail}
+                </p>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  El HTML se pide a Resend al verlo (no se guarda en Cleexs). Retención típica ~30 días.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeMails}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-2">
+              <div className="overflow-y-auto border-b border-slate-100 p-4 lg:border-b-0 lg:border-r">
+                {mailsLoading ? (
+                  <div className="flex items-center gap-2 py-8 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cargando envíos…
+                  </div>
+                ) : mailsError ? (
+                  <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    {mailsError}
+                  </p>
+                ) : mails.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-slate-500">
+                    No hay envíos registrados para este email.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {mails.map((m) => (
+                      <li
+                        key={m.id}
+                        className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-slate-800">{m.campaignSlug}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-500">{formatDate(m.createdAt)}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
+                              {m.status}
+                              {m.cleexsScore != null ? ` · score ${m.cleexsScore}` : ''}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!looksLikeResendId(m.externalId) || previewLoadingId === m.id}
+                            onClick={() => void viewMailContent(m.id)}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-violet-500 disabled:opacity-40"
+                            title={
+                              looksLikeResendId(m.externalId)
+                                ? 'Ver HTML en Resend'
+                                : 'Sin ID de Resend'
+                            }
+                          >
+                            {previewLoadingId === m.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Eye className="h-3 w-3" />
+                            )}
+                            Ver
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="flex min-h-[280px] flex-col overflow-hidden bg-slate-50">
+                {previewError ? (
+                  <p className="m-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    {previewError}
+                  </p>
+                ) : preview ? (
+                  <>
+                    <div className="border-b border-slate-200 bg-white px-4 py-2 text-xs text-slate-600">
+                      <p>
+                        <span className="font-semibold text-slate-800">Asunto:</span> {preview.email.subject}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        {preview.email.from} →{' '}
+                        {Array.isArray(preview.email.to) ? preview.email.to.join(', ') : preview.email.to}
+                        {preview.email.lastEvent ? ` · ${preview.email.lastEvent}` : ''}
+                      </p>
+                      {preview.retentionNote ? (
+                        <p className="mt-1 text-[10px] text-slate-400">{preview.retentionNote}</p>
+                      ) : null}
+                    </div>
+                    {preview.email.html ? (
+                      <iframe
+                        title="Preview correo Resend"
+                        srcDoc={preview.email.html}
+                        className="min-h-0 w-full flex-1 border-0 bg-white"
+                        sandbox="allow-same-origin"
+                      />
+                    ) : (
+                      <pre className="overflow-auto p-4 text-xs text-slate-700 whitespace-pre-wrap">
+                        {preview.email.text || '(Sin HTML ni texto)'}
+                      </pre>
+                    )}
+                  </>
+                ) : (
+                  <p className="m-auto px-6 text-center text-sm text-slate-500">
+                    Elegí un envío y tocá <strong>Ver</strong> para cargar el correo desde Resend.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
