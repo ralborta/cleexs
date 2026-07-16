@@ -23,12 +23,15 @@ const attributionField = z.string().trim().max(120).optional();
 const checkoutSchema = z.object({
   planId: z.enum(['crecimiento']),
   billingMode: z.enum(['monthly', 'annual']).default('monthly'),
-  // Atribuci?n de adquisici?n (funnel interno). Opcional.
+  // Atribución de adquisición (funnel interno). Opcional.
   refCode: attributionField,
   utmSource: attributionField,
   utmMedium: attributionField,
   utmCampaign: attributionField,
   sourceChannel: attributionField,
+  /** Checkout desde reporte público sin sesión previa en el portal. */
+  diagnosticId: z.string().uuid().optional(),
+  customerEmail: z.string().email().optional(),
 });
 
 const planConquistarCheckoutSchema = z.object({
@@ -72,10 +75,36 @@ function mercadoPagoCheckoutUrl(preapproval: { init_point?: string | null; sandb
 const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof checkoutSchema> }>('/subscriptions/checkout', async (request, reply) => {
     try {
-      const portalUser = await resolvePortalUserFromRequest(request);
+      const parsed = checkoutSchema.safeParse(request.body ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear suscripción.' });
+
+      let portalUser = await resolvePortalUserFromRequest(request);
+
+      if (!portalUser && parsed.data.diagnosticId) {
+        const ensured = await ensurePortalUserForDiagnosticCheckout(prisma, parsed.data.diagnosticId);
+        if (!ensured) {
+          return reply.code(400).send({
+            error:
+              'No encontramos el email de tu diagnóstico. Completá el reporte con tu correo antes de contratar Premium.',
+          });
+        }
+        if (
+          parsed.data.customerEmail &&
+          parsed.data.customerEmail.trim().toLowerCase() !== ensured.email.toLowerCase()
+        ) {
+          return reply.code(400).send({ error: 'El email del checkout no coincide con el del diagnóstico.' });
+        }
+        portalUser = {
+          userId: ensured.userId,
+          tenantId: ensured.tenantId,
+          email: ensured.email,
+        };
+      }
+
       if (!portalUser) {
         return reply.code(401).send({
-          error: 'Para pagar necesit?s iniciar sesi?n en el portal, as? podemos activar el plan en tu cuenta.',
+          error:
+            'Para pagar iniciá sesión en el portal o abrí el checkout desde tu reporte (con el email del diagnóstico).',
         });
       }
 
@@ -87,11 +116,8 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(403).send({ error: 'Solo el administrador de la cuenta puede contratar el plan.' });
       }
 
-      const parsed = checkoutSchema.safeParse(request.body ?? {});
-      if (!parsed.success) return reply.code(400).send({ error: 'Payload inv?lido para crear suscripci?n.' });
-
       if (!process.env.MP_ACCESS_TOKEN?.trim()) {
-        return reply.code(503).send({ error: 'Mercado Pago no est? configurado en el servidor (MP_ACCESS_TOKEN).' });
+        return reply.code(503).send({ error: 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).' });
       }
 
       const interval = toBillingInterval(parsed.data.billingMode);
@@ -165,6 +191,8 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           subscriptionId: subscription.id,
           mpPreapprovalId: preapproval.id,
           checkoutUrl,
+          portalToken: signPortalToken(portalUser.userId),
+          portalEmail: portalUser.email,
           amount: {
             usd: amountUsd,
             ars: amountArs,

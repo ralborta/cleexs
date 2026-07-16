@@ -27,6 +27,8 @@ import {
   YAxis,
 } from 'recharts';
 import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-sidebar-nav';
+import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
+import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 
@@ -353,11 +355,35 @@ function escapeCsv(cell: string) {
   return s;
 }
 
-export function PortalCompetidoresCleexsScore({ runId }: { runId: string }) {
-  const basePath = `/portal-crecimiento/reporte/${runId}/premium`;
-  const informeTop3Href = `/portal-crecimiento/reporte/${runId}`;
-  const portalHomeHref = '/portal-crecimiento';
-  const promptsDetailHref = `${basePath}/prompts`;
+export type PortalCompetidoresShell = 'premium' | 'portal-cliente' | 'portal-crecimiento';
+
+function nextRenewalLabel() {
+  const d = new Date();
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return next.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric', year: 'numeric' });
+}
+
+export function PortalCompetidoresCleexsScore({
+  runId,
+  shell = 'premium',
+}: {
+  runId: string;
+  shell?: PortalCompetidoresShell;
+}) {
+  const basePath =
+    shell === 'portal-cliente'
+      ? `/portal-cliente/reporte/${runId}`
+      : shell === 'portal-crecimiento'
+        ? `/portal-crecimiento/reporte/${runId}/cliente`
+        : `/portal-crecimiento/reporte/${runId}/premium`;
+  const informeTop3Href =
+    shell === 'premium'
+      ? `/portal-crecimiento/reporte/${runId}`
+      : shell === 'portal-cliente'
+        ? `/portal-cliente/reporte/${runId}`
+        : `/portal-crecimiento/reporte/${runId}/cliente`;
+  const portalHomeHref = shell === 'portal-cliente' ? '/portal-cliente' : '/portal-crecimiento';
+  const promptsDetailHref = shell === 'premium' ? `${basePath}/prompts` : `${basePath}#prompts`;
 
   const [run, setRun] = useState<ExpandedRun | null>(null);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
@@ -664,11 +690,35 @@ export function PortalCompetidoresCleexsScore({ runId }: { runId: string }) {
     );
   }
 
+  const analysesUsed = usage?.usage?.scoreViews ?? 0;
+  const analysesLimitForNav = usage?.limits?.scoreViews ?? 2;
+
+  const sidebar =
+    shell === 'premium' ? (
+      <PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />
+    ) : shell === 'portal-cliente' ? (
+      <PortalFreeTierNav
+        basePath={basePath}
+        analysesUsed={analysesUsed}
+        analysesLimit={analysesLimitForNav}
+        renewalLabel={nextRenewalLabel()}
+      />
+    ) : (
+      <PortalCrecimientoTierNav
+        basePath={basePath}
+        runId={runId}
+        planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+        analysesUsed={analysesUsed}
+        analysesLimit={analysesLimitForNav}
+        renewalLabel={nextRenewalLabel()}
+      />
+    );
+
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
       <PortalResponsiveShell
         mobileTitle="Competidores"
-        sidebar={<PortalPremiumSidebarNav runId={runId} usage={usage} loadingPlan={loading} />}
+        sidebar={sidebar}
       >
         <div className="min-w-0 space-y-4">
           <nav className="flex flex-wrap items-center gap-x-2 text-xs text-violet-700">

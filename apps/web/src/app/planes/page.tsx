@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, Sparkles } from 'lucide-react';
@@ -9,6 +10,9 @@ import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { APP_PLANS, getAnnualPrice, type BillingMode, type PlanDefinition } from '@/lib/plans';
 
 export default function PlanesPage() {
+  const searchParams = useSearchParams();
+  const diagnosticId = searchParams.get('diagnosticId');
+  const customerEmail = searchParams.get('email');
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
   const [pagoOpen, setPagoOpen] = useState(false);
   const [planForPago, setPlanForPago] = useState<PlanDefinition['id']>('crecimiento');
@@ -142,6 +146,9 @@ export default function PlanesPage() {
         planId={planForPago}
         billingMode={billingMode}
         onConfirm={() => setPagoOpen(false)}
+        diagnosticId={diagnosticId}
+        customerEmail={customerEmail}
+        sourceChannel="planes_landing"
       />
     </main>
   );

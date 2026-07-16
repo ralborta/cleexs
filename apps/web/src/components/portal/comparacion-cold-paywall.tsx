@@ -30,6 +30,7 @@ import {
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
+import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -38,8 +39,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 type UsageResponse = {
   planKey?: string;
   planDisplay?: string;
+  account?: { email?: string };
   usage?: { scoreViews?: number };
   limits?: { scoreViews?: number | null };
+};
+
+type RunCheckoutContext = {
+  publicDiagnosticId?: string | null;
 };
 
 function isPremiumPlan(planKey?: string) {
@@ -166,6 +172,9 @@ export function ComparacionColdPaywallPage({
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pagoOpen, setPagoOpen] = useState(false);
+  const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
+  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,8 +205,23 @@ export function ComparacionColdPaywallPage({
           return;
         }
         const data = res.ok ? ((await res.json()) as UsageResponse) : {};
+        let checkoutDiagnosticId: string | null = null;
+        try {
+          const runRes = await fetch(`${API_URL}/api/reports/app/reports/${encodeURIComponent(runId)}`, {
+            cache: 'no-store',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (runRes.ok) {
+            const runData = (await runRes.json()) as RunCheckoutContext;
+            checkoutDiagnosticId = runData.publicDiagnosticId?.trim() || null;
+          }
+        } catch {
+          checkoutDiagnosticId = null;
+        }
         if (!cancelled) {
           setUsage(data);
+          setDiagnosticId(checkoutDiagnosticId);
+          setCustomerEmail(data.account?.email?.trim() || null);
           if (isPremiumPlan(data.planKey)) {
             const premiumTarget =
               pageContext === 'competidores'
@@ -578,12 +602,19 @@ export function ComparacionColdPaywallPage({
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-stretch sm:items-end">
-                <Link
-                  href={suscripcionHref}
+                <button
+                  type="button"
+                  onClick={() => setPagoOpen(true)}
                   className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700"
                 >
                   <Crown className="h-3.5 w-3.5" />
-                  Actualizar mi plan
+                  Comprar Premium
+                </button>
+                <Link
+                  href={suscripcionHref}
+                  className="mt-2 text-center text-[11px] font-semibold text-violet-800/80 hover:text-violet-950 hover:underline"
+                >
+                  Ver planes y precios
                 </Link>
                 <button
                   type="button"
@@ -604,6 +635,21 @@ export function ComparacionColdPaywallPage({
           </p>
         </div>
       </div>
+
+      <PlanPaymentModal
+        open={pagoOpen}
+        onOpenChange={setPagoOpen}
+        planId="crecimiento"
+        billingMode="monthly"
+        onConfirm={() => setPagoOpen(false)}
+        diagnosticId={diagnosticId}
+        customerEmail={customerEmail}
+        sourceChannel={
+          pageContext === 'competidores'
+            ? 'portal_competidores_paywall'
+            : 'portal_comparacion_paywall'
+        }
+      />
     </main>
   );
 }

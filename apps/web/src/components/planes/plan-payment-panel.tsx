@@ -24,9 +24,21 @@ export interface PlanPaymentPanelProps {
   /** Callback opcional tras iniciar el checkout. */
   onConfirm?: () => void;
   hideFooterSsl?: boolean;
+  /** Permite checkout sin sesión previa (mismo flujo que Plan Conquistar). */
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
+  sourceChannel?: string;
 }
 
-export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl }: PlanPaymentPanelProps) {
+export function PlanPaymentPanel({
+  planId,
+  billingMode,
+  onConfirm,
+  hideFooterSsl,
+  diagnosticId,
+  customerEmail,
+  sourceChannel,
+}: PlanPaymentPanelProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,8 +59,11 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
       setError(null);
 
       const token = typeof window !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null;
-      if (!token) {
-        setError('Para pagar necesitás iniciar sesión en el portal. Así podemos activar el plan en tu cuenta.');
+      const diagId = diagnosticId?.trim() || null;
+      if (!token && !diagId) {
+        setError(
+          'Para pagar abrí el checkout desde tu reporte (con el email del diagnóstico) o iniciá sesión en el portal.',
+        );
         return;
       }
 
@@ -76,23 +91,35 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
         /* ignore */
       }
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const res = await fetch(`${API_URL}/api/subscriptions/checkout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ planId, billingMode, ...attribution }),
+        headers,
+        body: JSON.stringify({
+          planId,
+          billingMode,
+          ...(sourceChannel ? { sourceChannel } : {}),
+          ...(diagId ? { diagnosticId: diagId } : {}),
+          ...(customerEmail?.trim() ? { customerEmail: customerEmail.trim() } : {}),
+          ...attribution,
+        }),
       });
 
       const json = (await res.json().catch(() => ({}))) as {
         checkoutUrl?: string;
         error?: string;
         message?: string;
+        portalToken?: string;
       };
 
       if (!res.ok || !json.checkoutUrl) {
         throw new Error(json.error || json.message || 'No se pudo iniciar el checkout de Mercado Pago.');
+      }
+
+      if (json.portalToken && typeof window !== 'undefined') {
+        sessionStorage.setItem(TOKEN_KEY, json.portalToken);
       }
 
       onConfirm?.();

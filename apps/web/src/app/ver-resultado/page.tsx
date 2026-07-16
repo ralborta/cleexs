@@ -235,10 +235,18 @@ const mergeConfiguredCompetitorsWithZeroShare = (
 function ReporteFreemium({
   runResult,
   domainRating,
+  diagnosticId,
+  customerEmail,
 }: {
   runResult: PublicDiagnosticRunResult;
   domainRating?: DomainRatingSnapshot | null;
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
 }) {
+  const planesHref =
+    diagnosticId != null
+      ? `/planes?diagnosticId=${encodeURIComponent(diagnosticId)}${customerEmail ? `&email=${encodeURIComponent(customerEmail)}` : ''}`
+      : '/planes';
   return (
     <div className="space-y-6">
       <Card className="border-transparent bg-white shadow-md">
@@ -273,7 +281,7 @@ function ReporteFreemium({
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Button asChild className="bg-primary-600 hover:bg-primary-700">
-              <Link href="/planes">
+              <Link href={planesHref}>
                 <LogIn className="mr-2 h-4 w-4" />
                 Ver planes y crear cuenta
               </Link>
@@ -859,6 +867,11 @@ function VerResultadoContent() {
       />
     ) : null;
 
+  const planesHref =
+    diagnostic.id != null
+      ? `/planes?diagnosticId=${encodeURIComponent(diagnostic.id)}${diagnostic.email ? `&email=${encodeURIComponent(diagnostic.email)}` : ''}`
+      : '/planes';
+
   return (
     <div>
       <main className="min-h-[calc(100vh-72px)] bg-slate-50 px-4 py-10 sm:px-6 sm:py-12">
@@ -1146,7 +1159,12 @@ function VerResultadoContent() {
                         ))}
                     </div>
                   ) : (
-                    <ReporteFreemium runResult={runResult} domainRating={diagnostic.domainRating} />
+                    <ReporteFreemium
+                      runResult={runResult}
+                      domainRating={diagnostic.domainRating}
+                      diagnosticId={diagnostic.id}
+                      customerEmail={diagnostic.email}
+                    />
                   )
                 ) : (
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
@@ -1284,7 +1302,7 @@ function VerResultadoContent() {
                       </p>
                       <div className="flex flex-wrap gap-3">
                         <Button asChild className="bg-primary-600 hover:bg-primary-700">
-                          <Link href="/planes">
+                          <Link href={planesHref}>
                             <LogIn className="mr-2 h-4 w-4" />
                             Ver planes
                           </Link>
@@ -1302,7 +1320,7 @@ function VerResultadoContent() {
                         asChild
                         className="h-9 min-w-[160px] rounded-lg bg-primary-600 px-5 text-xs font-semibold shadow-md shadow-primary-600/15 hover:bg-primary-700"
                       >
-                        <Link href="/planes" className="inline-flex items-center gap-1.5">
+                        <Link href={planesHref} className="inline-flex items-center gap-1.5">
                           <Rocket className="h-3.5 w-3.5" />
                           Ver planes
                         </Link>

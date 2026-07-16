@@ -408,6 +408,17 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   }, [shell]);
 
   useEffect(() => {
+    if (loading || typeof window === 'undefined') return;
+    const hash = window.location.hash.replace('#', '').trim();
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    window.requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [loading, runId]);
+
+  useEffect(() => {
     if (!runId) return;
     let cancelled = false;
     (async () => {
@@ -941,7 +952,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               <LockFooter>
                 Desbloqueá el ranking completo, detalle por prompt y brecha vs líder.{' '}
                 <Link href={suscripcionHref} className="font-semibold text-violet-700 hover:underline">
-                  Actualizar plan →
+                  Comprar Premium →
                 </Link>
               </LockFooter>
             </section>
