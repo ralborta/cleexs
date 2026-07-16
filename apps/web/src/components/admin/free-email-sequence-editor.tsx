@@ -46,6 +46,7 @@ type StepRow = {
   preheader: string | null;
   body: string | null;
   insightKey: string | null;
+  insightText: string | null;
   templateVariant: TemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -91,6 +92,7 @@ export function FreeEmailSequenceEditor() {
   const [preheader, setPreheader] = useState('');
   const [body, setBody] = useState('');
   const [insightKey, setInsightKey] = useState<string>('');
+  const [insightText, setInsightText] = useState('');
   const [active, setActive] = useState(true);
 
   const [score, setScore] = useState(62);
@@ -162,10 +164,31 @@ export function FreeEmailSequenceEditor() {
     setVariant(selected.templateVariant);
     setSubject(selected.subject ?? '');
     setPreheader(selected.preheader ?? '');
-    setBody(selected.body ?? '');
     setInsightKey(selected.insightKey ?? '');
     setActive(selected.active);
-  }, [selected?.id]);
+
+    const catalogSample =
+      selected.insightKey != null
+        ? insightCatalog.find((i) => i.key === selected.insightKey)?.sampleLine ?? null
+        : null;
+    const savedInsight = (selected.insightText ?? '').trim();
+    const savedBody = selected.body ?? '';
+
+    // Recuperación: si el bug anterior guardó el demo del insight en el cuerpo.
+    if (
+      selected.insightKey &&
+      !savedInsight &&
+      catalogSample &&
+      savedBody.trim() === catalogSample.trim()
+    ) {
+      setInsightText(catalogSample);
+      const suggested = suggestedBySortOrder[String(selected.sortOrder)]?.body;
+      setBody(suggested ?? '');
+    } else {
+      setInsightText(savedInsight || catalogSample || '');
+      setBody(savedBody);
+    }
+  }, [selected?.id, insightCatalog, suggestedBySortOrder]);
 
   const refreshPreview = useCallback(async () => {
     if (!selected) return;
@@ -181,6 +204,7 @@ export function FreeEmailSequenceEditor() {
           preheader: preheader.trim() || null,
           body: body.trim() || null,
           insightKey: insightKey || null,
+          insightText: insightKey ? insightText.trim() || null : null,
           sortOrder: selected.sortOrder,
           score,
           domain,
@@ -196,13 +220,13 @@ export function FreeEmailSequenceEditor() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [selected, variant, subject, preheader, body, insightKey, score, domain, brandName]);
+  }, [selected, variant, subject, preheader, body, insightKey, insightText, score, domain, brandName]);
 
   useEffect(() => {
     if (!selected) return undefined;
     const t = window.setTimeout(() => void refreshPreview(), 400);
     return () => window.clearTimeout(t);
-  }, [selected, variant, subject, preheader, body, insightKey, score, domain, brandName, refreshPreview]);
+  }, [selected, variant, subject, preheader, body, insightKey, insightText, score, domain, brandName, refreshPreview]);
 
   async function saveStep() {
     if (!selected) return;
@@ -222,6 +246,7 @@ export function FreeEmailSequenceEditor() {
           preheader: preheader.trim() || null,
           body: body.trim() || null,
           insightKey: insightKey || null,
+          insightText: insightKey ? insightText.trim() || null : null,
           active,
         }),
       });
@@ -308,6 +333,7 @@ export function FreeEmailSequenceEditor() {
           preheader: preheader.trim() || null,
           body: body.trim() || null,
           insightKey: insightKey || null,
+          insightText: insightKey ? insightText.trim() || null : null,
           sortOrder: selected.sortOrder,
           score,
           domain,
@@ -561,17 +587,20 @@ export function FreeEmailSequenceEditor() {
               <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
                 <p className={labelCls}>Insight del reporte (de los 12)</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Elegí el tipo. El texto de abajo es editable y es lo que aparece en la tarjeta del mail.
+                  Solo afecta la tarjeta del mail. El cuerpo del mensaje se edita aparte y no se pisa.
                 </p>
                 <select
                   value={insightKey}
                   onChange={(e) => {
                     const next = e.target.value;
                     setInsightKey(next);
-                    if (!next) return;
+                    if (!next) {
+                      setInsightText('');
+                      return;
+                    }
                     setVariant('letter');
                     const item = insightCatalog.find((i) => i.key === next);
-                    if (item) setBody(item.sampleLine);
+                    if (item) setInsightText(item.sampleLine);
                   }}
                   className={field}
                 >
@@ -591,15 +620,15 @@ export function FreeEmailSequenceEditor() {
                         Texto en la tarjeta (editable)
                       </span>
                       <textarea
-                        value={body}
-                        onChange={(e) => setBody(e.target.value)}
+                        value={insightText}
+                        onChange={(e) => setInsightText(e.target.value)}
                         rows={4}
                         className={`${field} mt-1.5 font-mono text-[13px] leading-relaxed`}
                         placeholder="Editá este texto: es lo que se ve en la tarjeta del preview…"
                       />
                     </label>
                     <p className="mt-1.5 text-[10px] text-slate-500">
-                      Al cambiar de insight se reemplaza con el demo nuevo. Variables:{' '}
+                      Al cambiar de insight se reemplaza solo este texto (no el cuerpo). Variables:{' '}
                       <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
                       <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
                       <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
@@ -617,24 +646,22 @@ export function FreeEmailSequenceEditor() {
                 <span className={labelCls}>Preheader</span>
                 <input value={preheader} onChange={(e) => setPreheader(e.target.value)} className={field} />
               </label>
-              {!insightKey ? (
-                <label className="block">
-                  <span className={labelCls}>Cuerpo</span>
-                  <textarea
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    rows={12}
-                    className={`${field} font-mono text-[13px] leading-relaxed`}
-                  />
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    Párrafos separados con línea en blanco. Variables:{' '}
-                    <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
-                    <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
-                    <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
-                    <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
-                  </p>
-                </label>
-              ) : null}
+              <label className="block">
+                <span className={labelCls}>Cuerpo del mensaje</span>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={10}
+                  className={`${field} font-mono text-[13px] leading-relaxed`}
+                />
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Texto principal del mail (independiente del insight). Párrafos con línea en blanco. Variables:{' '}
+                  <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
+                  <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
+                  <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
+                  <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
+                </p>
+              </label>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <label className="block text-sm">

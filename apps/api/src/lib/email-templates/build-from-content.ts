@@ -37,13 +37,6 @@ export function buildCleexsEmailFromEditableContent(input: {
   const featured = input.featuredInsight;
 
   if (variant === 'letter') {
-    // Con insight editable: el comentario va a la tarjeta (signal), no se duplica en el cuerpo.
-    const letterBodyParagraphs = featured?.text
-      ? ([] as string[])
-      : paragraphs.length > 0
-        ? paragraphs
-        : undefined;
-
     return buildCleexsEmail({
       variant: 'letter',
       personalization: input.personalization,
@@ -51,11 +44,11 @@ export function buildCleexsEmailFromEditableContent(input: {
       letterContent: {
         ...(input.content.subject?.trim() ? { subject: input.content.subject.trim() } : {}),
         ...(input.content.preheader?.trim() ? { preheader: input.content.preheader.trim() } : {}),
-        ...(letterBodyParagraphs ? { bodyParagraphs: letterBodyParagraphs } : {}),
+        // Cuerpo del mail e insight de tarjeta son independientes.
+        ...(paragraphs.length > 0 ? { bodyParagraphs: paragraphs } : {}),
         ...(featured?.text
           ? {
               signalLabel: featured.label.endsWith(':') ? featured.label : `${featured.label}:`,
-              // Comentario editable (puede traer {{brandName}}, {{score}}, etc.).
               signalTemplate: featured.text,
             }
           : {}),

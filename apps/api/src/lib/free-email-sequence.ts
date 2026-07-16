@@ -40,6 +40,7 @@ export type FreeSequenceStepDto = {
   preheader: string | null;
   body: string | null;
   insightKey: string | null;
+  insightText: string | null;
   templateVariant: CleexsEmailTemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -185,6 +186,7 @@ function toStepDto(step: FreeEmailSequenceStep, allSteps: FreeEmailSequenceStep[
     preheader: step.preheader,
     body: step.body,
     insightKey: step.insightKey,
+    insightText: step.insightText,
     templateVariant: step.templateVariant,
     active: step.active,
     cumulativeDaysLabel: cumulativeDaysLabel(sorted, index),
@@ -350,6 +352,7 @@ export async function buildFreeSequencePreview(input: {
   sortOrder?: number;
   recipientEmail?: string;
   insightKey?: string | null;
+  insightText?: string | null;
 }) {
   const personalization = sampleCleexsPersonalization({
     score: input.score,
@@ -369,9 +372,8 @@ export async function buildFreeSequencePreview(input: {
       };
 
   const insightKey = isFreeEmailInsightKey(input.insightKey) ? input.insightKey : null;
-  const commentText = (input.content.body || '').trim();
-  // Comentario editable: lo que el admin escribió (demo del insight o versión editada).
-  // Fallback al sample del catálogo si eligió insight pero el campo está vacío.
+  const commentText = (input.insightText || '').trim();
+  // Texto de tarjeta: insightText editable. Fallback al sample del catálogo.
   const insightLine =
     insightKey && commentText
       ? commentText
@@ -383,12 +385,12 @@ export async function buildFreeSequencePreview(input: {
       ? { label: getInsightMeta(insightKey).title, text: insightLine }
       : null;
 
-  // Con insight: el comentario va a la tarjeta; el cuerpo de carta queda vacío (no duplicar).
+  // Cuerpo del mail e insight de tarjeta son independientes.
   const built = buildCleexsEmailFromEditableContent({
     content: {
       ...input.content,
       variant: insightKey ? CleexsEmailTemplateVariant.letter : input.content.variant,
-      body: insightKey ? null : input.content.body,
+      body: input.content.body,
     },
     personalization,
     links,
@@ -444,6 +446,7 @@ export async function updateFreeEmailSequenceStep(
     preheader: string | null;
     body: string | null;
     insightKey: string | null;
+    insightText: string | null;
     templateVariant: CleexsEmailTemplateVariant;
     active: boolean;
   }>
@@ -467,6 +470,7 @@ export async function updateFreeEmailSequenceStep(
       ...(input.preheader !== undefined ? { preheader: input.preheader } : {}),
       ...(input.body !== undefined ? { body: input.body } : {}),
       ...(insightKey !== undefined ? { insightKey } : {}),
+      ...(input.insightText !== undefined ? { insightText: input.insightText } : {}),
       ...(input.templateVariant !== undefined
         ? { templateVariant: insightKey ? CleexsEmailTemplateVariant.letter : input.templateVariant }
         : insightKey
@@ -550,6 +554,7 @@ export async function sendFreeEmailSequenceStepTest(input: {
   domain?: string;
   brandName?: string;
   insightKey?: string | null;
+  insightText?: string | null;
 }) {
   if (isEmailDisabled()) {
     throw Object.assign(new Error('Envíos deshabilitados (DISABLE_EMAILS).'), { statusCode: 400 });
@@ -568,6 +573,7 @@ export async function sendFreeEmailSequenceStepTest(input: {
     sortOrder: input.sortOrder,
     recipientEmail: to,
     insightKey: input.insightKey,
+    insightText: input.insightText,
   });
 
   const apiKey = process.env.RESEND_API_KEY?.trim();

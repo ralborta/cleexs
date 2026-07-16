@@ -354,7 +354,7 @@ export async function sendFreeOnboardingStep(input: {
   candidate: FreeOnboardingCandidate;
   step: Pick<
     FreeEmailSequenceStep,
-    'sortOrder' | 'subject' | 'preheader' | 'body' | 'templateVariant' | 'insightKey'
+    'sortOrder' | 'subject' | 'preheader' | 'body' | 'templateVariant' | 'insightKey' | 'insightText'
   >;
 }): Promise<{ sent: boolean; reason?: string; logId?: string; subject?: string }> {
   if (isEmailDisabled()) return { sent: false, reason: 'emails_disabled' };
@@ -366,8 +366,8 @@ export async function sendFreeOnboardingStep(input: {
   const campaignSlug = freeOnboardingCampaignSlug(input.step.sortOrder);
   const insightKey = isFreeEmailInsightKey(input.step.insightKey) ? input.step.insightKey : null;
   const variant = insightKey ? CleexsEmailTemplateVariant.letter : input.step.templateVariant;
-  const commentText = (input.step.body || '').trim();
-  // Envío: usa el comentario guardado (editable). Si falta, resuelve dato del reporte.
+  const commentText = (input.step.insightText || '').trim();
+  // Envío: insightText en la tarjeta; body es el cuerpo del mail.
   const insightLine = insightKey
     ? commentText ||
       resolveFreeEmailInsightLine(insightKey, input.candidate.analysisJson, {
@@ -385,7 +385,7 @@ export async function sendFreeOnboardingStep(input: {
     variant,
     subject: input.step.subject,
     preheader: input.step.preheader,
-    body: insightKey ? null : input.step.body,
+    body: input.step.body,
   };
 
   const personalization = {

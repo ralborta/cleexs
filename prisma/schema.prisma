@@ -974,6 +974,8 @@ model FreeEmailSequenceStep {
   body                   String?                   @db.Text
   /// Uno de los 12 insights del catálogo free (ver free-email-insights.ts).
   insightKey             String?                   @map("insight_key")
+  /// Texto editable del insight en la tarjeta (independiente del cuerpo del mail).
+  insightText            String?                   @map("insight_text") @db.Text
   templateVariant        CleexsEmailTemplateVariant @default(letter) @map("template_variant")
   active                 Boolean                   @default(true)
   createdAt              DateTime                  @default(now()) @map("created_at")
