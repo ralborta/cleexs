@@ -25,7 +25,11 @@ export type CleexsLetterContent = {
   scoreLabelText: string;
   scoreMissingLine: string;
   rivalsLabel: string;
+  /** Etiqueta del bullet de insight (default «Señal:»). */
+  signalLabel: string;
   signalTemplate: string;
+  /** Etiqueta del bullet de acción (default «Acción sugerida:»). */
+  actionLabel: string;
   actionTemplate: string;
   reportCtaLabel: string;
   shareCtaLabel: string;
@@ -69,7 +73,9 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     scoreLabelText: 'Cleexs Score',
     scoreMissingLine: '—',
     rivalsLabel: 'Rivales detectados:',
+    signalLabel: 'Señal:',
     signalTemplate: 'Hoy {{topCompetitor}} aparece más que {{brandName}} en consultas del rubro.',
+    actionLabel: 'Acción sugerida:',
     actionTemplate: 'Reforzar señales en {{domain}} para subir recomendaciones.',
     reportCtaLabel: 'Ver reporte',
     shareCtaLabel: 'Compartir reporte',
@@ -197,8 +203,8 @@ function reportInsightBoxHtml(
         <td width="66%" valign="top" style="padding:18px 16px;">
           <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
             ${insightBulletHtml(content.rivalsLabel, rivalNames)}
-            ${insightBulletHtml('Señal:', signal)}
-            ${insightBulletHtml('Acción sugerida:', action)}
+            ${insightBulletHtml(content.signalLabel, signal)}
+            ${insightBulletHtml(content.actionLabel, action)}
           </table>
           ${reportCta ? `<div style="margin-top:14px;text-align:right;">${reportCta}</div>` : ''}
         </td>

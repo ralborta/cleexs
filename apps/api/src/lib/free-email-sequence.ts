@@ -23,8 +23,8 @@ import { withEmailAttribution } from './email-link-attribution';
 import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 import {
-  composeFreeSequenceBodyWithInsight,
   FREE_EMAIL_INSIGHT_CATALOG,
+  getInsightMeta,
   isFreeEmailInsightKey,
 } from './free-email-insights';
 import { prisma } from './prisma';
@@ -369,27 +369,30 @@ export async function buildFreeSequencePreview(input: {
       };
 
   const insightKey = isFreeEmailInsightKey(input.insightKey) ? input.insightKey : null;
-  const composedBody = composeFreeSequenceBodyWithInsight({
-    insightKey,
-    comment: input.content.body,
-    brandName: personalization.brandName,
-    domain: personalization.domain,
-    score: personalization.score,
-    topCompetitor: personalization.competitors?.[0]
-      ? typeof personalization.competitors[0] === 'string'
-        ? personalization.competitors[0]
-        : personalization.competitors[0].name
-      : null,
-  });
+  const commentText = (input.content.body || '').trim();
+  // Comentario editable: lo que el admin escribió (demo del insight o versión editada).
+  // Fallback al sample del catálogo si eligió insight pero el campo está vacío.
+  const insightLine =
+    insightKey && commentText
+      ? commentText
+      : insightKey
+        ? getInsightMeta(insightKey).sampleLine
+        : null;
+  const featuredInsight =
+    insightKey && insightLine
+      ? { label: getInsightMeta(insightKey).title, text: insightLine }
+      : null;
 
+  // Con insight: el comentario va a la tarjeta; el cuerpo de carta queda vacío (no duplicar).
   const built = buildCleexsEmailFromEditableContent({
     content: {
       ...input.content,
       variant: insightKey ? CleexsEmailTemplateVariant.letter : input.content.variant,
-      body: composedBody || input.content.body,
+      body: insightKey ? null : input.content.body,
     },
     personalization,
     links,
+    featuredInsight,
     showFounderSignature: true,
     showScoreBlock: (insightKey ? 'letter' : input.content.variant) === 'letter',
     showReportLinks: (insightKey ? 'letter' : input.content.variant) === 'letter',
@@ -406,15 +409,7 @@ export async function buildFreeSequencePreview(input: {
     sampleBrandName: personalization.brandName ?? 'Empliados',
     campaignSlug,
     insightKey,
-    insightPreviewLine: insightKey
-      ? composeFreeSequenceBodyWithInsight({
-          insightKey,
-          comment: '',
-          brandName: personalization.brandName,
-          domain: personalization.domain,
-          score: personalization.score,
-        }).replace(/^Dato de tu reporte:\n/, '')
-      : null,
+    insightPreviewLine: insightLine,
   };
 }
 

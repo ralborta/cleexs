@@ -19,7 +19,7 @@ import {
   ensureFreeEmailSequence,
 } from './free-email-sequence';
 import { buildMonthlyScoreDiagnosticUrl, buildFreeOnboardingPlanConquistarUrl } from './email-templates/build-email';
-import { composeFreeSequenceBodyWithInsight, isFreeEmailInsightKey } from './free-email-insights';
+import { getInsightMeta, isFreeEmailInsightKey, resolveFreeEmailInsightLine } from './free-email-insights';
 import { prisma } from './prisma';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 
@@ -366,20 +366,26 @@ export async function sendFreeOnboardingStep(input: {
   const campaignSlug = freeOnboardingCampaignSlug(input.step.sortOrder);
   const insightKey = isFreeEmailInsightKey(input.step.insightKey) ? input.step.insightKey : null;
   const variant = insightKey ? CleexsEmailTemplateVariant.letter : input.step.templateVariant;
-  const composedBody = composeFreeSequenceBodyWithInsight({
-    insightKey,
-    comment: input.step.body,
-    analysisJson: input.candidate.analysisJson,
-    brandName: input.candidate.brandName,
-    domain: input.candidate.domain,
-    score: input.candidate.score,
-    topCompetitor: input.candidate.competitors[0]?.name ?? null,
-  });
+  const commentText = (input.step.body || '').trim();
+  // Envío: usa el comentario guardado (editable). Si falta, resuelve dato del reporte.
+  const insightLine = insightKey
+    ? commentText ||
+      resolveFreeEmailInsightLine(insightKey, input.candidate.analysisJson, {
+        brandName: input.candidate.brandName,
+        domain: input.candidate.domain,
+        score: input.candidate.score,
+        topCompetitor: input.candidate.competitors[0]?.name ?? null,
+      })
+    : null;
+  const featuredInsight =
+    insightKey && insightLine
+      ? { label: getInsightMeta(insightKey).title, text: insightLine }
+      : null;
   const content = {
     variant,
     subject: input.step.subject,
     preheader: input.step.preheader,
-    body: composedBody || input.step.body,
+    body: insightKey ? null : input.step.body,
   };
 
   const personalization = {
@@ -400,6 +406,7 @@ export async function sendFreeOnboardingStep(input: {
     content,
     personalization,
     links,
+    featuredInsight,
     showFounderSignature: true,
     showScoreBlock: variant === 'letter',
     showReportLinks: variant === 'letter',

@@ -63,6 +63,8 @@ type PreviewPayload = {
   variant: TemplateVariant;
   subject: string;
   html: string;
+  insightPreviewLine?: string | null;
+  insightKey?: string | null;
 };
 
 const field =
@@ -559,13 +561,17 @@ export function FreeEmailSequenceEditor() {
               <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
                 <p className={labelCls}>Insight del reporte (de los 12)</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Elegí el dato automático. Después escribí el comentario humano abajo.
+                  Elegí el tipo → se carga un texto demo editable abajo. El preview usa ese texto en la tarjeta.
                 </p>
                 <select
                   value={insightKey}
                   onChange={(e) => {
-                    setInsightKey(e.target.value);
-                    if (e.target.value) setVariant('letter');
+                    const next = e.target.value;
+                    setInsightKey(next);
+                    if (!next) return;
+                    setVariant('letter');
+                    const item = insightCatalog.find((i) => i.key === next);
+                    if (item) setBody(item.sampleLine);
                   }}
                   className={field}
                 >
@@ -580,7 +586,7 @@ export function FreeEmailSequenceEditor() {
                   <div className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs text-slate-700">
                     <p className="font-semibold text-violet-800">{selectedInsight.title}</p>
                     <p className="mt-1 text-slate-500">{selectedInsight.description}</p>
-                    <p className="mt-2 italic text-slate-600">Ejemplo: {selectedInsight.sampleLine}</p>
+                    <p className="mt-2 italic text-slate-600">Demo base: {selectedInsight.sampleLine}</p>
                   </div>
                 ) : null}
               </div>
@@ -594,7 +600,7 @@ export function FreeEmailSequenceEditor() {
                 <input value={preheader} onChange={(e) => setPreheader(e.target.value)} className={field} />
               </label>
               <label className="block">
-                <span className={labelCls}>{insightKey ? 'Comentario (texto humano)' : 'Cuerpo'}</span>
+                <span className={labelCls}>{insightKey ? 'Comentario editable (va a la tarjeta)' : 'Cuerpo'}</span>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
@@ -602,13 +608,13 @@ export function FreeEmailSequenceEditor() {
                   className={`${field} font-mono text-[13px] leading-relaxed`}
                   placeholder={
                     insightKey
-                      ? 'Escribí el mensaje alrededor del dato del insight…'
+                      ? 'Editá el demo del insight. Esto es lo que se ve en la tarjeta del mail…'
                       : undefined
                   }
                 />
                 <p className="mt-1 text-[10px] text-slate-500">
                   {insightKey
-                    ? 'El mail combina: dato del insight (automático) + este comentario. '
+                    ? 'Al cambiar de insight se reemplaza este texto con el demo nuevo. Guardá para persistir tu versión. '
                     : ''}
                   Párrafos separados con línea en blanco. Variables:{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
@@ -661,9 +667,17 @@ export function FreeEmailSequenceEditor() {
                 {selectedInsight ? ` · ${selectedInsight.title}` : ''} + contenido del editor
               </div>
               {preview ? (
-                <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-600">
-                  <span className="font-semibold text-slate-800">Asunto:</span> {preview.subject}
-                </p>
+                <div className="space-y-1 border-b border-slate-100 px-4 py-2 text-xs text-slate-600">
+                  <p>
+                    <span className="font-semibold text-slate-800">Asunto:</span> {preview.subject}
+                  </p>
+                  {preview.insightPreviewLine ? (
+                    <p>
+                      <span className="font-semibold text-violet-800">Insight en tarjeta:</span>{' '}
+                      {preview.insightPreviewLine}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               {previewLoading && !preview ? (
                 <div className="flex items-center justify-center gap-2 py-24 text-slate-500">
