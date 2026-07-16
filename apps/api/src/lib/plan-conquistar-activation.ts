@@ -100,6 +100,48 @@ export async function ensurePortalUserForDiagnosticCheckout(
   };
 }
 
+/** Checkout Premium desde /planes u otros entrypoints sin diagnóstico previo. */
+export async function ensurePortalUserForEmailCheckout(
+  client: PrismaClient,
+  rawEmail: string,
+): Promise<{ userId: string; tenantId: string; email: string; generatedPassword?: string } | null> {
+  const emailRaw = rawEmail.trim().toLowerCase();
+  if (!emailRaw || !emailRaw.includes('@') || emailRaw.endsWith('@whatsapp.cleexs.net')) {
+    return null;
+  }
+
+  const existing = await client.user.findUnique({
+    where: { email: emailRaw },
+    select: { id: true, tenantId: true, email: true },
+  });
+  if (existing) {
+    return { userId: existing.id, tenantId: existing.tenantId, email: existing.email };
+  }
+
+  const generatedPassword = randomPortalPassword();
+  await provisionAccount(client, {
+    email: emailRaw,
+    domain: 'cleexs.client',
+    plan: 'free',
+    grantCourtesyCrecimiento: false,
+    portalPassword: generatedPassword,
+    passwordFromCli: false,
+  });
+
+  const user = await client.user.findUnique({
+    where: { email: emailRaw },
+    select: { id: true, tenantId: true, email: true },
+  });
+  if (!user) return null;
+
+  return {
+    userId: user.id,
+    tenantId: user.tenantId,
+    email: user.email,
+    generatedPassword,
+  };
+}
+
 export async function activatePlanConquistarPremiumAfterPayment(input: {
   tenantId: string;
   paymentId: string;

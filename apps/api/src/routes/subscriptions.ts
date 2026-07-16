@@ -13,6 +13,7 @@ import { getPreApprovalClient, getPreferenceClient, getPublicAppUrl, resolveMerc
 import {
   activatePlanConquistarPremiumAfterPayment,
   ensurePortalUserForDiagnosticCheckout,
+  ensurePortalUserForEmailCheckout,
 } from '../lib/plan-conquistar-activation';
 import { resolvePlanKey } from '../lib/entitlements';
 import { signPortalToken } from '../lib/portal-jwt';
@@ -101,10 +102,21 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         };
       }
 
+      if (!portalUser && parsed.data.customerEmail) {
+        const ensured = await ensurePortalUserForEmailCheckout(prisma, parsed.data.customerEmail);
+        if (!ensured) {
+          return reply.code(400).send({ error: 'Ingresá un email válido para continuar al pago.' });
+        }
+        portalUser = {
+          userId: ensured.userId,
+          tenantId: ensured.tenantId,
+          email: ensured.email,
+        };
+      }
+
       if (!portalUser) {
-        return reply.code(401).send({
-          error:
-            'Para pagar iniciá sesión en el portal o abrí el checkout desde tu reporte (con el email del diagnóstico).',
+        return reply.code(400).send({
+          error: 'Ingresá tu email para continuar al pago con Mercado Pago.',
         });
       }
 

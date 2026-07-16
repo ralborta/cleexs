@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { Check, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { APP_PLANS, getAnnualPrice, type BillingMode } from '@/lib/plans';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -41,6 +42,15 @@ export function PlanPaymentPanel({
 }: PlanPaymentPanelProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState(customerEmail?.trim() || '');
+
+  useEffect(() => {
+    if (customerEmail?.trim()) setEmailInput(customerEmail.trim());
+  }, [customerEmail]);
+
+  const hasPortalSession =
+    typeof window !== 'undefined' && Boolean(sessionStorage.getItem(TOKEN_KEY));
+  const needsEmailField = !hasPortalSession && !diagnosticId?.trim();
 
   const plan = useMemo(() => APP_PLANS.find((p) => p.id === planId) ?? APP_PLANS[1], [planId]);
 
@@ -60,10 +70,14 @@ export function PlanPaymentPanel({
 
       const token = typeof window !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null;
       const diagId = diagnosticId?.trim() || null;
-      if (!token && !diagId) {
-        setError(
-          'Para pagar abrí el checkout desde tu reporte (con el email del diagnóstico) o iniciá sesión en el portal.',
-        );
+      const emailToSend = (customerEmail?.trim() || emailInput.trim() || '').toLowerCase();
+
+      if (!token && !diagId && !emailToSend) {
+        setError('Ingresá tu email para continuar al pago.');
+        return;
+      }
+      if (!token && !diagId && !emailToSend.includes('@')) {
+        setError('Ingresá un email válido.');
         return;
       }
 
@@ -102,7 +116,7 @@ export function PlanPaymentPanel({
           billingMode,
           ...(sourceChannel ? { sourceChannel } : {}),
           ...(diagId ? { diagnosticId: diagId } : {}),
-          ...(customerEmail?.trim() ? { customerEmail: customerEmail.trim() } : {}),
+          ...(!token && emailToSend ? { customerEmail: emailToSend } : {}),
           ...attribution,
         }),
       });
@@ -149,6 +163,26 @@ export function PlanPaymentPanel({
             </li>
           ))}
         </ul>
+
+        {needsEmailField ? (
+          <div className="mt-6 border-t border-slate-100 pt-6">
+            <label htmlFor="checkout-email" className="text-sm font-medium text-slate-700">
+              Email para activar tu plan
+            </label>
+            <Input
+              id="checkout-email"
+              type="email"
+              autoComplete="email"
+              placeholder="tu@empresa.com"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="mt-2"
+            />
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              Usamos este email para vincular el pago a tu cuenta y activar Premium.
+            </p>
+          </div>
+        ) : null}
 
         {error ? (
           <p className="mt-6 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
