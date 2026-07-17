@@ -36,6 +36,7 @@ type MonitorStatus = {
   ok: boolean;
   checked_at: string;
   baileys_configured: boolean;
+  channel?: 'baileys' | 'builderbot_cloud' | 'none';
   public_bot_url?: string | null;
   services: {
     api: MonitorServiceProbe;
@@ -203,7 +204,13 @@ export function WhatsAppMonitorPanel() {
             <p className="mt-1 text-sm text-slate-600">
               {error ??
                 (data?.checked_at
-                  ? `Último chequeo: ${fmtTime(data.checked_at)}`
+                  ? `Último chequeo: ${fmtTime(data.checked_at)}${
+                      data.channel === 'builderbot_cloud'
+                        ? ' · Canal BuilderBot Cloud'
+                        : data.channel === 'baileys'
+                          ? ' · Canal Baileys'
+                          : ''
+                    }`
                   : 'Esperando primer chequeo…')}
             </p>
             {data?.hints && data.hints.length > 0 ? (
@@ -217,7 +224,7 @@ export function WhatsAppMonitorPanel() {
         </div>
       </div>
 
-      {data && !data.services.whatsapp.ok ? (
+      {data && !data.services.whatsapp.ok && data.baileys_configured ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -226,8 +233,7 @@ export function WhatsAppMonitorPanel() {
                 Vincular WhatsApp
               </h3>
               <p className="mt-2 max-w-xl text-xs text-slate-500">
-                No usamos QR acá (se queda viejo y genera conflictos). Abrí la página del bot:
-                se actualiza sola y se oculta al conectar.
+                Abrí la página del bot Baileys (QR vivo). No uses QR embebido viejo.
               </p>
             </div>
             <a
@@ -240,12 +246,6 @@ export function WhatsAppMonitorPanel() {
               Abrir QR del bot
             </a>
           </div>
-          <ol className="mt-4 list-decimal space-y-1 pl-4 text-xs text-slate-500">
-            <li>EasyPanel: Zero Downtime OFF en wa-bot</li>
-            <li>WhatsApp → Dispositivos vinculados → Vincular</li>
-            <li>Escaneá solo el QR vivo de esa página (si dice vencido, esperá el nuevo)</li>
-            <li>Cuando diga conectado, no vuelvas a escanear</li>
-          </ol>
         </div>
       ) : null}
 

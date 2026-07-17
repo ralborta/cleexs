@@ -20,13 +20,27 @@ function baileysBotBase(): string {
   return (process.env.BAILEYS_BOT_URL || '').trim().replace(/\/$/, '');
 }
 
-/** URL pública para que el cliente abra y escanee el QR. */
+function builderBotCloudConfigured(): boolean {
+  return Boolean(
+    (process.env.BUILDERBOT_BOT_ID || '').trim() && (process.env.BUILDERBOT_API_KEY || '').trim(),
+  );
+}
+
+function displayWhatsAppPhone(): string | null {
+  const fromEnv = (process.env.CLEEXS_WHATSAPP_PHONE_E164 || process.env.CLEEXS_WHATSAPP_PHONE || '')
+    .trim()
+    .replace(/\D/g, '');
+  if (fromEnv.length >= 9) return fromEnv;
+  // Número campaña Cleexs (auspiciadores) — fallback de UI si no hay env.
+  return '5491162630542';
+}
+
+/** URL pública para que el cliente abra y escanee el QR (solo modo Baileys). */
 export function baileysBotPublicUrl(): string | null {
   const explicit = (process.env.BAILEYS_BOT_PUBLIC_URL || '').trim().replace(/\/$/, '');
   if (explicit) return explicit;
   const base = baileysBotBase();
   if (base.startsWith('https://') || base.startsWith('http://')) {
-    // Solo exponer si parece URL pública (no hostname interno de docker)
     if (!/localhost|127\.0\.0\.1|:3008$|cleexs-wa-bot/i.test(base)) return base;
   }
   return null;
@@ -75,7 +89,8 @@ function whatsappOk(botProbe: MonitorServiceProbe): boolean {
 export async function buildWhatsAppMonitorStatus() {
   const botBase = baileysBotBase();
   const publicUrl = baileysBotPublicUrl();
-  const bot = await probeJson(botBase ? `${botBase}/health` : '', 'bot');
+  const bbc = builderBotCloudConfigured();
+  const phone = displayWhatsAppPhone();
 
   const api: MonitorServiceProbe = {
     id: 'api',
@@ -83,6 +98,44 @@ export async function buildWhatsAppMonitorStatus() {
     service: 'cleexs-api',
     latency_ms: 0,
   };
+
+  // Modo BBC Cloud (rollback): la UI debe verse operativa sin depender de Baileys.
+  if (!botBase && bbc) {
+    return {
+      ok: true,
+      checked_at: new Date().toISOString(),
+      public_bot_url: null,
+      baileys_configured: false,
+      channel: 'builderbot_cloud' as const,
+      services: {
+        api,
+        bot: {
+          id: 'bot',
+          ok: true,
+          service: 'builderbot-cloud',
+          status: 'online',
+          whatsapp: 'connected',
+          phone,
+          detail: 'Canal BuilderBot Cloud',
+          latency_ms: 0,
+        },
+        whatsapp: {
+          id: 'whatsapp',
+          ok: true,
+          phone,
+          status: 'connected',
+          whatsapp: 'connected',
+          qr_available: false,
+          qr_updated_at: null,
+          auto_reconnect: true,
+          detail: 'Sesión activa (BuilderBot Cloud)',
+        } satisfies MonitorServiceProbe,
+      },
+      hints: [] as string[],
+    };
+  }
+
+  const bot = await probeJson(botBase ? `${botBase}/health` : '', 'bot');
 
   const waConnected = whatsappOk(bot);
   const botOperational = bot.ok && waConnected;
@@ -108,7 +161,7 @@ export async function buildWhatsAppMonitorStatus() {
           : bot.ok
             ? 'Desconectado — el bot intenta reconectar'
             : bot.error === 'URL no configurada'
-              ? 'BAILEYS_BOT_URL no configurado'
+              ? 'Sin canal WhatsApp configurado'
               : 'Bot no responde',
     } satisfies MonitorServiceProbe,
   };
@@ -116,19 +169,16 @@ export async function buildWhatsAppMonitorStatus() {
   const ok = api.ok && botOperational;
 
   const hints: string[] = [];
-  if (!botBase) {
-    hints.push('Configurá BAILEYS_BOT_URL en la API (URL del bot Baileys en EasyPanel).');
+  if (!botBase && !bbc) {
+    hints.push('Configurá BUILDERBOT_* (Cloud) o BAILEYS_BOT_URL.');
   } else if (!waConnected && bot.ok) {
     hints.push(
       publicUrl
-        ? `WhatsApp desconectado — abrí el QR vivo en ${publicUrl}/vincular (no uses / ni QR del admin).`
-        : 'WhatsApp desconectado — abrí …/vincular en el bot Baileys para el QR vivo.',
+        ? `WhatsApp desconectado — abrí el QR vivo en ${publicUrl}/vincular.`
+        : 'WhatsApp desconectado — escaneá QR del canal activo.',
     );
-    if (bot.auto_reconnect) {
-      hints.push('Baileys reconecta solo ante cortes de red; si la sesión expiró, un solo QR fresco.');
-    }
-  } else if (!bot.ok) {
-    hints.push('Servicio cleexs-wa-bot caído — revisá logs en EasyPanel.');
+  } else if (!bot.ok && botBase) {
+    hints.push('Servicio wa-bot caído — revisá EasyPanel.');
   }
 
   return {
@@ -136,6 +186,7 @@ export async function buildWhatsAppMonitorStatus() {
     checked_at: new Date().toISOString(),
     public_bot_url: publicUrl,
     baileys_configured: Boolean(botBase),
+    channel: botBase ? ('baileys' as const) : bbc ? ('builderbot_cloud' as const) : ('none' as const),
     services,
     hints,
   };
@@ -144,10 +195,19 @@ export async function buildWhatsAppMonitorStatus() {
 export async function fetchBaileysWhatsappQr() {
   const botBase = baileysBotBase();
   if (!botBase) {
+    if (builderBotCloudConfigured()) {
+      return {
+        ok: true,
+        connected: true,
+        phone: displayWhatsAppPhone(),
+        message: 'Canal activo en BuilderBot Cloud (sin QR Baileys).',
+        public_bot_url: null,
+      };
+    }
     return {
       ok: false,
       connected: false,
-      error: 'BAILEYS_BOT_URL no configurado',
+      error: 'Sin canal WhatsApp (BBC o Baileys)',
       public_bot_url: baileysBotPublicUrl(),
     };
   }
