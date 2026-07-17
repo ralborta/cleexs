@@ -30,10 +30,29 @@ export const CLEEXS_TOOLS_PUBLIC_URL = (
   process.env.NEXT_PUBLIC_CLEEXS_TOOLS_URL?.trim().replace(/\/$/, '') || ''
 ) as string;
 
-/** Número WhatsApp Business de Cleexs (solo dígitos E.164, ej. 54911…).
- * Usado en QR de auspiciadores (wa.me).
+/** Número WhatsApp Cleexs (solo dígitos E.164, ej. 54911…).
+ * Usado en QR de auspiciadores (wa.me) y onboarding.
+ * Override: NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE=54911…
+ * Default: número vinculado al bot Baileys (BBC Open).
  */
-export const CLEEXS_WHATSAPP_PHONE_E164 = '5491160156473' as const;
+export const CLEEXS_WHATSAPP_PHONE_E164 = (
+  process.env.NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE?.replace(/\D/g, '').trim() || '5491162630542'
+) as string;
+
+/** Formato legible AR para UI (+54 9 11 …). */
+export function formatCleexsWhatsAppPhoneDisplay(
+  digits: string = CLEEXS_WHATSAPP_PHONE_E164
+): string {
+  const d = digits.replace(/\D/g, '');
+  if (d.startsWith('549') && d.length >= 12) {
+    const area = d.slice(3, 5);
+    const rest = d.slice(5);
+    const a = rest.slice(0, 4);
+    const b = rest.slice(4);
+    return `+54 9 ${area} ${a}${b ? `-${b}` : ''}`.trim();
+  }
+  return d ? `+${d}` : '—';
+}
 
 /** Contacto general (soporte, ventas, consultas). */
 export const CLEEXS_CONTACT_EMAIL = 'info@cleexs.net' as const;
