@@ -36,6 +36,7 @@ type MonitorStatus = {
   ok: boolean;
   checked_at: string;
   baileys_configured: boolean;
+  public_bot_url?: string | null;
   services: {
     api: MonitorServiceProbe;
     bot: MonitorServiceProbe;
@@ -44,16 +45,7 @@ type MonitorStatus = {
   hints?: string[];
 };
 
-type MonitorQr = {
-  ok: boolean;
-  connected: boolean;
-  phone?: string | null;
-  message?: string;
-  error?: string;
-  image_base64?: string;
-  qr_available?: boolean;
-  qr_updated_at?: string | null;
-};
+const FALLBACK_BOT_QR_URL = 'https://agente-cleexs-wa-bot.wd75db.easypanel.host/';
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-AR', {
@@ -93,9 +85,6 @@ export function WhatsAppMonitorPanel() {
   const [data, setData] = useState<MonitorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qr, setQr] = useState<MonitorQr | null>(null);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [showQr, setShowQr] = useState(false);
   const [blockPhone, setBlockPhone] = useState('');
   const [blockBusy, setBlockBusy] = useState<'add' | 'remove' | null>(null);
   const [blockMsg, setBlockMsg] = useState<string | null>(null);
@@ -108,37 +97,10 @@ export function WhatsAppMonitorPanel() {
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setData(json);
       setError(null);
-      if (json.services.whatsapp.ok) {
-        setShowQr(false);
-        setQr(null);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error de monitoreo');
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const loadQr = useCallback(async () => {
-    setQrLoading(true);
-    try {
-      const res = await adminUiFetch('/api/admin-ui/monitor/whatsapp/qr');
-      const payload = (await res.json().catch(() => ({}))) as MonitorQr & { error?: string };
-      if (!res.ok && !payload.message) {
-        setQr({ ok: false, connected: false, message: payload.error || `HTTP ${res.status}` });
-      } else {
-        setQr(payload);
-      }
-      setShowQr(true);
-    } catch (err) {
-      setQr({
-        ok: false,
-        connected: false,
-        message: err instanceof Error ? err.message : 'No se pudo cargar el QR',
-      });
-      setShowQr(true);
-    } finally {
-      setQrLoading(false);
     }
   }, []);
 
@@ -186,13 +148,8 @@ export function WhatsAppMonitorPanel() {
     return () => window.clearInterval(id);
   }, [refresh]);
 
-  useEffect(() => {
-    if (!data || data.services.whatsapp.ok || !showQr) return;
-    const id = window.setInterval(() => void loadQr(), 12_000);
-    return () => window.clearInterval(id);
-  }, [data, showQr, loadQr]);
-
   const services = data ? [data.services.api, data.services.bot, data.services.whatsapp] : [];
+  const botQrUrl = (data?.public_bot_url || FALLBACK_BOT_QR_URL).replace(/\/$/, '') + '/';
   const bannerOk = !error && Boolean(data?.ok);
   const bannerTone = error
     ? 'border-rose-200 bg-rose-50'
@@ -265,54 +222,26 @@ export function WhatsAppMonitorPanel() {
                 Vincular WhatsApp
               </h3>
               <p className="mt-2 max-w-xl text-xs text-slate-500">
-                Si la sesión expiró, escaneá el QR desde este panel.
+                No usamos QR acá (se queda viejo y genera conflictos). Abrí la página del bot:
+                se actualiza sola y se oculta al conectar.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void loadQr()}
-              disabled={qrLoading}
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
+            <a
+              href={botQrUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700"
             >
-              <QrCode className={`h-4 w-4 ${qrLoading ? 'animate-pulse' : ''}`} />
-              {showQr ? 'Actualizar QR' : 'Mostrar QR'}
-            </button>
+              <QrCode className="h-4 w-4" />
+              Abrir QR del bot
+            </a>
           </div>
-
-          {showQr ? (
-            <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              {qr?.image_base64 ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={qr.image_base64}
-                  alt="QR WhatsApp Cleexs"
-                  className="h-56 w-56 rounded-xl border border-slate-200 bg-white p-2"
-                />
-              ) : (
-                <div className="flex h-56 w-56 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center text-sm text-slate-500">
-                  {qrLoading ? 'Cargando QR…' : 'Sin QR todavía'}
-                </div>
-              )}
-              <div className="text-sm text-slate-600">
-                <p className="font-medium text-slate-800">
-                  {qr?.message ?? qr?.error ?? 'Tocá «Mostrar QR» para generar la vista.'}
-                </p>
-                {qr?.qr_updated_at ? (
-                  <p className="mt-2 text-xs tabular-nums text-slate-400">
-                    QR del bot: {fmtTime(qr.qr_updated_at)}
-                  </p>
-                ) : null}
-                {qr?.connected && qr.phone ? (
-                  <p className="mt-2 text-emerald-700">Conectado: {qr.phone}</p>
-                ) : null}
-                <ol className="mt-3 list-decimal space-y-1 pl-4 text-xs text-slate-500">
-                  <li>WhatsApp en el celular → Dispositivos vinculados</li>
-                  <li>Vincular dispositivo → Escanear QR</li>
-                  <li>Apuntá a este código (actualizalo si pasó 1 minuto)</li>
-                </ol>
-              </div>
-            </div>
-          ) : null}
+          <ol className="mt-4 list-decimal space-y-1 pl-4 text-xs text-slate-500">
+            <li>EasyPanel: Zero Downtime OFF en wa-bot</li>
+            <li>WhatsApp → Dispositivos vinculados → Vincular</li>
+            <li>Escaneá solo el QR vivo de esa página (si dice vencido, esperá el nuevo)</li>
+            <li>Cuando diga conectado, no vuelvas a escanear</li>
+          </ol>
         </div>
       ) : null}
 
