@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Activity,
+  Ban,
   Bot,
   CheckCircle2,
   MessageCircle,
   QrCode,
   RefreshCw,
   Server,
+  ShieldOff,
   XCircle,
 } from 'lucide-react';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
@@ -94,6 +96,10 @@ export function WhatsAppMonitorPanel() {
   const [qr, setQr] = useState<MonitorQr | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [blockPhone, setBlockPhone] = useState('');
+  const [blockBusy, setBlockBusy] = useState<'add' | 'remove' | null>(null);
+  const [blockMsg, setBlockMsg] = useState<string | null>(null);
+  const [blockErr, setBlockErr] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -135,6 +141,44 @@ export function WhatsAppMonitorPanel() {
       setQrLoading(false);
     }
   }, []);
+
+  const setBlacklist = useCallback(async (intent: 'add' | 'remove') => {
+    const number = blockPhone.trim();
+    if (!number) {
+      setBlockErr('Ingresá un número (ej. 54911…)');
+      setBlockMsg(null);
+      return;
+    }
+    setBlockBusy(intent);
+    setBlockErr(null);
+    setBlockMsg(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/monitor/whatsapp/blacklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number, intent }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        number?: string;
+      };
+      if (!res.ok || json.ok === false) {
+        throw new Error(json.error || `HTTP ${res.status}`);
+      }
+      setBlockMsg(
+        json.message ||
+          (intent === 'add'
+            ? `Bloqueado ${json.number || number}`
+            : `Desbloqueado ${json.number || number}`)
+      );
+    } catch (err) {
+      setBlockErr(err instanceof Error ? err.message : 'No se pudo actualizar blacklist');
+    } finally {
+      setBlockBusy(null);
+    }
+  }, [blockPhone]);
 
   useEffect(() => {
     void refresh();
@@ -271,6 +315,52 @@ export function WhatsAppMonitorPanel() {
           ) : null}
         </div>
       ) : null}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+            <Ban className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-slate-900">Bloquear número</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Igual que en BBC: el bot deja de responder a ese contacto (blacklist Baileys).
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="tel"
+                inputMode="numeric"
+                placeholder="54911…"
+                value={blockPhone}
+                onChange={(e) => setBlockPhone(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-violet-500 focus:bg-white focus:ring-2 sm:max-w-xs"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={blockBusy != null}
+                  onClick={() => void setBlacklist('add')}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+                >
+                  <Ban className={`h-4 w-4 ${blockBusy === 'add' ? 'animate-pulse' : ''}`} />
+                  Bloquear
+                </button>
+                <button
+                  type="button"
+                  disabled={blockBusy != null}
+                  onClick={() => void setBlacklist('remove')}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <ShieldOff className={`h-4 w-4 ${blockBusy === 'remove' ? 'animate-pulse' : ''}`} />
+                  Desbloquear
+                </button>
+              </div>
+            </div>
+            {blockMsg ? <p className="mt-2 text-sm text-emerald-700">{blockMsg}</p> : null}
+            {blockErr ? <p className="mt-2 text-sm text-rose-700">{blockErr}</p> : null}
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {services.map((svc) => (

@@ -63,6 +63,57 @@ async function sendViaBaileysBot(options: SendWhatsAppOptions): Promise<unknown>
   return data;
 }
 
+/**
+ * Pausar / reactivar respuestas automáticas para un número (como BBC blacklist).
+ * intent: "add" = bloquear bot · "remove" = desbloquear
+ */
+export async function setWhatsAppBlacklist(
+  number: string,
+  intent: 'add' | 'remove'
+): Promise<{ ok: true; number: string; intent: 'add' | 'remove'; via: 'baileys' | 'builderbot_cloud' }> {
+  const phone = formatBuilderBotRecipient(number).replace(/@.*$/, '');
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 9) {
+    throw new Error('Número inválido (mínimo 9 dígitos)');
+  }
+
+  if (BAILEYS_BOT_URL) {
+    const res = await fetch(`${BAILEYS_BOT_URL}/v1/blacklist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: digits, intent }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const raw = await res.text().catch(() => '');
+    if (!res.ok) {
+      throw new Error(`Baileys blacklist ${res.status}: ${raw.slice(0, 200)}`);
+    }
+    return { ok: true, number: digits, intent, via: 'baileys' };
+  }
+
+  const BOT_ID = (process.env.BUILDERBOT_BOT_ID || '').trim();
+  const API_KEY = (process.env.BUILDERBOT_API_KEY || '').trim();
+  if (!BOT_ID || !API_KEY) {
+    throw new Error('WhatsApp: definí BAILEYS_BOT_URL o BUILDERBOT_BOT_ID + BUILDERBOT_API_KEY');
+  }
+
+  const url = `${BUILDERBOT_BASE_URL}/api/v2/${BOT_ID}/blacklist`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-builderbot': API_KEY,
+    },
+    body: JSON.stringify({ number: digits, intent }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`BuilderBot blacklist ${res.status}: ${detail.slice(0, 200)}`);
+  }
+  return { ok: true, number: digits, intent, via: 'builderbot_cloud' };
+}
+
 export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise<unknown> {
   const { number, message, mediaUrl, checkIfExists = false, logSource = 'api_send', diagnosticId = null } = options;
   const recipient = formatBuilderBotRecipient(number);
