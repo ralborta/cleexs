@@ -325,10 +325,6 @@ export default function AdminSettingsPage() {
                     value: data.integrations.builderbot.baileysBotUrl || 'no configurado',
                   },
                   {
-                    label: 'URL pública QR',
-                    value: data.integrations.builderbot.baileysPublicUrl || '—',
-                  },
-                  {
                     label: 'BBC (fallback)',
                     value: data.integrations.builderbot.configured ? 'configurado' : 'no',
                   },

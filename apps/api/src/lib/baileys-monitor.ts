@@ -119,11 +119,7 @@ export async function buildWhatsAppMonitorStatus() {
   if (!botBase) {
     hints.push('Configurá BAILEYS_BOT_URL en la API (URL del bot Baileys en EasyPanel).');
   } else if (!waConnected && bot.ok) {
-    hints.push(
-      publicUrl
-        ? `WhatsApp desconectado — abrí ${publicUrl} o usá «Mostrar QR» abajo.`
-        : 'WhatsApp desconectado — usá «Mostrar QR» abajo o abrí la URL pública del bot.',
-    );
+    hints.push('WhatsApp desconectado — usá «Mostrar QR» abajo.');
     if (bot.auto_reconnect) {
       hints.push('Baileys reconecta solo ante cortes de red; si la sesión expiró, escaneá QR.');
     }

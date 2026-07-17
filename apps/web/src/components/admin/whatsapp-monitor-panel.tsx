@@ -5,8 +5,6 @@ import {
   Activity,
   Bot,
   CheckCircle2,
-  Copy,
-  ExternalLink,
   MessageCircle,
   QrCode,
   RefreshCw,
@@ -35,7 +33,6 @@ type MonitorServiceProbe = {
 type MonitorStatus = {
   ok: boolean;
   checked_at: string;
-  public_bot_url: string | null;
   baileys_configured: boolean;
   services: {
     api: MonitorServiceProbe;
@@ -54,7 +51,6 @@ type MonitorQr = {
   image_base64?: string;
   qr_available?: boolean;
   qr_updated_at?: string | null;
-  public_bot_url?: string | null;
 };
 
 function fmtTime(iso: string) {
@@ -98,7 +94,6 @@ export function WhatsAppMonitorPanel() {
   const [qr, setQr] = useState<MonitorQr | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [showQr, setShowQr] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -152,18 +147,6 @@ export function WhatsAppMonitorPanel() {
     const id = window.setInterval(() => void loadQr(), 12_000);
     return () => window.clearInterval(id);
   }, [data, showQr, loadQr]);
-
-  async function copyPublicUrl() {
-    const url = data?.public_bot_url;
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
-    }
-  }
 
   const services = data ? [data.services.api, data.services.bot, data.services.whatsapp] : [];
   const bannerOk = !error && Boolean(data?.ok);
@@ -229,44 +212,6 @@ export function WhatsAppMonitorPanel() {
         </div>
       </div>
 
-      {data?.public_bot_url ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm font-semibold text-slate-900">URL pública para vincular</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Pasale este link al cliente: abre la página, ve el QR y vincula WhatsApp.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <code className="max-w-full truncate rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-800 ring-1 ring-slate-200">
-              {data.public_bot_url}
-            </code>
-            <button
-              type="button"
-              onClick={() => void copyPublicUrl()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              {copied ? 'Copiado' : 'Copiar'}
-            </button>
-            <a
-              href={data.public_bot_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Abrir
-            </a>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Falta la URL pública del bot. En EasyPanel asigná un dominio al servicio{' '}
-          <strong>cleexs-wa-bot</strong> y en la API de Cleexs seteá{' '}
-          <code className="rounded bg-white/70 px-1">BAILEYS_BOT_URL</code> (y opcional{' '}
-          <code className="rounded bg-white/70 px-1">BAILEYS_BOT_PUBLIC_URL</code>).
-        </div>
-      )}
-
       {data && !data.services.whatsapp.ok ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -276,7 +221,7 @@ export function WhatsAppMonitorPanel() {
                 Vincular WhatsApp
               </h3>
               <p className="mt-2 max-w-xl text-xs text-slate-500">
-                Si la sesión expiró, escaneá el QR acá o abrí la URL pública del bot.
+                Si la sesión expiró, escaneá el QR desde este panel.
               </p>
             </div>
             <button
