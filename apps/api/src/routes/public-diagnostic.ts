@@ -57,7 +57,10 @@ import {
   getWaCompetitorWaitMs,
   isPlaceholderPublicSuffixOnlyDomain,
   isWhatsAppSourceChannel,
+  buildWhatsAppGreetingReply,
+  isWaGreetingMessage,
   normalizeWaPhone,
+  replyWhatsAppAssistant,
   verifyWhatsAppChannelApiKey,
   waPlaceholderEmail,
   waRecipientFromFlowBody,
@@ -3130,6 +3133,47 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         ready: false,
       });
     }
+  });
+
+  // POST /api/public/whatsapp/assistant — Baileys / BBC Open (mismo prompt que Consultas IA).
+  // Auth: x-cleexs-channel-key. Body: { from|phone, body|message }.
+  fastify.post<{ Body: Record<string, unknown> }>('/whatsapp/assistant', async (request, reply) => {
+    if (!verifyWaChannelRequest(request)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized', message: '' });
+    }
+
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const phone = firstWaString(body.from, body.phone, body.recipient);
+    const message = firstWaString(body.body, body.message, body.text);
+    if (!phone || !message) {
+      return reply.code(400).send({ error: 'from y body requeridos', code: 'missing_fields', message: '' });
+    }
+
+    if (isWaGreetingMessage(message)) {
+      const greeting = buildWhatsAppGreetingReply();
+      return reply.send({ ok: true, flow: 'saludo', message: greeting });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return reply.code(503).send({
+        error: 'OPENAI_API_KEY no configurada',
+        code: 'openai_missing',
+        message: '',
+      });
+    }
+
+    const assistantReply = await replyWhatsAppAssistant({ phone, message });
+    if (!assistantReply) {
+      return reply.send({
+        ok: false,
+        flow: 'consultas_ia',
+        code: 'assistant_failed',
+        message:
+          '🙂 Solo puedo ayudarte con Cleexs y tu visibilidad en IA. Pasame la URL de tu empresa (ej. empresa.com) o preguntame qué es el *Cleexs Score*.',
+      });
+    }
+
+    return reply.send({ ok: true, flow: 'consultas_ia', message: assistantReply });
   });
 
   // POST /api/public/whatsapp/builderbot-inbound — Webhook del proyecto BuilderBot.
