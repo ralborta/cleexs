@@ -45,7 +45,7 @@ type MonitorStatus = {
   hints?: string[];
 };
 
-const FALLBACK_BOT_QR_URL = 'https://agente-cleexs-wa-bot.wd75db.easypanel.host/';
+const FALLBACK_BOT_QR_URL = 'https://agente-cleexs-wa-bot.wd75db.easypanel.host/vincular';
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-AR', {
@@ -149,7 +149,11 @@ export function WhatsAppMonitorPanel() {
   }, [refresh]);
 
   const services = data ? [data.services.api, data.services.bot, data.services.whatsapp] : [];
-  const botQrUrl = (data?.public_bot_url || FALLBACK_BOT_QR_URL).replace(/\/$/, '') + '/';
+  const botQrUrl = (() => {
+    const base = (data?.public_bot_url || FALLBACK_BOT_QR_URL).replace(/\/$/, '');
+    if (/\/vincular$/i.test(base) || /\/qr$/i.test(base)) return base;
+    return `${base}/vincular`;
+  })();
   const bannerOk = !error && Boolean(data?.ok);
   const bannerTone = error
     ? 'border-rose-200 bg-rose-50'

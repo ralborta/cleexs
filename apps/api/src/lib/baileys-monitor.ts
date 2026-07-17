@@ -121,8 +121,8 @@ export async function buildWhatsAppMonitorStatus() {
   } else if (!waConnected && bot.ok) {
     hints.push(
       publicUrl
-        ? `WhatsApp desconectado — abrí el QR vivo en ${publicUrl}/ (no uses QR embebido en admin).`
-        : 'WhatsApp desconectado — abrí la URL pública del bot Baileys para el QR vivo.',
+        ? `WhatsApp desconectado — abrí el QR vivo en ${publicUrl}/vincular (no uses / ni QR del admin).`
+        : 'WhatsApp desconectado — abrí …/vincular en el bot Baileys para el QR vivo.',
     );
     if (bot.auto_reconnect) {
       hints.push('Baileys reconecta solo ante cortes de red; si la sesión expiró, un solo QR fresco.');
