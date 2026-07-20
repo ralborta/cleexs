@@ -189,6 +189,53 @@ function howFoundUsLabel(code: string | null | undefined): string | null {
   return HOW_FOUND_US_LABELS[code] || code;
 }
 
+const diagnosticAdminSelect = {
+  id: true,
+  createdAt: true,
+  status: true,
+  email: true,
+  refCode: true,
+  utmSource: true,
+  sourceChannel: true,
+  domain: true,
+  brandName: true,
+  tier: true,
+} as const;
+
+type DiagnosticAdminRowInput = {
+  id: string;
+  createdAt: Date;
+  brandName: string;
+  domain: string;
+  email: string | null;
+  status: string;
+  tier: string | null;
+  refCode: string | null;
+  utmSource: string | null;
+  sourceChannel: string | null;
+};
+
+function mapDiagnosticToAdminRow(
+  row: DiagnosticAdminRowInput,
+  campaignMap: Map<string, { name?: string | null }>
+) {
+  const refCode = row.refCode?.trim().toLowerCase() || null;
+  const campaign = refCode ? campaignMap.get(refCode) : undefined;
+  return {
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+    brandName: row.brandName,
+    domain: row.domain,
+    email: row.email,
+    status: row.status,
+    tier: row.tier,
+    refCode: row.refCode,
+    referrerName: refCode ? resolveReferrerDisplayName(refCode, campaign?.name) : null,
+    utmSource: row.utmSource,
+    sourceChannel: row.sourceChannel,
+  };
+}
+
 const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   // 1) Reporte de Adquisicion y Funnel
   // ----------------------------------------------------------------
@@ -201,19 +248,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     const [diagnosticsInWindow, totalDiagnosticsAllTime, campaignMap] = await Promise.all([
       prisma.publicDiagnostic.findMany({
         where: { createdAt: { gte: fromDate } },
-        select: {
-          id: true,
-          createdAt: true,
-          status: true,
-          email: true,
-          refCode: true,
-          utmSource: true,
-          utmMedium: true,
-          sourceChannel: true,
-          domain: true,
-          brandName: true,
-          tier: true,
-        },
+        select: diagnosticAdminSelect,
         orderBy: { createdAt: 'desc' },
       }),
       prisma.publicDiagnostic.count(),
@@ -293,23 +328,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    const latest = diagnosticsInWindow.slice(0, 25).map((row) => {
-      const refCode = row.refCode?.trim().toLowerCase() || null;
-      const campaign = refCode ? campaignMap.get(refCode) : undefined;
-      return {
-        id: row.id,
-        createdAt: row.createdAt.toISOString(),
-        brandName: row.brandName,
-        domain: row.domain,
-        email: row.email,
-        status: row.status,
-        tier: row.tier,
-        refCode: row.refCode,
-        referrerName: refCode ? resolveReferrerDisplayName(refCode, campaign?.name) : null,
-        utmSource: row.utmSource,
-        sourceChannel: row.sourceChannel,
-      };
-    });
+    const latest = diagnosticsInWindow.slice(0, 25).map((row) => mapDiagnosticToAdminRow(row, campaignMap));
 
     return {
       windowDays,
@@ -330,6 +349,59 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       sponsorBreakdown,
       topUtmSources,
       latestDiagnostics: latest,
+    };
+  });
+
+  /** Busqueda historica por marca, dominio o email (reuniones / soporte). */
+  fastify.get('/internal/acquisition/diagnostic-search', async (request, reply) => {
+    const parsed = z
+      .object({
+        q: z.string().trim().min(2).max(120),
+        limit: z.coerce.number().int().min(1).max(100).default(100),
+        completedOnly: z
+          .union([z.literal('true'), z.literal('false'), z.boolean()])
+          .optional()
+          .transform((v) => v === true || v === 'true'),
+      })
+      .safeParse(request.query);
+
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Parametros invalidos', details: parsed.error.flatten() });
+    }
+
+    const { q, limit, completedOnly } = parsed.data;
+    const campaignMap = await loadReferrerCampaignMap();
+
+    const orFilters: Prisma.PublicDiagnosticWhereInput[] = [
+      { brandName: { contains: q, mode: 'insensitive' } },
+      { domain: { contains: q, mode: 'insensitive' } },
+      { email: { contains: q, mode: 'insensitive' } },
+    ];
+
+    const where: Prisma.PublicDiagnosticWhereInput = {
+      ...(completedOnly ? { status: 'completed' } : {}),
+      OR: orFilters,
+    };
+
+    const [totalMatching, rows] = await Promise.all([
+      prisma.publicDiagnostic.count({ where }),
+      prisma.publicDiagnostic.findMany({
+        where,
+        select: diagnosticAdminSelect,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      }),
+    ]);
+
+    return {
+      ok: true as const,
+      query: q,
+      completedOnly: Boolean(completedOnly),
+      limit,
+      totalMatching,
+      returned: rows.length,
+      truncated: totalMatching > rows.length,
+      rows: rows.map((row) => mapDiagnosticToAdminRow(row, campaignMap)),
     };
   });
 

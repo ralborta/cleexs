@@ -480,6 +480,19 @@ export interface AcquisitionReport {
   }>;
 }
 
+export type AcquisitionDiagnosticRow = AcquisitionReport['latestDiagnostics'][number];
+
+export interface AcquisitionDiagnosticSearchResult {
+  ok: true;
+  query: string;
+  completedOnly: boolean;
+  limit: number;
+  totalMatching: number;
+  returned: number;
+  truncated: boolean;
+  rows: AcquisitionDiagnosticRow[];
+}
+
 export interface OnboardingProfileReport {
   windowDays: number;
   asOf: string;
@@ -802,6 +815,14 @@ export interface AdminPaymentsReport {
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
+  searchDiagnostics: (params: { q: string; limit?: number; completedOnly?: boolean }) => {
+    const qs = new URLSearchParams({ q: params.q.trim() });
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.completedOnly) qs.set('completedOnly', 'true');
+    return api<AcquisitionDiagnosticSearchResult>(
+      `/api/reports/internal/acquisition/diagnostic-search?${qs.toString()}`
+    );
+  },
   onboardingProfile: (windowDays: ReportWindowDays = 30, country?: string) => {
     const qs = new URLSearchParams({ windowDays: String(windowDays) });
     if (country?.trim()) qs.set('country', country.trim());
