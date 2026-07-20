@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -96,6 +96,8 @@ function prettyContact(c: Conversation) {
   return c.chatId;
 }
 
+const AUTO_REFRESH_MS = 4_000;
+
 const SOURCE_LABEL: Record<string, string> = {
   flow: 'Flujo URL',
   builderbot_inbound: 'Webhook',
@@ -107,6 +109,10 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 export default function AdminWhatsAppPage() {
+  const threadScrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
+
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -148,10 +154,13 @@ export default function AdminWhatsAppPage() {
       );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error');
-      setMessages((json as { messages: Message[] }).messages || []);
+      const next = (json as { messages: Message[] }).messages || [];
+      setMessages(next);
       if (!opts?.silent) setError(null);
+      return next.length;
     } catch (e) {
       if (!opts?.silent) setError(e instanceof Error ? e.message : 'Error');
+      return null;
     } finally {
       if (!opts?.silent) setLoadingThread(false);
     }
@@ -166,14 +175,25 @@ export default function AdminWhatsAppPage() {
     void loadThread(selectedChat);
   }, [selectedChat, loadThread]);
 
-  // Auto-refresco: refresca lista y, si hay un chat abierto, su hilo, cada 12s.
+  // Auto-refresco: lista + hilo abierto cada 4s; también al volver a la pestaña.
   useEffect(() => {
     if (!autoRefresh) return;
-    const id = setInterval(() => {
+    const tick = () => {
       void loadConversations({ silent: true });
       if (selectedChat) void loadThread(selectedChat, { silent: true });
-    }, 12_000);
-    return () => clearInterval(id);
+    };
+    const id = setInterval(tick, AUTO_REFRESH_MS);
+    const onFocus = () => tick();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [autoRefresh, loadConversations, loadThread, selectedChat]);
 
   const selectedConv = useMemo(
@@ -200,6 +220,22 @@ export default function AdminWhatsAppPage() {
     }
     return kept;
   }, [messages]);
+
+  useEffect(() => {
+    prevMessageCountRef.current = 0;
+  }, [selectedChat]);
+
+  // Scroll al final cuando entran mensajes nuevos en el hilo abierto.
+  useEffect(() => {
+    const count = visibleMessages.length;
+    const prev = prevMessageCountRef.current;
+    if (count > prev || (selectedChat && prev === 0 && count > 0)) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: count - prev > 2 ? 'auto' : 'smooth' });
+      });
+    }
+    prevMessageCountRef.current = count;
+  }, [visibleMessages.length, selectedChat]);
 
   if (error && looksLikeAdminAuthError(error)) {
     return <AdminAuthExpiredCard />;
@@ -228,7 +264,7 @@ export default function AdminWhatsAppPage() {
               onChange={(ev) => setAutoRefresh(ev.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
             />
-            Auto-refresco
+            Auto-refresco · cada {AUTO_REFRESH_MS / 1000}s
             {autoRefresh ? (
               <span className="inline-flex items-center gap-1 text-emerald-600">
                 <span className="relative flex h-2 w-2">
@@ -243,7 +279,10 @@ export default function AdminWhatsAppPage() {
           </label>
           <button
             type="button"
-            onClick={() => void loadConversations()}
+            onClick={() => {
+              void loadConversations();
+              if (selectedChat) void loadThread(selectedChat);
+            }}
             disabled={loadingList}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
           >
@@ -407,7 +446,7 @@ export default function AdminWhatsAppPage() {
                 </button>
               </header>
 
-              <div className="max-h-[640px] space-y-4 overflow-y-auto bg-[#f4f6f8] p-5">
+              <div ref={threadScrollRef} className="max-h-[640px] space-y-4 overflow-y-auto bg-[#f4f6f8] p-5">
                 {loadingThread && visibleMessages.length === 0 ? (
                   <div className="px-5 py-10 text-center text-sm text-slate-500">
                     <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" />
@@ -468,6 +507,7 @@ export default function AdminWhatsAppPage() {
                     );
                   })
                 )}
+                <div ref={messagesEndRef} aria-hidden className="h-px shrink-0" />
               </div>
             </>
           )}
