@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   Download,
@@ -35,6 +35,8 @@ const STATUS_BADGES: Record<string, string> = {
   completed: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
   failed: 'bg-red-100 text-red-800 ring-1 ring-red-200',
 };
+
+const ONBOARDING_PAGE_SIZE = 25;
 
 type SendLogRow = {
   id: string;
@@ -110,6 +112,7 @@ export default function OnboardingProfileReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [windowDays, setWindowDays] = useState<ReportWindowDays>(30);
   const [countryFilter, setCountryFilter] = useState('');
+  const [page, setPage] = useState(1);
 
   const [mailsOpen, setMailsOpen] = useState(false);
   const [mailsEmail, setMailsEmail] = useState<string | null>(null);
@@ -141,6 +144,22 @@ export default function OnboardingProfileReportPage() {
     setLoading(true);
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [windowDays, countryFilter]);
+
+  const tablePagination = useMemo(() => {
+    if (!data) return null;
+    const totalRows = data.rows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / ONBOARDING_PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const pagedRows = data.rows.slice(
+      (safePage - 1) * ONBOARDING_PAGE_SIZE,
+      safePage * ONBOARDING_PAGE_SIZE
+    );
+    return { totalRows, totalPages, safePage, pagedRows };
+  }, [data, page]);
 
   async function openMails(email: string, brandName: string) {
     const normalized = email.trim().toLowerCase();
@@ -252,7 +271,7 @@ export default function OnboardingProfileReportPage() {
       {error ? <ReportErrorBanner message={error} /> : null}
       {loading && !data ? <ReportLoading /> : null}
 
-      {data ? (
+      {data && tablePagination ? (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <ReportMetric
@@ -315,8 +334,8 @@ export default function OnboardingProfileReportPage() {
             title="Leads con datos de onboarding"
             description={
               countryFilter.trim()
-                ? `${data.rows.length} dominio${data.rows.length === 1 ? '' : 's'} único${data.rows.length === 1 ? '' : 's'} en ${countryFilter} (ventana ${windowDays}d).`
-                : `${data.rows.length} dominio${data.rows.length === 1 ? '' : 's'} único${data.rows.length === 1 ? '' : 's'} en la ventana.`
+                ? `${tablePagination.totalRows} dominio${tablePagination.totalRows === 1 ? '' : 's'} único${tablePagination.totalRows === 1 ? '' : 's'} en ${countryFilter} (ventana ${windowDays}d). ${ONBOARDING_PAGE_SIZE} por página.`
+                : `${tablePagination.totalRows} dominio${tablePagination.totalRows === 1 ? '' : 's'} único${tablePagination.totalRows === 1 ? '' : 's'} en la ventana. ${ONBOARDING_PAGE_SIZE} por página.`
             }
           >
             <div className="overflow-x-auto">
@@ -335,7 +354,7 @@ export default function OnboardingProfileReportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.rows.length === 0 ? (
+                  {tablePagination.totalRows === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-6 text-center text-sm text-slate-500">
                         {countryFilter.trim()
@@ -344,7 +363,7 @@ export default function OnboardingProfileReportPage() {
                       </td>
                     </tr>
                   ) : (
-                    data.rows.map((row) => (
+                    tablePagination.pagedRows.map((row) => (
                       <tr key={row.id} className="border-t border-slate-100 align-top">
                         <td className="py-2 text-xs text-slate-500">{formatDate(row.createdAt)}</td>
                         <td className="py-2">
@@ -389,6 +408,37 @@ export default function OnboardingProfileReportPage() {
                 </tbody>
               </table>
             </div>
+
+            {tablePagination.totalRows > 0 ? (
+              <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs">
+                  Mostrando {(tablePagination.safePage - 1) * ONBOARDING_PAGE_SIZE + 1}–
+                  {Math.min(tablePagination.safePage * ONBOARDING_PAGE_SIZE, tablePagination.totalRows)} de{' '}
+                  {tablePagination.totalRows}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={tablePagination.safePage <= 1 || loading}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-xs text-slate-500">
+                    Página {tablePagination.safePage} / {tablePagination.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(tablePagination.totalPages, p + 1))}
+                    disabled={tablePagination.safePage >= tablePagination.totalPages || loading}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </ReportSection>
         </>
       ) : null}
