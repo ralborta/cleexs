@@ -79,3 +79,26 @@
   animation: aeo-indeterminate-slide 1.85s ease-in-out infinite;
   box-shadow: 0 0 12px rgb(37 99 235 / 0.35);
 }
+
+@media print {
+  body.portal-report-print-mode * {
+    visibility: hidden;
+  }
+
+  body.portal-report-print-mode .portal-report-print-root,
+  body.portal-report-print-mode .portal-report-print-root * {
+    visibility: visible;
+  }
+
+  body.portal-report-print-mode .portal-report-print-root {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0.75rem;
+    background: white;
+  }
+
+  body.portal-report-print-mode .no-print {
+    display: none !important;
+  }
+}
