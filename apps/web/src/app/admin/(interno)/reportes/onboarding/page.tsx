@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { internalReportsApi, type OnboardingProfileReport, type ReportWindowDays } from '@/lib/api';
 import {
+  DiagnosticReportLink,
   ReportErrorBanner,
   ReportLoading,
   ReportMetric,
@@ -329,13 +330,14 @@ export default function OnboardingProfileReportPage() {
                     <th className="py-2">Nombre</th>
                     <th className="py-2">Cómo llegó</th>
                     <th className="py-2">Estado</th>
+                    <th className="py-2">Reporte</th>
                     <th className="py-2">Mails</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-6 text-center text-sm text-slate-500">
+                      <td colSpan={9} className="py-6 text-center text-sm text-slate-500">
                         {countryFilter.trim()
                           ? `Sin leads con datos de onboarding para ${countryFilter} en este período.`
                           : 'Nadie dejó datos del onboarding en este período.'}
@@ -363,6 +365,9 @@ export default function OnboardingProfileReportPage() {
                           >
                             {row.status}
                           </span>
+                        </td>
+                        <td className="py-2">
+                          <DiagnosticReportLink diagnosticId={row.id} status={row.status} />
                         </td>
                         <td className="py-2">
                           {row.email ? (

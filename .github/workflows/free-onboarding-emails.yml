@@ -1,9 +1,8 @@
 name: Free Onboarding Emails
 
 on:
-  schedule:
-    # Cada hora — respeta sendHourLocal de la secuencia (AR) en el API.
-    - cron: '0 * * * *'
+  # Pausado hasta reactivar "Secuencia activa (prod)" en admin y pasos 2+.
+  # workflow_dispatch manual sigue disponible para pruebas.
   workflow_dispatch:
     inputs:
       dry_run:

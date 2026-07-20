@@ -3,6 +3,8 @@
  * Analiza JSON-LD, microdata y propiedades recomendadas de Schema.org.
  */
 
+import { fetchPageContent } from './page-fetch';
+
 const RECOMMENDED_PROPERTIES: Record<string, string[]> = {
   Organization: ['name', 'url', 'logo', 'description', 'sameAs', 'contactPoint', 'address'],
   LocalBusiness: ['name', 'address', 'telephone', 'openingHours', 'geo', 'priceRange', 'image'],
@@ -75,30 +77,40 @@ function parseSchemaNode(data: unknown, source: string): SchemaItemFound[] {
     return items;
   }
   let schemaType = obj['@type'];
-  if (Array.isArray(schemaType)) schemaType = schemaType[0];
-  if (typeof schemaType !== 'string' || !schemaType) return items;
+  const typeList: string[] = Array.isArray(schemaType)
+    ? schemaType.filter((t): t is string => typeof t === 'string')
+    : typeof schemaType === 'string'
+      ? [schemaType]
+      : [];
+  if (typeList.length === 0) return items;
 
-  const properties: Record<string, string> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (!key.startsWith('@') && value != null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
-      properties[key] = typeof value;
+  for (const schemaType of typeList) {
+    const properties: Record<string, string> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (!key.startsWith('@') && value != null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+        properties[key] = typeof value;
+      }
     }
-  }
-  const missing: string[] = [];
-  const rec = RECOMMENDED_PROPERTIES[schemaType];
-  if (rec) {
-    for (const prop of rec) {
-      if (obj[prop] == null || obj[prop] === '') missing.push(prop);
+    const missing: string[] = [];
+    const rec = RECOMMENDED_PROPERTIES[schemaType];
+    if (rec) {
+      for (const prop of rec) {
+        if (obj[prop] == null || obj[prop] === '') missing.push(prop);
+      }
     }
+    items.push({
+      schema_type: schemaType,
+      source,
+      properties,
+      missing_recommended: missing,
+      property_count: Object.keys(properties).length,
+    });
   }
-  items.push({
-    schema_type: schemaType,
-    source,
-    properties,
-    missing_recommended: missing,
-    property_count: Object.keys(properties).length,
-  });
   return items;
+}
+
+function organizationTypesFound(foundTypes: Set<string>): boolean {
+  return ['Organization', 'LocalBusiness', 'OnlineBusiness'].some((t) => foundTypes.has(t));
 }
 
 function extractMicrodata(html: string): SchemaItemFound[] {
@@ -202,7 +214,8 @@ function calculateScore(hasSchema: boolean, schemasFound: SchemaItemFound[]): nu
   if (!hasSchema) return 0;
   const foundTypes = new Set(schemasFound.map((s) => s.schema_type));
   let score = 30;
-  if (foundTypes.has('Organization') || foundTypes.has('LocalBusiness')) score += 15;
+  if (foundTypes.has('Organization') || foundTypes.has('LocalBusiness') || foundTypes.has('OnlineBusiness'))
+    score += 15;
   if (foundTypes.has('WebSite')) score += 10;
   if (foundTypes.has('BreadcrumbList')) score += 10;
   if (foundTypes.has('FAQPage')) score += 10;
@@ -215,62 +228,52 @@ function calculateScore(hasSchema: boolean, schemasFound: SchemaItemFound[]): nu
 }
 
 const FETCH_TIMEOUT = 12_000;
-const UA = 'Mozilla/5.0 (compatible; CleexsAgenticAudit/1.0; +https://cleexs.net)';
 
 export async function checkSchema(url: string): Promise<SchemaCheckResult> {
   let target = url.trim();
   if (!/^https?:\/\//i.test(target)) target = `https://${target}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-  try {
-    const res = await fetch(target, {
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: { 'User-Agent': UA },
-    });
-    if (!res.ok) {
-      const msg =
-        res.status === 403
-          ? `HTTP ${res.status} — El sitio puede bloquear peticiones automáticas.`
-          : `HTTP ${res.status}`;
-      return errorResult(target, msg);
-    }
-    const html = await res.text();
-    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : null;
-    const has_h1 = /<h1[\s>]/i.test(html);
-
-    const schemasFound: SchemaItemFound[] = [];
-    for (const block of extractJsonLdBlocks(html)) {
-      schemasFound.push(...parseSchemaNode(block, 'json-ld'));
-    }
-    schemasFound.push(...extractMicrodata(html));
-
-    const has_schema = schemasFound.length > 0;
-    const foundTypes = new Set(schemasFound.map((s) => s.schema_type));
-    const missing_types: string[] = [];
-    for (const t of ['Organization', 'WebSite', 'BreadcrumbList']) {
-      if (!foundTypes.has(t)) missing_types.push(t);
-    }
-    const suggestions = generateSuggestions(has_schema, schemasFound, foundTypes);
-    const score = calculateScore(has_schema, schemasFound);
-
-    return {
-      url: target,
-      has_schema,
-      schemas_found: schemasFound,
-      missing_types,
-      suggestions,
-      score,
-      total_schemas: schemasFound.length,
-      page_info: { title, has_h1 },
-    };
-  } catch (e) {
-    return errorResult(target, e instanceof Error ? e.message : 'Error de red');
-  } finally {
-    clearTimeout(timeout);
+  const fetched = await fetchPageContent(target, { timeoutMs: FETCH_TIMEOUT });
+  if (!fetched || !fetched.ok || !fetched.text.trim()) {
+    const msg =
+      fetched?.status === 403
+        ? `HTTP ${fetched.status} — El sitio puede bloquear peticiones automáticas.`
+        : fetched
+          ? `HTTP ${fetched.status}`
+          : 'Error de red';
+    return errorResult(target, msg);
   }
+
+  const html = fetched.text;
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : null;
+  const has_h1 = /<h1[\s>]/i.test(html);
+
+  const schemasFound: SchemaItemFound[] = [];
+  for (const block of extractJsonLdBlocks(html)) {
+    schemasFound.push(...parseSchemaNode(block, 'json-ld'));
+  }
+  schemasFound.push(...extractMicrodata(html));
+
+  const has_schema = schemasFound.length > 0;
+  const foundTypes = new Set(schemasFound.map((s) => s.schema_type));
+  const missing_types: string[] = [];
+  if (!organizationTypesFound(foundTypes)) missing_types.push('Organization');
+  if (!foundTypes.has('WebSite')) missing_types.push('WebSite');
+  if (!foundTypes.has('BreadcrumbList')) missing_types.push('BreadcrumbList');
+  const suggestions = generateSuggestions(has_schema, schemasFound, foundTypes);
+  const score = calculateScore(has_schema, schemasFound);
+
+  return {
+    url: fetched.finalUrl || target,
+    has_schema,
+    schemas_found: schemasFound,
+    missing_types,
+    suggestions,
+    score,
+    total_schemas: schemasFound.length,
+    page_info: { title, has_h1 },
+  };
 }
 
 function errorResult(url: string, error: string): SchemaCheckResult {

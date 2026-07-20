@@ -226,7 +226,7 @@ export async function ensureFreeEmailSequence(): Promise<FreeEmailSequence & { s
             preheader: s.preheader,
             body: s.body,
             templateVariant: s.templateVariant,
-            active: true,
+            active: s.sortOrder === 1,
           })),
         },
       },
@@ -243,7 +243,7 @@ export async function ensureFreeEmailSequence(): Promise<FreeEmailSequence & { s
         preheader: s.preheader,
         body: s.body,
         templateVariant: s.templateVariant,
-        active: true,
+        active: s.sortOrder === 1,
       })),
     });
     sequence = await prisma.freeEmailSequence.findUniqueOrThrow({
@@ -505,7 +505,7 @@ export async function createFreeEmailSequenceStep(input: {
       subject: useSuggested ? suggested.subject : '',
       preheader: useSuggested ? suggested.preheader : '',
       body: useSuggested ? suggested.body : '',
-      active: true,
+      active: false,
     },
   });
   const refreshed = await ensureFreeEmailSequence();

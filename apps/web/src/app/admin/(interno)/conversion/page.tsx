@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
-import { SponsorBreakdownTable } from '@/components/admin/report-ui';
+import { DiagnosticReportLink, SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 import { internalReportsApi } from '@/lib/api';
 import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDayInArgentina } from '@cleexs/shared';
@@ -685,6 +685,16 @@ function EmailLeadsModal({
                         </span>
                       ) : null}
                     </div>
+                    {lead.status === 'completed' ? (
+                      <div className="mt-2">
+                        <DiagnosticReportLink
+                          diagnosticId={lead.id}
+                          tier={lead.tier}
+                          status={lead.status}
+                          label="Ver diagnóstico"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
                     {fmtDateTime(lead.createdAt)}

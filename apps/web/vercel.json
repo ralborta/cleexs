@@ -4,6 +4,11 @@
   "installCommand": "npm install",
   "redirects": [
     {
+      "source": "/home",
+      "destination": "/inicio/",
+      "permanent": false
+    },
+    {
       "source": "/diagnostico/:path*",
       "has": [{ "type": "host", "value": "cleexs.net" }],
       "destination": "https://app.cleexs.net/diagnostico/:path*",

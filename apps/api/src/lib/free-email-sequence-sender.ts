@@ -17,6 +17,7 @@ import {
 import {
   buildFreeSequencePreviewLinks,
   ensureFreeEmailSequence,
+  FREE_SEQUENCE_KEY,
 } from './free-email-sequence';
 import { buildMonthlyScoreDiagnosticUrl, buildFreeOnboardingPlanConquistarUrl } from './email-templates/build-email';
 import { getInsightMeta, isFreeEmailInsightKey, resolveFreeEmailInsightLine } from './free-email-insights';
@@ -536,9 +537,11 @@ export async function sendFreeOnboardingStep1ForCompletedDiagnostic(input: {
   if (await isPremiumEmail(email)) return { sent: false, reason: 'premium_user' };
   if (await wasFreeOnboardingStepSent(email, 1)) return { sent: false, reason: 'already_sent' };
 
-  const sequence = await ensureFreeEmailSequence();
-  // Día 0 = disparo al completar free. No depende de `active` (eso gobierna el cron de pasos 2+).
-  const step1 = sequence.steps.find((s) => s.sortOrder === 1);
+  await ensureFreeEmailSequence();
+  // Siempre lee el paso 1 desde BD (contenido editado en admin UI).
+  const step1 = await prisma.freeEmailSequenceStep.findFirst({
+    where: { sequence: { key: FREE_SEQUENCE_KEY }, sortOrder: 1 },
+  });
   if (!step1) return { sent: false, reason: 'step_not_configured' };
 
   const candidate = await buildFreeOnboardingCandidateFromDiagnostic(input);
@@ -612,7 +615,10 @@ export async function runFreeOnboardingEmailBatch(input: {
     };
   }
 
-  const activeSteps = sequence.steps.filter((s) => s.active).sort((a, b) => a.sortOrder - b.sortOrder);
+  // Paso 1 solo al completar diagnóstico; el cron nunca debe reenviarlo.
+  const activeSteps = sequence.steps
+    .filter((s) => s.active && s.sortOrder > 1)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   const stepSummaries: Array<Record<string, unknown>> = [];
   let sent = 0;
   let skipped = 0;

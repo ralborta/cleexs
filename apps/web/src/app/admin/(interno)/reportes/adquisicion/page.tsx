@@ -16,6 +16,7 @@ import {
   ReportLoading,
   ReportMetric,
   ReportRefreshButton,
+  DiagnosticReportLink,
   ReportSection,
   ReferrerNameCell,
   SponsorBreakdownTable,
@@ -237,7 +238,7 @@ export default function AcquisitionReportPage() {
 
           <ReportSection
             title="Ultimos diagnosticos"
-            description="Los 25 diagnosticos mas recientes en la ventana."
+            description="Los 25 diagnosticos mas recientes en la ventana. Ver reporte abre /ver-resultado igual que el usuario."
             action={
               <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                 <Users className="h-3.5 w-3.5" />
@@ -256,12 +257,13 @@ export default function AcquisitionReportPage() {
                     <th className="py-2">Ref / UTM</th>
                     <th className="py-2">Tier</th>
                     <th className="py-2">Estado</th>
+                    <th className="py-2">Reporte</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.latestDiagnostics.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-6 text-center text-sm text-slate-500">
+                      <td colSpan={8} className="py-6 text-center text-sm text-slate-500">
                         Sin diagnosticos en la ventana.
                       </td>
                     </tr>
@@ -311,6 +313,13 @@ export default function AcquisitionReportPage() {
                           >
                             {row.status}
                           </span>
+                        </td>
+                        <td className="py-2">
+                          <DiagnosticReportLink
+                            diagnosticId={row.id}
+                            tier={row.tier}
+                            status={row.status}
+                          />
                         </td>
                       </tr>
                     ))

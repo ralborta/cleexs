@@ -444,7 +444,7 @@ export function FreeEmailSequenceEditor() {
                 void saveConfig({ enabled });
               }}
             />
-            Secuencia activa (prod)
+            Cron pasos 2+ activo (prod)
           </label>
         </section>
       ) : null}
@@ -452,7 +452,7 @@ export function FreeEmailSequenceEditor() {
       <section className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900">Probar corrida automática</h2>
         <p className="mt-1 text-xs text-slate-600">
-          Simulá quién recibiría mail hoy según días desde el diagnóstico. &quot;Enviar ahora&quot; usa force (ignora hora y el checkbox de arriba).
+          Simulá pasos 2+ (el paso 1 solo se envía al completar diagnóstico). &quot;Enviar ahora&quot; usa force e ignora hora y el checkbox de arriba.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={secondaryBtn} disabled={triggerBusy} onClick={() => void triggerBatch(true)}>

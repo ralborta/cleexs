@@ -50,6 +50,7 @@ import {
   buildWhatsAppStartedReply,
   buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
+  deliverWaChannelStart,
   deliverWaReplyToUser,
   extractUrlFromWhatsAppMessage,
   resolveWebsiteUrlFromWhatsAppMessage,
@@ -2269,8 +2270,14 @@ async function processWhatsAppUrlHttpRequest(params: {
     };
   }
 
-  // El flow HTTP de BuilderBot envía el reply al cliente (avoidResponse: false).
-  // No llamamos deliverWaChannelStart acá para evitar mensaje duplicado.
+  const recipient = (waRecipient || phone).trim();
+  void deliverWaChannelStart(
+    log,
+    recipient,
+    started.domain,
+    started.resultUrl,
+    started.reused ?? false
+  );
 
   const reply = started.reused
     ? buildWhatsAppAlreadyStartedReply(started.domain, started.resultUrl)
@@ -3021,15 +3028,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (result.code !== 'started' && result.code !== 'already_started') {
       void deliverWaReplyToUser(fastify.log, recipient, result.reply);
-    } else if (result.reply) {
-      // El reply de 'started' / 'already_started' lo entrega el flow del bot,
-      // no pasa por sendWhatsAppMessage; lo logueamos manualmente.
-      void logOutgoingWhatsApp(fastify.log, {
-        chatId: recipient || phoneFromPathOrBody,
-        message: result.reply,
-        source: 'flow_reply',
-        status: 'sent',
-      });
     }
     return reply.send(result);
   }

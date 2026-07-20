@@ -4,6 +4,9 @@
  * rastreo que afectan a agentes de IA.
  */
 
+import { fetchPageContent } from './page-fetch';
+import { isBotBlocked, isWildcardFullyBlocked, parseRobots } from './robots-parse';
+
 export type CrawlIssue = {
   severity: 'critical' | 'warning' | 'info';
   category: string;
@@ -33,8 +36,27 @@ export type SiteCrawlResult = {
   crawl_time: number;
 };
 
-const UA = 'Mozilla/5.0 (compatible; CleexsAgenticAudit/1.0; +https://cleexs.net)';
 const PAGE_TIMEOUT_MS = 10_000;
+
+async function fetchPage(url: string): Promise<{
+  ok: boolean;
+  status: number;
+  html: string;
+  responseTime: number;
+  finalUrl: string;
+} | null> {
+  const t0 = Date.now();
+  const res = await fetchPageContent(url, { timeoutMs: PAGE_TIMEOUT_MS });
+  if (!res) return null;
+  const responseTime = (Date.now() - t0) / 1000;
+  return {
+    ok: res.ok,
+    status: res.status,
+    html: res.text,
+    responseTime,
+    finalUrl: res.finalUrl,
+  };
+}
 
 function normalizeUrl(url: string): string {
   try {
@@ -79,36 +101,6 @@ function analyzePageMeta(html: string) {
   return { title, metaDesc, metaRobots, has_h1, totalImages: imgTags.length, imagesWithoutAlt: imgNoAlt };
 }
 
-async function fetchPage(url: string): Promise<{
-  ok: boolean;
-  status: number;
-  html: string;
-  responseTime: number;
-  finalUrl: string;
-} | null> {
-  const controller = new AbortController();
-  const t0 = Date.now();
-  const timeout = setTimeout(() => controller.abort(), PAGE_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: { 'User-Agent': UA },
-    });
-    const responseTime = (Date.now() - t0) / 1000;
-    const ct = res.headers.get('content-type') || '';
-    if (!ct.includes('text/html')) {
-      return { ok: res.ok, status: res.status, html: '', responseTime, finalUrl: res.url || url };
-    }
-    const html = await res.text();
-    return { ok: res.ok, status: res.status, html, responseTime, finalUrl: res.url || url };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 export async function crawlSite(
   rawUrl: string,
   opts: { maxPages?: number; maxDepth?: number } = {},
@@ -134,20 +126,18 @@ export async function crawlSite(
   const robotsRes = await fetchPage(`${baseUrl}/robots.txt`);
   if (robotsRes && robotsRes.ok && robotsRes.html) {
     const txt = robotsRes.html;
-    if (/Disallow:\s*\//m.test(txt)) {
-      const wildcardBlock = /User-agent:\s*\*[\s\S]*?Disallow:\s*\/\s*$/im.test(txt);
-      if (wildcardBlock) {
-        issues.push({
-          severity: 'critical',
-          category: 'robots_txt',
-          url: `${baseUrl}/robots.txt`,
-          message: "robots.txt bloquea todo el sitio con 'Disallow: /'",
-          details: 'Los motores de búsqueda e IAs no pueden acceder a ninguna página.',
-        });
-      }
+    const groups = parseRobots(txt);
+    if (isWildcardFullyBlocked(groups)) {
+      issues.push({
+        severity: 'critical',
+        category: 'robots_txt',
+        url: `${baseUrl}/robots.txt`,
+        message: "robots.txt bloquea todo el sitio con 'Disallow: /' para User-agent: *",
+        details: 'Los motores de búsqueda e IAs no pueden acceder a ninguna página.',
+      });
     }
     for (const bot of ['GPTBot', 'ClaudeBot', 'Google-Extended', 'PerplexityBot']) {
-      if (new RegExp(bot, 'i').test(txt) && new RegExp(`User-agent:\\s*${bot}[\\s\\S]*?Disallow:\\s*/`, 'i').test(txt)) {
+      if (isBotBlocked(groups, bot)) {
         issues.push({
           severity: 'warning',
           category: 'ai_bots',

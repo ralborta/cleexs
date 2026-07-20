@@ -16,6 +16,8 @@
 import { checkSchema, type SchemaCheckResult } from './agentic-tools/schema-checker';
 import { crawlSite, type SiteCrawlResult } from './agentic-tools/site-crawler';
 import { generateRecommendedRobots } from './agentic-tools/robots-recommendation';
+import { fetchPageContent } from './agentic-tools/page-fetch';
+import { hasCloudflareManagedBlock, hasSitemapDirective, isBotBlocked, parseRobots } from './agentic-tools/robots-parse';
 
 /**
  * Devuelve un "Agent-Readiness Score" (0-100) ponderado + checks individuales
@@ -91,8 +93,6 @@ const AI_BOTS = [
 ] as const;
 
 const FETCH_TIMEOUT_MS = 12_000;
-const USER_AGENT =
-  'Mozilla/5.0 (compatible; CleexsAgenticAudit/1.0; +https://cleexs.net)';
 
 function normalizeUrl(raw: string): string {
   let u = (raw || '').trim();
@@ -110,76 +110,26 @@ async function timedFetch(
   url: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; status: number; text: string; finalUrl: string } | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      ...init,
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: { 'User-Agent': USER_AGENT, ...(init?.headers || {}) },
-    });
-    const text = await res.text();
-    return { ok: res.ok, status: res.status, text, finalUrl: res.url || url };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
+  const method = init?.method === 'HEAD' ? 'HEAD' : 'GET';
+  const res = await fetchPageContent(url, { timeoutMs: FETCH_TIMEOUT_MS, method });
+  if (!res) return null;
+  return { ok: res.ok, status: res.status, text: res.text, finalUrl: res.finalUrl };
 }
 
 // ────────────────────────────────────────────────────────────────
 // 1. robots.txt — acceso de bots de IA
 // ────────────────────────────────────────────────────────────────
 
-type RobotsGroup = { agents: string[]; disallows: string[]; allows: string[] };
-
-function parseRobots(txt: string): RobotsGroup[] {
-  const groups: RobotsGroup[] = [];
-  let current: RobotsGroup | null = null;
-  let lastWasAgent = false;
-  for (const rawLine of txt.split(/\r?\n/)) {
-    const line = rawLine.replace(/#.*$/, '').trim();
-    if (!line) continue;
-    const idx = line.indexOf(':');
-    if (idx === -1) continue;
-    const field = line.slice(0, idx).trim().toLowerCase();
-    const value = line.slice(idx + 1).trim();
-    if (field === 'user-agent') {
-      if (!current || !lastWasAgent) {
-        current = { agents: [], disallows: [], allows: [] };
-        groups.push(current);
-      }
-      current.agents.push(value.toLowerCase());
-      lastWasAgent = true;
-    } else if (current && field === 'disallow') {
-      current.disallows.push(value);
-      lastWasAgent = false;
-    } else if (current && field === 'allow') {
-      current.allows.push(value);
-      lastWasAgent = false;
-    } else {
-      lastWasAgent = false;
-    }
+async function detectSitemap(origin: string): Promise<boolean> {
+  const paths = ['/sitemap_index.xml', '/sitemap.xml', '/wp-sitemap.xml'];
+  for (const path of paths) {
+    const head = await timedFetch(`${origin}${path}`, { method: 'HEAD' });
+    if (head && head.ok) return true;
+    const get = await timedFetch(`${origin}${path}`);
+    if (get && get.ok && !/<html/i.test(get.text.slice(0, 400))) return true;
   }
-  return groups;
-}
-
-/** ¿El bot `agent` está bloqueado de la raíz del sitio? */
-function isBotBlocked(groups: RobotsGroup[], agent: string): boolean {
-  const a = agent.toLowerCase();
-  const matching = groups.filter((g) => g.agents.includes(a));
-  const wildcard = groups.filter((g) => g.agents.includes('*'));
-  const relevant = matching.length > 0 ? matching : wildcard;
-  if (relevant.length === 0) return false;
-  // Bloqueado si hay un Disallow: / sin un Allow más específico.
-  for (const g of relevant) {
-    const blocksRoot = g.disallows.some((d) => d === '/' || d === '/*');
-    if (blocksRoot) {
-      const allowsRoot = g.allows.some((al) => al === '/' || al === '');
-      if (!allowsRoot) return true;
-    }
-  }
+  const robots = await timedFetch(`${origin}/robots.txt`);
+  if (robots?.ok && hasSitemapDirective(robots.text)) return true;
   return false;
 }
 
@@ -233,7 +183,11 @@ function auditRobots(robotsTxt: string | null): AuditCategory {
       status,
       score: blockedImportant.length > 0 ? 25 : 65,
       summary: `${blocked.length} bot(s) de IA bloqueados en robots.txt.`,
-      detail: `Bloqueados: ${blocked.join(', ')}. ${
+      detail: `Bloqueados: ${blocked.join(', ')}.${
+        hasCloudflareManagedBlock(robotsTxt)
+          ? ' Cloudflare inyecta bloqueos al inicio; WordPress ya tiene Allow al final — desactivar Managed robots.txt en CF.'
+          : ''
+      } ${
         blockedImportant.length > 0
           ? 'Incluye motores importantes — los agentes de esas plataformas no pueden leer tu sitio.'
           : 'Son motores secundarios, pero conviene revisarlo.'
@@ -241,7 +195,7 @@ function auditRobots(robotsTxt: string | null): AuditCategory {
     });
   }
 
-  const hasSitemapRef = /^\s*sitemap\s*:/im.test(robotsTxt);
+  const hasSitemapRef = hasSitemapDirective(robotsTxt);
   checks.push({
     id: 'robots_sitemap_ref',
     label: 'Referencia a sitemap',
@@ -275,10 +229,10 @@ function auditLlmsTxt(llmsTxt: string | null): AuditCategory {
     return { id: 'llms', label: 'Guía para LLMs (llms.txt)', weight: 0.1, score: 40, checks };
   }
 
-  const lines = llmsTxt.split(/\r?\n/);
-  const hasTitle = lines.some((l) => /^#\s+/.test(l.trim()));
+  const lines = llmsTxt.replace(/\\#/g, '#').split(/\r?\n/);
+  const hasTitle = lines.some((l) => /^#\s+\S/.test(l.trim()));
   const linkCount = (llmsTxt.match(/\[[^\]]+\]\([^)]+\)/g) || []).length;
-  const hasSections = lines.some((l) => /^##\s+/.test(l.trim()));
+  const hasSections = lines.some((l) => /^##\s+\S/.test(l.trim()));
 
   checks.push({
     id: 'llms_exists',
@@ -593,7 +547,7 @@ function buildRecommendations(
       category: 'Acceso de agentes',
       title: 'Permitir el acceso de los bots de IA en robots.txt',
       detail:
-        'Quitá las reglas Disallow para GPTBot, ClaudeBot, Google-Extended y PerplexityBot (o agregá Allow explícitos). Si no, esos agentes no pueden leer tu sitio.',
+        'WordPress ya declara Allow para GPTBot, ClaudeBot y otros, pero Cloudflare puede inyectar Disallow al inicio del archivo. Pedí acceso al panel Cloudflare para desactivar "Managed robots.txt" (ver docs/MENSAJE-CLIENTE-CLOUDFLARE-ROBOTS.txt).',
     });
   }
 
@@ -672,10 +626,10 @@ export async function runAgenticAudit(rawUrl: string): Promise<AgenticAuditResul
   const target = normalizeUrl(rawUrl);
   const origin = originOf(target);
 
-  const [robotsRes, llmsRes, sitemapRes, psi, schemaResult, crawlResult] = await Promise.all([
+  const [robotsRes, llmsRes, sitemapFound, psi, schemaResult, crawlResult] = await Promise.all([
     timedFetch(`${origin}/robots.txt`),
     timedFetch(`${origin}/llms.txt`),
-    timedFetch(`${origin}/sitemap.xml`, { method: 'HEAD' }),
+    detectSitemap(origin),
     fetchPageSpeed(target, warnings),
     checkSchema(target),
     crawlSite(target, { maxPages: 8, maxDepth: 2 }),
@@ -686,7 +640,6 @@ export async function runAgenticAudit(rawUrl: string): Promise<AgenticAuditResul
     llmsRes && llmsRes.ok && /[#\[\w]/.test(llmsRes.text) && !/<html/i.test(llmsRes.text)
       ? llmsRes.text
       : null;
-  const sitemapFound = Boolean(sitemapRes && sitemapRes.ok);
 
   const robotsCategory = auditRobots(robotsTxt);
   const needsRobotsFix = robotsCategory.checks.some(
