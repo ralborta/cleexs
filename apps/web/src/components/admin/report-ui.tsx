@@ -16,7 +16,7 @@ export function DiagnosticReportLink({
   diagnosticId,
   tier,
   status,
-  label = 'Ver reporte',
+  label = 'Ver',
 }: {
   diagnosticId: string;
   tier?: string | null;
@@ -27,7 +27,7 @@ export function DiagnosticReportLink({
   if (!ready) {
     return (
       <span
-        className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-400"
+        className="inline-flex cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-400"
         title="Disponible cuando el diagnóstico está completed"
       >
         {label}
@@ -40,7 +40,7 @@ export function DiagnosticReportLink({
       href={buildDiagnosticReportPath({ diagnosticId, tier })}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100"
       title="Abrir el diagnóstico completo como lo vio el usuario"
     >
       <ExternalLink className="h-3 w-3" aria-hidden />

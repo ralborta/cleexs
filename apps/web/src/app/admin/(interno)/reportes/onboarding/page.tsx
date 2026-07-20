@@ -393,11 +393,11 @@ export default function OnboardingProfileReportPage() {
                             <button
                               type="button"
                               onClick={() => void openMails(row.email!, row.brandName)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100"
+                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100"
                               title="Ver correos enviados a este lead"
                             >
                               <Mail className="h-3 w-3" aria-hidden />
-                              Ver mails
+                              Ver
                             </button>
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
@@ -566,7 +566,7 @@ export default function OnboardingProfileReportPage() {
                   </>
                 ) : (
                   <p className="m-auto px-6 text-center text-sm text-slate-500">
-                    Elegí un envío y tocá <strong>Ver mail</strong> para cargar el correo desde Resend.
+                    Elegí un envío y tocá <strong>Ver</strong> para cargar el correo desde Resend.
                   </p>
                 )}
               </div>
