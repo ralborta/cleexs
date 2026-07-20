@@ -237,130 +237,6 @@ export default function AcquisitionReportPage() {
           </div>
 
           <ReportSection
-            title="Buscar marca o cliente"
-            description={
-              data.totals.diagnosticsAllTime > 0
-                ? `Busca en los ${data.totals.diagnosticsAllTime.toLocaleString('es-AR')} diagnósticos históricos de Cleexs (no solo los 25 de abajo). Ideal para reuniones: encontrá cualquier análisis por marca, dominio o email.`
-                : 'Busca en todo el historico por marca, dominio o email.'
-            }
-          >
-            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3 sm:flex-row sm:flex-wrap sm:items-end">
-              <label className="block min-w-[200px] flex-1 text-sm">
-                <span className="text-xs font-semibold uppercase tracking-wide text-violet-800">
-                  Marca, dominio o email
-                </span>
-                <div className="relative mt-1.5">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="search"
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void runSearch(searchInput);
-                    }}
-                    placeholder="Ej. Chegaucho, chegaucho.es, juan@…"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
-                  />
-                </div>
-              </label>
-              <label className="flex items-center gap-2 pb-2 text-xs text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={completedOnly}
-                  onChange={(e) => {
-                    const next = e.target.checked;
-                    setCompletedOnly(next);
-                    if (activeQuery) void runSearch(activeQuery, next);
-                  }}
-                />
-                Solo completados (con reporte)
-              </label>
-              <div className="flex flex-wrap gap-2 pb-0.5">
-                <button
-                  type="button"
-                  disabled={searchLoading}
-                  onClick={() => void runSearch(searchInput)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
-                >
-                  {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  Buscar en todo el historico
-                </button>
-                {activeQuery ? (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <X className="h-4 w-4" />
-                    Limpiar
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {searchError ? (
-              <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-                {searchError}
-              </p>
-            ) : null}
-
-            {activeQuery && !searchLoading && searchMeta ? (
-              <p className="mb-3 text-xs text-slate-600">
-                {searchMeta.totalMatching === 0 ? (
-                  <>Ningún diagnóstico coincide con «{activeQuery}» en todo el historico.</>
-                ) : (
-                  <>
-                    <span className="font-semibold text-slate-900">{searchMeta.totalMatching}</span> coincidencia
-                    {searchMeta.totalMatching === 1 ? '' : 's'} en total
-                    {searchMeta.truncated ? (
-                      <> · mostrando las {searchRows?.length ?? 0} más recientes</>
-                    ) : null}
-                    {completedOnly ? ' · solo completados' : ''}
-                  </>
-                )}
-              </p>
-            ) : null}
-
-            {activeQuery ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-xs text-slate-500">
-                    <tr>
-                      <th className="py-2">Fecha</th>
-                      <th className="py-2">Marca / dominio</th>
-                      <th className="py-2">Email</th>
-                      <th className="py-2">Canal</th>
-                      <th className="py-2">Ref / UTM</th>
-                      <th className="py-2">Tier</th>
-                      <th className="py-2">Estado</th>
-                      <th className="py-2">Reporte</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {searchLoading ? (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-sm text-slate-500">
-                          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-violet-600" />
-                          Buscando en los {data.totals.diagnosticsAllTime.toLocaleString('es-AR')} diagnósticos…
-                        </td>
-                      </tr>
-                    ) : (
-                      <DiagnosticsTableBody
-                        rows={searchRows ?? []}
-                        emptyMessage="Ningun diagnostico coincide. Probá otra marca, dominio o email."
-                      />
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="rounded-xl border border-dashed border-violet-200 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
-                Escribí una marca o dominio y buscá — no se limita a los últimos 25 ni al periodo de {windowDays} días.
-              </p>
-            )}
-          </ReportSection>
-
-          <ReportSection
             title="Evolucion diaria"
             description="Barras moradas = diagnosticos creados. Verdes = completados."
           >
@@ -488,15 +364,96 @@ export default function AcquisitionReportPage() {
           </ReportSection>
 
           <ReportSection
-            title="Ultimos 25 del periodo"
-            description={`Solo vista rápida: los 25 diagnósticos más recientes de los últimos ${windowDays} días. Para un cliente concreto usá la búsqueda de arriba.`}
+            title="Diagnosticos"
+            description={
+              activeQuery
+                ? `Resultados de búsqueda en los ${data.totals.diagnosticsAllTime.toLocaleString('es-AR')} diagnósticos históricos.`
+                : `Ultimos 25 del periodo (${windowDays} dias). Buscá arriba para encontrar cualquier marca en todo el historico.`
+            }
             action={
               <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                 <Users className="h-3.5 w-3.5" />
-                {tableRows.length}
+                {activeQuery ? (searchRows?.length ?? 0) : tableRows.length}
               </span>
             }
           >
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="block min-w-[200px] flex-1 text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wide text-violet-800">
+                  Buscar marca, dominio o email
+                </span>
+                <div className="relative mt-1.5">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="search"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void runSearch(searchInput);
+                    }}
+                    placeholder="Ej. Chegaucho, chegaucho.es, juan@…"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                  />
+                </div>
+              </label>
+              <label className="flex items-center gap-2 pb-2 text-xs text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={completedOnly}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setCompletedOnly(next);
+                    if (activeQuery) void runSearch(activeQuery, next);
+                  }}
+                />
+                Solo completados (con reporte)
+              </label>
+              <div className="flex flex-wrap gap-2 pb-0.5">
+                <button
+                  type="button"
+                  disabled={searchLoading}
+                  onClick={() => void runSearch(searchInput)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
+                >
+                  {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  Buscar en todo el historico
+                </button>
+                {activeQuery ? (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Limpiar
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {searchError ? (
+              <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                {searchError}
+              </p>
+            ) : null}
+
+            {activeQuery && !searchLoading && searchMeta ? (
+              <p className="mb-3 text-xs text-slate-600">
+                {searchMeta.totalMatching === 0 ? (
+                  <>Ningún diagnóstico coincide con «{activeQuery}» en todo el historico.</>
+                ) : (
+                  <>
+                    <span className="font-semibold text-slate-900">{searchMeta.totalMatching}</span> coincidencia
+                    {searchMeta.totalMatching === 1 ? '' : 's'} en total
+                    {searchMeta.truncated ? (
+                      <> · mostrando las {searchRows?.length ?? 0} más recientes</>
+                    ) : null}
+                    {completedOnly ? ' · solo completados' : ''}
+                  </>
+                )}
+              </p>
+            ) : null}
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-slate-500">
@@ -512,7 +469,23 @@ export default function AcquisitionReportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <DiagnosticsTableBody rows={tableRows} emptyMessage="Sin diagnosticos en la ventana." />
+                  {searchLoading ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-sm text-slate-500">
+                        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-violet-600" />
+                        Buscando en los {data.totals.diagnosticsAllTime.toLocaleString('es-AR')} diagnósticos…
+                      </td>
+                    </tr>
+                  ) : (
+                    <DiagnosticsTableBody
+                      rows={activeQuery ? (searchRows ?? []) : tableRows}
+                      emptyMessage={
+                        activeQuery
+                          ? 'Ningun diagnostico coincide. Probá otra marca, dominio o email.'
+                          : 'Sin diagnosticos en la ventana.'
+                      }
+                    />
+                  )}
                 </tbody>
               </table>
             </div>
