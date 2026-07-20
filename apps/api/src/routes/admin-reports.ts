@@ -196,6 +196,7 @@ const diagnosticAdminSelect = {
   email: true,
   refCode: true,
   utmSource: true,
+  utmMedium: true,
   sourceChannel: true,
   domain: true,
   brandName: true,
@@ -212,6 +213,7 @@ type DiagnosticAdminRowInput = {
   tier: string | null;
   refCode: string | null;
   utmSource: string | null;
+  utmMedium: string | null;
   sourceChannel: string | null;
 };
 
