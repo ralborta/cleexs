@@ -155,13 +155,17 @@ export function CompetitorShareChart({
             <div
               key={`${row.rank}-${row.name}`}
               className={cn(
-                'grid grid-cols-[auto_auto_minmax(0,148px)_minmax(140px,1fr)] items-center gap-x-1.5 sm:grid-cols-[auto_auto_minmax(0,168px)_minmax(160px,236px)] sm:gap-x-2',
+                'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 sm:gap-x-10 lg:gap-x-14',
                 !highlighted && 'opacity-90',
               )}
             >
-              <RankBadge rank={row.rank} highlighted={highlighted} />
-              <CompetitorAvatar name={row.name} isBrand={row.isBrand} />
-              <CompetitorLabel row={row} brandDomain={brandDomain} />
+              <div className="flex max-w-[min(100%,220px)] items-center gap-1 sm:max-w-[min(100%,260px)]">
+                <RankBadge rank={row.rank} highlighted={highlighted} />
+                <CompetitorAvatar name={row.name} isBrand={row.isBrand} />
+                <div className="min-w-0 flex-1">
+                  <CompetitorLabel row={row} brandDomain={brandDomain} />
+                </div>
+              </div>
               <ShareBar share={row.share} maxShare={maxShare} highlighted={highlighted} />
             </div>
           );

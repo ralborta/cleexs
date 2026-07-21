@@ -8,6 +8,7 @@ import {
   Check,
   ClipboardList,
   FileText,
+  BarChart3,
   Lightbulb,
   Lock,
   Search,
@@ -573,25 +574,37 @@ export function DiagnosticoGratuitoV2({
         <section>
           <SectionBadge n={4} label="¿Qué pasaría si lo hacés?" />
           <ReportBlock className="p-4 sm:p-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              { icon: <TrendingUp className="h-5 w-5" />, text: 'Más presencia en consultas de decisión' },
-              { icon: <Users className="h-5 w-5" />, text: 'Mayor probabilidad de ser la recomendación #1' },
-              { icon: <Sparkles className="h-5 w-5" />, text: 'Más confianza cuando comparan opciones' },
-            ].map((item) => (
-              <div
-                key={item.text}
-                className="flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-5 text-center"
-              >
-                <div className="mb-2 text-violet-600">{item.icon}</div>
-                <p className="text-xs font-semibold text-slate-700 sm:text-sm">{item.text}</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
+              {[
+                {
+                  icon: <TrendingUp className="h-4 w-4" aria-hidden />,
+                  text: 'Más chances de aparecer en consultas de comparación y decisión donde hoy casi no estás presente.',
+                },
+                {
+                  icon: <Users className="h-4 w-4" aria-hidden />,
+                  text: 'Hoy tus competidores ganan estas consultas. Vos podés quedarte con ellas.',
+                },
+                {
+                  icon: <Target className="h-4 w-4" aria-hidden />,
+                  text: 'Mayor probabilidad de ser la primera recomendación de ChatGPT.',
+                },
+              ].map((item) => (
+                <div key={item.text} className="flex items-start gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                    {item.icon}
+                  </div>
+                  <p className="text-[11px] font-medium leading-snug text-slate-700 sm:text-xs">{item.text}</p>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:col-span-2 lg:col-span-1">
+                <div className="space-y-0.5 text-[11px] font-semibold leading-snug text-emerald-700 sm:text-xs">
+                  <p>Más visibilidad = más confianza</p>
+                  <p>Más confianza = más leads</p>
+                  <p>Más leads = más clientes</p>
+                </div>
+                <BarChart3 className="h-9 w-9 shrink-0 text-emerald-500/80" strokeWidth={1.6} aria-hidden />
               </div>
-            ))}
-            </div>
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
-              <p className="text-xs font-bold text-emerald-600 sm:text-sm">
-                Más visibilidad + más confianza = más clientes desde ChatGPT
-              </p>
             </div>
           </ReportBlock>
         </section>
