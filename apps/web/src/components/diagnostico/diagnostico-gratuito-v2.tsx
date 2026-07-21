@@ -88,16 +88,33 @@ function ReportBlock({ children, className }: { children: ReactNode; className?:
   );
 }
 
-function StarRow({ count, max = 5 }: { count: number; max?: number }) {
+function StarRow({
+  count,
+  max = 5,
+  tone = 'amber',
+}: {
+  count: number;
+  max?: number;
+  tone?: 'amber' | 'violet';
+}) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: max }).map((_, i) => (
-        <span key={i} className={cn('text-lg', i < count ? 'text-amber-400' : 'text-slate-200')}>
+        <span
+          key={i}
+          className={cn('text-lg', i < count ? (tone === 'violet' ? 'text-violet-500' : 'text-amber-400') : 'text-slate-200')}
+        >
           ★
         </span>
       ))}
     </div>
   );
+}
+
+function splitPrimaryActionTitle(title: string) {
+  const match = title.match(/^(.+?:)\s*["'](.+)["']$/);
+  if (!match) return { prefix: title, highlight: null as string | null };
+  return { prefix: match[1], highlight: `"${match[2]}"` };
 }
 
 function VerdictIcon({ verdict }: { verdict: DiagnosticoV2ViewModel['verdict'] }) {
@@ -494,34 +511,54 @@ export function DiagnosticoGratuitoV2({
         {/* 3 — Una acción */}
         <section>
           <SectionBadge n={3} label="Si solo pudieras hacer UNA cosa" />
+          <p className="mb-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
+            La oportunidad con mayor impacto para ganar visibilidad en decisiones de compra.
+          </p>
           <ReportBlock>
-            <div className="border-b border-violet-100 bg-violet-600/5 px-4 py-3 sm:px-5">
-              <div className="flex items-center gap-2 text-violet-700">
-                <Target className="h-4 w-4" />
-                <span className="text-[10px] font-bold uppercase tracking-wide">Tu primera misión</span>
+            <div className="grid gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(108px,0.55fr)_minmax(108px,0.55fr)] lg:items-stretch">
+              <div className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 sm:col-span-2 sm:gap-4 lg:col-span-1">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                  <Target className="h-5 w-5" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  {(() => {
+                    const { prefix, highlight } = splitPrimaryActionTitle(model.primaryAction.title);
+                    return (
+                      <h3 className="text-sm font-bold leading-snug text-[#1e2a5a] sm:text-base">
+                        {prefix}{' '}
+                        {highlight ? <span className="text-violet-700">{highlight}</span> : null}
+                      </h3>
+                    );
+                  })()}
+                  <p className="mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                    {model.primaryAction.subtitle}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-4 text-center">
+                <p className="text-[10px] font-semibold text-slate-500">Impacto esperado</p>
+                <div className="my-2">
+                  <StarRow count={model.primaryAction.impactStars} tone="violet" />
+                </div>
+                <p className="text-xs font-bold text-[#1e2a5a] sm:text-sm">{model.primaryAction.impactLabel}</p>
+              </div>
+
+              <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-4 text-center">
+                <p className="text-[10px] font-semibold text-slate-500">Esfuerzo estimado</p>
+                <div className="my-2">
+                  <StarRow count={model.primaryAction.effortStars} tone="violet" />
+                </div>
+                <p className="text-xs font-bold text-[#1e2a5a] sm:text-sm">{model.primaryAction.effortLabel}</p>
               </div>
             </div>
-            <div className="p-4 sm:p-5">
-              <h3 className="text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg">
-                {model.primaryAction.title}
-              </h3>
-              <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-                {model.primaryAction.subtitle}
-              </p>
-              <div className="mt-5 flex flex-wrap gap-6">
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-500">Impacto esperado</p>
-                  <StarRow count={model.primaryAction.impactStars} />
-                  <p className="mt-1 text-xs font-bold text-slate-800 sm:text-sm">{model.primaryAction.impactLabel}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-500">Esfuerzo estimado</p>
-                  <StarRow count={model.primaryAction.effortStars} />
-                  <p className="mt-1 text-xs font-bold text-slate-800 sm:text-sm">{model.primaryAction.effortLabel}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-[11px] text-slate-500">
-                Esta acción sola podría cerrar ~{model.gapClosePct}% de la brecha con {model.leaderName}.
+
+            <div className="flex items-start gap-2 border-t border-violet-100 bg-violet-50/80 px-4 py-3 sm:items-center sm:px-5">
+              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 sm:mt-0" aria-hidden />
+              <p className="text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                Esta acción podría cerrar el{' '}
+                <span className="font-bold text-[#1e2a5a]">{model.gapClosePct}%</span> de la brecha que hay hoy
+                frente al líder.
               </p>
             </div>
           </ReportBlock>
