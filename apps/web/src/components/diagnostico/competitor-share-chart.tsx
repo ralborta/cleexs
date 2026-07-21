@@ -173,6 +173,47 @@ export function CompetitorShareChart({
   );
 }
 
+function LeaderInsightTrophy({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      className={cn('h-[88px] w-[88px] sm:h-[100px] sm:w-[100px]', className)}
+      fill="none"
+      aria-hidden
+    >
+      {/* Destellos */}
+      <path d="M60 10V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M48 14l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M72 14l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M42 22l-5-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M78 22l5-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Asas y copa */}
+      <path
+        d="M38 34c0-6 4.5-10 10-10h24c5.5 0 10 4 10 10v2H38v-2Z"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M34 36h8M78 36h8"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M42 36h36l-4 28H46L42 36Z"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      {/* Vástago y base */}
+      <path d="M52 64h16v10H52V64Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M44 74h32v8H44V74Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M38 82h44v6H38V82Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function CompetitorLeaderInsight({
   leaderName,
   leaderShare,
@@ -185,32 +226,24 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative flex min-h-[220px] flex-col justify-center overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/90 to-indigo-50/50 p-5 shadow-sm sm:min-h-[260px] sm:p-6',
+        'flex min-h-[280px] flex-col justify-between overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f5f3fa] p-6 sm:min-h-[320px] sm:p-7',
         className,
       )}
     >
-      <div className="relative z-[1] max-w-[210px]">
-        <p className="text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg">
+      <div className="max-w-[92%]">
+        <p className="text-lg font-bold leading-snug text-[#1e2a5a] sm:text-[1.35rem]">
           Estás muy cerca del líder.
         </p>
-        <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
-          {leaderName} lidera con {leaderShare.toFixed(1)}%. Con los cambios correctos podés ser la primera
-          recomendación en consultas clave.
+        <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+          Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-slate-500">
+          {leaderName} lidera hoy con {leaderShare.toFixed(1)}%.
         </p>
       </div>
-      <div className="pointer-events-none absolute bottom-4 right-4 text-violet-500/75" aria-hidden>
-        <svg viewBox="0 0 80 80" className="h-[72px] w-[72px] sm:h-20 sm:w-20" fill="none">
-          <path d="M18 12h44l-4 18H22L18 12Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-          <path d="M24 30h32l-3 16H27l-3-16Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-          <path d="M32 46h16v8H32v-8Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-          <path d="M28 54h24v6H28v-6Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-          <path
-            d="M12 18l3 3M68 18l-3 3M10 32h5M65 32h5M40 6v4M40 62v4"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
+
+      <div className="mt-6 flex justify-end pt-2 text-[#8b7fd4]">
+        <LeaderInsightTrophy />
       </div>
     </div>
   );
