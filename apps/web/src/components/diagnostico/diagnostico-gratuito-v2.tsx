@@ -461,32 +461,24 @@ export function DiagnosticoGratuitoV2({
     <div className="min-h-screen bg-[#f7f8fb] text-slate-900">
       {/* Header sticky */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center px-4 py-3 sm:px-6">
           <Link href="https://cleexs.net" className="inline-flex items-center gap-2">
             <CleexsMark className="h-7 w-auto" />
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="https://cleexs.net"
-              className="hidden text-xs font-medium text-slate-500 hover:text-slate-800 sm:inline"
-            >
-              ¿Cómo funciona este diagnóstico?
-            </Link>
-            <ShareScoreButtons
-              path={sharePath}
-              brandName={model.brandName}
-              domain={model.domain}
-              diagnosticId={diagnostic.id}
-              shareSlug={diagnostic.shareSlug ?? undefined}
-              intent="social"
-            />
-          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {/* HERO */}
         <section className="mb-6">
+          <div className="mb-2">
+            <p className="text-sm font-bold text-[#1e2a5a] sm:text-base">{model.brandName}</p>
+            {model.domain ? (
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                {model.domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '')}
+              </p>
+            ) : null}
+          </div>
           <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Diagnóstico gratuito</p>
 
           <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start lg:gap-5">
