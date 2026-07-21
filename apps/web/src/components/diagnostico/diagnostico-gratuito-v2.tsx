@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   Bot,
-  Check,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -27,7 +26,6 @@ import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
 import {
   PlanConquistarCheckoutButton,
-  PlanConquistarPromoPrice,
 } from '@/components/planes/plan-conquistar-checkout-button';
 import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-modal';
 import type { EngineCardKey } from '@/components/diagnostico/cleexs-engine-scores-panel';
@@ -749,47 +747,6 @@ export function DiagnosticoGratuitoV2({
           </div>
         </section>
 
-        {/* CTA principal — Plan Conquistar */}
-        <section className="mt-8">
-          <div className="overflow-hidden rounded-2xl bg-violet-600 px-4 py-8 shadow-lg shadow-violet-600/20 sm:px-6 sm:py-9">
-            <PlanConquistarCheckoutButton
-              className="mx-auto w-full max-w-xl rounded-2xl py-4 text-base shadow-md"
-              variant="sidebar"
-              label="Quiero mi plan de acción →"
-              sourceChannel="ver_resultado_v2"
-              diagnosticId={diagnostic.id}
-              customerEmail={diagnostic.email}
-              icon="sparkles"
-            />
-          </div>
-        </section>
-
-        {/* Share — debajo del CTA principal */}
-        <footer className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5">
-            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Compartir resultado</p>
-            <ShareScoreButtons
-              path={sharePath}
-              brandName={model.brandName}
-              domain={model.domain}
-              diagnosticId={diagnostic.id}
-              shareSlug={diagnostic.shareSlug ?? undefined}
-              intent="social"
-            />
-          </div>
-          <div className="rounded-xl border border-sky-200/90 bg-sky-50/40 p-4 sm:p-5">
-            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Invitar a tu equipo</p>
-            <ShareScoreButtons
-              path={sharePath}
-              brandName={model.brandName}
-              domain={model.domain}
-              diagnosticId={diagnostic.id}
-              shareSlug={diagnostic.shareSlug ?? undefined}
-              intent="team"
-            />
-          </div>
-        </footer>
-
         {/* 7 — Mientras leías */}
         <section>
           <SectionBadge n={7} label="Mientras vos leías este diagnóstico…" />
@@ -840,54 +797,46 @@ export function DiagnosticoGratuitoV2({
           </ReportBlock>
         </section>
 
-        {/* Footer CTA */}
-        <section className="overflow-hidden rounded-2xl bg-[#1e2a5a] text-white shadow-xl">
-          <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_280px] lg:items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-violet-300">Plan Conquistar</p>
-              <h2 className="mt-3 text-2xl font-black leading-tight sm:text-3xl">
-                Desbloqueá tu plan personalizado para conseguir clientes desde ChatGPT
-              </h2>
-              <ul className="mt-6 space-y-2.5">
-                {[
-                  'Roadmap de implementación de 90 días',
-                  '25 acciones priorizadas por impacto',
-                  'Qué hacer esta semana y qué puede esperar',
-                  'Prompts listos para copiar y ejecutar',
-                  'Cómo cerrar la brecha con tu competidor líder',
-                  'Premium incluido durante la implementación',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-slate-200">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-8 space-y-2 border-t border-white/10 pt-6">
-                <p className="text-lg font-bold">El diagnóstico te mostró dónde está la oportunidad.</p>
-                <p className="text-sm text-slate-300">
-                  El Plan Conquistar te muestra exactamente cómo capturarla.
-                </p>
-                <p className="text-sm font-semibold text-white/90">
-                  Mientras vos intentabas entender qué hacer… nosotros ya lo resolvimos.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white p-6 text-slate-900 shadow-xl">
-              <PlanConquistarPromoPrice size="md" className="justify-center" />
-              <PlanConquistarCheckoutButton
-                className="mt-5 w-full"
-                variant="promo"
-                label="Quiero mi plan de acción"
-                sourceChannel="ver_resultado_v2"
-                diagnosticId={diagnostic.id}
-                customerEmail={diagnostic.email}
-                icon="sparkles"
-              />
-              <p className="mt-4 text-center text-[11px] text-slate-500">Pago único · Acceso inmediato</p>
-            </div>
+        {/* CTA principal — Plan Conquistar */}
+        <section className="mt-2">
+          <div className="overflow-hidden rounded-2xl bg-violet-600 px-4 py-8 shadow-lg shadow-violet-600/20 sm:px-6 sm:py-9">
+            <PlanConquistarCheckoutButton
+              className="mx-auto w-full max-w-xl rounded-2xl py-4 text-base shadow-md"
+              variant="sidebar"
+              label="Quiero mi plan de acción →"
+              sourceChannel="ver_resultado_v2"
+              diagnosticId={diagnostic.id}
+              customerEmail={diagnostic.email}
+              icon="sparkles"
+            />
           </div>
         </section>
+
+        {/* Share — debajo del CTA principal */}
+        <footer className="grid gap-4 sm:grid-cols-[minmax(0,1.75fr)_minmax(220px,1fr)]">
+          <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5">
+            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Compartir resultado</p>
+            <ShareScoreButtons
+              path={sharePath}
+              brandName={model.brandName}
+              domain={model.domain}
+              diagnosticId={diagnostic.id}
+              shareSlug={diagnostic.shareSlug ?? undefined}
+              intent="social"
+            />
+          </div>
+          <div className="rounded-xl border border-sky-200/90 bg-sky-50/40 p-4 sm:p-5">
+            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Invitar a tu equipo</p>
+            <ShareScoreButtons
+              path={sharePath}
+              brandName={model.brandName}
+              domain={model.domain}
+              diagnosticId={diagnostic.id}
+              shareSlug={diagnostic.shareSlug ?? undefined}
+              intent="team"
+            />
+          </div>
+        </footer>
         </div>
 
         <p className="mt-6 text-center text-[11px] text-slate-400">
