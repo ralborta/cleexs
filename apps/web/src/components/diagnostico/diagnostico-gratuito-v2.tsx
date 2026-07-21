@@ -292,9 +292,9 @@ function HeroSummaryPanel({
 }
 
 const FINDING_WATERMARK: Record<DiagnosticoV2ViewModel['findings'][0]['tone'], ReactNode> = {
-  success: <Trophy className="h-12 w-12" />,
-  warning: <Search className="h-12 w-12" />,
-  critical: <Bot className="h-12 w-12" />,
+  success: <Trophy className="h-16 w-16" />,
+  warning: <Search className="h-16 w-16" />,
+  critical: <Bot className="h-16 w-16" />,
 };
 
 function RevenueCalculator({ leaderName }: { leaderName: string }) {
@@ -451,8 +451,8 @@ export function DiagnosticoGratuitoV2({
                 >
                   {FINDING_WATERMARK[f.tone]}
                 </div>
-                <div className="relative flex items-start gap-2.5">
-                  <CleexsStatusIcon tone={f.tone} size="sm" className="mt-0.5" />
+                <div className="relative flex items-start gap-3">
+                  <CleexsStatusIcon tone={f.tone} size="xl" className="mt-0.5 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className={cn('text-xs font-bold leading-snug sm:text-sm', FINDING_TONE_TITLE_CLASS[f.tone])}>
                       {f.title}

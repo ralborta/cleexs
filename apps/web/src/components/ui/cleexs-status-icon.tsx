@@ -7,6 +7,7 @@ const SIZE = {
   sm: { box: 'h-5 w-5', glyph: 'h-3 w-3', warn: 'h-5 w-5' },
   md: { box: 'h-6 w-6', glyph: 'h-3.5 w-3.5', warn: 'h-6 w-6' },
   lg: { box: 'h-7 w-7', glyph: 'h-4 w-4', warn: 'h-7 w-7' },
+  xl: { box: 'h-9 w-9', glyph: 'h-[18px] w-[18px]', warn: 'h-9 w-9' },
 } as const;
 
 /** Íconos de estado alineados al diseño de tarjetas de hallazgos (círculo ✓, triángulo ⚠, círculo ✕). */
