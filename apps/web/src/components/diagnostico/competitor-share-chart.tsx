@@ -71,7 +71,7 @@ function CompetitorLabel({
   return (
     <p
       className={cn(
-        'min-w-0 shrink-0 truncate text-[10px] leading-tight sm:w-[132px] sm:text-[11px]',
+        'min-w-0 flex-1 truncate text-[10px] leading-tight sm:text-[11px]',
         row.rank <= 3 ? 'font-semibold text-slate-900' : 'font-medium text-slate-500',
       )}
     >
@@ -98,11 +98,11 @@ function ShareBar({
   maxShare: number;
   highlighted: boolean;
 }) {
-  const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 12 : 4) : 0;
+  const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 14 : 5) : 0;
   const pctLabel = `${share.toFixed(1)}%`;
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+    <div className="flex w-[88px] shrink-0 items-center gap-1.5 sm:w-[104px]">
       <div
         className={cn(
           'min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100',
@@ -112,15 +112,17 @@ function ShareBar({
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500',
-            highlighted ? 'bg-violet-600' : 'bg-slate-300',
+            highlighted
+              ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500'
+              : 'bg-gradient-to-r from-slate-300 to-slate-200',
           )}
           style={{ width: `${Math.min(widthPct, 100)}%` }}
         />
       </div>
       <span
         className={cn(
-          'w-10 shrink-0 text-right text-[10px] tabular-nums sm:text-[11px]',
-          highlighted ? 'font-bold text-slate-900' : 'font-medium text-slate-400',
+          'w-8 shrink-0 text-right text-[9px] tabular-nums sm:text-[10px]',
+          highlighted ? 'font-bold text-violet-700' : 'font-medium text-slate-400',
         )}
       >
         {pctLabel}
@@ -178,22 +180,22 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-4 sm:min-h-0 sm:p-5',
+        'relative mx-auto flex min-h-[168px] w-full max-w-[210px] flex-col justify-center overflow-hidden rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-5 lg:mx-0 lg:max-w-[200px]',
         className,
       )}
     >
       <div
-        className="pointer-events-none absolute -bottom-3 -right-1 text-[#059669] opacity-[0.12]"
+        className="pointer-events-none absolute -bottom-4 -right-2 text-[#059669] opacity-[0.12]"
         aria-hidden
       >
-        <Trophy className="h-[5.5rem] w-[5.5rem]" strokeWidth={1.2} />
+        <Trophy className="h-[6.5rem] w-[6.5rem]" strokeWidth={1.2} />
       </div>
-      <div className="relative pr-6">
-        <p className="text-sm font-bold leading-snug text-[#065f46]">Estás muy cerca del líder.</p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
+      <div className="relative z-[1] pr-2">
+        <p className="text-[13px] font-bold leading-snug text-[#065f46]">Estás muy cerca del líder.</p>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
         </p>
-        <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
+        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
           {leaderName} lidera hoy con {leaderShare.toFixed(1)}%.
         </p>
       </div>
