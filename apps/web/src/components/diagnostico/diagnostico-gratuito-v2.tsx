@@ -103,7 +103,7 @@ function StarRow({ count, max = 5 }: { count: number; max?: number }) {
 function VerdictIcon({ verdict }: { verdict: DiagnosticoV2ViewModel['verdict'] }) {
   const tone: CleexsStatusTone =
     verdict === 'yes' ? 'success' : verdict === 'partial' ? 'warning' : 'critical';
-  return <CleexsStatusIcon tone={tone} size="md" />;
+  return <CleexsStatusIcon tone={tone} size="sm" />;
 }
 
 function EngineSidebar({
@@ -118,13 +118,13 @@ function EngineSidebar({
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
   return (
-    <div>
-      <div className="border-b border-slate-100 px-4 pb-3 pt-4">
-        <p className="text-sm font-bold text-[#1e2a5a]">Tu presencia en los motores</p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">Mide tu visibilidad y recomendaciones.</p>
+    <div className="lg:self-start">
+      <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
+        <p className="text-xs font-bold leading-tight text-[#1e2a5a]">Tu presencia en los motores</p>
+        <p className="mt-0.5 text-[10px] leading-snug text-slate-500">Mide tu visibilidad y recomendaciones.</p>
       </div>
 
-      <div className="divide-y divide-slate-100 px-4">
+      <div className="divide-y divide-slate-100 px-3">
         {items.map((key) => {
           const meta = ENGINE_META[key];
           const locked = key !== 'chatgpt' && engines[key].status === 'locked';
@@ -138,33 +138,33 @@ function EngineSidebar({
               disabled={!locked}
               onClick={() => locked && onLockedClick(key)}
               className={cn(
-                'flex w-full items-center gap-3 py-3 text-left',
+                'flex w-full items-center gap-2 py-1.5 text-left',
                 locked && 'cursor-pointer transition hover:bg-slate-50/80',
               )}
             >
-              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                <Image src={meta.logo} alt="" width={26} height={26} className="object-contain" />
+              <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                <Image src={meta.logo} alt="" width={20} height={20} className="object-contain" />
               </span>
-              <span className="w-[76px] shrink-0 text-sm font-bold text-slate-900">{meta.label}</span>
+              <span className="w-[62px] shrink-0 text-xs font-bold text-slate-900">{meta.label}</span>
 
               {locked ? (
                 <>
                   <span className="min-w-0 flex-1" aria-hidden />
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
-                    <Lock className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+                    <Lock className="h-3 w-3 text-slate-400" aria-hidden />
                   </span>
                 </>
               ) : (
                 <>
-                  <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={cn('h-full rounded-full', traffic.barClass)}
                       style={{ width: `${Math.max(pct, 6)}%` }}
                     />
                   </div>
                   <span className="shrink-0 text-right tabular-nums leading-none">
-                    <span className={cn('text-base', SCORE_NUMBER_CLASS, traffic.textClass)}>{pct}</span>
-                    <span className="text-xs font-medium text-slate-400"> / 100</span>
+                    <span className={cn('text-sm', SCORE_NUMBER_CLASS, traffic.textClass)}>{pct}</span>
+                    <span className="text-[10px] font-medium text-slate-400"> /100</span>
                   </span>
                 </>
               )}
@@ -173,7 +173,7 @@ function EngineSidebar({
         })}
       </div>
 
-      <p className="border-t border-slate-100 px-4 py-2.5 text-center text-[10px] leading-relaxed text-slate-400">
+      <p className="border-t border-slate-100 px-3 py-1.5 text-center text-[9px] leading-snug text-slate-400">
         Los otros motores se desbloquean en el Plan Conquistar.
       </p>
     </div>
@@ -199,7 +199,7 @@ function HeroSummaryPanel({
   const competitorTotal = Math.max(model.competitorCount, 1);
 
   return (
-    <div className="min-w-0 flex-1 space-y-3">
+    <div className="min-w-0 flex-1 space-y-2">
       <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm">
         <button
           type="button"
@@ -229,17 +229,17 @@ function HeroSummaryPanel({
 
       {summaryTab === 'score' ? (
         <>
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-1.5">
             <VerdictIcon verdict={model.verdict} />
-            <p className="text-sm font-bold leading-snug text-slate-800 sm:text-base">{model.verdictLabel}</p>
+            <p className="text-xs font-bold leading-snug text-slate-800 sm:text-sm">{model.verdictLabel}</p>
           </div>
-          <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">{model.verdictDetail}</p>
+          <p className="text-[11px] leading-relaxed text-slate-600 sm:text-xs">{model.verdictDetail}</p>
           <button
             type="button"
             onClick={onScrollCompetitors}
-            className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 ring-1 ring-violet-100 transition hover:bg-violet-100"
+            className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-800 ring-1 ring-violet-100 transition hover:bg-violet-100"
           >
-            <Trophy className="h-3.5 w-3.5 shrink-0" />#{rankLabel} de {competitorTotal} competidores analizados
+            <Trophy className="h-3 w-3 shrink-0" />#{rankLabel} de {competitorTotal} competidores analizados
           </button>
         </>
       ) : (
@@ -411,9 +411,9 @@ export function DiagnosticoGratuitoV2({
           </p>
 
           <ReportBlock className="mt-5">
-            <div className="grid gap-0 lg:grid-cols-[1fr_280px] lg:divide-x lg:divide-slate-100">
-              <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
-                <CleexsScoreRing score={model.score} size="lg" />
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+              <div className="flex gap-3 p-3 sm:flex-row sm:items-start sm:p-4 lg:self-start">
+                <CleexsScoreRing score={model.score} size="md" className="sm:mx-0" />
                 <HeroSummaryPanel
                   model={model}
                   summaryTab={summaryTab}
@@ -421,7 +421,7 @@ export function DiagnosticoGratuitoV2({
                   onScrollCompetitors={scrollToCompetitors}
                 />
               </div>
-              <div className="border-t border-slate-100 lg:border-t-0">
+              <div className="border-t border-slate-100 lg:border-l lg:border-t-0">
                 <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
               </div>
             </div>

@@ -10,31 +10,35 @@ import {
 
 type CleexsScoreRingProps = {
   score: number;
-  size?: 'lg' | 'xl';
+  size?: 'md' | 'lg' | 'xl';
   className?: string;
 };
+
+const RING_SIZE = {
+  md: { r: 46, box: 'h-28 w-28', scoreText: 'text-3xl', stroke: 9 },
+  lg: { r: 54, box: 'h-36 w-36', scoreText: 'text-4xl', stroke: 11 },
+  xl: { r: 62, box: 'h-44 w-44', scoreText: 'text-5xl', stroke: 11 },
+} as const;
 
 export function CleexsScoreRing({ score, size = 'lg', className }: CleexsScoreRingProps) {
   const gradId = useId().replace(/:/g, '');
   const pct = normalizeScorePct(score);
   const colors = getScoreTrafficColors(pct);
-  const r = size === 'xl' ? 62 : 54;
-  const c = 2 * Math.PI * r;
+  const spec = RING_SIZE[size];
+  const c = 2 * Math.PI * spec.r;
   const offset = c - (pct / 100) * c;
-  const box = size === 'xl' ? 'h-44 w-44' : 'h-36 w-36';
-  const scoreText = size === 'xl' ? 'text-5xl' : 'text-4xl';
 
   return (
-    <div className={cn('relative mx-auto shrink-0', box, className)}>
+    <div className={cn('relative mx-auto shrink-0', spec.box, className)}>
       <svg className="h-full w-full -rotate-90" viewBox="0 0 140 140" aria-hidden>
-        <circle cx="70" cy="70" r={r} fill="none" stroke="#e8ecf4" strokeWidth="11" />
+        <circle cx="70" cy="70" r={spec.r} fill="none" stroke="#e8ecf4" strokeWidth={spec.stroke} />
         <circle
           cx="70"
           cy="70"
-          r={r}
+          r={spec.r}
           fill="none"
           stroke={`url(#scoreGrad-${gradId})`}
-          strokeWidth="11"
+          strokeWidth={spec.stroke}
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={offset}
@@ -47,8 +51,8 @@ export function CleexsScoreRing({ score, size = 'lg', className }: CleexsScoreRi
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn(SCORE_NUMBER_CLASS, colors.textClass, scoreText)}>{pct}</span>
-        <span className="text-sm font-semibold text-slate-400">/100</span>
+        <span className={cn(SCORE_NUMBER_CLASS, colors.textClass, spec.scoreText)}>{pct}</span>
+        <span className="text-[11px] font-semibold text-slate-400 sm:text-xs">/100</span>
       </div>
     </div>
   );
