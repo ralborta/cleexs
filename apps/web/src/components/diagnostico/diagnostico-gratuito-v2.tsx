@@ -404,32 +404,34 @@ export function DiagnosticoGratuitoV2({
         <section className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Diagnóstico gratuito</p>
 
-          <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center lg:gap-6">
-            <div className="min-w-0">
-              <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.65rem]">
-                ¿Hoy ChatGPT recomienda tu empresa?
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-                Medimos tu presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
-              </p>
+          <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start lg:gap-5">
+            <div className="min-w-0 space-y-5">
+              <div>
+                <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.65rem]">
+                  ¿Hoy ChatGPT recomienda tu empresa?
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+                  Medimos tu presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
+                </p>
+              </div>
+
+              <ReportBlock>
+                <div className="flex gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
+                  <CleexsScoreRing score={model.score} size="hero" className="sm:mx-0" />
+                  <HeroSummaryPanel
+                    model={model}
+                    summaryTab={summaryTab}
+                    onSummaryTab={setSummaryTab}
+                    onScrollCompetitors={scrollToCompetitors}
+                  />
+                </div>
+              </ReportBlock>
             </div>
 
-            <ReportBlock className="overflow-hidden">
+            <ReportBlock className="overflow-hidden lg:self-start">
               <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
             </ReportBlock>
           </div>
-
-          <ReportBlock className="mt-5">
-            <div className="flex gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
-              <CleexsScoreRing score={model.score} size="hero" className="sm:mx-0" />
-              <HeroSummaryPanel
-                model={model}
-                summaryTab={summaryTab}
-                onSummaryTab={setSummaryTab}
-                onScrollCompetitors={scrollToCompetitors}
-              />
-            </div>
-          </ReportBlock>
         </section>
 
         <div className="space-y-6">
