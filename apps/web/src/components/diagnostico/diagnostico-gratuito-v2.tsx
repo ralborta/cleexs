@@ -684,7 +684,7 @@ export function DiagnosticoGratuitoV2({
                 <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
                   Ahora te mostramos exactamente cómo aprovecharla.
                 </p>
-                <RoadmapCueArrow className="pointer-events-none absolute -bottom-1 right-0 hidden h-[4.5rem] w-28 -scale-x-100 lg:block" />
+                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 hidden h-[4.75rem] w-[7.5rem] lg:block" />
               </div>
 
               <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/30">
@@ -719,7 +719,7 @@ export function DiagnosticoGratuitoV2({
                 <p className="font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
                   *Esto es solo el comienzo*
                 </p>
-                <PlanNoteArrow className="ml-2 hidden h-14 w-[4.5rem] lg:block" />
+                <PlanNoteArrow className="ml-1 hidden h-[4.5rem] w-[4.75rem] lg:block" />
                 <p className="max-w-[16rem] text-[11px] leading-relaxed text-slate-600 sm:text-xs">
                   El plan completo incluye {model.hiddenActionCount} acciones priorizadas, prompts, checklist y
                   roadmap de 90 días.
