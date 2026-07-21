@@ -141,41 +141,27 @@ function BenefitLeadIcon({ icon, imageSrc }: { icon?: ReactNode; imageSrc?: stri
 
 function RoadmapCueArrow({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 96 72" fill="none" className={className} aria-hidden>
-      <path
-        d="M8 64 C22 52, 46 34, 78 16"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M78 16 L69 14 M78 16 L80 24"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <Image
+      src="/diagnostico/roadmap-cue-arrow.png"
+      alt=""
+      width={112}
+      height={80}
+      className={cn('object-contain', className)}
+      aria-hidden
+    />
   );
 }
 
 function PlanNoteArrow({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 48 44" fill="none" className={className} aria-hidden>
-      <path
-        d="M10 8 C16 16, 20 24, 14 34"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M14 34 L10 32 M14 34 L16 29"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <Image
+      src="/diagnostico/plan-note-arrow.png"
+      alt=""
+      width={72}
+      height={56}
+      className={cn('object-contain', className)}
+      aria-hidden
+    />
   );
 }
 
@@ -698,7 +684,7 @@ export function DiagnosticoGratuitoV2({
                 <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
                   Ahora te mostramos exactamente cómo aprovecharla.
                 </p>
-                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 hidden h-16 w-24 text-violet-500/85 lg:block" />
+                <RoadmapCueArrow className="pointer-events-none absolute -bottom-1 right-0 hidden h-[4.5rem] w-28 -scale-x-100 lg:block" />
               </div>
 
               <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/30">
@@ -733,7 +719,7 @@ export function DiagnosticoGratuitoV2({
                 <p className="font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
                   *Esto es solo el comienzo*
                 </p>
-                <PlanNoteArrow className="ml-6 hidden h-10 w-12 text-violet-500/80 lg:block" />
+                <PlanNoteArrow className="ml-2 hidden h-14 w-[4.5rem] lg:block" />
                 <p className="max-w-[16rem] text-[11px] leading-relaxed text-slate-600 sm:text-xs">
                   El plan completo incluye {model.hiddenActionCount} acciones priorizadas, prompts, checklist y
                   roadmap de 90 días.
