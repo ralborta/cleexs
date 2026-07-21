@@ -31,6 +31,10 @@ import {
 import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-modal';
 import type { EngineCardKey } from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { CompetitorNameLink } from '@/components/report/competitor-name-link';
+import {
+  CompetitorLeaderInsight,
+  CompetitorShareChart,
+} from '@/components/diagnostico/competitor-share-chart';
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
 import {
   CleexsStatusIcon,
@@ -444,47 +448,9 @@ export function DiagnosticoGratuitoV2({
         {/* 2 — Competidores */}
         <section id="seccion-competidores" className="mb-16 scroll-mt-24 sm:mb-20">
           <SectionBadge n={2} label="Dónde perdés clientes hoy" />
-          <div className="grid gap-6 lg:grid-cols-[1fr_240px]">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="mb-6 text-sm font-semibold text-slate-500">
-                Participación en respuestas de ChatGPT
-              </p>
-              <div className="space-y-4">
-                {model.competitors.map((row) => (
-                  <div key={row.name}>
-                    <div className="mb-1.5 flex items-center justify-between gap-2 text-sm">
-                      {row.isBrand ? (
-                        <span className="font-semibold text-violet-700">{row.name} (vos)</span>
-                      ) : (
-                        <CompetitorNameLink
-                          name={row.name}
-                          url={row.url}
-                          className="font-semibold text-slate-700"
-                        />
-                      )}
-                      <span className="tabular-nums text-slate-500">{row.share.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className={cn(
-                          'h-full rounded-full',
-                          row.isBrand ? 'bg-violet-600' : 'bg-slate-400',
-                        )}
-                        style={{ width: `${Math.max(row.share, row.isBrand ? 4 : 2)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col justify-center rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
-              <Trophy className="mb-3 h-8 w-8 text-blue-600" />
-              <p className="text-sm font-bold text-[#1e2a5a]">Estás muy cerca del líder</p>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                {model.leaderName} lidera con {model.leaderShare.toFixed(1)}%. Con los cambios correctos podés
-                ser la primera recomendación en consultas clave.
-              </p>
-            </div>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-stretch">
+            <CompetitorShareChart rows={model.competitors} brandDomain={model.domain} />
+            <CompetitorLeaderInsight leaderName={model.leaderName} leaderShare={model.leaderShare} />
           </div>
         </section>
 
