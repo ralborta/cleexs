@@ -118,6 +118,67 @@ function splitPrimaryActionTitle(title: string) {
   return { prefix: match[1], highlight: `"${match[2]}"` };
 }
 
+function BenefitLeadIcon({ icon, imageSrc }: { icon?: ReactNode; imageSrc?: string }) {
+  if (imageSrc) {
+    return (
+      <Image
+        src={imageSrc}
+        alt=""
+        width={32}
+        height={32}
+        className="h-8 w-8 shrink-0 object-contain"
+        aria-hidden
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      {icon}
+    </div>
+  );
+}
+
+function RoadmapCueArrow({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 96 72" fill="none" className={className} aria-hidden>
+      <path
+        d="M8 64 C22 52, 46 34, 78 16"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M78 16 L69 14 M78 16 L80 24"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PlanNoteArrow({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 44" fill="none" className={className} aria-hidden>
+      <path
+        d="M10 8 C16 16, 20 24, 14 34"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 34 L10 32 M14 34 L16 29"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function VerdictIcon({ verdict }: { verdict: DiagnosticoV2ViewModel['verdict'] }) {
   const tone: CleexsStatusTone =
     verdict === 'yes' ? 'success' : verdict === 'partial' ? 'warning' : 'critical';
@@ -585,14 +646,12 @@ export function DiagnosticoGratuitoV2({
                   text: 'Hoy tus competidores ganan estas consultas. Vos podés quedarte con ellas.',
                 },
                 {
-                  icon: <Target className="h-4 w-4" aria-hidden />,
+                  imageSrc: '/diagnostico/mission-target.png',
                   text: 'Mayor probabilidad de ser la primera recomendación de ChatGPT.',
                 },
               ].map((item) => (
                 <div key={item.text} className="flex items-start gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-                    {item.icon}
-                  </div>
+                  <BenefitLeadIcon icon={item.icon} imageSrc={item.imageSrc} />
                   <p className="text-[11px] font-medium leading-snug text-slate-700 sm:text-xs">{item.text}</p>
                 </div>
               ))}
@@ -626,39 +685,62 @@ export function DiagnosticoGratuitoV2({
         {/* 5 — Buenas noticias */}
         <section>
           <SectionBadge n={5} label="Buenas noticias" />
-          <ReportBlock className="p-4 sm:p-5">
-            <p className="text-sm font-semibold text-[#1e2a5a] sm:text-base">
-              No necesitás rehacer tu sitio web.
-            </p>
-            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-              Encontramos una oportunidad muy clara para que ChatGPT te recomiende más seguido. El Plan Conquistar
-              convierte ese diagnóstico en un plan de ejecución personalizado.
-            </p>
-            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_160px]">
-              <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-4">
+          <div className="relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f3f4ff] p-4 sm:p-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(170px,0.72fr)] lg:items-start lg:gap-5">
+              <div className="relative min-w-0 pb-8 lg:pb-12">
+                <div className="inline-flex items-center gap-1.5 text-violet-700">
+                  <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="text-xs font-semibold sm:text-sm">No necesitás rehacer tu sitio.</span>
+                </div>
+                <h3 className="mt-3 text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg lg:text-[1.35rem] lg:leading-tight">
+                  Encontramos una oportunidad muy clara que podría mover significativamente tu presencia en ChatGPT.
+                </h3>
+                <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                  Ahora te mostramos exactamente cómo aprovecharla.
+                </p>
+                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 hidden h-16 w-24 text-violet-500/85 lg:block" />
+              </div>
+
+              <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/30">
                 <p className="text-xs font-bold text-[#1e2a5a] sm:text-sm">Tu roadmap personalizado (preview)</p>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 divide-y divide-slate-100">
                   {model.roadmapPreview.map((item) => (
-                    <div
-                      key={item.week}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-white px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-[10px] font-bold text-violet-700">{item.week}</p>
-                        <p className="text-xs text-slate-600">{item.task}</p>
+                    <div key={item.week} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                          {item.week}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold leading-snug text-[#1e2a5a] sm:text-sm">{item.title}</p>
+                          <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500 sm:text-[11px]">
+                            {item.detail}
+                          </p>
+                        </div>
                       </div>
-                      <Lock className="h-3.5 w-3.5 shrink-0 text-slate-300" />
+                      <Lock className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" aria-hidden />
                     </div>
                   ))}
+                  <div className="flex items-center justify-between gap-3 py-3">
+                    <p className="text-[11px] font-medium text-slate-500 sm:text-xs">
+                      … y {Math.max(model.hiddenActionCount - 3, 0)} acciones más, ordenadas por impacto
+                    </p>
+                    <Lock className="h-4 w-4 shrink-0 text-slate-300" aria-hidden />
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <p className="text-center font-serif text-lg italic text-violet-400 lg:-rotate-6">
-                  Esto es solo el comienzo
+
+              <div className="relative flex min-w-0 flex-col gap-2 pt-1 lg:pt-2">
+                <p className="font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
+                  *Esto es solo el comienzo*
+                </p>
+                <PlanNoteArrow className="ml-6 hidden h-10 w-12 text-violet-500/80 lg:block" />
+                <p className="max-w-[16rem] text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                  El plan completo incluye {model.hiddenActionCount} acciones priorizadas, prompts, checklist y
+                  roadmap de 90 días.
                 </p>
               </div>
             </div>
-          </ReportBlock>
+          </div>
         </section>
 
         {/* 6 — Mientras leías */}

@@ -46,7 +46,8 @@ export type DiagnosticoV2ViewModel = {
   };
   teaser: TeaserShape;
   deliverables: Array<{ value: number; label: string }>;
-  roadmapPreview: Array<{ week: string; task: string }>;
+  roadmapPreview: Array<{ week: string; title: string; detail: string }>;
+  hiddenActionCount: number;
 };
 
 function normalizeName(value: string) {
@@ -285,9 +286,72 @@ export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): Diagn
       { value: quickWins, label: 'mejoras que podrías implementar esta semana' },
       { value: 1, label: 'roadmap de implementación de 90 días' },
     ],
-    roadmapPreview: teaser.roadmap.slice(0, 3).map((phase, i) => ({
-      week: `Semana ${i + 1}`,
-      task: phase.theme,
-    })),
+    hiddenActionCount: hiddenActions,
+    roadmapPreview: buildRoadmapPreview(teaser.opportunities, teaser.roadmap, topCompetitor),
   };
+}
+
+function impactEffortDetail(impact: 'Alto' | 'Medio' | 'Defensivo', effort: 'Bajo' | 'Medio' | 'Alto') {
+  const impactLabel = impact === 'Alto' ? 'Muy alto' : impact === 'Medio' ? 'Medio' : 'Moderado';
+  const effortLabel = effort === 'Bajo' ? 'Bajo' : effort === 'Medio' ? 'Medio' : 'Alto';
+  return `Impacto: ${impactLabel} • Esfuerzo: ${effortLabel}`;
+}
+
+function roadmapTitleFromOpportunity(opp: TeaserShape['opportunities'][0]) {
+  const intention = `${opp.intention || ''}`.toLowerCase();
+  if (intention.includes('compar') || intention.includes('consider')) {
+    return 'Crear página Comparación de opciones';
+  }
+  return opp.title.length > 52 ? `${opp.title.slice(0, 49)}…` : opp.title;
+}
+
+function buildRoadmapPreview(
+  opportunities: TeaserShape['opportunities'],
+  roadmap: TeaserShape['roadmap'],
+  topCompetitor?: string,
+) {
+  const oppsByPriority = [...opportunities].sort((a, b) => b.priority - a.priority);
+  const defaults = [
+    {
+      week: 'Semana 1',
+      title: 'Crear página Comparación de opciones',
+      detail: 'Impacto: Muy alto • Esfuerzo: Bajo',
+    },
+    {
+      week: 'Semana 2',
+      title: 'Mejorar autoridad y presencia de marca',
+      detail: 'Impacto: Alto • Esfuerzo: Medio',
+    },
+    {
+      week: 'Semana 3',
+      title: topCompetitor ? `Comparativa vs ${topCompetitor}` : 'Optimizar sitio y materiales externos',
+      detail: 'Impacto: Alto • Esfuerzo: Medio',
+    },
+  ];
+
+  return [0, 1, 2].map((index) => {
+    const opp = oppsByPriority[index];
+    const fallback = defaults[index];
+    if (!opp) {
+      const phase = roadmap[index];
+      return {
+        week: fallback.week,
+        title: phase?.theme ?? fallback.title,
+        detail: fallback.detail,
+      };
+    }
+
+    return {
+      week: fallback.week,
+      title:
+        index === 1
+          ? 'Mejorar autoridad y presencia de marca'
+          : index === 2
+            ? topCompetitor
+              ? `Comparativa vs ${topCompetitor}`
+              : roadmapTitleFromOpportunity(opp)
+            : roadmapTitleFromOpportunity(opp),
+      detail: impactEffortDetail(opp.impact, opp.effort),
+    };
+  });
 }
