@@ -721,9 +721,9 @@ export function DiagnosticoGratuitoV2({
                 <p className="relative z-[1] max-w-[12rem] font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
                   *Esto es solo el comienzo*
                 </p>
-                <div className="relative mt-1 min-h-[5rem]">
+                <div className="relative mt-2 min-h-[6rem]">
                   <PlanNoteArrow className="pointer-events-none absolute left-3 top-0 z-0 hidden h-[5rem] w-[5rem] lg:block" />
-                  <p className="relative z-[1] max-w-[14rem] pt-12 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                  <p className="relative z-[1] max-w-[14rem] pt-16 text-[11px] leading-relaxed text-slate-600 sm:pt-[4.75rem] sm:text-xs">
                     El plan completo incluye {model.hiddenActionCount} acciones priorizadas, prompts, checklist y
                     roadmap de 90 días.
                   </p>
