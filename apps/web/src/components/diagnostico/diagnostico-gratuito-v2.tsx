@@ -6,13 +6,13 @@ import Link from 'next/link';
 import {
   Bot,
   Check,
+  ChevronDown,
   ClipboardList,
   FileText,
   BarChart3,
   Lightbulb,
   Lock,
   Search,
-  Share2,
   Sparkles,
   Target,
   Trophy,
@@ -420,6 +420,27 @@ function DeliverableCard({ icon, value, label }: { icon: ReactNode; value: numbe
   );
 }
 
+function PlanTransitionBanner() {
+  return (
+    <div className="relative mb-8 pb-2">
+      <div className="rounded-xl border-2 border-violet-300/70 bg-violet-50/40 px-4 py-5 text-center sm:px-6 sm:py-6">
+        <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
+          Ya entendiste el problema. y viste el tamaño de la oportunidad
+        </p>
+        <p className="mt-2 text-sm font-bold text-violet-700 sm:text-base">
+          Ahora te mostramos exactamente cómo resolverlo.
+        </p>
+      </div>
+      <div
+        className="absolute -bottom-1 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-violet-400 bg-white text-violet-600 shadow-sm"
+        aria-hidden
+      >
+        <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
+      </div>
+    </div>
+  );
+}
+
 export function DiagnosticoGratuitoV2({
   diagnostic,
   model,
@@ -659,18 +680,13 @@ export function DiagnosticoGratuitoV2({
           <ReportBlock>
             <RevenueCalculator leaderName={model.leaderName} />
           </ReportBlock>
-          <p className="mt-4 text-center text-xs font-medium text-slate-600 sm:text-sm">
-            Ya entendiste el problema y viste el tamaño de la oportunidad. Ahora te mostramos exactamente cómo
-            resolverlo.
-          </p>
         </section>
 
-        {/* Corte — Plan Conquistar */}
-        <div className="border-t border-slate-200 pt-2" />
+        <PlanTransitionBanner />
 
-        {/* 5 — Buenas noticias */}
+        {/* 6 — Buenas noticias */}
         <section>
-          <SectionBadge n={5} label="Buenas noticias" />
+          <SectionBadge n={6} label="Buenas noticias" />
           <div className="relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff] p-4 sm:p-6">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(170px,0.72fr)] lg:items-start lg:gap-5">
               <div className="relative flex min-w-0 flex-col lg:min-h-[11.5rem]">
@@ -733,9 +749,50 @@ export function DiagnosticoGratuitoV2({
           </div>
         </section>
 
-        {/* 6 — Mientras leías */}
+        {/* CTA principal — Plan Conquistar */}
+        <section className="mt-8">
+          <div className="overflow-hidden rounded-2xl bg-violet-600 px-4 py-8 shadow-lg shadow-violet-600/20 sm:px-6 sm:py-9">
+            <PlanConquistarCheckoutButton
+              className="mx-auto w-full max-w-xl rounded-2xl py-4 text-base shadow-md"
+              variant="sidebar"
+              label="Quiero mi plan de acción →"
+              sourceChannel="ver_resultado_v2"
+              diagnosticId={diagnostic.id}
+              customerEmail={diagnostic.email}
+              icon="sparkles"
+            />
+          </div>
+        </section>
+
+        {/* Share — debajo del CTA principal */}
+        <footer className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5">
+            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Compartir resultado</p>
+            <ShareScoreButtons
+              path={sharePath}
+              brandName={model.brandName}
+              domain={model.domain}
+              diagnosticId={diagnostic.id}
+              shareSlug={diagnostic.shareSlug ?? undefined}
+              intent="social"
+            />
+          </div>
+          <div className="rounded-xl border border-sky-200/90 bg-sky-50/40 p-4 sm:p-5">
+            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Invitar a tu equipo</p>
+            <ShareScoreButtons
+              path={sharePath}
+              brandName={model.brandName}
+              domain={model.domain}
+              diagnosticId={diagnostic.id}
+              shareSlug={diagnostic.shareSlug ?? undefined}
+              intent="team"
+            />
+          </div>
+        </footer>
+
+        {/* 7 — Mientras leías */}
         <section>
-          <SectionBadge n={6} label="Mientras vos leías este diagnóstico…" />
+          <SectionBadge n={7} label="Mientras vos leías este diagnóstico…" />
           <ReportBlock className="p-4 sm:p-5">
             <div className="mb-4 max-w-3xl space-y-2">
               <p className="text-sm font-semibold text-[#1e2a5a]">
@@ -832,22 +889,6 @@ export function DiagnosticoGratuitoV2({
           </div>
         </section>
         </div>
-
-        {/* Share footer */}
-        <footer className="mt-6 flex flex-col items-center gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-between">
-          <ShareScoreButtons
-            path={sharePath}
-            brandName={model.brandName}
-            domain={model.domain}
-            diagnosticId={diagnostic.id}
-            shareSlug={diagnostic.shareSlug ?? undefined}
-            intent="team"
-          />
-          <p className="flex items-center gap-2 text-xs text-slate-500">
-            <Share2 className="h-3.5 w-3.5" />
-            Invitá a tu equipo a ver este diagnóstico
-          </p>
-        </footer>
 
         <p className="mt-6 text-center text-[11px] text-slate-400">
           Vista de prueba ·{' '}
