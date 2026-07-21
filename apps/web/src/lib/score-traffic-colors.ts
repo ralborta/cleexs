@@ -29,24 +29,24 @@ const BAND_COLORS: Record<
   Omit<ScoreTrafficColors, 'band'>
 > = {
   green: {
-    stroke: '#22c55e',
-    strokeLight: '#16a34a',
-    textClass: 'text-emerald-600',
-    barClass: 'bg-gradient-to-r from-emerald-500 to-green-500',
+    stroke: '#15803d',
+    strokeLight: '#166534',
+    textClass: 'text-green-800',
+    barClass: 'bg-gradient-to-r from-green-800 to-green-600',
     label: 'Bueno',
   },
   yellow: {
-    stroke: '#f59e0b',
-    strokeLight: '#eab308',
-    textClass: 'text-amber-600',
-    barClass: 'bg-gradient-to-r from-amber-500 to-yellow-500',
+    stroke: '#d97706',
+    strokeLight: '#b45309',
+    textClass: 'text-amber-700',
+    barClass: 'bg-gradient-to-r from-amber-600 to-amber-500',
     label: 'Regular',
   },
   red: {
-    stroke: '#ef4444',
-    strokeLight: '#dc2626',
-    textClass: 'text-rose-600',
-    barClass: 'bg-gradient-to-r from-rose-500 to-red-500',
+    stroke: '#dc2626',
+    strokeLight: '#b91c1c',
+    textClass: 'text-red-700',
+    barClass: 'bg-gradient-to-r from-red-700 to-red-600',
     label: 'Crítico',
   },
 };

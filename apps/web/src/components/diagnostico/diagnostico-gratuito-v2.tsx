@@ -6,7 +6,6 @@ import Link from 'next/link';
 import {
   Bot,
   Check,
-  CheckCircle2,
   ClipboardList,
   FileText,
   Lightbulb,
@@ -18,7 +17,6 @@ import {
   Trophy,
   TrendingUp,
   Users,
-  X,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -34,6 +32,13 @@ import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-moda
 import type { EngineCardKey } from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { CompetitorNameLink } from '@/components/report/competitor-name-link';
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
+import {
+  CleexsStatusIcon,
+  FINDING_TONE_CARD_CLASS,
+  FINDING_TONE_TITLE_CLASS,
+  FINDING_TONE_WATERMARK_CLASS,
+  type CleexsStatusTone,
+} from '@/components/ui/cleexs-status-icon';
 import {
   getScoreTrafficColors,
   normalizeScorePct,
@@ -79,9 +84,9 @@ function StarRow({ count, max = 5 }: { count: number; max?: number }) {
 }
 
 function VerdictIcon({ verdict }: { verdict: DiagnosticoV2ViewModel['verdict'] }) {
-  if (verdict === 'yes') return <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />;
-  if (verdict === 'partial') return <span className="text-lg leading-none">⚠️</span>;
-  return <X className="h-5 w-5 shrink-0 text-rose-500" />;
+  const tone: CleexsStatusTone =
+    verdict === 'yes' ? 'success' : verdict === 'partial' ? 'warning' : 'critical';
+  return <CleexsStatusIcon tone={tone} size="md" />;
 }
 
 function EngineSidebar({
@@ -410,33 +415,27 @@ export function DiagnosticoGratuitoV2({
                 key={f.title}
                 className={cn(
                   'relative overflow-hidden rounded-2xl border p-5 shadow-sm',
-                  f.tone === 'success' && 'border-emerald-200 bg-emerald-50/70',
-                  f.tone === 'warning' && 'border-amber-200 bg-amber-50/70',
-                  f.tone === 'critical' && 'border-rose-200 bg-rose-50/70',
+                  FINDING_TONE_CARD_CLASS[f.tone],
                 )}
               >
                 <div
                   className={cn(
                     'pointer-events-none absolute -bottom-2 -right-2 opacity-[0.12]',
-                    f.tone === 'success' && 'text-emerald-600',
-                    f.tone === 'warning' && 'text-amber-600',
-                    f.tone === 'critical' && 'text-rose-500',
+                    FINDING_TONE_WATERMARK_CLASS[f.tone],
                   )}
                   aria-hidden
                 >
                   {FINDING_WATERMARK[f.tone]}
                 </div>
-                <p
-                  className={cn(
-                    'relative text-sm font-bold',
-                    f.tone === 'success' && 'text-emerald-800',
-                    f.tone === 'warning' && 'text-amber-900',
-                    f.tone === 'critical' && 'text-rose-800',
-                  )}
-                >
-                  {f.tone === 'success' ? '✔' : f.tone === 'warning' ? '⚠' : '✕'} {f.title}
-                </p>
-                <p className="relative mt-2 text-sm leading-relaxed text-slate-700">{f.body}</p>
+                <div className="relative flex items-start gap-3">
+                  <CleexsStatusIcon tone={f.tone} size="md" className="mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className={cn('text-sm font-bold leading-snug', FINDING_TONE_TITLE_CLASS[f.tone])}>
+                      {f.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-700">{f.body}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
