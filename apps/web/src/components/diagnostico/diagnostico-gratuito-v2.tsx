@@ -688,21 +688,21 @@ export function DiagnosticoGratuitoV2({
         <section>
           <SectionBadge n={6} label="Buenas noticias" />
           <div className="relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff] p-4 sm:p-6">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(170px,0.72fr)] lg:items-start lg:gap-5">
-              <div className="relative flex min-w-0 flex-col lg:min-h-[11.5rem]">
-                <div className="relative z-[1] lg:max-w-[calc(100%-7.25rem)]">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(140px,0.62fr)] lg:items-start lg:gap-4">
+              <div className="relative flex min-w-0 flex-col pb-12 pr-14 lg:pb-14 lg:pr-16">
+                <div className="relative z-[1]">
                   <div className="inline-flex items-center gap-1.5 text-violet-700">
                     <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="text-xs font-semibold sm:text-sm">No necesitás rehacer tu sitio.</span>
                   </div>
-                  <h3 className="mt-3 text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg lg:text-[1.35rem] lg:leading-tight">
+                  <h3 className="mt-3 text-[0.95rem] font-bold leading-snug text-[#1e2a5a] sm:text-base lg:text-[1.125rem] lg:leading-snug">
                     Encontramos una oportunidad muy clara que podría mover significativamente tu presencia en ChatGPT.
                   </h3>
-                  <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                  <p className="mt-2.5 text-xs leading-relaxed text-slate-600 sm:text-sm">
                     Ahora te mostramos exactamente cómo aprovecharla.
                   </p>
                 </div>
-                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[5rem] w-[7.75rem] lg:block" />
+                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[4.75rem] w-[7rem] lg:block" />
               </div>
 
               <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/30">
