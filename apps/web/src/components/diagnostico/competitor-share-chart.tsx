@@ -17,22 +17,22 @@ function displayDomain(url: string | null | undefined, fallback?: string | null)
 function RankBadge({ rank, highlighted }: { rank: number; highlighted: boolean }) {
   if (!highlighted) {
     return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[10px] font-semibold tabular-nums text-slate-400">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center text-[10px] font-semibold tabular-nums text-slate-400">
         {rank}
       </span>
     );
   }
 
   const styles: Record<number, string> = {
-    1: 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-sm shadow-amber-200/60',
-    2: 'bg-gradient-to-br from-slate-300 to-slate-500 text-white shadow-sm shadow-slate-200/60',
-    3: 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm shadow-orange-200/60',
+    1: 'bg-gradient-to-br from-amber-400 to-amber-600 text-white',
+    2: 'bg-gradient-to-br from-slate-300 to-slate-500 text-white',
+    3: 'bg-gradient-to-br from-orange-400 to-orange-600 text-white',
   };
 
   return (
     <span
       className={cn(
-        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black tabular-nums',
+        'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-black tabular-nums shadow-sm',
         styles[rank] ?? 'bg-slate-200 text-slate-700',
       )}
     >
@@ -44,14 +44,14 @@ function RankBadge({ rank, highlighted }: { rank: number; highlighted: boolean }
 function CompetitorAvatar({ name, isBrand }: { name: string; isBrand: boolean }) {
   if (isBrand) {
     return (
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-50 ring-1 ring-sky-200/80">
-        <Sparkles className="h-3 w-3 text-sky-600" strokeWidth={2.2} aria-hidden />
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-sky-50 ring-1 ring-sky-200/80">
+        <Sparkles className="h-2.5 w-2.5 text-sky-600" strokeWidth={2.2} aria-hidden />
       </span>
     );
   }
 
   return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1e2a5a] text-[10px] font-bold text-white">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#1e2a5a] text-[9px] font-bold text-white">
       {name.charAt(0).toUpperCase()}
     </span>
   );
@@ -71,7 +71,7 @@ function CompetitorLabel({
   return (
     <p
       className={cn(
-        'min-w-0 shrink-0 truncate text-[11px] leading-tight sm:w-[148px] sm:text-xs',
+        'min-w-0 shrink-0 truncate text-[10px] leading-tight sm:w-[132px] sm:text-[11px]',
         row.rank <= 3 ? 'font-semibold text-slate-900' : 'font-medium text-slate-500',
       )}
     >
@@ -84,12 +84,7 @@ function CompetitorLabel({
           className={row.rank <= 3 ? 'text-slate-900 hover:text-violet-700' : 'text-slate-500 hover:text-slate-700'}
         />
       )}
-      {showDomain ? (
-        <span className="font-normal text-slate-400">
-          {' '}
-          ({domain})
-        </span>
-      ) : null}
+      {showDomain ? <span className="font-normal text-slate-400"> ({domain})</span> : null}
     </p>
   );
 }
@@ -103,16 +98,15 @@ function ShareBar({
   maxShare: number;
   highlighted: boolean;
 }) {
-  const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 16 : 5) : 0;
+  const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 12 : 4) : 0;
   const pctLabel = `${share.toFixed(1)}%`;
-  const showPctInside = highlighted && widthPct >= 28;
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2.5">
       <div
         className={cn(
-          'relative min-w-0 flex-1 overflow-hidden rounded-full',
-          highlighted ? 'h-[18px] bg-violet-100/70' : 'h-1 bg-slate-100',
+          'min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100',
+          highlighted ? 'h-2' : 'h-[3px]',
         )}
       >
         <div
@@ -122,22 +116,15 @@ function ShareBar({
           )}
           style={{ width: `${Math.min(widthPct, 100)}%` }}
         />
-        {showPctInside ? (
-          <span className="absolute inset-y-0 right-2 flex items-center text-[10px] font-bold tabular-nums text-white">
-            {pctLabel}
-          </span>
-        ) : null}
       </div>
-      {!showPctInside ? (
-        <span
-          className={cn(
-            'w-9 shrink-0 text-right text-[10px] tabular-nums',
-            highlighted ? 'font-bold text-violet-700' : 'font-medium text-slate-400',
-          )}
-        >
-          {pctLabel}
-        </span>
-      ) : null}
+      <span
+        className={cn(
+          'w-10 shrink-0 text-right text-[10px] tabular-nums sm:text-[11px]',
+          highlighted ? 'font-bold text-slate-900' : 'font-medium text-slate-400',
+        )}
+      >
+        {pctLabel}
+      </span>
     </div>
   );
 }
@@ -156,16 +143,16 @@ export function CompetitorShareChart({
 
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="mb-3 text-[10px] font-medium leading-snug text-slate-500 sm:text-[11px]">
+      <p className="mb-2.5 text-[10px] font-medium leading-snug text-slate-500">
         Participación en respuestas de ChatGPT en consultas relevantes (Top 6 marcas)
       </p>
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {topRows.map((row) => {
           const highlighted = row.rank <= 3;
           return (
             <div
               key={`${row.rank}-${row.name}`}
-              className={cn('flex items-center gap-2', !highlighted && 'opacity-90')}
+              className={cn('flex items-center gap-1.5 sm:gap-2', !highlighted && 'opacity-90')}
             >
               <RankBadge rank={row.rank} highlighted={highlighted} />
               <CompetitorAvatar name={row.name} isBrand={row.isBrand} />
@@ -191,24 +178,22 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-4 sm:p-5',
+        'relative overflow-hidden rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-4 sm:min-h-0 sm:p-5',
         className,
       )}
     >
       <div
-        className="pointer-events-none absolute -bottom-4 -right-2 text-[#059669] opacity-[0.14]"
+        className="pointer-events-none absolute -bottom-3 -right-1 text-[#059669] opacity-[0.12]"
         aria-hidden
       >
-        <Trophy className="h-28 w-28" strokeWidth={1.25} />
+        <Trophy className="h-[5.5rem] w-[5.5rem]" strokeWidth={1.2} />
       </div>
-      <div className="relative max-w-[92%]">
-        <p className="text-sm font-bold leading-snug text-[#065f46] sm:text-[15px]">
-          Estás muy cerca del líder.
-        </p>
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+      <div className="relative pr-6">
+        <p className="text-sm font-bold leading-snug text-[#065f46]">Estás muy cerca del líder.</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
           Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
         </p>
-        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+        <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
           {leaderName} lidera hoy con {leaderShare.toFixed(1)}%.
         </p>
       </div>
