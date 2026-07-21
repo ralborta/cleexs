@@ -422,10 +422,11 @@ function PlanTransitionBanner() {
   return (
     <div className="relative mb-8 pb-2">
       <div className="rounded-xl border-2 border-violet-300/70 bg-violet-50/40 px-4 py-5 text-center sm:px-6 sm:py-6">
-        <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
+        <p className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold leading-relaxed text-[#1e2a5a] sm:text-sm">
+          <Sparkles className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
           Ya entendiste el problema. y viste el tamaño de la oportunidad
         </p>
-        <p className="mt-2 text-sm font-bold text-violet-700 sm:text-base">
+        <p className="mt-2 text-base font-bold text-violet-700 sm:text-lg">
           Ahora te mostramos exactamente cómo resolverlo.
         </p>
       </div>
