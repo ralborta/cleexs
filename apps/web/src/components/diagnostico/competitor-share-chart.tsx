@@ -102,7 +102,7 @@ function ShareBar({
   const pctLabel = `${share.toFixed(1)}%`;
 
   return (
-    <div className="flex w-[88px] shrink-0 items-center gap-1.5 sm:w-[104px]">
+    <div className="flex w-[200px] shrink-0 items-center gap-1.5 sm:w-[236px]">
       <div
         className={cn(
           'min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100',
