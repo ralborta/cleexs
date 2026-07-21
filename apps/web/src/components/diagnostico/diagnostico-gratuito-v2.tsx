@@ -33,6 +33,12 @@ import {
 import { EnginePaywallModal } from '@/components/diagnostico/engine-paywall-modal';
 import type { EngineCardKey } from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { CompetitorNameLink } from '@/components/report/competitor-name-link';
+import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
+import {
+  getScoreTrafficColors,
+  normalizeScorePct,
+  SCORE_NUMBER_CLASS,
+} from '@/lib/score-traffic-colors';
 
 const ENGINE_META: Record<EngineCardKey, { label: string; logo: string }> = {
   chatgpt: { label: 'ChatGPT', logo: '/engines/chatgpt.png' },
@@ -72,43 +78,6 @@ function StarRow({ count, max = 5 }: { count: number; max?: number }) {
   );
 }
 
-function ScoreRing({ score, size = 'lg' }: { score: number; size?: 'lg' | 'xl' }) {
-  const pct = Math.min(100, Math.max(0, score));
-  const r = size === 'xl' ? 62 : 54;
-  const c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
-  const box = size === 'xl' ? 'h-44 w-44' : 'h-36 w-36';
-  const scoreText = size === 'xl' ? 'text-5xl' : 'text-4xl';
-  return (
-    <div className={cn('relative mx-auto shrink-0', box)}>
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={r} fill="none" stroke="#e8ecf4" strokeWidth="11" />
-        <circle
-          cx="70"
-          cy="70"
-          r={r}
-          fill="none"
-          stroke="url(#scoreGradV2)"
-          strokeWidth="11"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-        />
-        <defs>
-          <linearGradient id="scoreGradV2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#7c3aed" />
-            <stop offset="100%" stopColor="#4f46e5" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn('font-black tabular-nums text-[#1e2a5a]', scoreText)}>{score}</span>
-        <span className="text-sm font-semibold text-slate-400">/100</span>
-      </div>
-    </div>
-  );
-}
-
 function VerdictIcon({ verdict }: { verdict: DiagnosticoV2ViewModel['verdict'] }) {
   if (verdict === 'yes') return <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />;
   if (verdict === 'partial') return <span className="text-lg leading-none">⚠️</span>;
@@ -127,13 +96,18 @@ function EngineSidebar({
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100/80">
-      <p className="text-sm font-bold text-[#1e2a5a]">Tu presencia en los motores</p>
-      <div className="mt-4 space-y-4">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/80">
+      <div className="border-b border-slate-100 pb-4">
+        <p className="text-[15px] font-bold text-[#1e2a5a]">Tu presencia en los motores</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">Mide tu visibilidad y recomendaciones.</p>
+      </div>
+
+      <div className="divide-y divide-slate-100">
         {items.map((key) => {
           const meta = ENGINE_META[key];
           const locked = key !== 'chatgpt' && engines[key].status === 'locked';
           const pct = key === 'chatgpt' ? score : scoreToPct(engines[key].score);
+          const traffic = getScoreTrafficColors(pct);
 
           return (
             <button
@@ -141,35 +115,43 @@ function EngineSidebar({
               type="button"
               disabled={!locked}
               onClick={() => locked && onLockedClick(key)}
-              className={cn('block w-full text-left', locked && 'cursor-pointer hover:opacity-90')}
+              className={cn(
+                'flex w-full items-center gap-3 py-3.5 text-left',
+                locked && 'cursor-pointer transition hover:bg-slate-50/80',
+              )}
             >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-50 ring-1 ring-slate-100">
-                    <Image src={meta.logo} alt="" width={22} height={22} className="object-contain" />
+              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                <Image src={meta.logo} alt="" width={26} height={26} className="object-contain" />
+              </span>
+              <span className="w-[76px] shrink-0 text-sm font-bold text-slate-900">{meta.label}</span>
+
+              {locked ? (
+                <>
+                  <span className="min-w-0 flex-1" aria-hidden />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+                    <Lock className="h-3.5 w-3.5 text-slate-400" aria-hidden />
                   </span>
-                  <span className="truncate text-sm font-semibold text-slate-800">{meta.label}</span>
-                </div>
-                {locked ? (
-                  <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                ) : (
-                  <span className="shrink-0 text-xs font-bold tabular-nums text-violet-700">{pct}/100</span>
-                )}
-              </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={cn(
-                    'h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 transition-all',
-                    locked && 'opacity-0',
-                  )}
-                  style={{ width: locked ? '0%' : `${Math.max(pct, 4)}%` }}
-                />
-              </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={cn('h-full rounded-full', traffic.barClass)}
+                      style={{ width: `${Math.max(pct, 6)}%` }}
+                    />
+                  </div>
+                  <span className="shrink-0 text-right tabular-nums leading-none">
+                    <span className={cn('text-base', SCORE_NUMBER_CLASS, traffic.textClass)}>{pct}</span>
+                    <span className="text-xs font-medium text-slate-400"> / 100</span>
+                  </span>
+                </>
+              )}
             </button>
           );
         })}
       </div>
-      <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
+
+      <p className="mt-3 border-t border-slate-100 pt-3 text-center text-[11px] leading-relaxed text-slate-400">
         Los otros motores se desbloquean en el Plan Conquistar.
       </p>
     </div>
@@ -177,9 +159,7 @@ function EngineSidebar({
 }
 
 function scoreToPct(score: number | null | undefined) {
-  const n = Number(score);
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n <= 1 ? n * 100 : n);
+  return normalizeScorePct(score);
 }
 
 function HeroSummaryPanel({
@@ -409,7 +389,7 @@ export function DiagnosticoGratuitoV2({
           </p>
           <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_300px] lg:items-start">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-              <ScoreRing score={model.score} size="xl" />
+              <CleexsScoreRing score={model.score} size="xl" />
               <HeroSummaryPanel
                 model={model}
                 summaryTab={summaryTab}

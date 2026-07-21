@@ -2,6 +2,11 @@
 
 import { CheckCircle2, Gauge, Loader2, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  getScoreTrafficColors,
+  normalizeScorePct,
+  SCORE_NUMBER_CLASS,
+} from '@/lib/score-traffic-colors';
 
 export type EngineCardKey = 'chatgpt' | 'gemini' | 'claude' | 'perplexity';
 
@@ -28,8 +33,7 @@ function statusLabel(key: EngineCardKey, state: EngineCardState) {
 
 function fmtScore(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return '—';
-  const n = Number(value);
-  return Math.round(n <= 1 ? n * 100 : n).toString();
+  return normalizeScorePct(value).toString();
 }
 
 export function CleexsEngineScoresPanel({
@@ -65,6 +69,8 @@ export function CleexsEngineScoresPanel({
           const done = state.status === 'completed' && state.score != null;
           const locked = state.status === 'locked';
           const isClickable = locked && onLockedClick;
+          const scorePct = state.score != null ? normalizeScorePct(state.score) : null;
+          const traffic = scorePct != null ? getScoreTrafficColors(scorePct) : null;
 
           return (
             <div
@@ -99,8 +105,11 @@ export function CleexsEngineScoresPanel({
               </div>
               <p
                 className={cn(
-                  'mt-3 text-3xl font-bold tabular-nums',
-                  locked || (!done && key !== 'chatgpt') ? 'text-slate-300' : 'text-slate-900'
+                  'mt-3 text-3xl tabular-nums',
+                  SCORE_NUMBER_CLASS,
+                  locked || (!done && key !== 'chatgpt')
+                    ? 'text-slate-300'
+                    : traffic?.textClass ?? 'text-slate-900',
                 )}
               >
                 {locked ? '—' : fmtScore(state.score)}
