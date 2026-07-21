@@ -29,10 +29,10 @@ const BAND_COLORS: Record<
   Omit<ScoreTrafficColors, 'band'>
 > = {
   green: {
-    stroke: '#15803d',
-    strokeLight: '#166534',
-    textClass: 'text-green-800',
-    barClass: 'bg-gradient-to-r from-green-800 to-green-600',
+    stroke: '#059669',
+    strokeLight: '#047857',
+    textClass: 'text-emerald-600',
+    barClass: 'bg-gradient-to-r from-emerald-600 to-emerald-500',
     label: 'Bueno',
   },
   yellow: {

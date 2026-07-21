@@ -25,7 +25,7 @@ export function CleexsStatusIcon({
     return (
       <span
         className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded-full bg-green-700 shadow-sm',
+          'inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-600 shadow-sm',
           s.box,
           className,
         )}
@@ -69,19 +69,19 @@ export function CleexsStatusIcon({
 }
 
 export const FINDING_TONE_CARD_CLASS: Record<CleexsStatusTone, string> = {
-  success: 'border-green-200 bg-green-50/90',
+  success: 'border-emerald-200 bg-emerald-50/90',
   warning: 'border-amber-200 bg-amber-50/90',
   critical: 'border-red-200 bg-red-50/90',
 };
 
 export const FINDING_TONE_TITLE_CLASS: Record<CleexsStatusTone, string> = {
-  success: 'text-green-900',
+  success: 'text-emerald-800',
   warning: 'text-amber-950',
   critical: 'text-red-900',
 };
 
 export const FINDING_TONE_WATERMARK_CLASS: Record<CleexsStatusTone, string> = {
-  success: 'text-green-700',
+  success: 'text-emerald-600',
   warning: 'text-amber-600',
   critical: 'text-red-500',
 };
