@@ -17,6 +17,7 @@ export type DiagnosticoV2CompetitorRow = {
   share: number;
   isBrand: boolean;
   rank: number;
+  url?: string | null;
 };
 
 export type DiagnosticoV2ViewModel = {
@@ -166,34 +167,35 @@ function humanPrimaryAction(primary: TeaserShape['opportunities'][0] | undefined
   };
 }
 
-function buildFindings(
-  score: number,
-  brandShare: number,
-  primary: TeaserShape['opportunities'][0] | undefined,
-  weakest: TeaserShape['opportunities'][0] | undefined,
-): DiagnosticoV2Finding[] {
+function buildFindings(score: number, brandShare: number): DiagnosticoV2Finding[] {
   const appears = brandShare > 0 || score >= 40;
   return [
     {
       tone: 'success',
       title: 'Tu marca ya aparece',
       body: appears
-        ? `En las consultas simuladas, tu marca aparece en el ${brandShare.toFixed(1)}% de las respuestas analizadas.`
+        ? `ChatGPT te menciona en el ${brandShare.toFixed(1)}% de las respuestas relevantes.`
         : 'Hay señales de presencia, pero todavía en pocas consultas relevantes.',
     },
     {
       tone: 'warning',
       title: 'Falta contenido para quienes están comparando opciones',
-      body: weakest
-        ? `La consulta «${weakest.intention}» tiene score ${weakest.score}/100. Ahí se pierden oportunidades de decisión.`
-        : 'No hay páginas claras para intenciones de comparación y elección de proveedor.',
+      body: 'Perdés oportunidades clave en consultas de comparación y decisión.',
     },
     {
       tone: 'critical',
       title: 'Gemini todavía casi nunca te recomienda',
-      body: 'En el diagnóstico gratuito solo medimos ChatGPT. Los otros motores se desbloquean con Plan Conquistar.',
+      body: 'Tu presencia en Gemini es 0%. Es una oportunidad rápida de ganar visibilidad.',
     },
   ];
+}
+
+function competitorUrlMap(runResult: PublicDiagnosticRunResult) {
+  return new Map(
+    (runResult.competitorDetails ?? [])
+      .filter((row) => row.name)
+      .map((row) => [normalizeName(row.name), row.domain ?? null]),
+  );
 }
 
 export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): DiagnosticoV2ViewModel | null {
@@ -218,12 +220,19 @@ export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): Diagn
 
   const score = scoreToPct(runResult.cleexsScore);
   const verdict = verdictFromScore(score);
-  const competitors = buildComparisonRows(runResult);
+  const urlByName = competitorUrlMap(runResult);
+  const competitors = buildComparisonRows(runResult).map((row) => ({
+    ...row,
+    url: urlByName.get(normalizeName(row.name)) ?? null,
+  }));
   const brandRow = competitors.find((c) => c.isBrand);
-  const leader = competitors[0];
+  const leader = competitors.find((c) => !c.isBrand) ?? competitors[0];
   const brandShare = brandRow?.share ?? 0;
   const leaderShare = leader?.share ?? 0;
   const brandRank = brandRow?.rank ?? competitors.length;
+  const configuredCompetitors = (runResult.competitors || []).filter((c) => `${c || ''}`.trim());
+  const detectedCompetitors = competitors.filter((c) => !c.isBrand);
+  const analyzedCompetitorCount = Math.max(configuredCompetitors.length, detectedCompetitors.length);
   const gapClosePct =
     leaderShare > brandShare && leaderShare > 0
       ? Math.round(((leaderShare - brandShare) / leaderShare) * 100 * 0.37)
@@ -251,14 +260,14 @@ export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): Diagn
     verdict: verdict.verdict,
     verdictLabel: verdict.label,
     verdictDetail: verdict.detail,
-    competitorCount: Math.max((runResult.competitors || []).length, competitors.length - 1),
+    competitorCount: analyzedCompetitorCount,
     brandRank,
     leaderName: leader?.name || 'Competidor líder',
     leaderShare,
     brandShare,
     gapClosePct: gapClosePct || 37,
     engines,
-    findings: buildFindings(score, brandShare, primary, weakest),
+    findings: buildFindings(score, brandShare),
     competitors: competitors.slice(0, 8),
     primaryAction: {
       ...primaryActionRaw,
