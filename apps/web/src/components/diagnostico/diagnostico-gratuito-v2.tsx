@@ -671,20 +671,22 @@ export function DiagnosticoGratuitoV2({
         {/* 5 — Buenas noticias */}
         <section>
           <SectionBadge n={5} label="Buenas noticias" />
-          <div className="relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f3f4ff] p-4 sm:p-6">
+          <div className="relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff] p-4 sm:p-6">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(170px,0.72fr)] lg:items-start lg:gap-5">
-              <div className="relative min-w-0 pb-8 lg:pb-12">
-                <div className="inline-flex items-center gap-1.5 text-violet-700">
-                  <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-                  <span className="text-xs font-semibold sm:text-sm">No necesitás rehacer tu sitio.</span>
+              <div className="relative flex min-w-0 flex-col lg:min-h-[11.5rem]">
+                <div className="relative z-[1] lg:max-w-[calc(100%-7.25rem)]">
+                  <div className="inline-flex items-center gap-1.5 text-violet-700">
+                    <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="text-xs font-semibold sm:text-sm">No necesitás rehacer tu sitio.</span>
+                  </div>
+                  <h3 className="mt-3 text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg lg:text-[1.35rem] lg:leading-tight">
+                    Encontramos una oportunidad muy clara que podría mover significativamente tu presencia en ChatGPT.
+                  </h3>
+                  <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                    Ahora te mostramos exactamente cómo aprovecharla.
+                  </p>
                 </div>
-                <h3 className="mt-3 text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg lg:text-[1.35rem] lg:leading-tight">
-                  Encontramos una oportunidad muy clara que podría mover significativamente tu presencia en ChatGPT.
-                </h3>
-                <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
-                  Ahora te mostramos exactamente cómo aprovecharla.
-                </p>
-                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 hidden h-[4.75rem] w-[7.5rem] lg:block" />
+                <RoadmapCueArrow className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[5rem] w-[7.75rem] lg:block" />
               </div>
 
               <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/30">
@@ -715,15 +717,17 @@ export function DiagnosticoGratuitoV2({
                 </div>
               </div>
 
-              <div className="relative flex min-w-0 flex-col gap-2 pt-1 lg:pt-2">
-                <p className="font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
+              <div className="relative min-w-0 pt-1 lg:pt-2">
+                <p className="relative z-[1] max-w-[12rem] font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
                   *Esto es solo el comienzo*
                 </p>
-                <PlanNoteArrow className="ml-1 hidden h-[4.5rem] w-[4.75rem] lg:block" />
-                <p className="max-w-[16rem] text-[11px] leading-relaxed text-slate-600 sm:text-xs">
-                  El plan completo incluye {model.hiddenActionCount} acciones priorizadas, prompts, checklist y
-                  roadmap de 90 días.
-                </p>
+                <div className="relative mt-1 min-h-[5rem]">
+                  <PlanNoteArrow className="pointer-events-none absolute left-3 top-0 z-0 hidden h-[5rem] w-[5rem] lg:block" />
+                  <p className="relative z-[1] max-w-[14rem] pt-12 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+                    El plan completo incluye {model.hiddenActionCount} acciones priorizadas, prompts, checklist y
+                    roadmap de 90 días.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
