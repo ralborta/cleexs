@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CompetitorNameLink } from '@/components/report/competitor-name-link';
 import type { DiagnosticoV2CompetitorRow } from '@/lib/diagnostico-v2-data';
@@ -17,22 +17,22 @@ function displayDomain(url: string | null | undefined, fallback?: string | null)
 function RankBadge({ rank, highlighted }: { rank: number; highlighted: boolean }) {
   if (!highlighted) {
     return (
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-sm font-semibold tabular-nums text-slate-400">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[10px] font-semibold tabular-nums text-slate-400">
         {rank}
       </span>
     );
   }
 
   const styles: Record<number, string> = {
-    1: 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 text-white ring-2 ring-amber-200/80 shadow-sm',
-    2: 'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 text-slate-800 ring-2 ring-slate-200 shadow-sm',
-    3: 'bg-gradient-to-br from-orange-300 via-amber-600 to-orange-700 text-white ring-2 ring-orange-200/80 shadow-sm',
+    1: 'bg-gradient-to-br from-amber-400 to-amber-600 text-white ring-1 ring-amber-200/80',
+    2: 'bg-gradient-to-br from-slate-300 to-slate-400 text-slate-800 ring-1 ring-slate-200',
+    3: 'bg-gradient-to-br from-orange-400 to-orange-600 text-white ring-1 ring-orange-200/80',
   };
 
   return (
     <span
       className={cn(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black tabular-nums',
+        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black tabular-nums',
         styles[rank] ?? 'bg-slate-200 text-slate-700',
       )}
     >
@@ -44,14 +44,14 @@ function RankBadge({ rank, highlighted }: { rank: number; highlighted: boolean }
 function CompetitorAvatar({ name, isBrand }: { name: string; isBrand: boolean }) {
   if (isBrand) {
     return (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 ring-1 ring-sky-200">
-        <Sparkles className="h-4 w-4 text-sky-600" strokeWidth={2.2} aria-hidden />
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-50 ring-1 ring-sky-200/80">
+        <Sparkles className="h-3 w-3 text-sky-600" strokeWidth={2.2} aria-hidden />
       </span>
     );
   }
 
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1e2a5a] text-sm font-bold text-white shadow-sm">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1e2a5a] text-[10px] font-bold text-white">
       {name.charAt(0).toUpperCase()}
     </span>
   );
@@ -66,12 +66,13 @@ function CompetitorLabel({
 }) {
   const domain = row.isBrand ? displayDomain(null, brandDomain) : displayDomain(row.url);
   const label = row.isBrand ? 'Tu empresa' : row.name;
+  const showDomain = domain && !label.toLowerCase().includes(domain.toLowerCase());
 
   return (
     <p
       className={cn(
-        'min-w-[120px] shrink-0 text-sm leading-tight sm:min-w-[148px]',
-        row.rank <= 3 ? 'font-bold text-slate-900' : 'font-medium text-slate-500',
+        'min-w-0 truncate text-[11px] leading-tight sm:max-w-[140px] sm:text-xs',
+        row.rank <= 3 ? 'font-semibold text-slate-800' : 'font-medium text-slate-500',
       )}
     >
       {row.isBrand ? (
@@ -80,11 +81,11 @@ function CompetitorLabel({
         <CompetitorNameLink
           name={label}
           url={row.url}
-          className={row.rank <= 3 ? 'text-slate-900 hover:text-violet-800' : 'text-slate-500 hover:text-slate-700'}
+          className={row.rank <= 3 ? 'text-slate-800 hover:text-violet-700' : 'text-slate-500 hover:text-slate-700'}
         />
       )}
-      {domain ? (
-        <span className={cn('font-normal', row.rank <= 3 ? 'text-slate-500' : 'text-slate-400')}>
+      {showDomain ? (
+        <span className={cn('font-normal', row.rank <= 3 ? 'text-slate-400' : 'text-slate-400/90')}>
           {' '}
           ({domain})
         </span>
@@ -102,34 +103,35 @@ function ShareBar({
   maxShare: number;
   highlighted: boolean;
 }) {
-  const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 12 : 4) : 0;
+  const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 14 : 6) : 0;
+  const pctLabel = `${share.toFixed(1)}%`;
 
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className="flex min-w-0 flex-1 items-center gap-2">
       <div
         className={cn(
-          'relative w-full overflow-hidden rounded-full bg-slate-100',
-          highlighted ? 'h-8 sm:h-9' : 'h-2.5',
+          'relative min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100/90',
+          highlighted ? 'h-5' : 'h-1.5',
         )}
       >
         <div
           className={cn(
-            'absolute inset-y-0 left-0 rounded-full transition-all',
-            highlighted ? 'min-w-[4.25rem] bg-gradient-to-r from-violet-700 to-violet-600' : 'bg-slate-300',
+            'h-full rounded-full transition-all duration-500',
+            highlighted
+              ? 'bg-gradient-to-r from-violet-600 via-violet-500 to-fuchsia-500 shadow-sm shadow-violet-200/40'
+              : 'bg-gradient-to-r from-slate-300 to-slate-200',
           )}
           style={{ width: `${Math.min(widthPct, 100)}%` }}
         />
-        {highlighted ? (
-          <span className="absolute inset-y-0 right-3 flex items-center text-sm font-bold tabular-nums text-white drop-shadow-sm">
-            {share.toFixed(1)}%
-          </span>
-        ) : null}
       </div>
-      {!highlighted ? (
-        <span className="mt-1 block text-right text-xs font-medium tabular-nums text-slate-400">
-          {share.toFixed(1)}%
-        </span>
-      ) : null}
+      <span
+        className={cn(
+          'shrink-0 text-right tabular-nums',
+          highlighted ? 'w-9 text-[10px] font-bold text-violet-700' : 'w-8 text-[10px] font-medium text-slate-400',
+        )}
+      >
+        {pctLabel}
+      </span>
     </div>
   );
 }
@@ -147,70 +149,27 @@ export function CompetitorShareChart({
   const maxShare = Math.max(...topRows.map((r) => r.share), 1);
 
   return (
-    <div className={cn('rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6', className)}>
-      <p className="mb-5 text-sm font-medium text-slate-500">
+    <div className={cn('min-w-0', className)}>
+      <p className="mb-3 text-[10px] font-medium leading-snug text-slate-500 sm:text-[11px]">
         Participación en respuestas de ChatGPT en consultas relevantes (Top 6 marcas)
       </p>
-      <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-2.5">
         {topRows.map((row) => {
           const highlighted = row.rank <= 3;
           return (
             <div
               key={`${row.rank}-${row.name}`}
-              className={cn('flex items-center gap-2.5 sm:gap-3', !highlighted && 'opacity-90')}
+              className={cn('flex items-center gap-2', !highlighted && 'opacity-85')}
             >
               <RankBadge rank={row.rank} highlighted={highlighted} />
               <CompetitorAvatar name={row.name} isBrand={row.isBrand} />
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
-                <CompetitorLabel row={row} brandDomain={brandDomain} />
-                <ShareBar share={row.share} maxShare={maxShare} highlighted={highlighted} />
-              </div>
+              <CompetitorLabel row={row} brandDomain={brandDomain} />
+              <ShareBar share={row.share} maxShare={maxShare} highlighted={highlighted} />
             </div>
           );
         })}
       </div>
     </div>
-  );
-}
-
-function LeaderInsightTrophy({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 120 120"
-      className={cn('h-[88px] w-[88px] sm:h-[100px] sm:w-[100px]', className)}
-      fill="none"
-      aria-hidden
-    >
-      {/* Destellos */}
-      <path d="M60 10V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M48 14l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M72 14l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M42 22l-5-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M78 22l5-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      {/* Asas y copa */}
-      <path
-        d="M38 34c0-6 4.5-10 10-10h24c5.5 0 10 4 10 10v2H38v-2Z"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M34 36h8M78 36h8"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M42 36h36l-4 28H46L42 36Z"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinejoin="round"
-      />
-      {/* Vástago y base */}
-      <path d="M52 64h16v10H52V64Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M44 74h32v8H44V74Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M38 82h44v6H38V82Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-    </svg>
   );
 }
 
@@ -226,24 +185,24 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'flex min-h-[280px] flex-col justify-between overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f5f3fa] p-6 sm:min-h-[320px] sm:p-7',
+        'relative overflow-hidden rounded-lg border border-emerald-200/90 bg-emerald-50/90 p-4',
         className,
       )}
     >
-      <div className="max-w-[92%]">
-        <p className="text-lg font-bold leading-snug text-[#1e2a5a] sm:text-[1.35rem]">
-          Estás muy cerca del líder.
-        </p>
-        <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+      <div
+        className="pointer-events-none absolute -bottom-3 -right-3 text-emerald-600 opacity-[0.12]"
+        aria-hidden
+      >
+        <Trophy className="h-24 w-24" strokeWidth={1.5} />
+      </div>
+      <div className="relative max-w-[95%]">
+        <p className="text-sm font-bold leading-snug text-emerald-900">Estás muy cerca del líder.</p>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
           Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
         </p>
-        <p className="mt-3 text-xs leading-relaxed text-slate-500">
+        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
           {leaderName} lidera hoy con {leaderShare.toFixed(1)}%.
         </p>
-      </div>
-
-      <div className="mt-6 flex justify-end pt-2 text-[#8b7fd4]">
-        <LeaderInsightTrophy />
       </div>
     </div>
   );
