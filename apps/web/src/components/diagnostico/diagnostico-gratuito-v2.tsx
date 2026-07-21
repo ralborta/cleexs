@@ -474,7 +474,7 @@ export function DiagnosticoGratuitoV2({
         <section id="seccion-competidores" className="scroll-mt-20">
           <SectionBadge n={2} label="Dónde perdés clientes hoy" />
           <ReportBlock className="p-4 sm:p-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,34%)] lg:items-center lg:gap-2">
               <CompetitorShareChart
                 rows={model.competitors}
                 brandDomain={model.domain}
@@ -483,7 +483,7 @@ export function DiagnosticoGratuitoV2({
               <CompetitorLeaderInsight
                 leaderName={model.leaderName}
                 leaderShare={model.leaderShare}
-                className="lg:min-h-full"
+                className="lg:-ml-1"
               />
             </div>
           </ReportBlock>

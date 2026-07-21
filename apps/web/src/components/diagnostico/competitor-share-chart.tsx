@@ -71,7 +71,7 @@ function CompetitorLabel({
   return (
     <p
       className={cn(
-        'min-w-0 flex-1 truncate text-[10px] leading-tight sm:text-[11px]',
+        'min-w-0 truncate text-[10px] leading-tight sm:text-[11px]',
         row.rank <= 3 ? 'font-semibold text-slate-900' : 'font-medium text-slate-500',
       )}
     >
@@ -102,7 +102,7 @@ function ShareBar({
   const pctLabel = `${share.toFixed(1)}%`;
 
   return (
-    <div className="flex w-[200px] shrink-0 items-center gap-1.5 sm:w-[236px]">
+    <div className="flex min-w-0 items-center gap-1.5">
       <div
         className={cn(
           'min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100',
@@ -154,7 +154,10 @@ export function CompetitorShareChart({
           return (
             <div
               key={`${row.rank}-${row.name}`}
-              className={cn('flex items-center gap-1.5 sm:gap-2', !highlighted && 'opacity-90')}
+              className={cn(
+                'grid grid-cols-[auto_auto_minmax(0,148px)_minmax(140px,1fr)] items-center gap-x-1.5 sm:grid-cols-[auto_auto_minmax(0,168px)_minmax(160px,236px)] sm:gap-x-2',
+                !highlighted && 'opacity-90',
+              )}
             >
               <RankBadge rank={row.rank} highlighted={highlighted} />
               <CompetitorAvatar name={row.name} isBrand={row.isBrand} />
@@ -180,22 +183,22 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative mx-auto flex min-h-[168px] w-full max-w-[210px] flex-col justify-center overflow-hidden rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-5 lg:mx-0 lg:max-w-[200px]',
+        'relative flex w-full flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-4 py-4 sm:px-5 sm:py-4',
         className,
       )}
     >
       <div
-        className="pointer-events-none absolute -bottom-4 -right-2 text-[#059669] opacity-[0.12]"
+        className="pointer-events-none absolute -bottom-3 -right-1 text-violet-500 opacity-[0.12]"
         aria-hidden
       >
-        <Trophy className="h-[6.5rem] w-[6.5rem]" strokeWidth={1.2} />
+        <Trophy className="h-20 w-20" strokeWidth={1.2} />
       </div>
-      <div className="relative z-[1] pr-2">
-        <p className="text-[13px] font-bold leading-snug text-[#065f46]">Estás muy cerca del líder.</p>
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+      <div className="relative z-[1] max-w-[95%]">
+        <p className="text-[13px] font-bold leading-snug text-violet-900">Estás muy cerca del líder.</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
           Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
         </p>
-        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+        <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
           {leaderName} lidera hoy con {leaderShare.toFixed(1)}%.
         </p>
       </div>
