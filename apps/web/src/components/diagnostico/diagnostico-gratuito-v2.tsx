@@ -118,7 +118,7 @@ function EngineSidebar({
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
   return (
-    <div className="lg:self-start">
+    <div>
       <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
         <p className="text-xs font-bold leading-tight text-[#1e2a5a]">Tu presencia en los motores</p>
         <p className="mt-0.5 text-[10px] leading-snug text-slate-500">Mide tu visibilidad y recomendaciones.</p>
@@ -403,27 +403,31 @@ export function DiagnosticoGratuitoV2({
         {/* HERO */}
         <section className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Diagnóstico gratuito</p>
-          <h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.65rem]">
-            ¿Hoy ChatGPT recomienda tu empresa?
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-            Medimos tu presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
-          </p>
+
+          <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center lg:gap-6">
+            <div className="min-w-0">
+              <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.65rem]">
+                ¿Hoy ChatGPT recomienda tu empresa?
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+                Medimos tu presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
+              </p>
+            </div>
+
+            <ReportBlock className="overflow-hidden">
+              <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
+            </ReportBlock>
+          </div>
 
           <ReportBlock className="mt-5">
-            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-              <div className="flex gap-3 p-3 sm:flex-row sm:items-start sm:p-4 lg:self-start">
-                <CleexsScoreRing score={model.score} size="md" className="sm:mx-0" />
-                <HeroSummaryPanel
-                  model={model}
-                  summaryTab={summaryTab}
-                  onSummaryTab={setSummaryTab}
-                  onScrollCompetitors={scrollToCompetitors}
-                />
-              </div>
-              <div className="border-t border-slate-100 lg:border-l lg:border-t-0">
-                <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
-              </div>
+            <div className="flex gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
+              <CleexsScoreRing score={model.score} size="hero" className="sm:mx-0" />
+              <HeroSummaryPanel
+                model={model}
+                summaryTab={summaryTab}
+                onSummaryTab={setSummaryTab}
+                onScrollCompetitors={scrollToCompetitors}
+              />
             </div>
           </ReportBlock>
         </section>
