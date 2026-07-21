@@ -517,9 +517,14 @@ export function DiagnosticoGratuitoV2({
           <ReportBlock>
             <div className="grid gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(108px,0.55fr)_minmax(108px,0.55fr)] lg:items-stretch">
               <div className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 sm:col-span-2 sm:gap-4 lg:col-span-1">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                  <Target className="h-5 w-5" aria-hidden />
-                </div>
+                <Image
+                  src="/diagnostico/mission-target.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 shrink-0 object-contain"
+                  aria-hidden
+                />
                 <div className="min-w-0">
                   {(() => {
                     const { prefix, highlight } = splitPrimaryActionTitle(model.primaryAction.title);
