@@ -179,16 +179,12 @@ function EngineSidebar({
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-slate-100 px-4 pb-3 pt-3">
-        <div className="flex items-start gap-2.5 sm:gap-3">
-          <p className="shrink-0 text-base font-bold leading-tight text-[#1e2a5a] sm:text-lg">
-            Este es tu Cleexs Score
-          </p>
-          <p className="min-w-0 pt-0.5 text-[11px] leading-snug text-slate-500 sm:text-xs">
-            Mide la presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
-          </p>
-        </div>
+    <div className="flex h-full flex-col justify-center py-1 lg:py-3">
+      <div className="border-b border-slate-100 px-4 pb-3.5 pt-4 lg:pt-5">
+        <p className="text-base font-bold leading-tight text-[#1e2a5a] sm:text-lg">Este es tu Cleexs Score</p>
+        <p className="mt-1.5 text-xs leading-snug text-slate-500 sm:text-sm">
+          Mide la presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
+        </p>
       </div>
 
       <div className="flex-1 divide-y divide-slate-100 px-4">
