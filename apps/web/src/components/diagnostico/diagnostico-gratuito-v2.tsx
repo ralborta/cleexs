@@ -258,39 +258,23 @@ function HeroScoreBlock({
   const competitorTotal = Math.max(analyzedCompetitors.length, model.competitorCount, 1);
 
   return (
-    <div className="px-5 py-6 sm:px-7 sm:py-7">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:items-center sm:gap-x-6 sm:gap-y-4 lg:grid-cols-[11.5rem_minmax(0,1fr)]">
-        <CleexsScoreRing
-          score={model.score}
-          size="heroLg"
-          className="order-2 mx-auto sm:order-none sm:col-start-1 sm:row-span-3 sm:row-start-1 sm:mx-0 sm:self-center"
-        />
+    <div className="flex flex-col items-center gap-5 py-2 sm:flex-row sm:items-center sm:gap-6 sm:py-3 lg:gap-8">
+      <CleexsScoreRing score={model.score} size="heroLg" className="shrink-0" />
 
-        <div className="order-1 flex items-start gap-2 sm:col-start-2 sm:row-start-1 sm:max-w-xl sm:pl-3 sm:pr-1">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 sm:h-5 sm:w-5" aria-hidden />
-          <p className="text-sm font-bold leading-snug tracking-tight text-violet-800 sm:text-base lg:text-lg">
-            {model.verdictLabel}
-          </p>
+      <div className="flex min-w-0 flex-col gap-4 sm:max-w-xs lg:max-w-sm">
+        <div className="flex items-start gap-2">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" aria-hidden />
+          <p className="text-base font-bold leading-snug text-violet-800 lg:text-lg">{model.verdictLabel}</p>
         </div>
 
-        {model.verdictDetail ? (
-          <p className="order-3 text-sm leading-relaxed text-slate-600 sm:col-start-2 sm:row-start-2 sm:max-w-md sm:pl-3 sm:text-base">
-            {model.verdictDetail}
-          </p>
-        ) : (
-          <span className="order-3 hidden sm:col-start-2 sm:row-start-2 sm:block" aria-hidden />
-        )}
-
-        <div className="order-4 flex justify-center sm:col-start-2 sm:row-start-3 sm:justify-start sm:pl-6">
-          <button
-            type="button"
-            onClick={onScrollCompetitors}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:text-base"
-          >
-            <Trophy className="h-4 w-4 shrink-0 text-violet-700" aria-hidden />
-            #{model.brandRank} de {competitorTotal} competidores analizados
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onScrollCompetitors}
+          className="inline-flex w-fit items-center gap-2 rounded-full bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:text-base"
+        >
+          <Trophy className="h-4 w-4 shrink-0 text-violet-700" aria-hidden />
+          #{model.brandRank} de {competitorTotal} competidores analizados
+        </button>
       </div>
     </div>
   );
@@ -418,12 +402,10 @@ export function DiagnosticoGratuitoV2({
             ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
           </h1>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,340px)] lg:items-stretch lg:gap-5">
-            <ReportBlock className="flex h-full flex-col">
-              <HeroScoreBlock model={model} onScrollCompetitors={scrollToCompetitors} />
-            </ReportBlock>
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-6">
+            <HeroScoreBlock model={model} onScrollCompetitors={scrollToCompetitors} />
 
-            <ReportBlock className="flex h-full flex-col overflow-hidden">
+            <ReportBlock className="flex h-full flex-col overflow-hidden lg:self-stretch">
               <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
             </ReportBlock>
           </div>
