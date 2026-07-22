@@ -17,26 +17,40 @@ type CleexsScoreRingProps = {
 const RING_SIZE = {
   md: { r: 46, box: 'h-28 w-28', scoreText: 'text-3xl', stroke: 9 },
   hero: { r: 62, box: 'h-[9.5rem] w-[9.5rem]', scoreText: 'text-4xl', stroke: 10 },
-  heroLg: { r: 72, box: 'h-[11.5rem] w-[11.5rem]', scoreText: 'text-6xl', stroke: 12 },
+  heroLg: { r: 68, box: 'h-[11rem] w-[11rem]', scoreText: 'text-6xl', stroke: 11 },
   lg: { r: 54, box: 'h-36 w-36', scoreText: 'text-4xl', stroke: 11 },
   xl: { r: 62, box: 'h-44 w-44', scoreText: 'text-5xl', stroke: 11 },
 } as const;
+
+function ringGeometry(r: number, stroke: number) {
+  const pad = stroke / 2 + 6;
+  const dim = (r + pad) * 2;
+  const center = dim / 2;
+  return { dim, center, c: 2 * Math.PI * r };
+}
 
 export function CleexsScoreRing({ score, size = 'lg', className }: CleexsScoreRingProps) {
   const gradId = useId().replace(/:/g, '');
   const pct = normalizeScorePct(score);
   const colors = getScoreTrafficColors(pct);
   const spec = RING_SIZE[size];
-  const c = 2 * Math.PI * spec.r;
+  const { dim, center, c } = ringGeometry(spec.r, spec.stroke);
   const offset = c - (pct / 100) * c;
 
   return (
     <div className={cn('relative mx-auto shrink-0', spec.box, className)}>
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 140 140" aria-hidden>
-        <circle cx="70" cy="70" r={spec.r} fill="none" stroke="#e8ecf4" strokeWidth={spec.stroke} />
+      <svg className="h-full w-full -rotate-90 overflow-visible" viewBox={`0 0 ${dim} ${dim}`} aria-hidden>
         <circle
-          cx="70"
-          cy="70"
+          cx={center}
+          cy={center}
+          r={spec.r}
+          fill="none"
+          stroke="#e8ecf4"
+          strokeWidth={spec.stroke}
+        />
+        <circle
+          cx={center}
+          cy={center}
           r={spec.r}
           fill="none"
           stroke={`url(#scoreGrad-${gradId})`}

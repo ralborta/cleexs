@@ -247,30 +247,36 @@ function scoreToPct(score: number | null | undefined) {
   return normalizeScorePct(score);
 }
 
-function HeroSummaryPanel({
+function HeroScoreBlock({
   model,
   onScrollCompetitors,
 }: {
   model: DiagnosticoV2ViewModel;
   onScrollCompetitors: () => void;
 }) {
-  const competitorTotal = Math.max(model.competitorCount, 1);
+  const analyzedCompetitors = model.competitors.filter((c) => !c.isBrand);
+  const competitorTotal = Math.max(analyzedCompetitors.length, model.competitorCount, 1);
 
   return (
-    <div className="min-w-0 flex-1 space-y-4">
-      <div className="flex items-start gap-2">
-        <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" aria-hidden />
-        <p className="text-base font-bold leading-snug text-violet-800 sm:text-lg">{model.verdictLabel}</p>
+    <div className="flex flex-col items-center px-5 py-6 text-center sm:px-8 sm:py-7">
+      <div className="flex max-w-[17rem] items-start gap-2 text-left sm:max-w-[19rem]">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 sm:h-5 sm:w-5" aria-hidden />
+        <div className="min-w-0 space-y-2">
+          <p className="text-sm font-bold leading-snug tracking-tight text-violet-800 sm:text-base">
+            {model.verdictLabel}
+          </p>
+          {model.verdictDetail ? (
+            <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">{model.verdictDetail}</p>
+          ) : null}
+        </div>
       </div>
 
-      {model.verdictDetail ? (
-        <p className="text-sm leading-relaxed text-slate-600 sm:text-base">{model.verdictDetail}</p>
-      ) : null}
+      <CleexsScoreRing score={model.score} size="heroLg" className="my-5 sm:my-6" />
 
       <button
         type="button"
         onClick={onScrollCompetitors}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-50 px-4 py-3 text-sm font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:w-auto sm:text-base"
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:text-base"
       >
         <Trophy className="h-4 w-4 shrink-0 text-violet-700" aria-hidden />
         #{model.brandRank} de {competitorTotal} competidores analizados
@@ -403,10 +409,7 @@ export function DiagnosticoGratuitoV2({
 
           <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,340px)] lg:items-stretch lg:gap-5">
             <ReportBlock className="flex h-full flex-col">
-              <div className="flex flex-1 flex-col gap-5 p-5 sm:flex-row sm:items-center">
-                <CleexsScoreRing score={model.score} size="heroLg" className="mx-auto shrink-0 sm:mx-0" />
-                <HeroSummaryPanel model={model} onScrollCompetitors={scrollToCompetitors} />
-              </div>
+              <HeroScoreBlock model={model} onScrollCompetitors={scrollToCompetitors} />
             </ReportBlock>
 
             <ReportBlock className="flex h-full flex-col overflow-hidden">
