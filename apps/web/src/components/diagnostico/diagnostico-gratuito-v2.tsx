@@ -179,8 +179,8 @@ function EngineSidebar({
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
   return (
-    <div className="flex h-full flex-col justify-center py-1 lg:py-3">
-      <div className="border-b border-slate-100 px-4 pb-3.5 pt-4 lg:pt-5">
+    <div className="flex h-full flex-col">
+      <div className="border-b border-slate-100 px-4 pb-3.5 pt-3.5 lg:pt-4">
         <p className="text-base font-bold leading-tight text-[#1e2a5a] sm:text-lg">Este es tu Cleexs Score</p>
         <p className="mt-1.5 text-xs leading-snug text-slate-500 sm:text-sm">
           Mide la presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
@@ -398,14 +398,17 @@ export function DiagnosticoGratuitoV2({
           <span className="inline-flex rounded-full bg-violet-100 px-3.5 py-1.5 text-sm font-semibold text-violet-700">
             Diagnóstico gratuito de {displayDomain(model.domain)} completado
           </span>
-          <h1 className="mt-4 max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.75rem]">
-            ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
-          </h1>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-6">
-            <HeroScoreBlock model={model} onScrollCompetitors={scrollToCompetitors} />
+          <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5">
+            <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:col-start-1 lg:row-start-1 lg:max-w-none lg:text-[2.75rem]">
+              ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
+            </h1>
 
-            <ReportBlock className="flex h-full flex-col overflow-hidden lg:self-stretch">
+            <div className="lg:col-start-1 lg:row-start-2">
+              <HeroScoreBlock model={model} onScrollCompetitors={scrollToCompetitors} />
+            </div>
+
+            <ReportBlock className="overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
               <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
             </ReportBlock>
           </div>
