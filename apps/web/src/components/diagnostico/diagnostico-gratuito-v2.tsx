@@ -456,7 +456,7 @@ export function DiagnosticoGratuitoV2({
         <section id="seccion-competidores" className="scroll-mt-20">
           <SectionBadge n={2} label="Dónde perdés clientes hoy" />
           <ReportBlock className="p-4 sm:p-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start lg:gap-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
               <CompetitorShareChart
                 rows={model.competitors}
                 brandDomain={model.domain}

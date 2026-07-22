@@ -71,7 +71,7 @@ function CompetitorLabel({
   return (
     <p
       className={cn(
-        'min-w-0 truncate text-xs leading-tight sm:text-[13px]',
+        'min-w-0 truncate text-[15px] leading-tight sm:text-base',
         row.rank <= 3 ? 'font-semibold text-slate-900' : 'font-medium text-slate-500',
       )}
     >
@@ -140,33 +140,41 @@ function ShareBar({
 type ChartRow = DiagnosticoV2CompetitorRow & { placeholder?: boolean };
 
 function buildTopSixRows(rows: DiagnosticoV2CompetitorRow[]): ChartRow[] {
-  const filled: ChartRow[] = rows.slice(0, 6).map((row) => ({ ...row, placeholder: false }));
-  while (filled.length < 6) {
-    filled.push({
-      rank: filled.length + 1,
-      name: '',
-      share: 0,
-      isBrand: false,
-      url: null,
-      placeholder: true,
-    });
-  }
-  return filled;
+  return Array.from({ length: 6 }, (_, index) => {
+    const rank = index + 1;
+    const row = rows[index];
+    if (!row) {
+      return {
+        rank,
+        name: '',
+        share: 0,
+        isBrand: false,
+        url: null,
+        placeholder: true,
+      };
+    }
+    return { ...row, rank, placeholder: false };
+  });
 }
 
 function PlaceholderRow({ rank }: { rank: number }) {
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 opacity-45 blur-[0.4px] sm:gap-x-10 lg:gap-x-14">
-      <div className="flex max-w-[min(100%,220px)] items-center gap-1.5 sm:max-w-[min(100%,260px)]">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-xs font-semibold tabular-nums text-slate-300">
+    <div
+      className="grid min-h-[2.125rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 sm:gap-x-10 lg:gap-x-14"
+      aria-hidden
+    >
+      <div className="flex max-w-[min(100%,240px)] items-center gap-1.5 sm:max-w-[min(100%,280px)]">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-sm font-semibold tabular-nums text-slate-300">
           {rank}
         </span>
+        <span className="h-6 w-6 shrink-0 rounded bg-slate-100/80" />
+        <span className="h-3 min-w-[7rem] flex-1 rounded bg-slate-100/70" />
       </div>
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 opacity-70">
         <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full w-[18%] rounded-full bg-slate-200" />
+          <div className="h-full w-[22%] rounded-full bg-slate-200" />
         </div>
-        {rank <= 4 ? <span className="w-9 shrink-0" aria-hidden /> : null}
+        <span className="w-9 shrink-0" />
       </div>
     </div>
   );
@@ -186,10 +194,10 @@ export function CompetitorShareChart({
 
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="mb-3 text-xs font-medium leading-snug text-slate-500">
+      <p className="mb-3 text-sm font-medium leading-snug text-slate-500">
         Participación en respuestas de ChatGPT en consultas relevantes (Top 6 marcas)
       </p>
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {topRows.map((row) => {
           if (row.placeholder) {
             return <PlaceholderRow key={`placeholder-${row.rank}`} rank={row.rank} />;
@@ -200,8 +208,8 @@ export function CompetitorShareChart({
             <div
               key={`${row.rank}-${row.name}`}
               className={cn(
-                'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 sm:gap-x-10 lg:gap-x-14',
-                !highlighted && 'opacity-55 blur-[0.25px]',
+                'grid min-h-[2.125rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 sm:gap-x-10 lg:gap-x-14',
+                !highlighted && 'opacity-60',
               )}
             >
               <div className="flex max-w-[min(100%,220px)] items-center gap-1.5 sm:max-w-[min(100%,260px)]">
@@ -237,17 +245,17 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative flex w-full max-w-[220px] flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:px-4 sm:py-4',
+        'relative flex w-full max-w-[175px] flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3 py-3 sm:px-3.5 sm:py-3.5',
         className,
       )}
     >
       <div
-        className="pointer-events-none absolute bottom-0 right-1 text-violet-500 opacity-[0.14]"
+        className="pointer-events-none absolute bottom-0 right-0.5 text-violet-500 opacity-[0.13]"
         aria-hidden
       >
-        <Trophy className="h-[4.5rem] w-[4.5rem]" strokeWidth={1.1} />
+        <Trophy className="h-[3.75rem] w-[3.75rem]" strokeWidth={1.1} />
       </div>
-      <div className="relative z-[1] pr-6">
+      <div className="relative z-[1] pr-5">
         <p className="text-sm font-bold leading-snug text-violet-900">Estás muy cerca del líder.</p>
         <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
           Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
