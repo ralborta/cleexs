@@ -40,7 +40,6 @@ import {
   FINDING_TONE_CARD_CLASS,
   FINDING_TONE_TITLE_CLASS,
   FINDING_TONE_WATERMARK_CLASS,
-  type CleexsStatusTone,
 } from '@/components/ui/cleexs-status-icon';
 import {
   getScoreTrafficColors,
@@ -61,6 +60,11 @@ function money(value: number) {
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function displayDomain(domain: string | null | undefined) {
+  if (!domain) return 'tu empresa';
+  return domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '');
 }
 
 function SectionBadge({ n, label }: { n: number; label: string }) {
@@ -163,12 +167,6 @@ function PlanNoteArrow({ className }: { className?: string }) {
   );
 }
 
-function VerdictIcon({ verdict }: { verdict: DiagnosticoV2ViewModel['verdict'] }) {
-  const tone: CleexsStatusTone =
-    verdict === 'yes' ? 'success' : verdict === 'partial' ? 'warning' : 'critical';
-  return <CleexsStatusIcon tone={tone} size="sm" />;
-}
-
 function EngineSidebar({
   score,
   engines,
@@ -181,13 +179,15 @@ function EngineSidebar({
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
   return (
-    <div>
-      <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
-        <p className="text-xs font-bold leading-tight text-[#1e2a5a]">Tu presencia en los motores</p>
-        <p className="mt-0.5 text-[10px] leading-snug text-slate-500">Mide tu visibilidad y recomendaciones.</p>
+    <div className="flex h-full flex-col justify-center py-1 lg:py-3">
+      <div className="border-b border-slate-100 px-4 pb-3.5 pt-4 lg:pt-5">
+        <p className="text-base font-bold leading-tight text-[#1e2a5a] sm:text-lg">Este es tu Cleexs Score</p>
+        <p className="mt-1.5 text-xs leading-snug text-slate-500 sm:text-sm">
+          Mide la presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
+        </p>
       </div>
 
-      <div className="divide-y divide-slate-100 px-3">
+      <div className="flex-1 divide-y divide-slate-100 px-4">
         {items.map((key) => {
           const meta = ENGINE_META[key];
           const locked = key !== 'chatgpt' && engines[key].status === 'locked';
@@ -201,33 +201,33 @@ function EngineSidebar({
               disabled={!locked}
               onClick={() => locked && onLockedClick(key)}
               className={cn(
-                'flex w-full items-center gap-2 py-1.5 text-left',
+                'flex w-full items-center gap-3 py-3 text-left',
                 locked && 'cursor-pointer transition hover:bg-slate-50/80',
               )}
             >
-              <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                <Image src={meta.logo} alt="" width={20} height={20} className="object-contain" />
+              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                <Image src={meta.logo} alt="" width={22} height={22} className="object-contain" />
               </span>
-              <span className="w-[62px] shrink-0 text-xs font-bold text-slate-900">{meta.label}</span>
+              <span className="w-[72px] shrink-0 text-sm font-bold text-slate-900">{meta.label}</span>
 
               {locked ? (
                 <>
                   <span className="min-w-0 flex-1" aria-hidden />
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
-                    <Lock className="h-3 w-3 text-slate-400" aria-hidden />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+                    <Lock className="h-3.5 w-3.5 text-slate-400" aria-hidden />
                   </span>
                 </>
               ) : (
                 <>
-                  <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className={cn('h-full rounded-full', traffic.barClass)}
-                      style={{ width: `${Math.max(pct, 6)}%` }}
+                      className={cn('h-full rounded-full shadow-sm', traffic.barClass)}
+                      style={{ width: `${Math.max(pct, 8)}%` }}
                     />
                   </div>
-                  <span className="shrink-0 text-right tabular-nums leading-none">
-                    <span className={cn('text-sm', SCORE_NUMBER_CLASS, traffic.textClass)}>{pct}</span>
-                    <span className="text-[10px] font-medium text-slate-400"> /100</span>
+                  <span className="w-[52px] shrink-0 text-right tabular-nums leading-none">
+                    <span className={cn('text-base font-black', SCORE_NUMBER_CLASS, traffic.textClass)}>{pct}</span>
+                    <span className="text-xs font-medium text-slate-400"> /100</span>
                   </span>
                 </>
               )}
@@ -236,7 +236,7 @@ function EngineSidebar({
         })}
       </div>
 
-      <p className="border-t border-slate-100 px-3 py-1.5 text-center text-[9px] leading-snug text-slate-400">
+      <p className="border-t border-slate-100 px-4 py-3 text-center text-xs leading-snug text-slate-400">
         Los otros motores se desbloquean en el Plan Conquistar.
       </p>
     </div>
@@ -249,107 +249,32 @@ function scoreToPct(score: number | null | undefined) {
 
 function HeroSummaryPanel({
   model,
-  summaryTab,
-  onSummaryTab,
   onScrollCompetitors,
 }: {
   model: DiagnosticoV2ViewModel;
-  summaryTab: 'score' | 'competidores';
-  onSummaryTab: (tab: 'score' | 'competidores') => void;
   onScrollCompetitors: () => void;
 }) {
-  const rankLabel = String(model.brandRank).padStart(2, '0');
   const competitorTotal = Math.max(model.competitorCount, 1);
 
   return (
-    <div className="min-w-0 flex-1 space-y-2">
-      <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-0.5 shadow-sm">
-        <button
-          type="button"
-          onClick={() => onSummaryTab('score')}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition',
-            summaryTab === 'score' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-500 hover:text-violet-700',
-          )}
-        >
-          <Sparkles className="h-3 w-3" aria-hidden />
-          Cleexs Score
-        </button>
-        <button
-          type="button"
-          onClick={() => onSummaryTab('competidores')}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition',
-            summaryTab === 'competidores'
-              ? 'bg-violet-600 text-white shadow-sm'
-              : 'text-slate-500 hover:text-violet-700',
-          )}
-        >
-          <Trophy className="h-3 w-3" aria-hidden />
-          Competidores
-        </button>
+    <div className="min-w-0 flex-1 space-y-4">
+      <div className="flex items-start gap-2">
+        <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" aria-hidden />
+        <p className="text-base font-bold leading-snug text-violet-800 sm:text-lg">{model.verdictLabel}</p>
       </div>
 
-      {summaryTab === 'score' ? (
-        <>
-          <div className="flex items-start gap-1.5">
-            <VerdictIcon verdict={model.verdict} />
-            <p className="text-xs font-bold leading-snug text-slate-800 sm:text-sm">{model.verdictLabel}</p>
-          </div>
-          <p className="text-[11px] leading-relaxed text-slate-600 sm:text-xs">{model.verdictDetail}</p>
-          <button
-            type="button"
-            onClick={onScrollCompetitors}
-            className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-800 ring-1 ring-violet-100 transition hover:bg-violet-100"
-          >
-            <Trophy className="h-3 w-3 shrink-0" />#{rankLabel} de {competitorTotal} competidores analizados
-          </button>
-        </>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-[11px] font-medium text-slate-500">
-            Orden por participación en Top 3 ({competitorTotal} competidores)
-          </p>
-          {model.competitors.length === 0 ? (
-            <p className="text-sm text-slate-500">Sin competidores cargados en este diagnóstico.</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {model.competitors.slice(0, 6).map((row) => (
-                <li
-                  key={row.name}
-                  className={cn(
-                    'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm',
-                    row.isBrand ? 'border-violet-200 bg-violet-50/80' : 'border-slate-200 bg-white',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums',
-                      row.rank === 1
-                        ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-200'
-                        : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
-                    )}
-                  >
-                    {row.rank}
-                  </span>
-                  {row.isBrand ? (
-                    <span className="min-w-0 flex-1 truncate font-semibold text-violet-800">{row.name} (vos)</span>
-                  ) : (
-                    <CompetitorNameLink
-                      name={row.name}
-                      url={row.url}
-                      className="min-w-0 flex-1 truncate font-medium text-slate-700"
-                    />
-                  )}
-                  <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-500">
-                    {row.share.toFixed(1)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {model.verdictDetail ? (
+        <p className="text-sm leading-relaxed text-slate-600 sm:text-base">{model.verdictDetail}</p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onScrollCompetitors}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-50 px-4 py-3 text-sm font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:w-auto sm:text-base"
+      >
+        <Trophy className="h-4 w-4 shrink-0 text-violet-700" aria-hidden />
+        #{model.brandRank} de {competitorTotal} competidores analizados
+      </button>
     </div>
   );
 }
@@ -450,10 +375,8 @@ export function DiagnosticoGratuitoV2({
   sharePath: string;
 }) {
   const [paywallEngine, setPaywallEngine] = useState<EngineCardKey | null>(null);
-  const [summaryTab, setSummaryTab] = useState<'score' | 'competidores'>('score');
 
   const scrollToCompetitors = () => {
-    setSummaryTab('competidores');
     document.getElementById('seccion-competidores')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -471,41 +394,22 @@ export function DiagnosticoGratuitoV2({
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {/* HERO */}
         <section className="mb-6">
-          <div className="mb-2">
-            <p className="text-sm font-bold text-[#1e2a5a] sm:text-base">{model.brandName}</p>
-            {model.domain ? (
-              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-                {model.domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '')}
-              </p>
-            ) : null}
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Diagnóstico gratuito</p>
+          <span className="inline-flex rounded-full bg-violet-100 px-3.5 py-1.5 text-sm font-semibold text-violet-700">
+            Diagnóstico gratuito de {displayDomain(model.domain)} completado
+          </span>
+          <h1 className="mt-4 max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.75rem]">
+            ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
+          </h1>
 
-          <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start lg:gap-5">
-            <div className="min-w-0 space-y-5">
-              <div>
-                <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.65rem]">
-                  ¿Hoy ChatGPT recomienda tu empresa?
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-                  Medimos tu presencia y visibilidad en las respuestas de ChatGPT, Gemini, Claude y Perplexity.
-                </p>
+          <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,340px)] lg:items-stretch lg:gap-5">
+            <ReportBlock className="flex h-full flex-col">
+              <div className="flex flex-1 flex-col gap-5 p-5 sm:flex-row sm:items-center">
+                <CleexsScoreRing score={model.score} size="heroLg" className="mx-auto shrink-0 sm:mx-0" />
+                <HeroSummaryPanel model={model} onScrollCompetitors={scrollToCompetitors} />
               </div>
+            </ReportBlock>
 
-              <ReportBlock>
-                <div className="flex gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
-                  <CleexsScoreRing score={model.score} size="hero" className="sm:mx-0" />
-                  <HeroSummaryPanel
-                    model={model}
-                    summaryTab={summaryTab}
-                    onSummaryTab={setSummaryTab}
-                    onScrollCompetitors={scrollToCompetitors}
-                  />
-                </div>
-              </ReportBlock>
-            </div>
-
-            <ReportBlock className="overflow-hidden lg:self-start">
+            <ReportBlock className="flex h-full flex-col overflow-hidden">
               <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
             </ReportBlock>
           </div>
@@ -514,7 +418,7 @@ export function DiagnosticoGratuitoV2({
         <div className="space-y-6">
         {/* 1 — Hallazgos */}
         <section>
-          <SectionBadge n={1} label="Esto explica tu resultado" />
+          <SectionBadge n={1} label="Lo más importante que encontramos" />
           <ReportBlock className="p-4 sm:p-5">
             <div className="grid gap-3 md:grid-cols-3">
             {model.findings.map((f) => (
