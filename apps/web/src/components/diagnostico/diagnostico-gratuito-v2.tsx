@@ -121,26 +121,58 @@ function splitPrimaryActionTitle(title: string) {
   return { prefix: match[1], highlight: `"${match[2]}"` };
 }
 
-function BenefitLeadIcon({ icon, imageSrc }: { icon?: ReactNode; imageSrc?: string }) {
-  if (imageSrc) {
-    return (
-      <Image
-        src={imageSrc}
-        alt=""
-        width={32}
-        height={32}
-        className="h-8 w-8 shrink-0 object-contain"
-        aria-hidden
-      />
-    );
-  }
-
+function WhatIfBenefitCard({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof TrendingUp;
+  title: string;
+  body: string;
+}) {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-      {icon}
+    <div className="flex gap-3.5 rounded-xl border border-slate-200/80 bg-white p-4 sm:gap-4 sm:p-5">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:h-12 sm:w-12">
+        <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.1} aria-hidden />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-bold leading-snug text-[#1e2a5a] sm:text-base">{title}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:text-sm">{body}</p>
+      </div>
     </div>
   );
 }
+
+function WhatIfOutcomeCard() {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+      <div className="space-y-1 text-sm font-bold leading-snug text-emerald-700 sm:space-y-1.5 sm:text-base">
+        <p>Más visibilidad = más confianza</p>
+        <p>Más confianza = más leads</p>
+        <p>Más leads = más clientes</p>
+      </div>
+      <BarChart3 className="h-10 w-10 shrink-0 text-emerald-500/85 sm:h-11 sm:w-11" strokeWidth={1.8} aria-hidden />
+    </div>
+  );
+}
+
+const WHAT_IF_BENEFITS = [
+  {
+    icon: TrendingUp,
+    title: 'Más chances de aparecer',
+    body: 'En consultas de comparación y decisión donde hoy casi no estás presente.',
+  },
+  {
+    icon: Users,
+    title: 'Hoy tus competidores ganan',
+    body: 'estas consultas. Vos podés quedarte con ellas.',
+  },
+  {
+    icon: Target,
+    title: 'Mayor probabilidad de ser la primera recomendación',
+    body: "Cuando el usuario pregunta '¿A quién recomendás?'",
+  },
+] as const;
 
 function RoadmapCueArrow({ className }: { className?: string }) {
   return (
@@ -552,36 +584,12 @@ export function DiagnosticoGratuitoV2({
         {/* 5 — Qué pasa si lo hacés */}
         <section>
           <SectionBadge n={5} label="¿Qué pasaría si lo hacés?" />
-          <ReportBlock className="p-4 sm:p-5">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
-              {[
-                {
-                  icon: <TrendingUp className="h-4 w-4" aria-hidden />,
-                  text: 'Más chances de aparecer en consultas de comparación y decisión donde hoy casi no estás presente.',
-                },
-                {
-                  icon: <Users className="h-4 w-4" aria-hidden />,
-                  text: 'Hoy tus competidores ganan estas consultas. Vos podés quedarte con ellas.',
-                },
-                {
-                  imageSrc: '/diagnostico/mission-target.png',
-                  text: 'Mayor probabilidad de ser la primera recomendación de ChatGPT.',
-                },
-              ].map((item) => (
-                <div key={item.text} className="flex items-start gap-2.5">
-                  <BenefitLeadIcon icon={item.icon} imageSrc={item.imageSrc} />
-                  <p className="text-[11px] font-medium leading-snug text-slate-700 sm:text-xs">{item.text}</p>
-                </div>
+          <ReportBlock className="p-4 sm:p-6">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+              {WHAT_IF_BENEFITS.map((item) => (
+                <WhatIfBenefitCard key={item.title} icon={item.icon} title={item.title} body={item.body} />
               ))}
-
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:col-span-2 lg:col-span-1">
-                <div className="space-y-0.5 text-[11px] font-semibold leading-snug text-emerald-700 sm:text-xs">
-                  <p>Más visibilidad = más confianza</p>
-                  <p>Más confianza = más leads</p>
-                  <p>Más leads = más clientes</p>
-                </div>
-                <BarChart3 className="h-9 w-9 shrink-0 text-emerald-500/80" strokeWidth={1.6} aria-hidden />
-              </div>
+              <WhatIfOutcomeCard />
             </div>
           </ReportBlock>
         </section>
