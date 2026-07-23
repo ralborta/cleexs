@@ -33,19 +33,6 @@ const FUNNEL_TONE_STYLES = {
 
 type FunnelTone = keyof typeof FUNNEL_TONE_STYLES;
 
-function buildDonutGradient(columns: { tone: FunnelTone }[]) {
-  if (columns.length === 0) return 'conic-gradient(#e2e8f0 0% 100%)';
-
-  const segment = 100 / columns.length;
-  const stops = columns.map((column, index) => {
-    const start = index * segment;
-    const end = (index + 1) * segment;
-    return `${FUNNEL_TONE_STYLES[column.tone].ring} ${start}% ${end}%`;
-  });
-
-  return `conic-gradient(${stops.join(', ')})`;
-}
-
 function QueryDonut({
   total,
   columns,
@@ -53,12 +40,45 @@ function QueryDonut({
   total: number;
   columns: { tone: FunnelTone }[];
 }) {
-  const gradient = total === 0 ? 'conic-gradient(#e2e8f0 0% 100%)' : buildDonutGradient(columns);
+  const stroke = 6;
+  const r = 48;
+  const pad = stroke / 2 + 2;
+  const dim = (r + pad) * 2;
+  const center = dim / 2;
+  const circumference = 2 * Math.PI * r;
+  const gapPx = 3;
+  const segmentCount = Math.max(columns.length, 1);
+  const segment = (circumference - gapPx * segmentCount) / segmentCount;
 
   return (
     <div className="relative mx-auto h-[7.5rem] w-[7.5rem] shrink-0 sm:h-32 sm:w-32">
-      <div className="h-full w-full rounded-full" style={{ background: gradient }} aria-hidden />
-      <div className="absolute inset-[36%] flex flex-col items-center justify-center rounded-full bg-white text-center">
+      <svg className="h-full w-full -rotate-90" viewBox={`0 0 ${dim} ${dim}`} aria-hidden>
+        {total === 0 ? (
+          <circle
+            cx={center}
+            cy={center}
+            r={r}
+            fill="none"
+            stroke="#e2e8f0"
+            strokeWidth={stroke}
+          />
+        ) : (
+          columns.map((column, index) => (
+            <circle
+              key={`${column.tone}-${index}`}
+              cx={center}
+              cy={center}
+              r={r}
+              fill="none"
+              stroke={FUNNEL_TONE_STYLES[column.tone].ring}
+              strokeWidth={stroke}
+              strokeDasharray={`${segment} ${circumference - segment}`}
+              strokeDashoffset={-(index * (segment + gapPx))}
+            />
+          ))
+        )}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className="text-2xl font-black tabular-nums leading-none text-[#1e2a5a] sm:text-[34px]">
           {total}
         </span>
