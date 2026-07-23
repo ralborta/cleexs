@@ -4,15 +4,32 @@ import { Check, Info, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DiagnosticoV2QueryDiscovery } from '@/lib/diagnostico-v2-data';
 
-function QueryDonut({ total }: { total: number }) {
+function QueryDonut({
+  total,
+  leadCount,
+  competeCount,
+  loseCount,
+}: {
+  total: number;
+  leadCount: number;
+  competeCount: number;
+  loseCount: number;
+}) {
+  const safeTotal = Math.max(total, 1);
+  const leadPct = (leadCount / safeTotal) * 100;
+  const competePct = (competeCount / safeTotal) * 100;
+  const leadEnd = leadPct;
+  const competeEnd = leadEnd + competePct;
+
+  const gradient =
+    total === 0
+      ? 'conic-gradient(#e2e8f0 0% 100%)'
+      : `conic-gradient(#059669 0% ${leadEnd}%, #d97706 ${leadEnd}% ${competeEnd}%, #dc2626 ${competeEnd}% 100%)`;
+
   return (
     <div className="relative mx-auto h-[7.5rem] w-[7.5rem] shrink-0 sm:h-32 sm:w-32">
-      <div
-        className="h-full w-full rounded-full"
-        style={{ background: 'conic-gradient(#059669 0% 100%)' }}
-        aria-hidden
-      />
-      <div className="absolute inset-[17%] flex flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
+      <div className="h-full w-full rounded-full" style={{ background: gradient }} aria-hidden />
+      <div className="absolute inset-[24%] flex flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
         <span className="text-2xl font-black tabular-nums leading-none text-[#1e2a5a] sm:text-[34px]">
           {total}
         </span>
@@ -141,11 +158,11 @@ function QueryDiscoveryInsight({
       <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600">
         <Search className="h-4 w-4" strokeWidth={2.2} aria-hidden />
       </div>
-      <p className="text-xs leading-snug text-slate-700 sm:text-[13px]">
+      <p className="text-[11px] leading-snug text-slate-700 sm:text-xs">
         {discovery.insightBody}{' '}
         <span className="font-bold text-violet-900">{discovery.insightHighlight}.</span>
       </p>
-      <p className="mt-3 text-[10px] leading-snug text-slate-600 sm:text-xs">
+      <p className="mt-3 text-[9px] leading-snug text-slate-600 sm:text-[10px]">
         Ahí es donde hoy gana{' '}
         <span className="font-bold text-violet-800">{discovery.leaderName}</span>.
       </p>
@@ -174,7 +191,12 @@ export function QueryDiscoveryPanel({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
         <div className="min-w-0">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-4 lg:gap-5">
-            <QueryDonut total={discovery.totalQueries} />
+            <QueryDonut
+              total={discovery.totalQueries}
+              leadCount={discovery.leadPromptCount}
+              competeCount={discovery.competePromptCount}
+              loseCount={discovery.losePromptCount}
+            />
             <div className="grid min-w-0 flex-1 gap-4 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
               {funnelColumns.map((column) => (
                 <FunnelPointColumn
