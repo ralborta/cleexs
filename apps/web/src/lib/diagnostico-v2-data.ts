@@ -3,6 +3,7 @@ import { buildPlanConquistarTeaserData } from '@/lib/plan-conquistar-preview';
 import type { PlanConquistarTeaserData as TeaserShape } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import type { EngineCardKey, EngineCardState } from '@/components/diagnostico/cleexs-engine-scores-panel';
 import { buildEngineScoresFromDiagnostic } from '@/components/diagnostico/cleexs-engine-scores-panel';
+import { computeWaRunMetrics } from '@/lib/wa-run-metrics';
 
 export type DiagnosticoV2Verdict = 'yes' | 'partial' | 'no';
 
@@ -24,15 +25,26 @@ export type DiagnosticoV2QueryBucket = 'lead' | 'compete' | 'lose';
 
 export type DiagnosticoV2QueryDiscovery = {
   totalQueries: number;
-  leadCount: number;
-  competeCount: number;
-  loseCount: number;
+  queryTypeCount: number;
+  leadPromptCount: number;
+  competePromptCount: number;
+  losePromptCount: number;
   lead: string[];
   compete: string[];
   lose: string[];
+  funnel: {
+    mentionCount: number;
+    mentionRate: number;
+    top3Count: number;
+    top3Rate: number;
+    top1Count: number;
+    top1Rate: number;
+    convMentionToTop3: number;
+    convTop3ToFirst: number;
+  };
   insightBody: string;
   insightHighlight: string;
-  leaderLine: string;
+  leaderName: string;
 };
 
 export type DiagnosticoV2ViewModel = {
@@ -191,17 +203,44 @@ function queryBucketForScore(score: number): DiagnosticoV2QueryBucket {
   return 'lose';
 }
 
-function promptQueryLabel(prompt: PublicDiagnosticPromptResult): string {
-  const category = `${prompt.category || ''}`.trim();
-  if (category && !/^general$/i.test(category)) {
-    return category.charAt(0).toUpperCase() + category.slice(1);
-  }
+function normalizeIntentionKey(value: string) {
+  const n = normalizeName(value);
+  if (n.includes('urgencia')) return 'urgencia';
+  if (n.includes('consideracion')) return 'consideracion';
+  if (n.includes('calidad')) return 'calidad';
+  if (n.includes('precio')) return 'precio';
+  return null;
+}
 
-  const text = `${prompt.promptText || ''}`.trim();
-  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
-  const scenario = lines[1] || lines[0] || '';
-  if (scenario.length <= 56) return scenario || 'Consulta relevante';
-  return `${scenario.slice(0, 53)}…`;
+function extractIntentionFromPrompt(promptText?: string | null) {
+  const match = (promptText || '').match(/Intención:\s*([^\(\n]+)\s*\((\d+)%\)/i);
+  if (!match) return null;
+  return { name: match[1].trim(), weight: Number(match[2]) };
+}
+
+function interpretQueryArchetype(prompt: PublicDiagnosticPromptResult): string {
+  const lines = (prompt.promptText || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const scenario = (lines[1] || lines[0] || '').toLowerCase();
+  const blob = `${prompt.promptText || ''}\n${prompt.category || ''}`.toLowerCase();
+  const haystack = `${scenario} ${blob}`;
+
+  if (/compar|proveedor|alternativ|mejores?\s+empres|versus|\bvs\b/.test(haystack)) {
+    return 'Comparación de proveedores';
+  }
+  if (/precio|presupuesto|costo|barato/.test(haystack)) return 'Precio y presupuesto';
+  if (/marca|reputaci|confianza/.test(haystack)) return 'Consultas de marca';
+  if (/calidad|confiable|mejor calidad/.test(haystack)) return 'Consultas de calidad';
+  if (/servicio|soluci|implement/.test(haystack)) return 'Consultas de servicio';
+  if (/informaci|qué es|caracter|especific/.test(haystack)) return 'Consultas específicas';
+
+  const intention = extractIntentionFromPrompt(prompt.promptText);
+  const key = intention ? normalizeIntentionKey(intention.name) : null;
+  if (key === 'consideracion') return 'Consultas de comparación';
+  if (key === 'calidad') return 'Consultas de calidad';
+  if (key === 'precio') return 'Consultas de precio';
+  if (key === 'urgencia') return 'Consultas urgentes';
+
+  return 'Consultas informativas';
 }
 
 function buildQueryDiscovery(
@@ -209,41 +248,73 @@ function buildQueryDiscovery(
   leaderName: string,
 ): DiagnosticoV2QueryDiscovery {
   const prompts = runResult.promptResults || [];
-  const buckets: Record<DiagnosticoV2QueryBucket, string[]> = {
-    lead: [],
-    compete: [],
-    lose: [],
+  const metrics = computeWaRunMetrics(runResult);
+
+  const promptBuckets: Record<DiagnosticoV2QueryBucket, number> = {
+    lead: 0,
+    compete: 0,
+    lose: 0,
+  };
+  const archetypeBuckets: Record<DiagnosticoV2QueryBucket, Map<string, number[]>> = {
+    lead: new Map(),
+    compete: new Map(),
+    lose: new Map(),
   };
 
   for (const prompt of prompts) {
     const bucket = queryBucketForScore(prompt.score);
-    buckets[bucket].push(promptQueryLabel(prompt));
+    promptBuckets[bucket] += 1;
+
+    const label = interpretQueryArchetype(prompt);
+    const scores = archetypeBuckets[bucket].get(label) ?? [];
+    scores.push(scoreToPct(prompt.score));
+    archetypeBuckets[bucket].set(label, scores);
   }
 
-  const leadCount = buckets.lead.length;
-  const competeCount = buckets.compete.length;
-  const loseCount = buckets.lose.length;
-  const totalQueries = prompts.length;
+  const toSortedLabels = (bucket: DiagnosticoV2QueryBucket) =>
+    Array.from(archetypeBuckets[bucket].entries())
+      .sort((a, b) => {
+        const avgA = a[1].reduce((sum, value) => sum + value, 0) / a[1].length;
+        const avgB = b[1].reduce((sum, value) => sum + value, 0) / b[1].length;
+        return avgB - avgA;
+      })
+      .map(([label]) => label);
 
-  const comparisonLose = buckets.lose.find((label) =>
-    /compar|proveedor|alternativ|mejor|precio|presupuesto/i.test(label),
-  );
-  const insightHighlight = comparisonLose ? 'comparando proveedores' : 'decidiendo entre opciones';
+  const lead = toSortedLabels('lead');
+  const compete = toSortedLabels('compete');
+  const lose = toSortedLabels('lose');
+  const queryTypeCount = new Set(
+    prompts.map((prompt) => interpretQueryArchetype(prompt)),
+  ).size;
+
+  const losingHasComparison = lose.some((label) => /compar|proveedor|precio/i.test(label));
+  const insightHighlight = losingHasComparison ? 'comparando proveedores' : 'decidiendo entre opciones';
 
   return {
-    totalQueries,
-    leadCount,
-    competeCount,
-    loseCount,
-    lead: buckets.lead,
-    compete: buckets.compete,
-    lose: buckets.lose,
+    totalQueries: metrics.totalPrompts,
+    queryTypeCount,
+    leadPromptCount: promptBuckets.lead,
+    competePromptCount: promptBuckets.compete,
+    losePromptCount: promptBuckets.lose,
+    lead,
+    compete,
+    lose,
+    funnel: {
+      mentionCount: metrics.mentionCount,
+      mentionRate: metrics.mentionRate,
+      top3Count: metrics.top3Count,
+      top3Rate: metrics.top3Rate,
+      top1Count: metrics.top1Count,
+      top1Rate: metrics.top1Rate,
+      convMentionToTop3: metrics.convMentionToTop3,
+      convTop3ToFirst: metrics.convTop3ToFirst,
+    },
     insightBody:
-      loseCount >= leadCount && loseCount >= competeCount
+      promptBuckets.lose >= promptBuckets.lead && promptBuckets.lose >= promptBuckets.compete
         ? 'La mayoría de las oportunidades que encontramos están en consultas donde el usuario todavía está'
-        : 'Encontramos oportunidades concretas en consultas clave de tu industria donde todavía podés',
+        : 'Todavía hay oportunidades concretas en consultas clave de tu industria mientras el usuario está',
     insightHighlight,
-    leaderLine: `Ahí es donde hoy gana ${leaderName}.`,
+    leaderName,
   };
 }
 
