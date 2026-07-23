@@ -2,6 +2,7 @@ import { UserRole, type PrismaClient } from '@prisma/client';
 import { ensurePremiumPlan, PREMIUM_PLAN_ID } from './billing';
 import { getPublicAppUrl } from './mercadopago';
 import { provisionAccount, randomPortalPassword } from './provision-account-core';
+import { sendPortalMagicLinkForUser } from './portal-magic-link';
 import { sendPlanConquistarPremiumWelcomeEmail } from './plan-conquistar-premium-email';
 import { prisma } from './prisma';
 
@@ -204,20 +205,33 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
   const owner = await prisma.user.findFirst({
     where: { tenantId: input.tenantId, role: UserRole.owner },
     orderBy: { createdAt: 'asc' },
-    select: { email: true, passwordHash: true },
+    select: { id: true, email: true, passwordHash: true },
   });
 
   const loginEmail = (input.payerEmail || owner?.email || payment?.payerEmail || '').trim().toLowerCase();
   let emailSent = false;
   let emailSkipReason: string | undefined;
+  let magicLinkUrl: string | null = null;
 
-  if (loginEmail) {
+  if (loginEmail && owner?.id) {
+    const magic = await sendPortalMagicLinkForUser({
+      userId: owner.id,
+      createdBy: 'subscription-premium',
+      portalTarget: 'premium',
+      subject: 'Plan Conquistar activo · Acceso directo al portal Premium',
+      intro:
+        'Tu pago fue confirmado. Entrá con un click a tu portal Premium: no necesitás recordar contraseña en este primer acceso.',
+    });
+    emailSent = magic.sent;
+    emailSkipReason = magic.reason;
+    magicLinkUrl = magic.magicLinkUrl ?? null;
+  } else if (loginEmail) {
     const mail = await sendPlanConquistarPremiumWelcomeEmail({
       to: loginEmail,
       loginEmail,
       portalUrl: `${getPublicAppUrl()}/portal-crecimiento`,
       premiumUntil: endsAt,
-      temporaryPassword: generatedPassword || (!owner?.passwordHash ? undefined : undefined),
+      temporaryPassword: generatedPassword,
     });
     emailSent = mail.sent;
     emailSkipReason = mail.reason;
@@ -229,5 +243,6 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
     emailSent,
     emailSkipReason,
     loginEmail: loginEmail || null,
+    magicLinkUrl,
   };
 }

@@ -93,6 +93,11 @@ export default function AdminCuentasPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [uBusy, setUBusy] = useState(false);
 
+  const [magicEmail, setMagicEmail] = useState('');
+  const [magicTarget, setMagicTarget] = useState<'auto' | 'free' | 'premium'>('auto');
+  const [magicBusy, setMagicBusy] = useState(false);
+  const [magicSelectedLabel, setMagicSelectedLabel] = useState<string | null>(null);
+
   const [oTenantId, setOTenantId] = useState('');
   const [oUserId, setOUserId] = useState('');
   const [oGrant, setOGrant] = useState('crecimiento');
@@ -189,6 +194,52 @@ export default function AdminCuentasPage() {
     } finally {
       setUBusy(false);
     }
+  }
+
+  async function sendMagicLink(input?: { userId?: string; email?: string; label?: string }) {
+    const email = (input?.email || magicEmail).trim().toLowerCase();
+    if (!input?.userId && !email.includes('@')) {
+      setError('Indicá un email válido o elegí un usuario desde la búsqueda.');
+      return;
+    }
+
+    setMagicBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await adminUiFetch('/api/admin-ui/portal-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: input?.userId,
+          email: input?.userId ? undefined : email,
+          portalTarget: magicTarget,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error || 'No se pudo enviar el acceso');
+
+      const target = (data as { email?: string }).email || email;
+      setMessage(
+        `Acceso enviado a ${target}.\n` +
+          (input?.label ? `Cliente: ${input.label}\n` : '') +
+          `Portal: ${magicTarget === 'free' ? 'cliente Free' : magicTarget === 'premium' ? 'Premium' : 'automático según plan'}`,
+      );
+      if (!input?.userId) setMagicEmail('');
+      setMagicSelectedLabel(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al enviar acceso');
+    } finally {
+      setMagicBusy(false);
+    }
+  }
+
+  function fillMagicFromSearch(u: UserRow) {
+    setMagicEmail(u.email);
+    setMagicTarget('free');
+    setMagicSelectedLabel(`${u.email} · ${u.tenantCode}`);
+    setMessage(null);
+    setError(null);
   }
 
   async function runOverride(e: React.FormEvent) {
@@ -529,6 +580,56 @@ export default function AdminCuentasPage() {
         </AdminPanelSection>
 
         <AdminPanelSection
+          icon={Mail}
+          accent="indigo"
+          title="Acceso directo al portal"
+          description="Envía un correo con link mágico de un solo uso. Ideal para cuentas Free: el cliente entra sin recordar contraseña."
+        >
+          {magicSelectedLabel ? (
+            <p className="mb-4 rounded-xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-sky-950">
+              <span className="font-semibold">Cliente elegido:</span> {magicSelectedLabel}
+            </p>
+          ) : null}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className={labelCls}>Email del cliente</span>
+              <input
+                type="email"
+                value={magicEmail}
+                onChange={(ev) => {
+                  setMagicEmail(ev.target.value);
+                  setMagicSelectedLabel(null);
+                }}
+                placeholder="ej. cliente@empresa.com"
+                className={field}
+              />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className={labelCls}>Destino del acceso</span>
+              <select
+                value={magicTarget}
+                onChange={(ev) => setMagicTarget(ev.target.value as 'auto' | 'free' | 'premium')}
+                className={field}
+              >
+                <option value="auto">Automático según plan</option>
+                <option value="free">Portal cliente Free</option>
+                <option value="premium">Portal Premium</option>
+              </select>
+            </label>
+          </div>
+          <div className="mt-5">
+            <button
+              type="button"
+              disabled={magicBusy || magicEmail.trim().length < 5}
+              onClick={() => void sendMagicLink()}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-600/20 transition hover:bg-sky-500 disabled:opacity-50"
+            >
+              {magicBusy ? 'Enviando…' : 'Enviar acceso por email'}
+            </button>
+          </div>
+        </AdminPanelSection>
+
+        <AdminPanelSection
           icon={Search}
           accent="slate"
           title="Buscar usuarios"
@@ -563,6 +664,22 @@ export default function AdminCuentasPage() {
                   </p>
                   <p className="mt-2 text-xs text-slate-500">Portal: {u.hasPortalPassword ? 'tiene clave' : 'sin clave'}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void sendMagicLink({ userId: u.id, email: u.email, label: `${u.email} · ${u.tenantCode}` })}
+                      disabled={magicBusy}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
+                    >
+                      <Mail className="h-3.5 w-3.5" aria-hidden />
+                      Enviar acceso al portal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillMagicFromSearch(u)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-800 shadow-sm transition hover:bg-sky-50"
+                    >
+                      Usar en formulario de acceso
+                    </button>
                     <button
                       type="button"
                       onClick={() => fillCourtesyFromSearch(u)}
