@@ -105,7 +105,7 @@ function StarRow({
       {Array.from({ length: max }).map((_, i) => (
         <span
           key={i}
-          className={cn('text-lg', i < count ? (tone === 'violet' ? 'text-violet-500' : 'text-amber-400') : 'text-slate-200')}
+          className={cn('text-xl sm:text-2xl', i < count ? (tone === 'violet' ? 'text-violet-500' : 'text-amber-400') : 'text-slate-200')}
         >
           ★
         </span>
@@ -474,56 +474,64 @@ export function DiagnosticoGratuitoV2({
         {/* 3 — Una acción */}
         <section>
           <SectionBadge n={3} label="Si solo pudieras hacer UNA cosa" />
-          <p className="mb-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
+          <p className="mb-3 text-sm leading-relaxed text-slate-600 sm:text-base">
             La oportunidad con mayor impacto para ganar visibilidad en decisiones de compra.
           </p>
-          <ReportBlock>
-            <div className="grid gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(108px,0.55fr)_minmax(108px,0.55fr)] lg:items-stretch">
-              <div className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 sm:col-span-2 sm:gap-4 lg:col-span-1">
+          <ReportBlock className="overflow-hidden">
+            <div className="bg-slate-50/70 p-4 sm:p-5">
+              <div className="flex gap-4 sm:gap-5">
                 <Image
                   src="/diagnostico/mission-target.png"
                   alt=""
-                  width={44}
-                  height={44}
-                  className="h-11 w-11 shrink-0 object-contain"
+                  width={64}
+                  height={64}
+                  className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16"
                   aria-hidden
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   {(() => {
                     const { prefix, highlight } = splitPrimaryActionTitle(model.primaryAction.title);
                     return (
-                      <h3 className="text-sm font-bold leading-snug text-[#1e2a5a] sm:text-base">
-                        {prefix}{' '}
-                        {highlight ? <span className="text-violet-700">{highlight}</span> : null}
-                      </h3>
+                      <>
+                        <h3 className="text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg">
+                          {prefix}
+                        </h3>
+                        {highlight ? (
+                          <p className="mt-1.5 text-lg font-bold leading-snug text-violet-700 sm:text-xl">
+                            {highlight}
+                          </p>
+                        ) : null}
+                      </>
                     );
                   })()}
-                  <p className="mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
                     {model.primaryAction.subtitle}
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-4 text-center">
-                <p className="text-[10px] font-semibold text-slate-500">Impacto esperado</p>
-                <div className="my-2">
-                  <StarRow count={model.primaryAction.impactStars} tone="violet" />
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-white px-4 py-4 text-center sm:py-5">
+                  <p className="text-xs font-semibold text-slate-500 sm:text-sm">Impacto esperado</p>
+                  <div className="my-2.5">
+                    <StarRow count={model.primaryAction.impactStars} tone="violet" />
+                  </div>
+                  <p className="text-sm font-bold text-[#1e2a5a] sm:text-base">{model.primaryAction.impactLabel}</p>
                 </div>
-                <p className="text-xs font-bold text-[#1e2a5a] sm:text-sm">{model.primaryAction.impactLabel}</p>
-              </div>
 
-              <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-4 text-center">
-                <p className="text-[10px] font-semibold text-slate-500">Esfuerzo estimado</p>
-                <div className="my-2">
-                  <StarRow count={model.primaryAction.effortStars} tone="violet" />
+                <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-white px-4 py-4 text-center sm:py-5">
+                  <p className="text-xs font-semibold text-slate-500 sm:text-sm">Esfuerzo estimado</p>
+                  <div className="my-2.5">
+                    <StarRow count={model.primaryAction.effortStars} tone="violet" />
+                  </div>
+                  <p className="text-sm font-bold text-[#1e2a5a] sm:text-base">{model.primaryAction.effortLabel}</p>
                 </div>
-                <p className="text-xs font-bold text-[#1e2a5a] sm:text-sm">{model.primaryAction.effortLabel}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 border-t border-violet-100 bg-violet-50/80 px-4 py-3 sm:items-center sm:px-5">
-              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 sm:mt-0" aria-hidden />
-              <p className="text-[11px] leading-relaxed text-slate-600 sm:text-xs">
+            <div className="flex items-start gap-2 border-t border-violet-100 bg-violet-50/80 px-4 py-3.5 sm:items-center sm:px-5 sm:py-4">
+              <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-violet-600 sm:mt-0" aria-hidden />
+              <p className="text-sm leading-relaxed text-slate-600 sm:text-[15px]">
                 Esta acción podría cerrar el{' '}
                 <span className="font-bold text-[#1e2a5a]">{model.gapClosePct}%</span> de la brecha que hay hoy
                 frente al líder.
