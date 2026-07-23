@@ -4,32 +4,61 @@ import { Check, Info, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DiagnosticoV2QueryDiscovery } from '@/lib/diagnostico-v2-data';
 
+const FUNNEL_TONE_STYLES = {
+  success: {
+    count: 'text-emerald-600',
+    check: 'bg-emerald-500 text-white',
+    title: 'text-emerald-700',
+    ring: '#059669',
+  },
+  warning: {
+    count: 'text-amber-600',
+    check: 'bg-amber-500 text-white',
+    title: 'text-amber-700',
+    ring: '#d97706',
+  },
+  critical: {
+    count: 'text-red-600',
+    check: 'bg-red-500 text-white',
+    title: 'text-red-700',
+    ring: '#dc2626',
+  },
+  neutral: {
+    count: 'text-slate-700',
+    check: 'bg-slate-500 text-white',
+    title: 'text-slate-800',
+    ring: '#64748b',
+  },
+} as const;
+
+type FunnelTone = keyof typeof FUNNEL_TONE_STYLES;
+
+function buildDonutGradient(columns: { tone: FunnelTone }[]) {
+  if (columns.length === 0) return 'conic-gradient(#e2e8f0 0% 100%)';
+
+  const segment = 100 / columns.length;
+  const stops = columns.map((column, index) => {
+    const start = index * segment;
+    const end = (index + 1) * segment;
+    return `${FUNNEL_TONE_STYLES[column.tone].ring} ${start}% ${end}%`;
+  });
+
+  return `conic-gradient(${stops.join(', ')})`;
+}
+
 function QueryDonut({
   total,
-  leadCount,
-  competeCount,
-  loseCount,
+  columns,
 }: {
   total: number;
-  leadCount: number;
-  competeCount: number;
-  loseCount: number;
+  columns: { tone: FunnelTone }[];
 }) {
-  const safeTotal = Math.max(total, 1);
-  const leadPct = (leadCount / safeTotal) * 100;
-  const competePct = (competeCount / safeTotal) * 100;
-  const leadEnd = leadPct;
-  const competeEnd = leadEnd + competePct;
-
-  const gradient =
-    total === 0
-      ? 'conic-gradient(#e2e8f0 0% 100%)'
-      : `conic-gradient(#059669 0% ${leadEnd}%, #d97706 ${leadEnd}% ${competeEnd}%, #dc2626 ${competeEnd}% 100%)`;
+  const gradient = total === 0 ? 'conic-gradient(#e2e8f0 0% 100%)' : buildDonutGradient(columns);
 
   return (
     <div className="relative mx-auto h-[7.5rem] w-[7.5rem] shrink-0 sm:h-32 sm:w-32">
       <div className="h-full w-full rounded-full" style={{ background: gradient }} aria-hidden />
-      <div className="absolute inset-[24%] flex flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
+      <div className="absolute inset-[36%] flex flex-col items-center justify-center rounded-full bg-white text-center">
         <span className="text-2xl font-black tabular-nums leading-none text-[#1e2a5a] sm:text-[34px]">
           {total}
         </span>
@@ -49,33 +78,12 @@ function FunnelPointColumn({
   title,
   items,
 }: {
-  tone: 'success' | 'warning' | 'critical' | 'neutral';
+  tone: FunnelTone;
   count: number;
   title: string;
   items: string[];
 }) {
-  const toneStyles = {
-    success: {
-      count: 'text-emerald-600',
-      check: 'bg-emerald-500 text-white',
-      title: 'text-emerald-700',
-    },
-    warning: {
-      count: 'text-amber-600',
-      check: 'bg-amber-500 text-white',
-      title: 'text-amber-700',
-    },
-    critical: {
-      count: 'text-red-600',
-      check: 'bg-red-500 text-white',
-      title: 'text-red-700',
-    },
-    neutral: {
-      count: 'text-slate-700',
-      check: 'bg-slate-500 text-white',
-      title: 'text-slate-800',
-    },
-  }[tone];
+  const toneStyles = FUNNEL_TONE_STYLES[tone];
 
   return (
     <div className="min-w-0">
@@ -104,7 +112,7 @@ function FunnelPointColumn({
   );
 }
 
-function toneForRate(rate: number): 'success' | 'warning' | 'critical' | 'neutral' {
+function toneForRate(rate: number): FunnelTone {
   if (rate >= 80) return 'success';
   if (rate >= 40) return 'warning';
   return 'critical';
@@ -191,12 +199,7 @@ export function QueryDiscoveryPanel({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
         <div className="min-w-0">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-4 lg:gap-5">
-            <QueryDonut
-              total={discovery.totalQueries}
-              leadCount={discovery.leadPromptCount}
-              competeCount={discovery.competePromptCount}
-              loseCount={discovery.losePromptCount}
-            />
+            <QueryDonut total={discovery.totalQueries} columns={funnelColumns} />
             <div className="grid min-w-0 flex-1 gap-4 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
               {funnelColumns.map((column) => (
                 <FunnelPointColumn
