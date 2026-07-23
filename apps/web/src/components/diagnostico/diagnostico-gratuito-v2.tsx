@@ -719,12 +719,12 @@ export function DiagnosticoGratuitoV2({
         </section>
 
         {/* CTA principal — Plan Conquistar */}
-        <section className="mt-2">
+        <section className="mt-10 sm:mt-12">
           <div className="overflow-hidden rounded-2xl bg-violet-600 px-4 py-8 shadow-lg shadow-violet-600/20 sm:px-6 sm:py-9">
             <PlanConquistarCheckoutButton
               className="mx-auto w-full max-w-xl rounded-2xl py-4 text-base shadow-md"
               variant="sidebar"
-              label="Quiero mi plan de acción →"
+              label={`Quiero ver mi plan de acción (${model.brandName}) →`}
               sourceChannel="ver_resultado_v2"
               diagnosticId={diagnostic.id}
               customerEmail={diagnostic.email}
@@ -734,9 +734,11 @@ export function DiagnosticoGratuitoV2({
         </section>
 
         {/* Share — debajo del CTA principal */}
-        <footer className="grid gap-4 sm:grid-cols-[minmax(0,1.75fr)_minmax(220px,1fr)]">
+        <footer className="mt-8 grid gap-4 sm:mt-10 sm:grid-cols-[minmax(0,1.75fr)_minmax(220px,1fr)]">
           <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5">
-            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Compartir resultado</p>
+            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">
+              Compartir resultado de {model.brandName}
+            </p>
             <ShareScoreButtons
               path={sharePath}
               brandName={model.brandName}
@@ -747,7 +749,9 @@ export function DiagnosticoGratuitoV2({
             />
           </div>
           <div className="rounded-xl border border-sky-200/90 bg-sky-50/40 p-4 sm:p-5">
-            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">Invitar a tu equipo</p>
+            <p className="mb-3 text-sm font-bold text-[#1e2a5a]">
+              Invitar al equipo de {model.brandName}
+            </p>
             <ShareScoreButtons
               path={sharePath}
               brandName={model.brandName}
