@@ -176,27 +176,53 @@ const WHAT_IF_BENEFITS = [
 
 function RoadmapCueArrow({ className }: { className?: string }) {
   return (
-    <Image
-      src="/diagnostico/roadmap-cue-arrow.png"
-      alt=""
-      width={112}
-      height={80}
-      className={cn('object-contain', className)}
+    <svg
+      viewBox="0 0 112 80"
+      fill="none"
+      className={cn('text-violet-500', className)}
       aria-hidden
-    />
+    >
+      <path
+        d="M28 6v46c0 12.5 10.5 18.5 24.5 18.5H88"
+        stroke="currentColor"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M84 71h16M96 71l-7-7M96 71l-7 7"
+        stroke="currentColor"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
 function PlanNoteArrow({ className }: { className?: string }) {
   return (
-    <Image
-      src="/diagnostico/plan-note-arrow.png"
-      alt=""
-      width={72}
-      height={56}
-      className={cn('object-contain', className)}
+    <svg
+      viewBox="0 0 80 72"
+      fill="none"
+      className={cn('text-violet-500', className)}
       aria-hidden
-    />
+    >
+      <path
+        d="M68 8C68 8 48 8 36 24C24 40 18 56 14 64"
+        stroke="currentColor"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 64H2M2 64l7-7M2 64l7 7"
+        stroke="currentColor"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
