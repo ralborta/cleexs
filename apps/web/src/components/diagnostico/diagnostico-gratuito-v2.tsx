@@ -34,6 +34,7 @@ import {
   CompetitorLeaderInsight,
   CompetitorShareChart,
 } from '@/components/diagnostico/competitor-share-chart';
+import { QueryDiscoveryPanel } from '@/components/diagnostico/query-discovery-panel';
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
 import {
   CleexsStatusIcon,
@@ -471,9 +472,17 @@ export function DiagnosticoGratuitoV2({
           </ReportBlock>
         </section>
 
-        {/* 3 — Una acción */}
+        {/* 3 — Descubrimiento de consultas */}
         <section>
-          <SectionBadge n={3} label="Si solo pudieras hacer UNA cosa" />
+          <SectionBadge n={3} label="Lo que descubrimos sobre tu empresa" />
+          <ReportBlock className="p-4 sm:p-5">
+            <QueryDiscoveryPanel discovery={model.queryDiscovery} />
+          </ReportBlock>
+        </section>
+
+        {/* 4 — Una acción */}
+        <section>
+          <SectionBadge n={4} label="Si solo pudieras hacer UNA cosa" />
           <p className="mb-3 text-sm leading-relaxed text-slate-600 sm:text-base">
             La oportunidad con mayor impacto para ganar visibilidad en decisiones de compra.
           </p>
@@ -540,9 +549,9 @@ export function DiagnosticoGratuitoV2({
           </ReportBlock>
         </section>
 
-        {/* 4 — Qué pasa si lo hacés */}
+        {/* 5 — Qué pasa si lo hacés */}
         <section>
-          <SectionBadge n={4} label="¿Qué pasaría si lo hacés?" />
+          <SectionBadge n={5} label="¿Qué pasaría si lo hacés?" />
           <ReportBlock className="p-4 sm:p-5">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
               {[

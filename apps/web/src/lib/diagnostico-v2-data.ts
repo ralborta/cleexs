@@ -1,4 +1,4 @@
-import type { PublicDiagnostic, PublicDiagnosticRunResult } from '@/lib/api';
+import type { PublicDiagnostic, PublicDiagnosticRunResult, PublicDiagnosticPromptResult } from '@/lib/api';
 import { buildPlanConquistarTeaserData } from '@/lib/plan-conquistar-preview';
 import type { PlanConquistarTeaserData as TeaserShape } from '@/components/diagnostico/plan-conquistar-upsell-teaser';
 import type { EngineCardKey, EngineCardState } from '@/components/diagnostico/cleexs-engine-scores-panel';
@@ -20,6 +20,21 @@ export type DiagnosticoV2CompetitorRow = {
   url?: string | null;
 };
 
+export type DiagnosticoV2QueryBucket = 'lead' | 'compete' | 'lose';
+
+export type DiagnosticoV2QueryDiscovery = {
+  totalQueries: number;
+  leadCount: number;
+  competeCount: number;
+  loseCount: number;
+  lead: string[];
+  compete: string[];
+  lose: string[];
+  insightBody: string;
+  insightHighlight: string;
+  leaderLine: string;
+};
+
 export type DiagnosticoV2ViewModel = {
   brandName: string;
   domain: string;
@@ -36,6 +51,7 @@ export type DiagnosticoV2ViewModel = {
   engines: Record<EngineCardKey, EngineCardState>;
   findings: DiagnosticoV2Finding[];
   competitors: DiagnosticoV2CompetitorRow[];
+  queryDiscovery: DiagnosticoV2QueryDiscovery;
   primaryAction: {
     title: string;
     subtitle: string;
@@ -168,6 +184,69 @@ function humanPrimaryAction(primary: TeaserShape['opportunities'][0] | undefined
   };
 }
 
+function queryBucketForScore(score: number): DiagnosticoV2QueryBucket {
+  const pct = scoreToPct(score);
+  if (pct >= 65) return 'lead';
+  if (pct >= 35) return 'compete';
+  return 'lose';
+}
+
+function promptQueryLabel(prompt: PublicDiagnosticPromptResult): string {
+  const category = `${prompt.category || ''}`.trim();
+  if (category && !/^general$/i.test(category)) {
+    return category.charAt(0).toUpperCase() + category.slice(1);
+  }
+
+  const text = `${prompt.promptText || ''}`.trim();
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+  const scenario = lines[1] || lines[0] || '';
+  if (scenario.length <= 56) return scenario || 'Consulta relevante';
+  return `${scenario.slice(0, 53)}…`;
+}
+
+function buildQueryDiscovery(
+  runResult: PublicDiagnosticRunResult,
+  leaderName: string,
+): DiagnosticoV2QueryDiscovery {
+  const prompts = runResult.promptResults || [];
+  const buckets: Record<DiagnosticoV2QueryBucket, string[]> = {
+    lead: [],
+    compete: [],
+    lose: [],
+  };
+
+  for (const prompt of prompts) {
+    const bucket = queryBucketForScore(prompt.score);
+    buckets[bucket].push(promptQueryLabel(prompt));
+  }
+
+  const leadCount = buckets.lead.length;
+  const competeCount = buckets.compete.length;
+  const loseCount = buckets.lose.length;
+  const totalQueries = prompts.length;
+
+  const comparisonLose = buckets.lose.find((label) =>
+    /compar|proveedor|alternativ|mejor|precio|presupuesto/i.test(label),
+  );
+  const insightHighlight = comparisonLose ? 'comparando proveedores' : 'decidiendo entre opciones';
+
+  return {
+    totalQueries,
+    leadCount,
+    competeCount,
+    loseCount,
+    lead: buckets.lead,
+    compete: buckets.compete,
+    lose: buckets.lose,
+    insightBody:
+      loseCount >= leadCount && loseCount >= competeCount
+        ? 'La mayoría de las oportunidades que encontramos están en consultas donde el usuario todavía está'
+        : 'Encontramos oportunidades concretas en consultas clave de tu industria donde todavía podés',
+    insightHighlight,
+    leaderLine: `Ahí es donde hoy gana ${leaderName}.`,
+  };
+}
+
 function buildFindings(score: number, brandShare: number): DiagnosticoV2Finding[] {
   const appears = brandShare > 0 || score >= 40;
   return [
@@ -270,6 +349,7 @@ export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): Diagn
     engines,
     findings: buildFindings(score, brandShare),
     competitors: competitors.slice(0, 8),
+    queryDiscovery: buildQueryDiscovery(runResult, leader?.name || 'Competidor líder'),
     primaryAction: {
       ...primaryActionRaw,
       impactStars: impactStars(primary?.impact ?? 'Alto'),
