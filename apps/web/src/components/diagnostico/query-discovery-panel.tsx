@@ -13,10 +13,10 @@ function QueryDonut({ total }: { total: number }) {
         aria-hidden
       />
       <div className="absolute inset-[17%] flex flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
-        <span className="text-3xl font-black tabular-nums leading-none text-[#1e2a5a] sm:text-4xl">
+        <span className="text-2xl font-black tabular-nums leading-none text-[#1e2a5a] sm:text-[34px]">
           {total}
         </span>
-        <span className="mt-1 px-1 text-[10px] font-medium leading-tight text-slate-500 sm:text-[11px]">
+        <span className="mt-1 px-1 text-[8px] font-medium leading-tight text-slate-500 sm:text-[9px]">
           consultas
           <br />
           analizadas
@@ -63,10 +63,10 @@ function FunnelPointColumn({
   return (
     <div className="min-w-0">
       <div className="mb-2 flex items-baseline gap-1.5">
-        <span className={cn('text-2xl font-black tabular-nums leading-none sm:text-3xl', toneStyles.count)}>
+        <span className={cn('text-xl font-black tabular-nums leading-none sm:text-2xl', toneStyles.count)}>
           {count}
         </span>
-        <span className={cn('text-sm font-bold sm:text-base', toneStyles.title)}>{title}</span>
+        <span className={cn('text-xs font-bold sm:text-sm', toneStyles.title)}>{title}</span>
       </div>
       <ul className="space-y-1.5">
         {items.map((item) => (
@@ -79,7 +79,7 @@ function FunnelPointColumn({
             >
               <Check className="h-2 w-2" strokeWidth={3} aria-hidden />
             </span>
-            <span className="min-w-0 text-xs leading-snug text-slate-700 sm:text-sm">{item}</span>
+            <span className="min-w-0 text-[10px] leading-snug text-slate-700 sm:text-xs">{item}</span>
           </li>
         ))}
       </ul>
@@ -141,11 +141,11 @@ function QueryDiscoveryInsight({
       <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600">
         <Search className="h-4 w-4" strokeWidth={2.2} aria-hidden />
       </div>
-      <p className="text-sm leading-snug text-slate-700 sm:text-[15px]">
+      <p className="text-xs leading-snug text-slate-700 sm:text-[13px]">
         {discovery.insightBody}{' '}
         <span className="font-bold text-violet-900">{discovery.insightHighlight}.</span>
       </p>
-      <p className="mt-3 text-xs leading-snug text-slate-600 sm:text-sm">
+      <p className="mt-3 text-[10px] leading-snug text-slate-600 sm:text-xs">
         Ahí es donde hoy gana{' '}
         <span className="font-bold text-violet-800">{discovery.leaderName}</span>.
       </p>
@@ -164,7 +164,7 @@ export function QueryDiscoveryPanel({
 
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="mb-4 flex items-start gap-1.5 text-sm text-slate-500 sm:text-base">
+      <p className="mb-4 flex items-start gap-1.5 text-xs text-slate-500 sm:text-sm">
         <span>
           De {discovery.totalQueries} prompts hasta la recomendación #1
         </span>
