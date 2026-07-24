@@ -349,7 +349,10 @@ function competitorUrlMap(runResult: PublicDiagnosticRunResult) {
   );
 }
 
-export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): DiagnosticoV2ViewModel | null {
+export function buildDiagnosticoV2ViewModel(
+  diagnostic: PublicDiagnostic,
+  options?: { unlockEngines?: boolean },
+): DiagnosticoV2ViewModel | null {
   const runResult = diagnostic.runResult;
   if (!runResult) return null;
 
@@ -358,7 +361,10 @@ export function buildDiagnosticoV2ViewModel(diagnostic: PublicDiagnostic): Diagn
     runResultGemini: diagnostic.runResultGemini,
     runResultPerplexity: diagnostic.runResultPerplexity,
     runResultClaude: diagnostic.runResultClaude,
-    lockUnavailableEngines: true,
+    runGeminiId: diagnostic.runGeminiId,
+    runPerplexityId: diagnostic.runPerplexityId,
+    runClaudeId: diagnostic.runClaudeId,
+    lockUnavailableEngines: !options?.unlockEngines,
   });
 
   const teaser = buildPlanConquistarTeaserData(

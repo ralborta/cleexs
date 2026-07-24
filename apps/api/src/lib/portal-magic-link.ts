@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'crypto';
 import type { PrismaClient } from '@prisma/client';
 import { RunStatus } from '@prisma/client';
 import { resolvePlanKey } from './entitlements';
-import { getPublicAppUrl } from './mercadopago';
+import { getAppBaseUrlForPublicLinks } from './app-public-url';
 import { prisma } from './prisma';
 import { signPortalToken } from './portal-jwt';
 import { sendPortalMagicLinkEmail } from './portal-magic-link-email';
@@ -22,7 +22,7 @@ function addHours(date: Date, hours: number): Date {
 }
 
 export function buildPortalMagicLinkUrl(rawToken: string): string {
-  const base = getPublicAppUrl().replace(/\/$/, '');
+  const base = getAppBaseUrlForPublicLinks();
   return `${base}/portal/acceso?token=${encodeURIComponent(rawToken)}`;
 }
 
@@ -31,6 +31,7 @@ export async function resolvePortalMagicLinkRedirect(
   userId: string,
   tenantId: string,
   target: PortalMagicLinkTarget = 'auto',
+  runId?: string | null,
 ): Promise<string> {
   const planKey =
     target === 'free'
@@ -40,6 +41,19 @@ export async function resolvePortalMagicLinkRedirect(
         : await resolvePlanKey(client, { tenantId, userId });
 
   const isPremium = planKey === 'crecimiento' || planKey === 'enterprise';
+
+  if (runId) {
+    const run = await client.run.findFirst({
+      where: { id: runId, tenantId, status: RunStatus.completed },
+      select: { id: true },
+    });
+    if (run?.id) {
+      return isPremium
+        ? `/portal-crecimiento/reporte/${run.id}/premium`
+        : `/portal-cliente/reporte/${run.id}`;
+    }
+  }
+
   const latestRun = await client.run.findFirst({
     where: { tenantId, status: RunStatus.completed },
     orderBy: { createdAt: 'desc' },
@@ -59,6 +73,7 @@ export async function createPortalMagicLink(input: {
   userId: string;
   createdBy: string;
   ttlHours?: number;
+  redirectPath?: string | null;
 }): Promise<{ rawToken: string; url: string; expiresAt: Date }> {
   const rawToken = randomBytes(32).toString('base64url');
   const expiresAt = addHours(new Date(), input.ttlHours ?? DEFAULT_TTL_HOURS);
@@ -69,6 +84,7 @@ export async function createPortalMagicLink(input: {
       tokenHash: hashToken(rawToken),
       expiresAt,
       createdBy: input.createdBy,
+      redirectPath: input.redirectPath?.trim() || null,
     },
   });
 
@@ -101,12 +117,9 @@ export async function consumePortalMagicLink(rawToken: string) {
     data: { usedAt: now },
   });
 
-  const redirectUrl = await resolvePortalMagicLinkRedirect(
-    prisma,
-    row.user.id,
-    row.user.tenantId,
-    'auto',
-  );
+  const redirectUrl =
+    row.redirectPath?.trim() ||
+    (await resolvePortalMagicLinkRedirect(prisma, row.user.id, row.user.tenantId, 'auto'));
 
   return {
     ok: true as const,
@@ -126,10 +139,11 @@ export async function sendPortalMagicLinkForUser(input: {
   email?: string;
   createdBy: string;
   portalTarget?: PortalMagicLinkTarget;
+  runId?: string;
   ttlHours?: number;
   subject?: string;
   intro?: string;
-}): Promise<{ sent: boolean; reason?: string; email?: string; magicLinkUrl?: string }> {
+}): Promise<{ sent: boolean; reason?: string; email?: string; magicLinkUrl?: string; redirectPath?: string }> {
   const email = input.email?.trim().toLowerCase();
   const user = input.userId
     ? await prisma.user.findUnique({
@@ -145,14 +159,21 @@ export async function sendPortalMagicLinkForUser(input: {
 
   if (!user) return { sent: false, reason: 'user_not_found' };
 
+  const target = input.portalTarget ?? 'auto';
+  const redirectPath = await resolvePortalMagicLinkRedirect(
+    prisma,
+    user.id,
+    user.tenantId,
+    target,
+    input.runId,
+  );
+
   const { url, expiresAt } = await createPortalMagicLink({
     userId: user.id,
     createdBy: input.createdBy,
     ttlHours: input.ttlHours,
+    redirectPath,
   });
-
-  const target = input.portalTarget ?? 'auto';
-  const redirectPath = await resolvePortalMagicLinkRedirect(prisma, user.id, user.tenantId, target);
 
   const mail = await sendPortalMagicLinkEmail({
     to: user.email,
@@ -172,5 +193,6 @@ export async function sendPortalMagicLinkForUser(input: {
     reason: mail.reason,
     email: user.email,
     magicLinkUrl: url,
+    redirectPath,
   };
 }

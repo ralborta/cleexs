@@ -204,10 +204,12 @@ function EngineSidebar({
   score,
   engines,
   onLockedClick,
+  unlockAll = false,
 }: {
   score: number;
   engines: DiagnosticoV2ViewModel['engines'];
   onLockedClick: (key: EngineCardKey) => void;
+  unlockAll?: boolean;
 }) {
   const items: EngineCardKey[] = ['chatgpt', 'gemini', 'claude', 'perplexity'];
 
@@ -223,7 +225,7 @@ function EngineSidebar({
       <div className="flex-1 divide-y divide-slate-100 px-4">
         {items.map((key) => {
           const meta = ENGINE_META[key];
-          const locked = key !== 'chatgpt' && engines[key].status === 'locked';
+          const locked = !unlockAll && key !== 'chatgpt' && engines[key].status === 'locked';
           const pct = key === 'chatgpt' ? score : scoreToPct(engines[key].score);
           const traffic = getScoreTrafficColors(pct);
 
@@ -403,11 +405,16 @@ export function DiagnosticoGratuitoV2({
   diagnostic,
   model,
   sharePath,
+  variant = 'free',
+  premiumAppend,
 }: {
   diagnostic: PublicDiagnostic;
   model: DiagnosticoV2ViewModel;
   sharePath: string;
+  variant?: 'free' | 'premium';
+  premiumAppend?: ReactNode;
 }) {
+  const isPremium = variant === 'premium';
   const [paywallEngine, setPaywallEngine] = useState<EngineCardKey | null>(null);
 
   const scrollToCompetitors = () => {
@@ -428,8 +435,15 @@ export function DiagnosticoGratuitoV2({
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {/* HERO */}
         <section className="mb-6">
-          <span className="inline-flex rounded-full bg-violet-100 px-3.5 py-1.5 text-sm font-semibold text-violet-700">
-            Diagnóstico gratuito de {displayDomain(model.domain)} completado
+          <span
+            className={cn(
+              'inline-flex rounded-full px-3.5 py-1.5 text-sm font-semibold',
+              isPremium ? 'bg-emerald-100 text-emerald-800' : 'bg-violet-100 text-violet-700',
+            )}
+          >
+            {isPremium
+              ? `Plan Cleexs Crecimiento · ${displayDomain(model.domain)}`
+              : `Diagnóstico gratuito de ${displayDomain(model.domain)} completado`}
           </span>
 
           <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5">
@@ -442,7 +456,12 @@ export function DiagnosticoGratuitoV2({
             </div>
 
             <ReportBlock className="overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
-              <EngineSidebar score={model.score} engines={model.engines} onLockedClick={setPaywallEngine} />
+              <EngineSidebar
+                score={model.score}
+                engines={model.engines}
+                onLockedClick={setPaywallEngine}
+                unlockAll={isPremium}
+              />
             </ReportBlock>
           </div>
         </section>
@@ -594,6 +613,10 @@ export function DiagnosticoGratuitoV2({
           </ReportBlock>
         </section>
 
+        {premiumAppend}
+
+        {!isPremium ? (
+          <>
         {/* Calculadora — fin del diagnóstico free */}
         <section>
           <ReportBlock>
@@ -732,9 +755,11 @@ export function DiagnosticoGratuitoV2({
             />
           </div>
         </section>
+          </>
+        ) : null}
 
-        {/* Share — debajo del CTA principal */}
-        <footer className="mt-8 grid gap-4 sm:mt-10 sm:grid-cols-[minmax(0,1.75fr)_minmax(220px,1fr)]">
+        {/* Share */}
+        <footer className={cn('grid gap-4 sm:grid-cols-[minmax(0,1.75fr)_minmax(220px,1fr)]', isPremium ? 'mt-6' : 'mt-8 sm:mt-10')}>
           <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5">
             <p className="mb-3 text-sm font-bold text-[#1e2a5a]">
               Compartir resultado de {model.brandName}
@@ -765,26 +790,32 @@ export function DiagnosticoGratuitoV2({
         </div>
 
         <p className="mt-6 text-center text-[11px] text-slate-400">
-          Vista de prueba ·{' '}
+          {isPremium ? 'Vista premium de prueba · ' : 'Vista de prueba · '}
           <Link href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
             Ver informe actual en producción
+          </Link>
+          {' · '}
+          <Link href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
+            Ver free v2
           </Link>
         </p>
       </main>
 
-      <EnginePaywallModal
-        open={paywallEngine != null}
-        engineName={
-          paywallEngine === 'gemini'
-            ? 'Gemini'
-            : paywallEngine === 'claude'
-              ? 'Claude'
-              : paywallEngine === 'perplexity'
-                ? 'Perplexity'
-                : null
-        }
-        onClose={() => setPaywallEngine(null)}
-      />
+      {!isPremium ? (
+        <EnginePaywallModal
+          open={paywallEngine != null}
+          engineName={
+            paywallEngine === 'gemini'
+              ? 'Gemini'
+              : paywallEngine === 'claude'
+                ? 'Claude'
+                : paywallEngine === 'perplexity'
+                  ? 'Perplexity'
+                  : null
+          }
+          onClose={() => setPaywallEngine(null)}
+        />
+      ) : null}
     </div>
   );
 }

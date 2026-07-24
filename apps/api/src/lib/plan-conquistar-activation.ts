@@ -1,6 +1,6 @@
 import { UserRole, type PrismaClient } from '@prisma/client';
 import { ensurePremiumPlan, PREMIUM_PLAN_ID } from './billing';
-import { getPublicAppUrl } from './mercadopago';
+import { getAppBaseUrlForPublicLinks } from './app-public-url';
 import { provisionAccount, randomPortalPassword } from './provision-account-core';
 import { sendPortalMagicLinkForUser } from './portal-magic-link';
 import { sendPlanConquistarPremiumWelcomeEmail } from './plan-conquistar-premium-email';
@@ -229,7 +229,7 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
     const mail = await sendPlanConquistarPremiumWelcomeEmail({
       to: loginEmail,
       loginEmail,
-      portalUrl: `${getPublicAppUrl()}/portal-crecimiento`,
+      portalUrl: `${getAppBaseUrlForPublicLinks()}/portal-crecimiento`,
       premiumUntil: endsAt,
       temporaryPassword: generatedPassword,
     });
