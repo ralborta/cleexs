@@ -28,6 +28,15 @@ function CroPreviewBannerB({ diagnosticId }: { diagnosticId: string }) {
           ·
         </span>
         <Link
+          href={`/ver-resultado/v2/cro-preview-c?diagnosticId=${encodeURIComponent(diagnosticId)}`}
+          className="text-violet-700 underline-offset-2 hover:underline"
+        >
+          Ver Fase C (conversión)
+        </Link>
+        <span className="text-indigo-400" aria-hidden>
+          ·
+        </span>
+        <Link
           href={prodHref}
           className="inline-flex items-center gap-1 text-violet-700 underline-offset-2 hover:underline"
         >
