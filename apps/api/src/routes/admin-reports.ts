@@ -6,7 +6,7 @@ import { executeRunGemini, executeRunPerplexity, executeRunClaude } from '../lib
 import { isOpenRouterConfigured } from '../lib/openrouter-runner';
 import type { SatelliteModuleResult } from '../lib/satellite-client';
 import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
-import { resolveConversionRange } from '@cleexs/shared';
+import { resolveConversionRange, isPlanConquistarUnlockKey, PLAN_CONQUISTAR_UNLOCK_LINKS, planConquistarUnlockLabel } from '@cleexs/shared';
 import {
   aggregateDiagnosticsByRefCode,
   normalizeReferralRefCode,
@@ -2064,7 +2064,9 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         .sort((a, b) => b.count - a.count);
       const purchasedTotal = purchases.length;
 
-      const unlockClickTotal = unlockClickGroups.reduce((acc, g) => acc + g._count._all, 0);
+      const unlockClickTotal = unlockClickGroups
+        .filter((g) => isPlanConquistarUnlockKey(g.unlockKey))
+        .reduce((acc, g) => acc + g._count._all, 0);
 
       const emailsByReferrer = emailAggRows
         .filter((row) => row.unique_emails > 0)
@@ -2149,48 +2151,176 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
-  // Detalle de clics en "Desbloquear" (upsell Plan Conquistar).
+  // Detalle Plan Conquistar: clics por CTA, únicos y dominios interesados.
   fastify.get<{ Querystring: { from?: string; to?: string } }>(
     '/internal/conversion-metrics/unlock-clicks',
     async (request) => {
       const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
 
-      const where = { createdAt: { gte: from, lte: to } };
-
-      const grouped = await prisma.unlockClickEvent.groupBy({
-        by: ['unlockKey'],
-        where,
-        _count: { _all: true },
+      const rows = await prisma.unlockClickEvent.findMany({
+        where: { createdAt: { gte: from, lte: to } },
+        select: {
+          unlockKey: true,
+          label: true,
+          visitorId: true,
+          diagnosticId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
       });
 
-      const labelRows =
-        grouped.length > 0
-          ? await prisma.unlockClickEvent.findMany({
-              where: { unlockKey: { in: grouped.map((g) => g.unlockKey) } },
-              distinct: ['unlockKey'],
-              select: { unlockKey: true, label: true },
+      const planRows = rows.filter((r) => {
+        if (!isPlanConquistarUnlockKey(r.unlockKey)) return false;
+        const did = (r.diagnosticId || '').trim();
+        if (did.startsWith('probe-')) return false;
+        return true;
+      });
+
+      const countByKey = new Map<string, number>();
+      for (const row of planRows) {
+        countByKey.set(row.unlockKey, (countByKey.get(row.unlockKey) || 0) + 1);
+      }
+
+      const labelByKey = new Map<string, string>();
+      for (const row of planRows) {
+        if (!labelByKey.has(row.unlockKey)) {
+          labelByKey.set(row.unlockKey, planConquistarUnlockLabel(row.unlockKey, row.label));
+        }
+      }
+
+      const primaryLinks = PLAN_CONQUISTAR_UNLOCK_LINKS.map((link) => ({
+        unlockKey: link.key,
+        label: link.label,
+        count: countByKey.get(link.key) || 0,
+        order: link.order,
+      }));
+
+      const extraLinks = Array.from(countByKey.entries())
+        .filter(([key]) => !PLAN_CONQUISTAR_UNLOCK_LINKS.some((l) => l.key === key))
+        .map(([unlockKey, count]) => ({
+          unlockKey,
+          label: labelByKey.get(unlockKey) || unlockKey,
+          count,
+          order: 99,
+        }))
+        .sort((a, b) => b.count - a.count || a.unlockKey.localeCompare(b.unlockKey));
+
+      const links = [...primaryLinks, ...extraLinks];
+
+      const diagnosticIds = new Set<string>();
+      for (const row of planRows) {
+        const did = (row.diagnosticId || '').trim();
+        if (did) diagnosticIds.add(did);
+      }
+
+      const diagnosticMeta =
+        diagnosticIds.size > 0
+          ? await prisma.publicDiagnostic.findMany({
+              where: { id: { in: Array.from(diagnosticIds) } },
+              select: { id: true, domain: true, brandName: true, email: true },
             })
           : [];
-      const labelByKey = new Map(labelRows.map((r) => [r.unlockKey, r.label]));
+      const diagnosticById = new Map(diagnosticMeta.map((d) => [d.id, d]));
 
-      const items = grouped
-        .map((g) => ({
-          unlockKey: g.unlockKey,
-          label: labelByKey.get(g.unlockKey) || g.unlockKey,
-          count: g._count._all,
-        }))
-        .sort((a, b) => {
-          if (b.count !== a.count) return b.count - a.count;
-          return a.unlockKey.localeCompare(b.unlockKey);
-        });
+      // Personas únicas = clientes distintos (diagnóstico), no un browser por cada clic.
+      const uniqueClientKeys = new Set<string>();
+      for (const row of planRows) {
+        const did = (row.diagnosticId || '').trim();
+        if (did) {
+          uniqueClientKeys.add(`diag:${did}`);
+          continue;
+        }
+        const vid = (row.visitorId || '').trim();
+        if (vid) uniqueClientKeys.add(`vid:${vid}`);
+      }
+      const uniqueVisitors = uniqueClientKeys.size;
 
-      const total = items.reduce((acc, r) => acc + r.count, 0);
+      const clientClicks = planRows.map((row) => {
+        const did = (row.diagnosticId || '').trim();
+        const diag = did ? diagnosticById.get(did) : undefined;
+        return {
+          diagnosticId: did || null,
+          brandName: diag?.brandName?.trim() || null,
+          domain: diag?.domain?.trim().toLowerCase() || null,
+          email: diag?.email?.trim() || null,
+          unlockKey: row.unlockKey,
+          ctaLabel: planConquistarUnlockLabel(row.unlockKey, row.label),
+          clickedAt: row.createdAt.toISOString(),
+        };
+      });
+
+      type DomainAgg = {
+        domain: string;
+        brandName: string | null;
+        clicks: number;
+        lastClickAt: string;
+      };
+      const domainAgg = new Map<string, DomainAgg>();
+
+      const siteKeys = new Set<string>();
+
+      for (const row of planRows) {
+        const did = (row.diagnosticId || '').trim();
+        if (!did) continue;
+        const diag = diagnosticById.get(did);
+        const domain = (diag?.domain || '').trim().toLowerCase();
+        const brandName = diag?.brandName?.trim() || null;
+        if (domain) {
+          siteKeys.add(domain);
+          const prev = domainAgg.get(domain);
+          const at = row.createdAt.toISOString();
+          if (!prev) {
+            domainAgg.set(domain, {
+              domain,
+              brandName,
+              clicks: 1,
+              lastClickAt: at,
+            });
+          } else {
+            prev.clicks += 1;
+            if (at > prev.lastClickAt) prev.lastClickAt = at;
+            if (!prev.brandName && brandName) prev.brandName = brandName;
+          }
+        } else if (brandName) {
+          const brandKey = `__brand__:${brandName.toLowerCase()}`;
+          siteKeys.add(brandKey);
+          const prev = domainAgg.get(brandKey);
+          const at = row.createdAt.toISOString();
+          if (!prev) {
+            domainAgg.set(brandKey, {
+              domain: brandName,
+              brandName,
+              clicks: 1,
+              lastClickAt: at,
+            });
+          } else {
+            prev.clicks += 1;
+            if (at > prev.lastClickAt) prev.lastClickAt = at;
+          }
+        } else {
+          siteKeys.add(`diag:${did}`);
+        }
+      }
+
+      const domains = Array.from(domainAgg.values()).sort((a, b) => {
+        if (b.clicks !== a.clicks) return b.clicks - a.clicks;
+        return a.domain.localeCompare(b.domain);
+      });
+
+      const totalClicks = planRows.length;
 
       return {
         ok: true,
         range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
-        total,
-        items,
+        total: totalClicks,
+        totalClicks,
+        uniqueVisitors,
+        uniqueDomains: siteKeys.size,
+        links,
+        domains,
+        clientClicks,
+        // Compat modal viejo
+        items: links.map(({ unlockKey, label, count }) => ({ unlockKey, label, count })),
       };
     }
   );

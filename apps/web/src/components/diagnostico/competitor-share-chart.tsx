@@ -4,6 +4,7 @@ import { Sparkles, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CompetitorNameLink } from '@/components/report/competitor-name-link';
 import type { DiagnosticoV2CompetitorRow } from '@/lib/diagnostico-v2-data';
+import { buildCompetitorLeaderInsightCopy } from '@/lib/diagnostico-v2-data';
 
 function displayDomain(url: string | null | undefined, fallback?: string | null): string | null {
   const raw = `${url || fallback || ''}`.trim();
@@ -236,12 +237,26 @@ export function CompetitorShareChart({
 export function CompetitorLeaderInsight({
   leaderName,
   leaderShare,
+  brandName,
+  brandShare,
+  brandRank,
   className,
 }: {
   leaderName: string;
   leaderShare: number;
+  brandName: string;
+  brandShare: number;
+  brandRank: number;
   className?: string;
 }) {
+  const copy = buildCompetitorLeaderInsightCopy({
+    brandName,
+    brandShare,
+    brandRank,
+    leaderName,
+    leaderShare,
+  });
+
   return (
     <div
       className={cn(
@@ -256,13 +271,9 @@ export function CompetitorLeaderInsight({
         <Trophy className="h-[3.75rem] w-[3.75rem]" strokeWidth={1.1} />
       </div>
       <div className="relative z-[1] pr-5">
-        <p className="text-sm font-bold leading-snug text-violet-900">Estás muy cerca del líder.</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-          Con las acciones correctas, podrás quedarte con ese lugar y ser la primera recomendación.
-        </p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-          {leaderName} lidera hoy con {leaderShare.toFixed(1)}%.
-        </p>
+        <p className="text-sm font-bold leading-snug text-violet-900">{copy.title}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{copy.body}</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{copy.footer}</p>
       </div>
     </div>
   );

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
+import { trackUnlockClick } from '@/lib/track';
 import { cn } from '@/lib/utils';
 import { Loader2, Sparkles, Trophy } from 'lucide-react';
 
@@ -139,6 +141,8 @@ export function PlanConquistarCheckoutButton({
   onCheckoutError,
   diagnosticId,
   customerEmail,
+  destination = 'checkout',
+  unlockKey,
 }: {
   className?: string;
   variant?: keyof typeof VARIANT_CLASSES;
@@ -151,7 +155,12 @@ export function PlanConquistarCheckoutButton({
   onCheckoutError?: (message: string) => void;
   diagnosticId?: string | null;
   customerEmail?: string | null;
+  /** checkout = Mercado Pago · plan-conquistar = landing /plan-conquistar */
+  destination?: 'checkout' | 'plan-conquistar';
+  /** Métrica propia en admin → Conversión → Clics desbloquear → Ver detalle */
+  unlockKey?: string;
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isLoading = loading || Boolean(externalLoading);
@@ -162,10 +171,29 @@ export function PlanConquistarCheckoutButton({
   const Icon = icon === 'sparkles' || variant === 'sidebar' ? Sparkles : Trophy;
   const showPriceBlock = showPromoPrice;
 
+  function trackUnlockIntent() {
+    trackUnlockClick({
+      unlockKey:
+        unlockKey ??
+        (sourceChannel ? `checkout_${sourceChannel}` : 'checkout_plan_conquistar'),
+      label: buttonLabel,
+      ...(diagnosticId ? { diagnosticId } : {}),
+    });
+  }
+
+  function goToPlanConquistarPage() {
+    trackUnlockIntent();
+    const params = new URLSearchParams();
+    if (diagnosticId) params.set('diagnosticId', diagnosticId);
+    const qs = params.toString();
+    router.push(qs ? `/plan-conquistar?${qs}` : '/plan-conquistar');
+  }
+
   async function handleCheckout() {
     setLoading(true);
     setError(null);
     onCheckoutStart?.();
+    trackUnlockIntent();
     try {
       await startPlanConquistarCheckout({
         ...(sourceChannel ? { sourceChannel } : {}),
@@ -179,6 +207,14 @@ export function PlanConquistarCheckoutButton({
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleClick() {
+    if (destination === 'plan-conquistar') {
+      goToPlanConquistarPage();
+      return;
+    }
+    void handleCheckout();
   }
 
   const buttonContent =
@@ -203,7 +239,7 @@ export function PlanConquistarCheckoutButton({
     <div className={variant === 'sidebar' ? 'w-full' : 'flex flex-col items-center gap-2'}>
       <button
         type="button"
-        onClick={() => void handleCheckout()}
+        onClick={handleClick}
         disabled={isLoading}
         className={cn(VARIANT_CLASSES[variant], className)}
       >

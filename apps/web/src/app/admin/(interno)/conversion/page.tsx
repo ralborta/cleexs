@@ -75,11 +75,35 @@ type UnlockClickBreakdown = {
   unlockKey: string;
   label: string;
   count: number;
+  order?: number;
+};
+
+type UnlockClickDomainRow = {
+  domain: string;
+  brandName: string | null;
+  clicks: number;
+  lastClickAt: string;
+};
+
+type UnlockClickClientRow = {
+  diagnosticId: string | null;
+  brandName: string | null;
+  domain: string | null;
+  email: string | null;
+  unlockKey: string;
+  ctaLabel: string;
+  clickedAt: string;
 };
 
 type UnlockClicksResponse = {
   ok: boolean;
   total: number;
+  totalClicks?: number;
+  uniqueVisitors?: number;
+  uniqueDomains?: number;
+  links?: UnlockClickBreakdown[];
+  domains?: UnlockClickDomainRow[];
+  clientClicks?: UnlockClickClientRow[];
   items: UnlockClickBreakdown[];
 };
 
@@ -197,7 +221,7 @@ export default function AdminConversionPage() {
   const [emailLeadsError, setEmailLeadsError] = useState<string | null>(null);
 
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
-  const [unlockBreakdown, setUnlockBreakdown] = useState<UnlockClickBreakdown[] | null>(null);
+  const [unlockDetail, setUnlockDetail] = useState<UnlockClicksResponse | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
 
@@ -249,7 +273,7 @@ export default function AdminConversionPage() {
       const res = await adminUiFetch(`/api/admin-ui/conversion/unlock-clicks${qs}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
-      setUnlockBreakdown((json as UnlockClicksResponse).items ?? []);
+      setUnlockDetail(json as UnlockClicksResponse);
     } catch (e) {
       setUnlockError(e instanceof Error ? e.message : 'Error');
     } finally {
@@ -427,7 +451,7 @@ export default function AdminConversionPage() {
         />
         <FunnelCard
           icon={<Lock className="h-4 w-4 text-violet-600" />}
-          label="Clics desbloquear"
+          label="Clics Plan Conquistar"
           value={fmt(f?.unlockClicks.count ?? 0)}
           pct={pctLabel(f?.unlockClicks.pct ?? null)}
           pctHint="de los que dejaron email"
@@ -535,7 +559,7 @@ export default function AdminConversionPage() {
         <UnlockClicksModal
           loading={unlockLoading}
           error={unlockError}
-          items={unlockBreakdown}
+          detail={unlockDetail}
           rangeFrom={from}
           rangeTo={to}
           onClose={() => setUnlockModalOpen(false)}
@@ -712,14 +736,14 @@ function EmailLeadsModal({
 function UnlockClicksModal({
   loading,
   error,
-  items,
+  detail,
   rangeFrom,
   rangeTo,
   onClose,
 }: {
   loading: boolean;
   error: string | null;
-  items: UnlockClickBreakdown[] | null;
+  detail: UnlockClicksResponse | null;
   rangeFrom: string;
   rangeTo: string;
   onClose: () => void;
@@ -732,15 +756,20 @@ function UnlockClicksModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const total = items?.reduce((acc, r) => acc + r.count, 0) ?? 0;
+  const links = detail?.links ?? detail?.items ?? [];
+  const domains = detail?.domains ?? [];
+  const clientClicks = detail?.clientClicks ?? [];
+  const total = detail?.totalClicks ?? detail?.total ?? links.reduce((acc, r) => acc + r.count, 0);
+  const uniqueVisitors = detail?.uniqueVisitors ?? 0;
+  const uniqueDomains = detail?.uniqueDomains ?? domains.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px] sm:items-center sm:p-6">
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Detalle de clics en desbloquear"
-        className="relative my-4 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        aria-label="Detalle de clics Plan Conquistar"
+        className="relative my-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-white px-6 py-4">
           <div className="flex items-center gap-3">
@@ -748,7 +777,7 @@ function UnlockClicksModal({
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Clics desbloquear</h2>
+              <h2 className="text-base font-bold text-slate-900">Clics Plan Conquistar</h2>
               <p className="text-xs text-slate-500">
                 {rangeFrom} → {rangeTo}
                 {!loading && !error ? ` · ${fmt(total)} ${total === 1 ? 'clic' : 'clics'}` : ''}
@@ -765,7 +794,7 @@ function UnlockClicksModal({
           </button>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -776,24 +805,106 @@ function UnlockClicksModal({
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{error}</p>
             </div>
-          ) : !items?.length ? (
+          ) : total === 0 ? (
             <div className="py-12 text-center text-sm text-slate-400">
-              No hay clics de desbloquear en este rango de fechas.
+              No hay clics al Plan Conquistar en este rango de fechas.
             </div>
           ) : (
-            <ul className="space-y-2">
-              {items.map((row) => (
-                <li
-                  key={row.unlockKey}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
-                >
-                  <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
-                  <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
-                    {fmt(row.count)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MiniStat label="Clics totales" value={fmt(total)} />
+                <MiniStat label="Clientes distintos" value={fmt(uniqueVisitors)} />
+                <MiniStat label="Sitios / marcas" value={fmt(uniqueDomains)} />
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Por cliente (cada clic)
+                </h3>
+                {clientClicks.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
+                    Sin clics en este rango.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {clientClicks.map((row, idx) => (
+                      <li
+                        key={`${row.clickedAt}-${row.unlockKey}-${idx}`}
+                        className="rounded-xl border border-slate-100 bg-white px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {row.brandName || row.domain || row.email || 'Sin diagnóstico vinculado'}
+                            </p>
+                            {row.domain && row.brandName ? (
+                              <p className="truncate text-xs text-slate-500">{row.domain}</p>
+                            ) : null}
+                            {row.email ? (
+                              <p className="truncate text-xs text-slate-500">{row.email}</p>
+                            ) : null}
+                            <p className="mt-1 text-xs text-violet-700">{row.ctaLabel}</p>
+                          </div>
+                          <p className="shrink-0 text-[11px] text-slate-400">{fmtDateTime(row.clickedAt)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Por botón o enlace
+                </h3>
+                <ul className="space-y-2">
+                  {links.map((row) => (
+                    <li
+                      key={row.unlockKey}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
+                    >
+                      <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
+                      <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
+                        {fmt(row.count)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Sitios / marcas que clickearon
+                </h3>
+                {domains.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
+                    Sin sitio o marca asociada (clics desde landing sin diagnóstico).
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {domains.map((row) => (
+                      <li
+                        key={row.domain}
+                        className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">{row.domain}</p>
+                          {row.brandName ? (
+                            <p className="truncate text-xs text-slate-500">{row.brandName}</p>
+                          ) : null}
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Último clic: {fmtDateTime(row.lastClickAt)}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-emerald-800">
+                          {fmt(row.clicks)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

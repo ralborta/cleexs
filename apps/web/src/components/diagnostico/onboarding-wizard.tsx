@@ -19,6 +19,7 @@ import {
   OnboardingPreviewNav,
   OnboardingPreviewTrustFooter,
 } from '@/components/diagnostico/onboarding-preview/onboarding-preview-frame';
+import { OnboardingEmailCountdown } from '@/components/diagnostico/onboarding-email-countdown';
 
 const ENGINES = [
   { id: 'chatgpt', label: 'ChatGPT', logo: '/engines/chatgpt.png' },
@@ -76,6 +77,9 @@ export type OnboardingWizardProps = {
   nextLoading?: boolean;
   error?: string | null;
   onOpenLegal?: (section: LegalSectionId) => void;
+  showEmailCountdown?: boolean;
+  diagnosticId?: string;
+  onEmailCountdownExpire?: () => void;
 };
 
 export function OnboardingWizard({
@@ -109,6 +113,9 @@ export function OnboardingWizard({
   nextLoading,
   error,
   onOpenLegal,
+  showEmailCountdown,
+  diagnosticId,
+  onEmailCountdownExpire,
 }: OnboardingWizardProps) {
   const idx = Math.min(Math.max(step, 1), 5) - 1;
   const meta = STEPS[idx]!;
@@ -362,6 +369,16 @@ export function OnboardingWizard({
               Este dato nos ayuda a personalizar benchmarks y competidores para tu mercado.
             </p>
           </div>
+        ) : null}
+
+        {idx === 4 && showEmailCountdown && onEmailCountdownExpire ? (
+          <OnboardingEmailCountdown
+            active
+            variant="inline"
+            diagnosticId={diagnosticId}
+            onExpire={onEmailCountdownExpire}
+            className="mt-5"
+          />
         ) : null}
 
         <OnboardingPreviewNav

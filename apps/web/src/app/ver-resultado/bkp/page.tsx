@@ -751,7 +751,7 @@ function VerResultadoContent() {
       })
     : '';
   const teamInvitePath = diagnostic.id
-    ? appendQueryToPath(`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`, teamTrackingQuery)
+    ? appendQueryToPath(`/ver-resultado/bkp?diagnosticId=${encodeURIComponent(diagnostic.id)}`, teamTrackingQuery)
     : null;
   const runResult = diagnostic.runResult;
   const runResultGemini = diagnostic.runResultGemini;
@@ -1235,7 +1235,7 @@ function VerResultadoContent() {
                               pueden crear cuenta en Cleexs desde la web.
                             </p>
                             <ShareScoreButtons
-                              path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                              path={teamInvitePath || `/ver-resultado/bkp?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
                               intent="team"
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}
@@ -1271,7 +1271,7 @@ function VerResultadoContent() {
                               </div>
                             </div>
                             <ShareScoreButtons
-                              path={teamInvitePath || `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+                              path={teamInvitePath || `/ver-resultado/bkp?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
                               intent="team"
                               brandName={diagnostic.brandName}
                               domain={diagnostic.domain}

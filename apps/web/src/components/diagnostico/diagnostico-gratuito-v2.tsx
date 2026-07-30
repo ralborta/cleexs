@@ -24,6 +24,7 @@ import type { DiagnosticoV2ViewModel } from '@/lib/diagnostico-v2-data';
 import type { PublicDiagnostic } from '@/lib/api';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { ShareScoreButtons } from '@/components/share/share-score-buttons';
+import { trackUnlockClick } from '@/lib/track';
 import {
   PlanConquistarCheckoutButton,
 } from '@/components/planes/plan-conquistar-checkout-button';
@@ -48,6 +49,17 @@ import {
   SCORE_NUMBER_CLASS,
 } from '@/lib/score-traffic-colors';
 
+import {
+  PLAN_CONQUISTAR_UNLOCK_LINKS,
+  type PlanConquistarUnlockKey,
+} from '@cleexs/shared';
+
+const VER_RESULTADO_V2_UNLOCK = {
+  transitionBanner: PLAN_CONQUISTAR_UNLOCK_LINKS[0].key,
+  ctaPlanAccion: PLAN_CONQUISTAR_UNLOCK_LINKS[1].key,
+  enginePaywall: PLAN_CONQUISTAR_UNLOCK_LINKS[2].key,
+} as const satisfies Record<string, PlanConquistarUnlockKey>;
+
 const ENGINE_META: Record<EngineCardKey, { label: string; logo: string }> = {
   chatgpt: { label: 'ChatGPT', logo: '/engines/chatgpt.png' },
   gemini: { label: 'Gemini', logo: '/engines/gemini.png' },
@@ -68,13 +80,35 @@ function displayDomain(domain: string | null | undefined) {
   return domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '');
 }
 
-function SectionBadge({ n, label }: { n: number; label: string }) {
+export type DiagnosticoV2LayoutVariant = 'default' | 'cro-phase-a';
+
+function SectionBadge({
+  n,
+  label,
+  croPhaseA,
+}: {
+  n: number;
+  label: string;
+  croPhaseA?: boolean;
+}) {
   return (
-    <div className="mb-2 flex items-start gap-2">
-      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow shadow-violet-500/20">
+    <div className={cn('flex items-start gap-2', croPhaseA ? 'mb-3' : 'mb-2')}>
+      <span
+        className={cn(
+          'mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 font-bold text-white shadow shadow-violet-500/20',
+          croPhaseA ? 'h-7 w-7 text-[11px]' : 'h-6 w-6 text-[10px]',
+        )}
+      >
         {n}
       </span>
-      <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">{label}</h2>
+      <h2
+        className={cn(
+          'font-bold tracking-tight text-slate-900',
+          croPhaseA ? 'text-xl leading-snug sm:text-2xl' : 'text-base sm:text-lg',
+        )}
+      >
+        {label}
+      </h2>
     </div>
   );
 }
@@ -285,27 +319,59 @@ function scoreToPct(score: number | null | undefined) {
 function HeroScoreBlock({
   model,
   onScrollCompetitors,
+  croPhaseA,
 }: {
   model: DiagnosticoV2ViewModel;
   onScrollCompetitors: () => void;
+  croPhaseA?: boolean;
 }) {
   const analyzedCompetitors = model.competitors.filter((c) => !c.isBrand);
   const competitorTotal = Math.max(analyzedCompetitors.length, model.competitorCount, 1);
 
   return (
-    <div className="flex flex-col items-center gap-5 py-2 sm:flex-row sm:items-center sm:gap-6 sm:py-3 lg:gap-8">
-      <CleexsScoreRing score={model.score} size="heroLg" className="shrink-0" />
+    <div
+      className={cn(
+        'flex flex-col gap-5 py-2 sm:flex-row sm:items-center sm:gap-6 sm:py-3 lg:gap-8',
+        croPhaseA ? 'items-stretch sm:items-center' : 'items-center',
+      )}
+    >
+      <CleexsScoreRing
+        score={model.score}
+        size={croPhaseA ? 'heroXl' : 'heroLg'}
+        className={cn('shrink-0', croPhaseA && 'mx-auto sm:mx-0')}
+      />
 
-      <div className="flex min-w-0 flex-col gap-4 sm:max-w-xs lg:max-w-sm">
-        <div className="flex items-start gap-2">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" aria-hidden />
-          <p className="text-base font-bold leading-snug text-violet-800 lg:text-lg">{model.verdictLabel}</p>
+      <div className={cn('flex min-w-0 flex-col gap-4', croPhaseA ? 'sm:max-w-md lg:max-w-lg' : 'sm:max-w-xs lg:max-w-sm')}>
+        <div className="text-left">
+          {croPhaseA ? (
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">Conclusión</p>
+          ) : null}
+          <div className="flex items-start gap-2">
+            <Sparkles
+              className={cn('shrink-0 text-violet-600', croPhaseA ? 'mt-1 h-6 w-6' : 'mt-0.5 h-5 w-5')}
+              aria-hidden
+            />
+            <p
+              className={cn(
+                'font-bold leading-snug text-violet-800',
+                croPhaseA ? 'text-xl sm:text-2xl lg:text-[1.65rem]' : 'text-base lg:text-lg',
+              )}
+            >
+              {model.verdictLabel}
+            </p>
+          </div>
+          {croPhaseA ? (
+            <p className="mt-3 text-base leading-relaxed text-slate-600 sm:text-lg">{model.verdictDetail}</p>
+          ) : null}
         </div>
 
         <button
           type="button"
           onClick={onScrollCompetitors}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:text-base"
+          className={cn(
+            'inline-flex w-fit items-center gap-2 rounded-full bg-violet-50 font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100',
+            croPhaseA ? 'px-4 py-3 text-base' : 'px-4 py-2.5 text-sm sm:text-base',
+          )}
         >
           <Trophy className="h-4 w-4 shrink-0 text-violet-700" aria-hidden />
           #{model.brandRank} de {competitorTotal} competidores analizados
@@ -369,20 +435,65 @@ function RevenueCalculator({ leaderName }: { leaderName: string }) {
   );
 }
 
-function DeliverableCard({ icon, value, label }: { icon: ReactNode; value: number; label: string }) {
+function DeliverableCard({
+  icon,
+  value,
+  label,
+  croPhaseA,
+}: {
+  icon: ReactNode;
+  value: number;
+  label: string;
+  croPhaseA?: boolean;
+}) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-slate-100 bg-white px-3 py-4 text-center">
+    <div
+      className={cn(
+        'flex flex-col items-center rounded-lg border border-slate-100 bg-white text-center',
+        croPhaseA ? 'px-3 py-5' : 'px-3 py-4',
+      )}
+    >
       <div className="mb-2 text-violet-600">{icon}</div>
-      <p className="text-2xl font-black tabular-nums text-[#1e2a5a]">{value}</p>
-      <p className="mt-1 text-[11px] leading-snug text-slate-600">{label}</p>
+      <p
+        className={cn(
+          'font-black tabular-nums text-[#1e2a5a]',
+          croPhaseA ? 'text-3xl sm:text-4xl' : 'text-2xl',
+        )}
+      >
+        {value}
+      </p>
+      <p className={cn('mt-1 leading-snug text-slate-600', croPhaseA ? 'text-sm' : 'text-[11px]')}>{label}</p>
     </div>
   );
 }
 
-function PlanTransitionBanner() {
+function PlanTransitionBanner({
+  diagnosticId,
+  brandName,
+}: {
+  diagnosticId?: string;
+  brandName?: string;
+}) {
+  const planHref = diagnosticId
+    ? `/plan-conquistar?diagnosticId=${encodeURIComponent(diagnosticId)}`
+    : '/plan-conquistar';
+  const trackLabel = brandName
+    ? `Informe v2 · Banner transición (${brandName})`
+    : 'Informe v2 · Banner transición → Plan Conquistar';
+
   return (
     <div className="relative mb-8 pb-2">
-      <div className="rounded-xl border-2 border-violet-300/70 bg-violet-50/40 px-4 py-5 text-center sm:px-6 sm:py-6">
+      <Link
+        href={planHref}
+        onClick={() =>
+          trackUnlockClick({
+            unlockKey: VER_RESULTADO_V2_UNLOCK.transitionBanner,
+            label: trackLabel,
+            ...(diagnosticId ? { diagnosticId } : {}),
+          })
+        }
+        className="group block rounded-xl border-2 border-violet-300/70 bg-violet-50/40 px-4 py-5 text-center transition hover:border-violet-400 hover:bg-violet-50/70 sm:px-6 sm:py-6"
+      >
         <p className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold leading-relaxed text-[#1e2a5a] sm:text-sm">
           <Sparkles className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
           Ya entendiste el problema. y viste el tamaño de la oportunidad
@@ -390,9 +501,12 @@ function PlanTransitionBanner() {
         <p className="mt-2 text-base font-bold text-violet-700 sm:text-lg">
           Ahora te mostramos exactamente cómo resolverlo.
         </p>
-      </div>
+        <p className="mt-3 text-sm font-semibold text-violet-700 underline-offset-2 group-hover:underline">
+          Ver Plan Conquistar →
+        </p>
+      </Link>
       <div
-        className="absolute -bottom-1 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-violet-400 bg-white text-violet-600 shadow-sm"
+        className="pointer-events-none absolute -bottom-1 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-violet-400 bg-white text-violet-600 shadow-sm"
         aria-hidden
       >
         <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
@@ -407,14 +521,18 @@ export function DiagnosticoGratuitoV2({
   sharePath,
   variant = 'free',
   premiumAppend,
+  layoutVariant = 'default',
 }: {
   diagnostic: PublicDiagnostic;
   model: DiagnosticoV2ViewModel;
   sharePath: string;
   variant?: 'free' | 'premium';
   premiumAppend?: ReactNode;
+  /** cro-phase-a = preview CRO Fase A (mobile first); default = producción actual */
+  layoutVariant?: DiagnosticoV2LayoutVariant;
 }) {
   const isPremium = variant === 'premium';
+  const croPhaseA = layoutVariant === 'cro-phase-a';
   const [paywallEngine, setPaywallEngine] = useState<EngineCardKey | null>(null);
 
   const scrollToCompetitors = () => {
@@ -432,27 +550,46 @@ export function DiagnosticoGratuitoV2({
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className={cn('mx-auto max-w-5xl px-4 sm:px-6', croPhaseA ? 'py-6 sm:py-10' : 'py-6 sm:py-8')}>
         {/* HERO */}
-        <section className="mb-6">
+        <section className={croPhaseA ? 'mb-8 sm:mb-10' : 'mb-6'}>
           <span
             className={cn(
-              'inline-flex rounded-full px-3.5 py-1.5 text-sm font-semibold',
+              'inline-flex rounded-full px-3.5 py-1.5 font-semibold',
+              croPhaseA ? 'text-sm sm:text-base' : 'text-sm',
               isPremium ? 'bg-emerald-100 text-emerald-800' : 'bg-violet-100 text-violet-700',
             )}
           >
             {isPremium
               ? `Plan Cleexs Crecimiento · ${displayDomain(model.domain)}`
-              : `Diagnóstico gratuito de ${displayDomain(model.domain)} completado`}
+              : croPhaseA
+                ? `Diagnóstico ejecutivo · ${displayDomain(model.domain)}`
+                : `Diagnóstico gratuito de ${displayDomain(model.domain)} completado`}
           </span>
 
-          <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5">
-            <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight text-[#1e2a5a] sm:text-4xl lg:col-start-1 lg:row-start-1 lg:max-w-none lg:text-[2.75rem]">
+          <div
+            className={cn(
+              'mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5',
+              croPhaseA && 'gap-6',
+            )}
+          >
+            <h1
+              className={cn(
+                'max-w-3xl font-black leading-tight tracking-tight text-[#1e2a5a] lg:col-start-1 lg:row-start-1 lg:max-w-none',
+                croPhaseA
+                  ? 'text-[2rem] sm:text-4xl lg:text-[3.25rem]'
+                  : 'text-3xl sm:text-4xl lg:text-[2.75rem]',
+              )}
+            >
               ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
             </h1>
 
             <div className="lg:col-start-1 lg:row-start-2">
-              <HeroScoreBlock model={model} onScrollCompetitors={scrollToCompetitors} />
+              <HeroScoreBlock
+                model={model}
+                onScrollCompetitors={scrollToCompetitors}
+                croPhaseA={croPhaseA}
+              />
             </div>
 
             <ReportBlock className="overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
@@ -466,17 +603,18 @@ export function DiagnosticoGratuitoV2({
           </div>
         </section>
 
-        <div className="space-y-6">
+        <div className={cn(croPhaseA ? 'space-y-10' : 'space-y-6')}>
         {/* 1 — Hallazgos */}
         <section>
-          <SectionBadge n={1} label="Lo más importante que encontramos" />
-          <ReportBlock className="p-4 sm:p-5">
+          <SectionBadge n={1} label="Lo más importante que encontramos" croPhaseA={croPhaseA} />
+          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             <div className="grid gap-3 md:grid-cols-3">
-            {model.findings.map((f) => (
+            {model.findings.map((f, idx) => (
               <div
-                key={f.title}
+                key={`${f.tone}-${idx}-${f.title}`}
                 className={cn(
-                  'relative overflow-hidden rounded-lg border p-4',
+                  'relative overflow-hidden rounded-lg border',
+                  croPhaseA ? 'p-5' : 'p-4',
                   FINDING_TONE_CARD_CLASS[f.tone],
                 )}
               >
@@ -492,10 +630,23 @@ export function DiagnosticoGratuitoV2({
                 <div className="relative flex items-start gap-3">
                   <CleexsStatusIcon tone={f.tone} size="xl" className="mt-0.5 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className={cn('text-xs font-bold leading-snug sm:text-sm', FINDING_TONE_TITLE_CLASS[f.tone])}>
+                    <p
+                      className={cn(
+                        'font-bold leading-snug',
+                        croPhaseA ? 'text-sm sm:text-base' : 'text-xs sm:text-sm',
+                        FINDING_TONE_TITLE_CLASS[f.tone],
+                      )}
+                    >
                       {f.title}
                     </p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-slate-700 sm:text-sm">{f.body}</p>
+                    <p
+                      className={cn(
+                        'mt-1.5 leading-relaxed text-slate-700',
+                        croPhaseA ? 'text-base' : 'text-xs sm:text-sm',
+                      )}
+                    >
+                      {f.body}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -506,8 +657,8 @@ export function DiagnosticoGratuitoV2({
 
         {/* 2 — Competidores */}
         <section id="seccion-competidores" className="scroll-mt-20">
-          <SectionBadge n={2} label="Dónde perdés clientes hoy" />
-          <ReportBlock className="p-4 sm:p-5">
+          <SectionBadge n={2} label="Dónde perdés clientes hoy" croPhaseA={croPhaseA} />
+          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
               <CompetitorShareChart
                 rows={model.competitors}
@@ -517,6 +668,9 @@ export function DiagnosticoGratuitoV2({
               <CompetitorLeaderInsight
                 leaderName={model.leaderName}
                 leaderShare={model.leaderShare}
+                brandName={model.brandName}
+                brandShare={model.brandShare}
+                brandRank={model.brandRank}
                 className="lg:justify-self-end"
               />
             </div>
@@ -525,20 +679,25 @@ export function DiagnosticoGratuitoV2({
 
         {/* 3 — Descubrimiento de consultas */}
         <section>
-          <SectionBadge n={3} label="Lo que descubrimos sobre tu empresa" />
-          <ReportBlock className="p-4 sm:p-5">
+          <SectionBadge n={3} label="Lo que descubrimos sobre tu empresa" croPhaseA={croPhaseA} />
+          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             <QueryDiscoveryPanel discovery={model.queryDiscovery} />
           </ReportBlock>
         </section>
 
         {/* 4 — Una acción */}
         <section>
-          <SectionBadge n={4} label="Si solo pudieras hacer UNA cosa" />
-          <p className="mb-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+          <SectionBadge n={4} label="Si solo pudieras hacer UNA cosa" croPhaseA={croPhaseA} />
+          <p
+            className={cn(
+              'mb-3 leading-relaxed text-slate-600',
+              croPhaseA ? 'text-base sm:text-lg' : 'text-sm sm:text-base',
+            )}
+          >
             La oportunidad con mayor impacto para ganar visibilidad en decisiones de compra.
           </p>
           <ReportBlock className="overflow-hidden">
-            <div className="bg-slate-50/70 p-4 sm:p-5">
+            <div className={croPhaseA ? 'bg-slate-50/70 p-5 sm:p-6' : 'bg-slate-50/70 p-4 sm:p-5'}>
               <div className="flex gap-4 sm:gap-5">
                 <Image
                   src="/diagnostico/mission-target.png"
@@ -553,18 +712,33 @@ export function DiagnosticoGratuitoV2({
                     const { prefix, highlight } = splitPrimaryActionTitle(model.primaryAction.title);
                     return (
                       <>
-                        <h3 className="text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg">
+                        <h3
+                          className={cn(
+                            'font-bold leading-snug text-[#1e2a5a]',
+                            croPhaseA ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg',
+                          )}
+                        >
                           {prefix}
                         </h3>
                         {highlight ? (
-                          <p className="mt-1.5 text-lg font-bold leading-snug text-violet-700 sm:text-xl">
+                          <p
+                            className={cn(
+                              'mt-1.5 font-bold leading-snug text-violet-700',
+                              croPhaseA ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl',
+                            )}
+                          >
                             {highlight}
                           </p>
                         ) : null}
                       </>
                     );
                   })()}
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+                  <p
+                    className={cn(
+                      'mt-3 leading-relaxed text-slate-600',
+                      croPhaseA ? 'text-base sm:text-lg' : 'text-sm sm:text-base',
+                    )}
+                  >
                     {model.primaryAction.subtitle}
                   </p>
                 </div>
@@ -602,8 +776,8 @@ export function DiagnosticoGratuitoV2({
 
         {/* 5 — Qué pasa si lo hacés */}
         <section>
-          <SectionBadge n={5} label="¿Qué pasaría si lo hacés?" />
-          <ReportBlock className="p-4 sm:p-6">
+          <SectionBadge n={5} label="¿Qué pasaría si lo hacés?" croPhaseA={croPhaseA} />
+          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-6'}>
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               {WHAT_IF_BENEFITS.map((item) => (
                 <WhatIfBenefitCard key={item.title} icon={item.icon} title={item.title} body={item.body} />
@@ -624,12 +798,12 @@ export function DiagnosticoGratuitoV2({
           </ReportBlock>
         </section>
 
-        <PlanTransitionBanner />
+        <PlanTransitionBanner diagnosticId={diagnostic.id} brandName={model.brandName} />
 
         {/* 6 — Buenas noticias */}
         <section>
-          <SectionBadge n={6} label="Buenas noticias" />
-          <div className="relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff] p-4 sm:p-6">
+          <SectionBadge n={6} label="Buenas noticias" croPhaseA={croPhaseA} />
+          <div className={cn('relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff]', croPhaseA ? 'p-5 sm:p-7' : 'p-4 sm:p-6')}>
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(140px,0.62fr)] lg:items-start lg:gap-4">
               <div className="relative flex min-w-0 flex-col pb-12 pr-14 lg:pb-14 lg:pr-16">
                 <div className="relative z-[1]">
@@ -693,8 +867,8 @@ export function DiagnosticoGratuitoV2({
 
         {/* 7 — Mientras leías */}
         <section>
-          <SectionBadge n={7} label="Mientras vos leías este diagnóstico…" />
-          <ReportBlock className="p-4 sm:p-5">
+          <SectionBadge n={7} label="Mientras vos leías este diagnóstico…" croPhaseA={croPhaseA} />
+          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             <div className="mb-4 max-w-3xl space-y-2">
               <p className="text-sm font-semibold text-[#1e2a5a]">
                 Nuestro motor terminó de trabajar sobre {model.brandName}.
@@ -706,53 +880,79 @@ export function DiagnosticoGratuitoV2({
               </p>
               <p className="text-xs font-bold text-violet-700 sm:text-sm">Todo ya está listo. Solo falta activarlo.</p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
             <DeliverableCard
               icon={<ClipboardList className="h-6 w-6" />}
               value={model.deliverables[0].value}
               label={model.deliverables[0].label}
+              croPhaseA={croPhaseA}
             />
             <DeliverableCard
               icon={<Lightbulb className="h-6 w-6" />}
               value={model.deliverables[1].value}
               label={model.deliverables[1].label}
+              croPhaseA={croPhaseA}
             />
             <DeliverableCard
               icon={<FileText className="h-6 w-6" />}
               value={model.deliverables[2].value}
               label={model.deliverables[2].label}
+              croPhaseA={croPhaseA}
             />
             <DeliverableCard
               icon={<Users className="h-6 w-6" />}
               value={model.deliverables[3].value}
               label={model.deliverables[3].label}
+              croPhaseA={croPhaseA}
             />
             <DeliverableCard
               icon={<Zap className="h-6 w-6" />}
               value={model.deliverables[4].value}
               label={model.deliverables[4].label}
+              croPhaseA={croPhaseA}
             />
             <DeliverableCard
               icon={<Target className="h-6 w-6" />}
               value={model.deliverables[5].value}
               label={model.deliverables[5].label}
+              croPhaseA={croPhaseA}
             />
             </div>
           </ReportBlock>
         </section>
 
         {/* CTA principal — Plan Conquistar */}
-        <section className="mt-10 sm:mt-12">
-          <div className="overflow-hidden rounded-2xl bg-violet-600 px-4 py-8 shadow-lg shadow-violet-600/20 sm:px-6 sm:py-9">
+        <section className={croPhaseA ? 'mt-12 sm:mt-14' : 'mt-10 sm:mt-12'}>
+          <div
+            className={cn(
+              'overflow-hidden rounded-2xl bg-violet-600 shadow-lg shadow-violet-600/20',
+              croPhaseA ? 'px-4 py-9 sm:px-8 sm:py-10' : 'px-4 py-8 sm:px-6 sm:py-9',
+            )}
+          >
             <PlanConquistarCheckoutButton
-              className="mx-auto w-full max-w-xl rounded-2xl py-4 text-base shadow-md"
+              className={cn(
+                'mx-auto w-full max-w-xl rounded-2xl shadow-md',
+                croPhaseA ? 'min-h-[56px] py-5 text-lg sm:min-h-[60px] sm:text-xl' : 'py-4 text-base',
+              )}
               variant="sidebar"
-              label={`Quiero ver mi plan de acción (${model.brandName}) →`}
+              label={
+                croPhaseA
+                  ? `Desbloquear mi plan de acción (${model.brandName}) →`
+                  : `Quiero ver mi plan de acción (${model.brandName}) →`
+              }
               sourceChannel="ver_resultado_v2"
+              unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
               diagnosticId={diagnostic.id}
               customerEmail={diagnostic.email}
               icon="sparkles"
+              destination="plan-conquistar"
             />
+            {croPhaseA ? (
+              <p className="mt-4 text-center text-sm font-medium text-violet-100/95 sm:text-base">
+                {model.deliverables[0]?.value ?? 25} acciones · {model.deliverables[1]?.value ?? 41} prompts ·
+                Roadmap de 90 días
+              </p>
+            ) : null}
           </div>
         </section>
           </>
@@ -789,21 +989,35 @@ export function DiagnosticoGratuitoV2({
         </footer>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-slate-400">
-          {isPremium ? 'Vista premium de prueba · ' : 'Vista de prueba · '}
-          <Link href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
-            Ver informe actual en producción
-          </Link>
-          {' · '}
-          <Link href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
-            Ver free v2
-          </Link>
-        </p>
+        {croPhaseA ? (
+          <p className="mt-6 text-center text-xs text-slate-500">
+            Preview Fase A CRO ·{' '}
+            <Link
+              href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Comparar con informe v2 en producción
+            </Link>
+          </p>
+        ) : (
+          <p className="mt-6 text-center text-[11px] text-slate-400">
+            {isPremium ? 'Vista premium de prueba · ' : 'Vista de prueba · '}
+            <Link href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
+              Ver informe actual en producción
+            </Link>
+            {' · '}
+            <Link href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
+              Ver free v2
+            </Link>
+          </p>
+        )}
       </main>
 
       {!isPremium ? (
         <EnginePaywallModal
           open={paywallEngine != null}
+          diagnosticId={diagnostic.id}
+          unlockKey={VER_RESULTADO_V2_UNLOCK.enginePaywall}
           engineName={
             paywallEngine === 'gemini'
               ? 'Gemini'

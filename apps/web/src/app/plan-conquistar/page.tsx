@@ -13,10 +13,8 @@ import {
   RefreshCw,
   Gift,
 } from 'lucide-react';
-import {
-  PlanConquistarCheckoutButton,
-  PlanConquistarPromoPrice,
-} from '@/components/planes/plan-conquistar-checkout-button';
+import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
+import { PlanConquistarPageCheckout } from '@/components/planes/plan-conquistar-page-checkout';
 
 export const metadata: Metadata = {
   title: 'Plan Conquistar ChatGPT en 90 Días | Cleexs',
@@ -90,7 +88,7 @@ export default function PlanConquistarPage() {
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3">
-            <PlanConquistarCheckoutButton />
+            <PlanConquistarPageCheckout />
             <PlanConquistarPromoPrice size="md" className="justify-center" />
           </div>
         </div>
@@ -166,7 +164,7 @@ export default function PlanConquistarPage() {
             competidores se adelanten.
           </p>
           <div className="mt-7">
-            <PlanConquistarCheckoutButton className="w-full sm:w-auto" />
+            <PlanConquistarPageCheckout className="w-full sm:w-auto" />
           </div>
           <p className="mt-6 text-sm text-slate-500">
             ¿Todavía no probaste el diagnóstico?{' '}

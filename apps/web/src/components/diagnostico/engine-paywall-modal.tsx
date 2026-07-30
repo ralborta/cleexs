@@ -6,17 +6,20 @@ import Link from 'next/link';
 import { Lock, Sparkles, X, ArrowLeft } from 'lucide-react';
 import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
 import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
-
-const PLAN_CONQUISTAR_PATH = '/plan-conquistar';
+import { trackUnlockClick } from '@/lib/track';
 
 export function EnginePaywallModal({
   open,
   engineName,
+  diagnosticId,
+  unlockKey = 'ver_resultado_v2_engine_paywall',
   onClose,
 }: {
   open: boolean;
   /** Motor que el usuario intentó abrir (ej. "Claude", "Perplexity"). */
   engineName: string | null;
+  diagnosticId?: string;
+  unlockKey?: string;
   onClose: () => void;
 }) {
   useTrapBrowserBack(open, onClose);
@@ -33,6 +36,17 @@ export function EnginePaywallModal({
   if (!open || typeof document === 'undefined') return null;
 
   const engineLabel = engineName?.trim() || 'este motor';
+  const planHref = diagnosticId
+    ? `/plan-conquistar?diagnosticId=${encodeURIComponent(diagnosticId)}`
+    : '/plan-conquistar';
+
+  function goToPlan() {
+    trackUnlockClick({
+      unlockKey,
+      label: `Informe v2 · Modal motor (${engineLabel})`,
+      ...(diagnosticId ? { diagnosticId } : {}),
+    });
+  }
 
   return createPortal(
     <>
@@ -91,7 +105,8 @@ export function EnginePaywallModal({
 
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row-reverse">
               <Link
-                href={PLAN_CONQUISTAR_PATH}
+                href={planHref}
+                onClick={goToPlan}
                 className="inline-flex flex-1 items-center justify-center rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 active:scale-[0.98]"
               >
                 Sí, me interesa en serio

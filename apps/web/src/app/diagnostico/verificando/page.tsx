@@ -864,7 +864,7 @@ function VerificandoContent() {
     setHandoff('leaving');
     trackOnboarding('onboarding_report_opened', { diagnosticId });
     const tierQ = diagnostic?.tier === 'gold' ? '&tier=gold' : '';
-    router.push(`/ver-resultado?diagnosticId=${diagnosticId}${tierQ}`);
+    router.push(`/ver-resultado/v2?diagnosticId=${diagnosticId}${tierQ}`);
   }, [diagnosticId, diagnostic?.tier, router]);
 
   const handleLegacySetupSave = async (e: React.FormEvent) => {
@@ -1022,7 +1022,7 @@ function VerificandoContent() {
   const showCafecito = analysisRunningPhase;
   const waUserName = onboardingWhatsAppDisplayName(setupEmail || diagnosticEmailTrimmed);
   const whatsappHref = buildOnboardingWhatsAppHref(waUserName, domainShort);
-  const reportHref = `/ver-resultado?diagnosticId=${diagnosticId}${diagnostic.tier === 'gold' ? '&tier=gold' : ''}`;
+  const reportHref = `/ver-resultado/v2?diagnosticId=${diagnosticId}${diagnostic.tier === 'gold' ? '&tier=gold' : ''}`;
 
   if (handoff === 'leaving') {
     return (
@@ -1221,6 +1221,9 @@ function VerificandoContent() {
                   nextLoading={contextLoading || startAnalysisLoading}
                   error={startAnalysisError}
                   onOpenLegal={setLegalModalSection}
+                  showEmailCountdown={showEmailCountdown}
+                  diagnosticId={diagnosticId ?? undefined}
+                  onEmailCountdownExpire={handleEmailCountdownExpire}
                 />
               ) : null}
             </div>
@@ -1232,8 +1235,6 @@ function VerificandoContent() {
           informe.
         </p>
       </div>
-
-      <OnboardingEmailCountdown active={showEmailCountdown} onExpire={handleEmailCountdownExpire} />
 
       <LegalAcceptanceModal
         open={legalModalSection !== null}
@@ -1343,6 +1344,15 @@ function VerificandoContent() {
                   autoComplete="email"
                 />
               </div>
+              {showEmailCountdown ? (
+                <OnboardingEmailCountdown
+                  active
+                  variant="inline"
+                  diagnosticId={diagnosticId ?? undefined}
+                  onExpire={handleEmailCountdownExpire}
+                  className="mt-5"
+                />
+              ) : null}
               <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
                 <Button
                   type="button"

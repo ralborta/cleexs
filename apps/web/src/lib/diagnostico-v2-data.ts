@@ -44,6 +44,7 @@ export type DiagnosticoV2QueryDiscovery = {
   };
   insightBody: string;
   insightHighlight: string;
+  insightFooter: string;
   leaderName: string;
 };
 
@@ -287,8 +288,15 @@ function buildQueryDiscovery(
     prompts.map((prompt) => interpretQueryArchetype(prompt)),
   ).size;
 
-  const losingHasComparison = lose.some((label) => /compar|proveedor|precio/i.test(label));
-  const insightHighlight = losingHasComparison ? 'comparando proveedores' : 'decidiendo entre opciones';
+  const insight = buildQueryInsightCopy({
+    promptBuckets,
+    lead,
+    compete,
+    lose,
+    leaderName,
+    brandName: runResult.brandName,
+    totalQueries: metrics.totalPrompts,
+  });
 
   return {
     totalQueries: metrics.totalPrompts,
@@ -309,35 +317,273 @@ function buildQueryDiscovery(
       convMentionToTop3: metrics.convMentionToTop3,
       convTop3ToFirst: metrics.convTop3ToFirst,
     },
-    insightBody:
-      promptBuckets.lose >= promptBuckets.lead && promptBuckets.lose >= promptBuckets.compete
-        ? 'La mayoría de las oportunidades que encontramos están en consultas donde el usuario todavía está'
-        : 'Todavía hay oportunidades concretas en consultas clave de tu industria mientras el usuario está',
-    insightHighlight,
+    insightBody: insight.insightBody,
+    insightHighlight: insight.insightHighlight,
+    insightFooter: insight.insightFooter,
     leaderName,
   };
 }
 
-function buildFindings(score: number, brandShare: number): DiagnosticoV2Finding[] {
-  const appears = brandShare > 0 || score >= 40;
-  return [
-    {
+function buildQueryInsightCopy(input: {
+  promptBuckets: Record<DiagnosticoV2QueryBucket, number>;
+  lead: string[];
+  compete: string[];
+  lose: string[];
+  leaderName: string;
+  brandName: string;
+  totalQueries: number;
+}): { insightBody: string; insightHighlight: string; insightFooter: string } {
+  const total = Math.max(input.totalQueries, 1);
+  const topLose = input.lose[0];
+  const topLead = input.lead[0];
+  const topCompete = input.compete[0];
+  const leader = input.leaderName.trim() || 'el competidor líder';
+
+  if (input.promptBuckets.lead >= input.promptBuckets.lose && input.promptBuckets.lead >= input.promptBuckets.compete) {
+    const highlight = topLead ? topLead.toLowerCase() : 'consultas de interés temprano';
+    return {
+      insightBody: `En ${input.promptBuckets.lead} de ${total} consultas ${input.brandName} ya compite bien, sobre todo en`,
+      insightHighlight: highlight,
+      insightFooter: topLose
+        ? `El hueco está en ${topLose.toLowerCase()}, donde hoy suma más ${leader}.`
+        : `El riesgo es ceder posición a ${leader} en comparación directa.`,
+    };
+  }
+
+  if (input.promptBuckets.lose >= input.promptBuckets.compete) {
+    const highlight =
+      topLose && /compar|proveedor/i.test(topLose)
+        ? 'comparando proveedores'
+        : topLose
+          ? topLose.toLowerCase()
+          : 'decidiendo entre opciones';
+    return {
+      insightBody:
+        input.promptBuckets.lose >= input.promptBuckets.lead
+          ? `La mayoría de las oportunidades están en consultas donde el usuario todavía está`
+          : `Perdés visibilidad en ${input.promptBuckets.lose} de ${total} consultas mientras el usuario está`,
+      insightHighlight: highlight,
+      insightFooter: `${leader} concentra más menciones en ese tipo de consultas hoy.`,
+    };
+  }
+
+  const highlight = topCompete ? topCompete.toLowerCase() : 'consultas competitivas';
+  return {
+    insightBody: `En ${input.promptBuckets.compete} de ${total} consultas aparecés, pero no cerrás la recomendación en`,
+    insightHighlight: highlight,
+    insightFooter: `${leader} sigue llevándose la primera mención en esos casos.`,
+  };
+}
+
+export function buildCompetitorLeaderInsightCopy(input: {
+  brandName: string;
+  brandShare: number;
+  brandRank: number;
+  leaderName: string;
+  leaderShare: number;
+}): { title: string; body: string; footer: string } {
+  const leader = input.leaderName.trim() || 'Competidor líder';
+  const gap = Math.max(0, input.leaderShare - input.brandShare);
+
+  if (input.brandRank <= 1 && input.brandShare >= input.leaderShare - 0.5) {
+    return {
+      title: input.brandRank === 1 ? 'Vas liderando en menciones' : 'Empatás con el líder',
+      body:
+        input.brandRank === 1
+          ? `Tu marca concentra ${input.brandShare.toFixed(1)}% de las menciones analizadas. El foco es sostenerlo en comparación y decisión.`
+          : `Tu marca y ${leader} están prácticamente empatados. Una página de comparación puede inclinarte a tu favor.`,
+      footer: `${input.brandName} · ${input.brandShare.toFixed(1)}% hoy.`,
+    };
+  }
+
+  if (gap <= 5) {
+    return {
+      title: 'Estás muy cerca del líder',
+      body: `Te separan solo ${gap.toFixed(1)} puntos (${input.brandShare.toFixed(1)}% vs ${input.leaderShare.toFixed(1)}%). Con las acciones correctas podés quedarte con el primer lugar.`,
+      footer: `${leader} lidera hoy con ${input.leaderShare.toFixed(1)}%.`,
+    };
+  }
+
+  if (gap <= 15) {
+    return {
+      title: 'Hay margen para alcanzar al líder',
+      body: `${leader} te saca ${gap.toFixed(1)} pp (${input.leaderShare.toFixed(1)}% vs tu ${input.brandShare.toFixed(1)}%). Todavía es una brecha cerrable con contenido comparativo y autoridad.`,
+      footer: `Vas ${input.brandRank}º en menciones en este análisis.`,
+    };
+  }
+
+  return {
+    title: 'El líder te saca ventaja clara',
+    body: `${leader} concentra ${input.leaderShare.toFixed(1)}% frente a tu ${input.brandShare.toFixed(1)}%. Hay que atacar consultas de comparación y decisión con páginas concretas.`,
+    footer: `Brecha actual: ${gap.toFixed(1)} puntos porcentuales.`,
+  };
+}
+
+const ENGINE_LABEL: Record<EngineCardKey, string> = {
+  chatgpt: 'ChatGPT',
+  gemini: 'Gemini',
+  claude: 'Claude',
+  perplexity: 'Perplexity',
+};
+
+function buildPresenceFinding(score: number, brandShare: number, mentionRate: number): DiagnosticoV2Finding {
+  if (brandShare >= 45 || (brandShare >= 25 && score >= 60)) {
+    return {
       tone: 'success',
-      title: 'Tu marca ya aparece',
-      body: appears
-        ? `ChatGPT te menciona en el ${brandShare.toFixed(1)}% de las respuestas relevantes.`
-        : 'Hay señales de presencia, pero todavía en pocas consultas relevantes.',
-    },
-    {
+      title: 'Tu marca ya aparece con fuerza',
+      body: `ChatGPT te menciona en el ${brandShare.toFixed(1)}% de las respuestas relevantes (${Math.round(mentionRate)}% de las consultas analizadas).`,
+    };
+  }
+  if (brandShare > 0 || score >= 35) {
+    return {
+      tone: 'success',
+      title: 'Tu marca ya aparece, pero no en todas las consultas',
+      body:
+        brandShare > 0
+          ? `ChatGPT te menciona en el ${brandShare.toFixed(1)}% de las respuestas relevantes. Todavía hay huecos en intenciones clave.`
+          : `Tu Cleexs Score es ${score}, pero aparecés en pocas consultas concretas (${Math.round(mentionRate)}% de menciones).`,
+    };
+  }
+  return {
+    tone: 'critical',
+    title: 'Hoy casi no aparecés en ChatGPT',
+    body: `En las consultas que simulamos, tu marca casi no figura (${brandShare.toFixed(1)}% de menciones). Hay mucho terreno por ganar.`,
+  };
+}
+
+function buildQueryWeaknessFinding(query: DiagnosticoV2QueryDiscovery): DiagnosticoV2Finding {
+  const total = Math.max(query.totalQueries, 1);
+  const loseShare = query.losePromptCount / total;
+  const competeShare = query.competePromptCount / total;
+  const topLose = query.lose[0];
+  const topCompete = query.compete[0];
+
+  if (query.leadPromptCount >= query.losePromptCount && query.leadPromptCount >= query.competePromptCount) {
+    const leadLabel = query.lead[0] || 'consultas de interés';
+    return {
+      tone: 'success',
+      title: 'Vas bien en consultas de interés temprano',
+      body: `En ${query.leadPromptCount} de ${total} consultas analizadas liderás o competís bien (${leadLabel.toLowerCase()}). El foco ahora es sostenerlo al comparar opciones.`,
+    };
+  }
+
+  if (loseShare >= 0.34 && topLose) {
+    const comparison = /compar|proveedor|precio|decisi/i.test(topLose);
+    return {
       tone: 'warning',
-      title: 'Falta contenido para quienes están comparando opciones',
-      body: 'Perdés oportunidades clave en consultas de comparación y decisión.',
-    },
-    {
+      title: comparison
+        ? 'Falta contenido para quienes comparan opciones'
+        : `Debilidad en ${topLose.toLowerCase()}`,
+      body: `Perdés en ${query.losePromptCount} de ${total} consultas, sobre todo cuando el usuario está ${query.insightHighlight}.`,
+    };
+  }
+
+  if (competeShare >= 0.34 && topCompete) {
+    return {
+      tone: 'warning',
+      title: `Competís, pero no ganás en ${topCompete.toLowerCase()}`,
+      body: `En ${query.competePromptCount} de ${total} consultas aparecés junto a ${query.leaderName}, pero no terminás de imponerte.`,
+    };
+  }
+
+  if (query.funnel.top1Rate < 25 && query.funnel.mentionRate > 0) {
+    return {
+      tone: 'warning',
+      title: 'Te mencionan, pero casi nunca quedás primero',
+      body: `Solo en el ${Math.round(query.funnel.top1Rate)}% de las consultas sos la recomendación #1, aunque aparecés en el ${Math.round(query.funnel.mentionRate)}%.`,
+    };
+  }
+
+  return {
+    tone: 'warning',
+    title: 'Hay consultas clave sin cubrir',
+    body: `Detectamos ${query.queryTypeCount} tipos de consulta distintos; en ${query.losePromptCount} de ${total} todavía no ganás visibilidad suficiente.`,
+  };
+}
+
+function buildGapFinding(input: {
+  score: number;
+  brandShare: number;
+  leaderName: string;
+  leaderShare: number;
+  engines: Record<EngineCardKey, EngineCardState>;
+}): DiagnosticoV2Finding {
+  const extraEngines: EngineCardKey[] = ['gemini', 'claude', 'perplexity'];
+  const measured = extraEngines
+    .map((key) => ({ key, state: input.engines[key] }))
+    .filter(({ state }) => state.status === 'completed' && state.score != null)
+    .map(({ key, state }) => ({ key, score: scoreToPct(state.score) }))
+    .sort((a, b) => a.score - b.score);
+
+  if (measured.length > 0) {
+    const weakest = measured[0];
+    const label = ENGINE_LABEL[weakest.key];
+    if (weakest.score >= 55) {
+      return {
+        tone: 'success',
+        title: `${label} también te posiciona bien`,
+        body: `Tu Cleexs Score en ${label} es ${weakest.score}. Seguí reforzando contenido para mantener esa ventaja.`,
+      };
+    }
+    if (weakest.score >= 30) {
+      return {
+        tone: 'warning',
+        title: `${label} te posiciona a medias`,
+        body: `Tu presencia en ${label} es ${weakest.score}%. Hay margen claro para ganar visibilidad sin mucho esfuerzo extra.`,
+      };
+    }
+    return {
       tone: 'critical',
-      title: 'Gemini todavía casi nunca te recomienda',
-      body: 'Tu presencia en Gemini es 0%. Es una oportunidad rápida de ganar visibilidad.',
-    },
+      title: `${label} casi no te recomienda`,
+      body: `Tu presencia en ${label} es ${weakest.score}%. Es una oportunidad rápida si reforzás las mismas páginas que ya mejoraron ChatGPT.`,
+    };
+  }
+
+  const gap = input.leaderShare - input.brandShare;
+  if (gap >= 12 && input.leaderName) {
+    return {
+      tone: 'critical',
+      title: `${input.leaderName} te supera hoy en ChatGPT`,
+      body: `${input.leaderName} concentra ${input.leaderShare.toFixed(1)}% de menciones vs tu ${input.brandShare.toFixed(1)}%. Cerrar esa brecha es la palanca más directa.`,
+    };
+  }
+
+  const allExtraLocked = extraEngines.every((key) => input.engines[key].status === 'locked');
+  if (allExtraLocked) {
+    return {
+      tone: 'warning',
+      title: 'Falta medir Gemini, Claude y Perplexity',
+      body: 'Este informe gratuito analiza ChatGPT. Los otros motores pueden mostrar oportunidades distintas — no asumimos 0% hasta medirlos.',
+    };
+  }
+
+  if (input.score < 40) {
+    return {
+      tone: 'critical',
+      title: 'Tu visibilidad en IA todavía es baja',
+      body: `Cleexs Score ${input.score}: ChatGPT rara vez te elige frente a alternativas en tu rubro.`,
+    };
+  }
+
+  return {
+    tone: 'warning',
+    title: 'Todavía hay motores sin consolidar',
+    body: 'Algunos motores no terminaron de generarse o no tienen corrida completa. Conviene completar el análisis multi-motor.',
+  };
+}
+
+function buildFindings(input: {
+  score: number;
+  brandShare: number;
+  leaderName: string;
+  leaderShare: number;
+  queryDiscovery: DiagnosticoV2QueryDiscovery;
+  engines: Record<EngineCardKey, EngineCardState>;
+}): DiagnosticoV2Finding[] {
+  return [
+    buildPresenceFinding(input.score, input.brandShare, input.queryDiscovery.funnel.mentionRate),
+    buildQueryWeaknessFinding(input.queryDiscovery),
+    buildGapFinding(input),
   ];
 }
 
@@ -395,6 +641,8 @@ export function buildDiagnosticoV2ViewModel(
       ? Math.round(((leaderShare - brandShare) / leaderShare) * 100 * 0.37)
       : 0;
 
+  const queryDiscovery = buildQueryDiscovery(runResult, leader?.name || 'Competidor líder');
+
   const sortedOpps = [...teaser.opportunities].sort((a, b) => a.score - b.score);
   const primary = teaser.opportunities[0];
   const weakest = sortedOpps[0];
@@ -424,9 +672,16 @@ export function buildDiagnosticoV2ViewModel(
     brandShare,
     gapClosePct: gapClosePct || 37,
     engines,
-    findings: buildFindings(score, brandShare),
+    findings: buildFindings({
+      score,
+      brandShare,
+      leaderName: leader?.name || 'Competidor líder',
+      leaderShare,
+      queryDiscovery,
+      engines,
+    }),
     competitors: competitors.slice(0, 8),
-    queryDiscovery: buildQueryDiscovery(runResult, leader?.name || 'Competidor líder'),
+    queryDiscovery,
     primaryAction: {
       ...primaryActionRaw,
       impactStars: impactStars(primary?.impact ?? 'Alto'),

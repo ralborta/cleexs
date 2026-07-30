@@ -3869,7 +3869,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         ? await isFirstRunForDomain(diagnostic.id, diagnostic.domain)
         : true;
     const isWaChannel = isWhatsAppSourceChannel(row.sourceChannel);
-    const showFullReport = isWaChannel ? true : tier === 'gold' || isFirstRun;
+    // Cada diagnóstico completado muestra su propio informe (prompts, motores, análisis).
+    // isFirstRun queda solo para email/upsell; no recortar re-diagnósticos del mismo dominio.
+    const showFullReport =
+      isWaChannel || tier === 'gold' || row.status === 'completed';
 
     const diagnosticEmail =
       row.email?.trim() && !row.email.endsWith('@whatsapp.cleexs.net')

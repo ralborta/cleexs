@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
@@ -16,6 +16,7 @@ import { PlanConquistarPremiumContent } from '@/components/diagnostico/plan-conq
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
 
 function VerResultadoContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
   const tierFromQuery = searchParams.get('tier') === 'gold' ? 'gold' : undefined;
@@ -45,6 +46,17 @@ function VerResultadoContent() {
       cancelled = true;
     };
   }, [diagnosticId, tierFromQuery]);
+
+  const isGoldTier =
+    tierFromQuery === 'gold' || diagnostic?.tier === 'gold';
+
+  // Informe premium solo para gold; free siempre va a /ver-resultado/v2.
+  useEffect(() => {
+    if (loading || !diagnosticId || !diagnostic) return;
+    if (isGoldTier) return;
+    const params = new URLSearchParams(searchParams.toString());
+    router.replace(`/ver-resultado/v2?${params.toString()}`);
+  }, [diagnostic, diagnosticId, isGoldTier, loading, router, searchParams]);
 
   const model = useMemo(
     () => (diagnostic ? buildDiagnosticoV2ViewModel(diagnostic, { unlockEngines: true }) : null),
@@ -86,6 +98,14 @@ function VerResultadoContent() {
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-violet-600" />
           <p className="mt-4 text-sm text-slate-500">Cargando informe de diagnóstico…</p>
         </div>
+      </main>
+    );
+  }
+
+  if (diagnostic && !isGoldTier) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f7f8fb] px-6">
+        <Loader2 className="mx-auto h-8 w-8 animate-spin text-violet-600" />
       </main>
     );
   }

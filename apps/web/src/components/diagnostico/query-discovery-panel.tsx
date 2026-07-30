@@ -190,10 +190,7 @@ function QueryDiscoveryInsight({
         {discovery.insightBody}{' '}
         <span className="font-bold text-violet-900">{discovery.insightHighlight}.</span>
       </p>
-      <p className="mt-3 text-[9px] leading-snug text-slate-600 sm:text-[10px]">
-        Ahí es donde hoy gana{' '}
-        <span className="font-bold text-violet-800">{discovery.leaderName}</span>.
-      </p>
+      <p className="mt-3 text-[9px] leading-snug text-slate-600 sm:text-[10px]">{discovery.insightFooter}</p>
     </div>
   );
 }

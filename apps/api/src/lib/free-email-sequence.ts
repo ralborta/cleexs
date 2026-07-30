@@ -327,7 +327,7 @@ export async function resolveFreeSequenceLinksForEmail(input: {
     newDiagnosticUrl: base.newDiagnosticUrl,
     plansUrl: base.plansUrl,
     unsubscribeUrl,
-    reportUrl: withEmailAttribution(`${origin}/ver-resultado?diagnosticId=${row.id}`, {
+    reportUrl: withEmailAttribution(`${origin}/ver-resultado/v2?diagnosticId=${row.id}`, {
       campaignSlug: input.campaignSlug,
       variant: input.variant,
       linkRole: 'cta_report',

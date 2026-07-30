@@ -321,7 +321,7 @@ function buildLinksForCandidate(input: {
 
   return {
     ...baseLinks,
-    reportUrl: withEmailAttribution(`${origin}/ver-resultado?diagnosticId=${input.candidate.diagnosticId}`, {
+    reportUrl: withEmailAttribution(`${origin}/ver-resultado/v2?diagnosticId=${input.candidate.diagnosticId}`, {
       campaignSlug,
       variant: input.variant,
       linkRole: 'cta_report',
