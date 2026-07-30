@@ -156,11 +156,6 @@ function RoadmapTimeline({
   );
 }
 
-function deliverableShortLabel(label: string): string {
-  const first = label.split(',')[0]?.trim() || label;
-  return first.split(/\s+/).slice(0, 2).join(' ').toUpperCase();
-}
-
 function SectionBadge({
   n,
   label,
@@ -594,12 +589,14 @@ function DeliverableCard({
   icon,
   value,
   label,
+  shortLabel,
   croPhaseA,
   croPhaseB,
 }: {
   icon: ReactNode;
   value: number;
   label: string;
+  shortLabel?: string;
   croPhaseA?: boolean;
   croPhaseB?: boolean;
 }) {
@@ -630,7 +627,7 @@ function DeliverableCard({
               : 'text-[11px]',
         )}
       >
-        {croPhaseB ? deliverableShortLabel(label) : label}
+        {croPhaseB ? shortLabel || label : label}
       </p>
     </div>
   );
@@ -645,8 +642,8 @@ function PlanConquistarCtaPanel({
   model: DiagnosticoV2ViewModel;
   variant?: 'main' | 'inline' | 'sticky';
 }) {
-  const actions = model.deliverables[0]?.value ?? 25;
-  const prompts = model.deliverables[1]?.value ?? 41;
+  const actions = model.deliverables[0]?.value ?? 0;
+  const prompts = model.deliverables[1]?.value ?? 0;
 
   if (variant === 'sticky') {
     return (
@@ -695,9 +692,12 @@ function PlanConquistarCtaPanel({
         icon="sparkles"
         destination="plan-conquistar"
       />
-      <p className="mt-3 text-center text-sm font-medium text-violet-100/95 sm:text-base">
-        {actions} acciones · {prompts} prompts · Roadmap de 90 días
-      </p>
+      {actions > 0 || prompts > 0 ? (
+        <p className="mt-3 text-center text-sm font-medium text-violet-100/95 sm:text-base">
+          {actions} {actions === 1 ? 'acción' : 'acciones'} · {prompts}{' '}
+          {prompts === 1 ? 'prompt' : 'prompts'} · Roadmap de 90 días
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1268,9 +1268,7 @@ export function DiagnosticoGratuitoV2({
                   : `Nuestro motor terminó de trabajar sobre ${model.brandName}.`}
               </p>
               <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
-                {croPhaseB
-                  ? 'Analizó oportunidades, calculó impacto, descartó lo que no mueve la aguja y armó un plan de ejecución personalizado. Solo falta activarlo.'
-                  : 'Ya analizó todas las oportunidades. Ya calculó cuáles tienen mayor impacto. Ya descartó las que hoy no mueven la aguja. Y ya armó un plan de ejecución personalizado para que sepas exactamente qué hacer primero.'}
+                {model.deliverablesIntro}
               </p>
               <p className="text-xs font-bold text-violet-700 sm:text-sm">Todo ya está listo. Solo falta activarlo.</p>
             </div>
@@ -1279,6 +1277,7 @@ export function DiagnosticoGratuitoV2({
               icon={<ClipboardList className="h-6 w-6" />}
               value={model.deliverables[0].value}
               label={model.deliverables[0].label}
+              shortLabel={model.deliverables[0].shortLabel}
               croPhaseA={croPhaseA}
               croPhaseB={croPhaseB}
             />
@@ -1286,6 +1285,7 @@ export function DiagnosticoGratuitoV2({
               icon={<Lightbulb className="h-6 w-6" />}
               value={model.deliverables[1].value}
               label={model.deliverables[1].label}
+              shortLabel={model.deliverables[1].shortLabel}
               croPhaseA={croPhaseA}
               croPhaseB={croPhaseB}
             />
@@ -1293,6 +1293,7 @@ export function DiagnosticoGratuitoV2({
               icon={<FileText className="h-6 w-6" />}
               value={model.deliverables[2].value}
               label={model.deliverables[2].label}
+              shortLabel={model.deliverables[2].shortLabel}
               croPhaseA={croPhaseA}
               croPhaseB={croPhaseB}
             />
@@ -1300,6 +1301,7 @@ export function DiagnosticoGratuitoV2({
               icon={<Users className="h-6 w-6" />}
               value={model.deliverables[3].value}
               label={model.deliverables[3].label}
+              shortLabel={model.deliverables[3].shortLabel}
               croPhaseA={croPhaseA}
               croPhaseB={croPhaseB}
             />
@@ -1307,6 +1309,7 @@ export function DiagnosticoGratuitoV2({
               icon={<Zap className="h-6 w-6" />}
               value={model.deliverables[4].value}
               label={model.deliverables[4].label}
+              shortLabel={model.deliverables[4].shortLabel}
               croPhaseA={croPhaseA}
               croPhaseB={croPhaseB}
             />
@@ -1314,6 +1317,7 @@ export function DiagnosticoGratuitoV2({
               icon={<Target className="h-6 w-6" />}
               value={model.deliverables[5].value}
               label={model.deliverables[5].label}
+              shortLabel={model.deliverables[5].shortLabel}
               croPhaseA={croPhaseA}
               croPhaseB={croPhaseB}
             />
@@ -1435,7 +1439,8 @@ export function DiagnosticoGratuitoV2({
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 p-3 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="sticky" />
           <p className="mt-1.5 text-center text-[10px] font-medium text-slate-500">
-            {model.deliverables[0]?.value ?? 25} acciones · roadmap 90 días
+            {model.deliverables[0]?.value ?? 0}{' '}
+            {(model.deliverables[0]?.value ?? 0) === 1 ? 'acción' : 'acciones'} · roadmap 90 días
           </p>
         </div>
       ) : null}

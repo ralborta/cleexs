@@ -86,7 +86,8 @@ export type DiagnosticoV2ViewModel = {
     effortLabel: string;
   };
   teaser: TeaserShape;
-  deliverables: Array<{ value: number; label: string }>;
+  deliverables: Array<{ value: number; label: string; shortLabel: string }>;
+  deliverablesIntro: string;
   roadmapPreview: Array<{ week: string; title: string; detail: string }>;
   hiddenActionCount: number;
 };
@@ -667,6 +668,96 @@ function buildExecutiveNarrative(input: {
   };
 }
 
+function buildPersonalizedDeliverables(input: {
+  teaser: TeaserShape;
+  competitors: DiagnosticoV2CompetitorRow[];
+  queryDiscovery: DiagnosticoV2QueryDiscovery;
+  brandName: string;
+}): {
+  deliverables: DiagnosticoV2ViewModel['deliverables'];
+  deliverablesIntro: string;
+  hiddenActionCount: number;
+} {
+  const opps = input.teaser.opportunities;
+  const basePrompts = input.teaser.implementationPrompts?.length ?? 0;
+  const queries = Math.max(input.queryDiscovery.totalQueries, opps.length, 1);
+
+  const actionCount = opps.length;
+  const promptCount = Math.max(basePrompts, opps.filter((o) => o.score < 70).length, actionCount > 0 ? 1 : 0);
+  const pagesToCreate = Math.max(
+    opps.filter((o) => o.score < 65 || /compar|consider/i.test(o.intention)).length,
+    actionCount > 0 ? 1 : 0,
+  );
+  const compareCount = input.competitors.filter((c) => !c.isBrand && c.share > 0).length;
+  const quickWins = Math.max(
+    opps.filter((o) => o.score < 55 && o.effort === 'Bajo').length,
+    opps.filter((o) => o.score < 50).length,
+    Math.min(input.teaser.improveNow.length, 3),
+    actionCount > 0 ? 1 : 0,
+  );
+
+  const deliverables: DiagnosticoV2ViewModel['deliverables'] = [
+    {
+      value: actionCount,
+      label:
+        actionCount === 1
+          ? 'acción priorizada de tu análisis'
+          : 'acciones priorizadas de tu análisis',
+      shortLabel: actionCount === 1 ? 'ACCIÓN' : 'ACCIONES',
+    },
+    {
+      value: promptCount,
+      label:
+        promptCount === 1
+          ? 'prompt generado para tu marca'
+          : 'prompts generados para tu marca',
+      shortLabel: promptCount === 1 ? 'PROMPT' : 'PROMPTS',
+    },
+    {
+      value: pagesToCreate,
+      label:
+        pagesToCreate === 1
+          ? 'página sugerida según tus consultas'
+          : 'páginas sugeridas según tus consultas',
+      shortLabel: pagesToCreate === 1 ? 'PÁGINA' : 'PÁGINAS',
+    },
+    {
+      value: compareCount,
+      label:
+        compareCount === 1
+          ? 'comparativa donde un competidor te gana hoy'
+          : 'comparativas donde tus competidores te ganan hoy',
+      shortLabel: compareCount === 1 ? 'COMPARATIVA' : 'COMPARATIVAS',
+    },
+    {
+      value: quickWins,
+      label:
+        quickWins === 1
+          ? 'mejora rápida para esta semana'
+          : 'mejoras rápidas para esta semana',
+      shortLabel: quickWins === 1 ? 'MEJORA' : 'MEJORAS',
+    },
+    {
+      value: 1,
+      label: 'roadmap de implementación de 90 días',
+      shortLabel: 'ROADMAP',
+    },
+  ];
+
+  const deliverablesIntro =
+    actionCount > 0
+      ? `En ${queries} consultas analizadas para ${input.brandName}, el motor detectó ${actionCount} ${
+          actionCount === 1 ? 'acción prioritaria' : 'acciones prioritarias'
+        } y armó este plan de ejecución.`
+      : `Analizamos ${queries} consultas para ${input.brandName}. El plan completo ordena las oportunidades por impacto.`;
+
+  return {
+    deliverables,
+    deliverablesIntro,
+    hiddenActionCount: actionCount,
+  };
+}
+
 function competitorUrlMap(runResult: PublicDiagnosticRunResult) {
   return new Map(
     (runResult.competitorDetails ?? [])
@@ -748,14 +839,12 @@ export function buildDiagnosticoV2ViewModel(
   const topCompetitor = competitors.find((c) => !c.isBrand)?.name;
   const primaryActionRaw = humanPrimaryAction(primary, topCompetitor);
 
-  const hiddenActions = Math.max(teaser.totalOpportunities, 25);
-  const promptCount = Math.max(teaser.implementationPrompts?.length ?? 0, 41);
-  const pageCount = Math.max(Math.min(teaser.improveNow.length + 7, 12), 12);
-  const compareCount = Math.max(
-    competitors.filter((c) => !c.isBrand && c.share > 0).length,
-    7,
-  );
-  const quickWins = Math.max(Math.min(teaser.improveNow.length, 4), 4);
+  const { deliverables, deliverablesIntro, hiddenActionCount } = buildPersonalizedDeliverables({
+    teaser,
+    competitors,
+    queryDiscovery,
+    brandName: runResult.brandName,
+  });
 
   return {
     brandName: runResult.brandName,
@@ -783,15 +872,9 @@ export function buildDiagnosticoV2ViewModel(
       effortLabel: primary?.effort === 'Bajo' ? 'Bajo' : primary?.effort === 'Medio' ? 'Medio' : 'Alto',
     },
     teaser,
-    deliverables: [
-      { value: hiddenActions, label: 'acciones para ejecutar, ordenadas por impacto' },
-      { value: promptCount, label: 'prompts personalizados, listos para copiar' },
-      { value: pageCount, label: 'páginas exactas que deberías crear' },
-      { value: compareCount, label: 'comparativas donde hoy tus competidores te ganan' },
-      { value: quickWins, label: 'mejoras que podrías implementar esta semana' },
-      { value: 1, label: 'roadmap de implementación de 90 días' },
-    ],
-    hiddenActionCount: hiddenActions,
+    deliverables,
+    deliverablesIntro,
+    hiddenActionCount,
     roadmapPreview: buildRoadmapPreview(teaser.opportunities, teaser.roadmap, topCompetitor),
   };
 }
