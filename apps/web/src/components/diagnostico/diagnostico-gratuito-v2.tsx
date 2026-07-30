@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -80,7 +80,7 @@ function displayDomain(domain: string | null | undefined) {
   return domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '');
 }
 
-export type DiagnosticoV2LayoutVariant = 'default' | 'cro-phase-a' | 'cro-phase-b';
+export type DiagnosticoV2LayoutVariant = 'default' | 'cro-phase-a' | 'cro-phase-b' | 'cro-phase-c';
 
 function SectionIntro({ children, croPhaseB }: { children: ReactNode; croPhaseB?: boolean }) {
   return (
@@ -466,15 +466,91 @@ const FINDING_WATERMARK: Record<DiagnosticoV2ViewModel['findings'][0]['tone'], R
   critical: <Bot className="h-16 w-16" />,
 };
 
-function RevenueCalculator({ leaderName }: { leaderName: string }) {
-  const [monthlyVisits, setMonthlyVisits] = useState('500');
-  const [conversionRate, setConversionRate] = useState('10');
-  const [clientValue, setClientValue] = useState('300');
+function RevenueCalculator({
+  leaderName,
+  useSliders,
+}: {
+  leaderName: string;
+  useSliders?: boolean;
+}) {
+  const [monthlyVisits, setMonthlyVisits] = useState(500);
+  const [conversionRate, setConversionRate] = useState(10);
+  const [clientValue, setClientValue] = useState(300);
 
-  const visits = Number(monthlyVisits) || 0;
-  const conversion = Number(conversionRate) || 0;
-  const value = Number(clientValue) || 0;
-  const monthly = visits * (conversion / 100) * value;
+  const monthly = monthlyVisits * (conversionRate / 100) * clientValue;
+
+  const sliderFields = [
+    {
+      label: 'Visitas adicionales por mes',
+      value: monthlyVisits,
+      set: setMonthlyVisits,
+      min: 100,
+      max: 5000,
+      step: 50,
+      format: (v: number) => v.toLocaleString('es-AR'),
+    },
+    {
+      label: 'Conversión a cliente (%)',
+      value: conversionRate,
+      set: setConversionRate,
+      min: 1,
+      max: 30,
+      step: 1,
+      format: (v: number) => `${v}%`,
+    },
+    {
+      label: 'Facturación mensual por cliente (USD)',
+      value: clientValue,
+      set: setClientValue,
+      min: 50,
+      max: 2000,
+      step: 25,
+      format: (v: number) => money(v),
+    },
+  ] as const;
+
+  if (useSliders) {
+    return (
+      <div className="p-5 sm:p-6">
+        <h3 className="text-lg font-bold text-[#1e2a5a] sm:text-xl">¿Cuánto podrías ganar?</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
+          Mové los controles — estimación ilustrativa si implementás el plan frente a {leaderName}.
+        </p>
+        <div className="mt-6 space-y-6">
+          {sliderFields.map((field) => (
+            <div key={field.label}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-600">{field.label}</span>
+                <span className="text-lg font-black tabular-nums text-[#1e2a5a]">
+                  {field.format(field.value)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                value={field.value}
+                onChange={(e) => field.set(Number(e.target.value))}
+                className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-violet-600"
+                aria-valuemin={field.min}
+                aria-valuemax={field.max}
+                aria-valuenow={field.value}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 p-5 sm:p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-violet-700">Resultado estimado</p>
+          <p className="mt-2 text-4xl font-black tabular-nums text-[#2563eb] sm:text-5xl">{money(monthly)}</p>
+          <p className="mt-1 text-sm font-medium text-slate-600">de facturación adicional mensual</p>
+          <p className="mt-3 text-xs leading-relaxed text-slate-500">
+            Estimación basada en tus supuestos. No es una promesa de resultados.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-5">
@@ -495,7 +571,7 @@ function RevenueCalculator({ leaderName }: { leaderName: string }) {
               type="number"
               min="0"
               value={field.value}
-              onChange={(e) => field.set(e.target.value)}
+              onChange={(e) => field.set(Number(e.target.value) || 0)}
               className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </label>
@@ -555,6 +631,72 @@ function DeliverableCard({
         )}
       >
         {croPhaseB ? deliverableShortLabel(label) : label}
+      </p>
+    </div>
+  );
+}
+
+function PlanConquistarCtaPanel({
+  diagnostic,
+  model,
+  variant = 'main',
+}: {
+  diagnostic: PublicDiagnostic;
+  model: DiagnosticoV2ViewModel;
+  variant?: 'main' | 'inline' | 'sticky';
+}) {
+  const actions = model.deliverables[0]?.value ?? 25;
+  const prompts = model.deliverables[1]?.value ?? 41;
+
+  if (variant === 'sticky') {
+    return (
+      <PlanConquistarCheckoutButton
+        className="w-full min-h-[48px] rounded-xl py-3.5 text-base shadow-md"
+        variant="sidebar"
+        label={`Desbloquear plan (${model.brandName}) →`}
+        sourceChannel="ver_resultado_v2"
+        unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
+        diagnosticId={diagnostic.id}
+        customerEmail={diagnostic.email}
+        icon="sparkles"
+        destination="plan-conquistar"
+      />
+    );
+  }
+
+  const wrapperClass =
+    variant === 'inline'
+      ? 'overflow-hidden rounded-2xl bg-violet-600 px-4 py-6 shadow-lg shadow-violet-600/25 sm:px-6 sm:py-7'
+      : cn(
+          'overflow-hidden rounded-2xl bg-violet-600 shadow-lg shadow-violet-600/20',
+          'px-4 py-9 sm:px-8 sm:py-10',
+        );
+
+  const buttonClass =
+    variant === 'inline'
+      ? 'mx-auto w-full max-w-xl min-h-[52px] rounded-2xl py-4 text-base shadow-md sm:text-lg'
+      : 'mx-auto w-full max-w-xl min-h-[56px] rounded-2xl py-5 text-lg shadow-md sm:min-h-[60px] sm:text-xl';
+
+  return (
+    <div className={wrapperClass}>
+      {variant === 'inline' ? (
+        <p className="mb-4 text-center text-sm font-medium text-violet-100 sm:text-base">
+          Ya viste el problema y la acción prioritaria — el plan completo está listo.
+        </p>
+      ) : null}
+      <PlanConquistarCheckoutButton
+        className={buttonClass}
+        variant="sidebar"
+        label={`Desbloquear mi plan de acción (${model.brandName}) →`}
+        sourceChannel="ver_resultado_v2"
+        unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
+        diagnosticId={diagnostic.id}
+        customerEmail={diagnostic.email}
+        icon="sparkles"
+        destination="plan-conquistar"
+      />
+      <p className="mt-3 text-center text-sm font-medium text-violet-100/95 sm:text-base">
+        {actions} acciones · {prompts} prompts · Roadmap de 90 días
       </p>
     </div>
   );
@@ -621,13 +763,27 @@ export function DiagnosticoGratuitoV2({
   sharePath: string;
   variant?: 'free' | 'premium';
   premiumAppend?: ReactNode;
-  /** cro-phase-a = tipografía mobile; cro-phase-b = narrativa consultoría (+ incluye A) */
+  /** cro-phase-c = Fase B + CTAs sticky/inline + calculadora sliders */
   layoutVariant?: DiagnosticoV2LayoutVariant;
 }) {
   const isPremium = variant === 'premium';
-  const croPhaseB = layoutVariant === 'cro-phase-b';
+  const croPhaseC = layoutVariant === 'cro-phase-c';
+  const croPhaseB = layoutVariant === 'cro-phase-b' || croPhaseC;
   const croPhaseA = layoutVariant === 'cro-phase-a' || croPhaseB;
   const [paywallEngine, setPaywallEngine] = useState<EngineCardKey | null>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const [heroInView, setHeroInView] = useState(true);
+
+  useEffect(() => {
+    if (!croPhaseC || !heroRef.current) return;
+    const node = heroRef.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroInView(entry.isIntersecting),
+      { threshold: 0.12, rootMargin: '-8px 0px 0px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [croPhaseC]);
 
   const scrollToCompetitors = () => {
     document.getElementById('seccion-competidores')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -644,9 +800,15 @@ export function DiagnosticoGratuitoV2({
         </div>
       </header>
 
-      <main className={cn('mx-auto max-w-5xl px-4 sm:px-6', croPhaseA ? 'py-6 sm:py-10' : 'py-6 sm:py-8')}>
+      <main
+        className={cn(
+          'mx-auto max-w-5xl px-4 sm:px-6',
+          croPhaseA ? 'py-6 sm:py-10' : 'py-6 sm:py-8',
+          croPhaseC && 'pb-28 sm:pb-10',
+        )}
+      >
         {/* HERO */}
-        <section className={croPhaseA ? 'mb-8 sm:mb-10' : 'mb-6'}>
+        <section ref={heroRef} className={croPhaseA ? 'mb-8 sm:mb-10' : 'mb-6'}>
           <span
             className={cn(
               'inline-flex rounded-full px-3.5 py-1.5 font-semibold',
@@ -948,9 +1110,23 @@ export function DiagnosticoGratuitoV2({
           </ReportBlock>
         </section>
 
+        {croPhaseC ? (
+          <section className="mt-10">
+            <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="inline" />
+          </section>
+        ) : null}
+
         {/* 5 — Qué pasa si lo hacés */}
         <section>
           <SectionBadge n={5} label="¿Qué pasaría si lo hacés?" croPhaseA={croPhaseA} />
+          {croPhaseC ? (
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+              {WHAT_IF_BENEFITS.map((item) => (
+                <WhatIfBenefitCard key={item.title} icon={item.icon} title={item.title} body={item.body} />
+              ))}
+              <WhatIfOutcomeCard />
+            </div>
+          ) : (
           <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-6'}>
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               {WHAT_IF_BENEFITS.map((item) => (
@@ -959,6 +1135,7 @@ export function DiagnosticoGratuitoV2({
               <WhatIfOutcomeCard />
             </div>
           </ReportBlock>
+          )}
         </section>
 
         {premiumAppend}
@@ -967,9 +1144,15 @@ export function DiagnosticoGratuitoV2({
           <>
         {/* Calculadora — fin del diagnóstico free */}
         <section>
-          <ReportBlock>
-            <RevenueCalculator leaderName={model.leaderName} />
-          </ReportBlock>
+          {croPhaseC ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm shadow-slate-200/20">
+              <RevenueCalculator leaderName={model.leaderName} useSliders />
+            </div>
+          ) : (
+            <ReportBlock>
+              <RevenueCalculator leaderName={model.leaderName} />
+            </ReportBlock>
+          )}
         </section>
 
         <PlanTransitionBanner diagnosticId={diagnostic.id} brandName={model.brandName} />
@@ -1140,37 +1323,7 @@ export function DiagnosticoGratuitoV2({
 
         {/* CTA principal — Plan Conquistar */}
         <section className={croPhaseA ? 'mt-12 sm:mt-14' : 'mt-10 sm:mt-12'}>
-          <div
-            className={cn(
-              'overflow-hidden rounded-2xl bg-violet-600 shadow-lg shadow-violet-600/20',
-              croPhaseA ? 'px-4 py-9 sm:px-8 sm:py-10' : 'px-4 py-8 sm:px-6 sm:py-9',
-            )}
-          >
-            <PlanConquistarCheckoutButton
-              className={cn(
-                'mx-auto w-full max-w-xl rounded-2xl shadow-md',
-                croPhaseA ? 'min-h-[56px] py-5 text-lg sm:min-h-[60px] sm:text-xl' : 'py-4 text-base',
-              )}
-              variant="sidebar"
-              label={
-                croPhaseA
-                  ? `Desbloquear mi plan de acción (${model.brandName}) →`
-                  : `Quiero ver mi plan de acción (${model.brandName}) →`
-              }
-              sourceChannel="ver_resultado_v2"
-              unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
-              diagnosticId={diagnostic.id}
-              customerEmail={diagnostic.email}
-              icon="sparkles"
-              destination="plan-conquistar"
-            />
-            {croPhaseA ? (
-              <p className="mt-4 text-center text-sm font-medium text-violet-100/95 sm:text-base">
-                {model.deliverables[0]?.value ?? 25} acciones · {model.deliverables[1]?.value ?? 41} prompts ·
-                Roadmap de 90 días
-              </p>
-            ) : null}
-          </div>
+          <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="main" />
         </section>
           </>
         ) : null}
@@ -1206,21 +1359,45 @@ export function DiagnosticoGratuitoV2({
         </footer>
         </div>
 
-        {croPhaseB ? (
+        {croPhaseC ? (
           <p className="mt-6 text-center text-xs text-slate-500">
-            Preview Fase B CRO (narrativa) ·{' '}
+            Preview Fase C CRO (conversión) ·{' '}
             <Link
-              href={`/ver-resultado/v2/cro-preview?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              href={`/ver-resultado/v2/cro-preview-b?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
               className="font-medium text-violet-600 underline-offset-2 hover:underline"
             >
-              Ver Fase A
+              Ver Fase B
             </Link>
             {' · '}
             <Link
               href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
               className="font-medium text-violet-600 underline-offset-2 hover:underline"
             >
-              Comparar con producción
+              Producción
+            </Link>
+          </p>
+        ) : croPhaseB ? (
+          <p className="mt-6 text-center text-xs text-slate-500">
+            Preview Fase B CRO (narrativa) ·{' '}
+            <Link
+              href={`/ver-resultado/v2/cro-preview-c?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Ver Fase C (conversión)
+            </Link>
+            {' · '}
+            <Link
+              href={`/ver-resultado/v2/cro-preview?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Fase A
+            </Link>
+            {' · '}
+            <Link
+              href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Producción
             </Link>
           </p>
         ) : croPhaseA ? (
@@ -1253,6 +1430,15 @@ export function DiagnosticoGratuitoV2({
           </p>
         )}
       </main>
+
+      {!isPremium && croPhaseC && !heroInView ? (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 p-3 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="sticky" />
+          <p className="mt-1.5 text-center text-[10px] font-medium text-slate-500">
+            {model.deliverables[0]?.value ?? 25} acciones · roadmap 90 días
+          </p>
+        </div>
+      ) : null}
 
       {!isPremium ? (
         <EnginePaywallModal

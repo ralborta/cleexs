@@ -10,39 +10,28 @@ import { buildDiagnosticoV2ViewModel } from '@/lib/diagnostico-v2-data';
 import { DiagnosticoGratuitoV2 } from '@/components/diagnostico/diagnostico-gratuito-v2';
 import { appendQueryToPath, buildShareTrackingQuery } from '@/lib/share-tracking';
 
-function CroPreviewBanner({ diagnosticId }: { diagnosticId: string }) {
+function CroPreviewBannerC({ diagnosticId }: { diagnosticId: string }) {
   const prodHref = `/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnosticId)}`;
+  const phaseBHref = `/ver-resultado/v2/cro-preview-b?diagnosticId=${encodeURIComponent(diagnosticId)}`;
 
   return (
-    <div className="border-b border-amber-300/80 bg-amber-50 px-4 py-3 text-center text-sm text-amber-950">
-      <p className="font-semibold">Preview — Fase A CRO (mobile first)</p>
-      <p className="mt-1 text-xs text-amber-900/90">
-        No es producción. Tipografía, hero y CTA agrandados para revisión de Gonzalo.
+    <div className="border-b border-emerald-300/80 bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-950">
+      <p className="font-semibold">Preview — Fase C CRO (conversión mobile)</p>
+      <p className="mt-1 text-xs text-emerald-900/90">
+        CTA sticky, CTA intermedio y calculadora con sliders. Propuesta final para revisión de Gonzalo.
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs font-semibold">
-        <Link
-          href={`/ver-resultado/v2/cro-preview-b?diagnosticId=${encodeURIComponent(diagnosticId)}`}
-          className="text-violet-700 underline-offset-2 hover:underline"
-        >
-          Ver Fase B (narrativa)
+        <Link href={phaseBHref} className="text-violet-700 underline-offset-2 hover:underline">
+          Ver Fase B
         </Link>
-        <span className="text-amber-500" aria-hidden>
-          ·
-        </span>
-        <Link
-          href={`/ver-resultado/v2/cro-preview-c?diagnosticId=${encodeURIComponent(diagnosticId)}`}
-          className="text-violet-700 underline-offset-2 hover:underline"
-        >
-          Ver Fase C (conversión)
-        </Link>
-        <span className="text-amber-500" aria-hidden>
+        <span className="text-emerald-500" aria-hidden>
           ·
         </span>
         <Link
           href={prodHref}
           className="inline-flex items-center gap-1 text-violet-700 underline-offset-2 hover:underline"
         >
-          Informe v2 producción
+          Producción
           <ExternalLink className="h-3.5 w-3.5" aria-hidden />
         </Link>
       </div>
@@ -50,7 +39,7 @@ function CroPreviewBanner({ diagnosticId }: { diagnosticId: string }) {
   );
 }
 
-function VerResultadoV2CroPreviewContent() {
+function VerResultadoV2CroPreviewCContent() {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
   const tierFromQuery = searchParams.get('tier') === 'gold' ? 'gold' : undefined;
@@ -86,7 +75,7 @@ function VerResultadoV2CroPreviewContent() {
       <main className="flex min-h-screen items-center justify-center bg-[#f7f8fb] px-6">
         <div className="text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-violet-600" />
-          <p className="mt-4 text-sm text-slate-500">Cargando preview Fase A…</p>
+          <p className="mt-4 text-sm text-slate-500">Cargando preview Fase C…</p>
         </div>
       </main>
     );
@@ -98,12 +87,6 @@ function VerResultadoV2CroPreviewContent() {
         <div className="max-w-md text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
           <p className="mt-4 text-sm text-slate-600">{error || 'Diagnóstico no encontrado.'}</p>
-          <p className="mt-2 text-xs text-slate-500">
-            Ejemplo:{' '}
-            <code className="rounded bg-slate-100 px-1 py-0.5">
-              /ver-resultado/v2/cro-preview?diagnosticId=...
-            </code>
-          </p>
         </div>
       </main>
     );
@@ -144,25 +127,25 @@ function VerResultadoV2CroPreviewContent() {
       : '';
   const sharePath = scoreTrackingQuery
     ? appendQueryToPath(
-        `/ver-resultado/v2/cro-preview?diagnosticId=${encodeURIComponent(diagnostic.id)}`,
+        `/ver-resultado/v2/cro-preview-c?diagnosticId=${encodeURIComponent(diagnostic.id)}`,
         scoreTrackingQuery,
       )
-    : `/ver-resultado/v2/cro-preview?diagnosticId=${encodeURIComponent(diagnostic.id)}`;
+    : `/ver-resultado/v2/cro-preview-c?diagnosticId=${encodeURIComponent(diagnostic.id)}`;
 
   return (
     <>
-      <CroPreviewBanner diagnosticId={diagnostic.id} />
+      <CroPreviewBannerC diagnosticId={diagnostic.id} />
       <DiagnosticoGratuitoV2
         diagnostic={diagnostic}
         model={model}
         sharePath={sharePath}
-        layoutVariant="cro-phase-a"
+        layoutVariant="cro-phase-c"
       />
     </>
   );
 }
 
-export default function VerResultadoV2CroPreviewPage() {
+export default function VerResultadoV2CroPreviewCPage() {
   return (
     <Suspense
       fallback={
@@ -171,7 +154,7 @@ export default function VerResultadoV2CroPreviewPage() {
         </main>
       }
     >
-      <VerResultadoV2CroPreviewContent />
+      <VerResultadoV2CroPreviewCContent />
     </Suspense>
   );
 }
