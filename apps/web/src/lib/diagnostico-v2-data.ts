@@ -48,6 +48,17 @@ export type DiagnosticoV2QueryDiscovery = {
   leaderName: string;
 };
 
+export type DiagnosticoV2ExecutiveNarrative = {
+  headline: string;
+  openingLine: string;
+  strengthLine: string;
+  weaknessLine: string;
+  competitorLine: string;
+  findingsIntro: string;
+  evidenceLabel: string;
+  primaryActionLead: string;
+};
+
 export type DiagnosticoV2ViewModel = {
   brandName: string;
   domain: string;
@@ -55,6 +66,7 @@ export type DiagnosticoV2ViewModel = {
   verdict: DiagnosticoV2Verdict;
   verdictLabel: string;
   verdictDetail: string;
+  executiveNarrative: DiagnosticoV2ExecutiveNarrative;
   competitorCount: number;
   brandRank: number;
   leaderName: string;
@@ -587,6 +599,74 @@ function buildFindings(input: {
   ];
 }
 
+function shortenFindingLine(finding: DiagnosticoV2Finding): string {
+  const bodyLead = finding.body.split(/[.!]/)[0]?.trim();
+  if (bodyLead && bodyLead.length <= 110) {
+    return bodyLead.endsWith('.') ? bodyLead : `${bodyLead}.`;
+  }
+  return finding.title.endsWith('.') ? finding.title : `${finding.title}.`;
+}
+
+function buildExecutiveNarrative(input: {
+  brandName: string;
+  score: number;
+  verdict: DiagnosticoV2Verdict;
+  brandShare: number;
+  leaderName: string;
+  leaderShare: number;
+  brandRank: number;
+  queryDiscovery: DiagnosticoV2QueryDiscovery;
+  findings: DiagnosticoV2Finding[];
+}): DiagnosticoV2ExecutiveNarrative {
+  const leader = input.leaderName.trim() || 'tu competidor líder';
+  const totalQueries = Math.max(input.queryDiscovery.totalQueries, 1);
+  const strengthFinding =
+    input.findings.find((f) => f.tone === 'success') ?? input.findings[0];
+  const weaknessFinding =
+    input.findings.find((f) => f.tone !== 'success') ?? input.findings[1] ?? input.findings[0];
+
+  let headline: string;
+  if (input.verdict === 'yes' && input.brandShare >= 25) {
+    headline = `${input.brandName} ya tiene buena presencia en ChatGPT.`;
+  } else if (input.verdict === 'no' || input.score < 35) {
+    headline = `Hoy estás perdiendo clientes que ChatGPT les envía a ${leader}.`;
+  } else {
+    headline = `${input.brandName} aparece a veces, pero pierde cuando el cliente compara opciones.`;
+  }
+
+  let openingLine: string;
+  if (input.queryDiscovery.losePromptCount > input.queryDiscovery.leadPromptCount) {
+    openingLine = `Cuando un cliente pregunta por alternativas en tu rubro, ChatGPT recomienda más a ${leader} que a vos.`;
+  } else if (input.brandRank === 1) {
+    openingLine = `Liderás en menciones, pero todavía hay consultas clave donde no cerrás la recomendación.`;
+  } else {
+    openingLine = `Analizamos ${totalQueries} consultas reales de tus potenciales clientes y encontramos una debilidad clara frente a ${leader}.`;
+  }
+
+  const strengthLine =
+    strengthFinding?.tone === 'success'
+      ? shortenFindingLine(strengthFinding)
+      : `Aparecés en el ${Math.round(input.queryDiscovery.funnel.mentionRate)}% de las consultas analizadas.`;
+
+  const weaknessLine = weaknessFinding ? shortenFindingLine(weaknessFinding) : openingLine;
+
+  const competitorLine =
+    input.brandRank > 1
+      ? `Eso explica por qué hoy ChatGPT recomienda más a ${leader} (${input.leaderShare.toFixed(0)}% de menciones) que a ${input.brandName} (${input.brandShare.toFixed(0)}%).`
+      : `El foco ahora es sostener el liderazgo en comparación y decisión de compra.`;
+
+  return {
+    headline,
+    openingLine,
+    strengthLine,
+    weaknessLine,
+    competitorLine,
+    findingsIntro: `Analizamos ${totalQueries} consultas donde tus potenciales clientes eligen proveedor. Encontramos dos patrones:`,
+    evidenceLabel: 'Cleexs Score · evidencia del análisis',
+    primaryActionLead: 'Si solo implementaras una acción en los próximos 30 días, haríamos esta.',
+  };
+}
+
 function competitorUrlMap(runResult: PublicDiagnosticRunResult) {
   return new Map(
     (runResult.competitorDetails ?? [])
@@ -642,6 +722,25 @@ export function buildDiagnosticoV2ViewModel(
       : 0;
 
   const queryDiscovery = buildQueryDiscovery(runResult, leader?.name || 'Competidor líder');
+  const findings = buildFindings({
+    score,
+    brandShare,
+    leaderName: leader?.name || 'Competidor líder',
+    leaderShare,
+    queryDiscovery,
+    engines,
+  });
+  const executiveNarrative = buildExecutiveNarrative({
+    brandName: runResult.brandName,
+    score,
+    verdict: verdict.verdict,
+    brandShare,
+    leaderName: leader?.name || 'Competidor líder',
+    leaderShare,
+    brandRank,
+    queryDiscovery,
+    findings,
+  });
 
   const sortedOpps = [...teaser.opportunities].sort((a, b) => a.score - b.score);
   const primary = teaser.opportunities[0];
@@ -665,6 +764,7 @@ export function buildDiagnosticoV2ViewModel(
     verdict: verdict.verdict,
     verdictLabel: verdict.label,
     verdictDetail: verdict.detail,
+    executiveNarrative,
     competitorCount: analyzedCompetitorCount,
     brandRank,
     leaderName: leader?.name || 'Competidor líder',
@@ -672,14 +772,7 @@ export function buildDiagnosticoV2ViewModel(
     brandShare,
     gapClosePct: gapClosePct || 37,
     engines,
-    findings: buildFindings({
-      score,
-      brandShare,
-      leaderName: leader?.name || 'Competidor líder',
-      leaderShare,
-      queryDiscovery,
-      engines,
-    }),
+    findings,
     competitors: competitors.slice(0, 8),
     queryDiscovery,
     primaryAction: {

@@ -80,7 +80,86 @@ function displayDomain(domain: string | null | undefined) {
   return domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '');
 }
 
-export type DiagnosticoV2LayoutVariant = 'default' | 'cro-phase-a';
+export type DiagnosticoV2LayoutVariant = 'default' | 'cro-phase-a' | 'cro-phase-b';
+
+function SectionIntro({ children, croPhaseB }: { children: ReactNode; croPhaseB?: boolean }) {
+  return (
+    <p
+      className={cn(
+        'mb-4 max-w-3xl leading-relaxed text-slate-600',
+        croPhaseB ? 'text-base sm:text-lg' : 'text-sm sm:text-base',
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
+function NarrativePatternRow({
+  tone,
+  label,
+  body,
+}: {
+  tone: 'success' | 'warning';
+  label: string;
+  body: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl border px-5 py-4 sm:px-6 sm:py-5',
+        tone === 'success'
+          ? 'border-emerald-200/90 bg-emerald-50/50'
+          : 'border-amber-200/90 bg-amber-50/40',
+      )}
+    >
+      <p
+        className={cn(
+          'text-xs font-bold uppercase tracking-widest',
+          tone === 'success' ? 'text-emerald-700' : 'text-amber-800',
+        )}
+      >
+        {label}
+      </p>
+      <p className="mt-2 text-base font-semibold leading-snug text-[#1e2a5a] sm:text-lg">{body}</p>
+    </div>
+  );
+}
+
+function RoadmapTimeline({
+  items,
+}: {
+  items: DiagnosticoV2ViewModel['roadmapPreview'];
+}) {
+  return (
+    <div className="space-y-0">
+      {items.map((item, index) => (
+        <div key={`${item.week}-${item.title}`} className="relative flex gap-4 pb-8 last:pb-0">
+          {index < items.length - 1 ? (
+            <div
+              className="absolute bottom-0 left-[11px] top-6 w-0.5 bg-violet-200"
+              aria-hidden
+            />
+          ) : null}
+          <div
+            className="relative z-[1] mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 border-violet-500 bg-white shadow-sm shadow-violet-200/60"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-600">{item.week}</p>
+            <p className="mt-1 text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg">{item.title}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{item.detail}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function deliverableShortLabel(label: string): string {
+  const first = label.split(',')[0]?.trim() || label;
+  return first.split(/\s+/).slice(0, 2).join(' ').toUpperCase();
+}
 
 function SectionBadge({
   n,
@@ -440,29 +519,43 @@ function DeliverableCard({
   value,
   label,
   croPhaseA,
+  croPhaseB,
 }: {
   icon: ReactNode;
   value: number;
   label: string;
   croPhaseA?: boolean;
+  croPhaseB?: boolean;
 }) {
+  const enlarged = croPhaseA || croPhaseB;
   return (
     <div
       className={cn(
         'flex flex-col items-center rounded-lg border border-slate-100 bg-white text-center',
-        croPhaseA ? 'px-3 py-5' : 'px-3 py-4',
+        enlarged ? 'px-3 py-5' : 'px-3 py-4',
       )}
     >
       <div className="mb-2 text-violet-600">{icon}</div>
       <p
         className={cn(
           'font-black tabular-nums text-[#1e2a5a]',
-          croPhaseA ? 'text-3xl sm:text-4xl' : 'text-2xl',
+          enlarged ? 'text-3xl sm:text-4xl' : 'text-2xl',
         )}
       >
         {value}
       </p>
-      <p className={cn('mt-1 leading-snug text-slate-600', croPhaseA ? 'text-sm' : 'text-[11px]')}>{label}</p>
+      <p
+        className={cn(
+          'mt-1 leading-snug text-slate-600',
+          croPhaseB
+            ? 'text-[11px] font-bold uppercase tracking-widest text-slate-500 sm:text-xs'
+            : enlarged
+              ? 'text-sm'
+              : 'text-[11px]',
+        )}
+      >
+        {croPhaseB ? deliverableShortLabel(label) : label}
+      </p>
     </div>
   );
 }
@@ -528,11 +621,12 @@ export function DiagnosticoGratuitoV2({
   sharePath: string;
   variant?: 'free' | 'premium';
   premiumAppend?: ReactNode;
-  /** cro-phase-a = preview CRO Fase A (mobile first); default = producción actual */
+  /** cro-phase-a = tipografía mobile; cro-phase-b = narrativa consultoría (+ incluye A) */
   layoutVariant?: DiagnosticoV2LayoutVariant;
 }) {
   const isPremium = variant === 'premium';
-  const croPhaseA = layoutVariant === 'cro-phase-a';
+  const croPhaseB = layoutVariant === 'cro-phase-b';
+  const croPhaseA = layoutVariant === 'cro-phase-a' || croPhaseB;
   const [paywallEngine, setPaywallEngine] = useState<EngineCardKey | null>(null);
 
   const scrollToCompetitors = () => {
@@ -567,97 +661,166 @@ export function DiagnosticoGratuitoV2({
                 : `Diagnóstico gratuito de ${displayDomain(model.domain)} completado`}
           </span>
 
-          <div
-            className={cn(
-              'mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5',
-              croPhaseA && 'gap-6',
-            )}
-          >
-            <h1
+          {croPhaseB ? (
+            <div className="mt-5 space-y-6 sm:mt-6">
+              <div className="max-w-3xl space-y-4">
+                <h1 className="text-[2rem] font-black leading-[1.12] tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.85rem]">
+                  {model.executiveNarrative.headline}
+                </h1>
+                <p className="text-lg font-medium leading-relaxed text-slate-700 sm:text-xl">
+                  {model.executiveNarrative.openingLine}
+                </p>
+                <p className="text-base leading-relaxed text-slate-600 sm:text-lg">
+                  {model.executiveNarrative.competitorLine}
+                </p>
+              </div>
+
+              <div className="border-t border-slate-200/90 pt-8">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  {model.executiveNarrative.evidenceLabel}
+                </p>
+                <div className="mt-4">
+                  <HeroScoreBlock
+                    model={model}
+                    onScrollCompetitors={scrollToCompetitors}
+                    croPhaseA={croPhaseA}
+                  />
+                </div>
+              </div>
+
+              <ReportBlock className="overflow-hidden border-slate-200/70 bg-slate-50/40">
+                <EngineSidebar
+                  score={model.score}
+                  engines={model.engines}
+                  onLockedClick={setPaywallEngine}
+                  unlockAll={isPremium}
+                />
+              </ReportBlock>
+            </div>
+          ) : (
+            <div
               className={cn(
-                'max-w-3xl font-black leading-tight tracking-tight text-[#1e2a5a] lg:col-start-1 lg:row-start-1 lg:max-w-none',
-                croPhaseA
-                  ? 'text-[2rem] sm:text-4xl lg:text-[3.25rem]'
-                  : 'text-3xl sm:text-4xl lg:text-[2.75rem]',
+                'mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5',
+                croPhaseA && 'gap-6',
               )}
             >
-              ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
-            </h1>
+              <h1
+                className={cn(
+                  'max-w-3xl font-black leading-tight tracking-tight text-[#1e2a5a] lg:col-start-1 lg:row-start-1 lg:max-w-none',
+                  croPhaseA
+                    ? 'text-[2rem] sm:text-4xl lg:text-[3.25rem]'
+                    : 'text-3xl sm:text-4xl lg:text-[2.75rem]',
+                )}
+              >
+                ¿Hoy ChatGPT recomienda {displayDomain(model.domain)}?
+              </h1>
 
-            <div className="lg:col-start-1 lg:row-start-2">
-              <HeroScoreBlock
-                model={model}
-                onScrollCompetitors={scrollToCompetitors}
-                croPhaseA={croPhaseA}
-              />
+              <div className="lg:col-start-1 lg:row-start-2">
+                <HeroScoreBlock
+                  model={model}
+                  onScrollCompetitors={scrollToCompetitors}
+                  croPhaseA={croPhaseA}
+                />
+              </div>
+
+              <ReportBlock className="overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+                <EngineSidebar
+                  score={model.score}
+                  engines={model.engines}
+                  onLockedClick={setPaywallEngine}
+                  unlockAll={isPremium}
+                />
+              </ReportBlock>
             </div>
-
-            <ReportBlock className="overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
-              <EngineSidebar
-                score={model.score}
-                engines={model.engines}
-                onLockedClick={setPaywallEngine}
-                unlockAll={isPremium}
-              />
-            </ReportBlock>
-          </div>
+          )}
         </section>
 
         <div className={cn(croPhaseA ? 'space-y-10' : 'space-y-6')}>
         {/* 1 — Hallazgos */}
         <section>
-          <SectionBadge n={1} label="Lo más importante que encontramos" croPhaseA={croPhaseA} />
-          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
-            <div className="grid gap-3 md:grid-cols-3">
-            {model.findings.map((f, idx) => (
-              <div
-                key={`${f.tone}-${idx}-${f.title}`}
-                className={cn(
-                  'relative overflow-hidden rounded-lg border',
-                  croPhaseA ? 'p-5' : 'p-4',
-                  FINDING_TONE_CARD_CLASS[f.tone],
-                )}
-              >
+          <SectionBadge
+            n={1}
+            label={croPhaseB ? 'Qué descubrimos' : 'Lo más importante que encontramos'}
+            croPhaseA={croPhaseA}
+          />
+          {croPhaseB ? (
+            <>
+              <SectionIntro croPhaseB>{model.executiveNarrative.findingsIntro}</SectionIntro>
+              <div className="grid gap-4 sm:gap-5">
+                <NarrativePatternRow
+                  tone="success"
+                  label="Muy fuerte"
+                  body={model.executiveNarrative.strengthLine}
+                />
+                <NarrativePatternRow
+                  tone="warning"
+                  label="Debilidad clave"
+                  body={model.executiveNarrative.weaknessLine}
+                />
+              </div>
+            </>
+          ) : (
+            <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
+              <div className="grid gap-3 md:grid-cols-3">
+              {model.findings.map((f, idx) => (
                 <div
+                  key={`${f.tone}-${idx}-${f.title}`}
                   className={cn(
-                    'pointer-events-none absolute -bottom-2 -right-2 opacity-[0.12]',
-                    FINDING_TONE_WATERMARK_CLASS[f.tone],
+                    'relative overflow-hidden rounded-lg border',
+                    croPhaseA ? 'p-5' : 'p-4',
+                    FINDING_TONE_CARD_CLASS[f.tone],
                   )}
-                  aria-hidden
                 >
-                  {FINDING_WATERMARK[f.tone]}
-                </div>
-                <div className="relative flex items-start gap-3">
-                  <CleexsStatusIcon tone={f.tone} size="xl" className="mt-0.5 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={cn(
-                        'font-bold leading-snug',
-                        croPhaseA ? 'text-sm sm:text-base' : 'text-xs sm:text-sm',
-                        FINDING_TONE_TITLE_CLASS[f.tone],
-                      )}
-                    >
-                      {f.title}
-                    </p>
-                    <p
-                      className={cn(
-                        'mt-1.5 leading-relaxed text-slate-700',
-                        croPhaseA ? 'text-base' : 'text-xs sm:text-sm',
-                      )}
-                    >
-                      {f.body}
-                    </p>
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute -bottom-2 -right-2 opacity-[0.12]',
+                      FINDING_TONE_WATERMARK_CLASS[f.tone],
+                    )}
+                    aria-hidden
+                  >
+                    {FINDING_WATERMARK[f.tone]}
+                  </div>
+                  <div className="relative flex items-start gap-3">
+                    <CleexsStatusIcon tone={f.tone} size="xl" className="mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          'font-bold leading-snug',
+                          croPhaseA ? 'text-sm sm:text-base' : 'text-xs sm:text-sm',
+                          FINDING_TONE_TITLE_CLASS[f.tone],
+                        )}
+                      >
+                        {f.title}
+                      </p>
+                      <p
+                        className={cn(
+                          'mt-1.5 leading-relaxed text-slate-700',
+                          croPhaseA ? 'text-base' : 'text-xs sm:text-sm',
+                        )}
+                      >
+                        {f.body}
+                      </p>
+                    </div>
                   </div>
                 </div>
+              ))}
               </div>
-            ))}
-            </div>
-          </ReportBlock>
+            </ReportBlock>
+          )}
         </section>
 
         {/* 2 — Competidores */}
         <section id="seccion-competidores" className="scroll-mt-20">
-          <SectionBadge n={2} label="Dónde perdés clientes hoy" croPhaseA={croPhaseA} />
+          <SectionBadge
+            n={2}
+            label={croPhaseB ? 'La evidencia en datos' : 'Dónde perdés clientes hoy'}
+            croPhaseA={croPhaseA}
+          />
+          {croPhaseB ? (
+            <SectionIntro croPhaseB>
+              Así se traduce en menciones frente a {model.leaderName} y el resto de tus competidores.
+            </SectionIntro>
+          ) : null}
           <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
               <CompetitorShareChart
@@ -687,16 +850,27 @@ export function DiagnosticoGratuitoV2({
 
         {/* 4 — Una acción */}
         <section>
-          <SectionBadge n={4} label="Si solo pudieras hacer UNA cosa" croPhaseA={croPhaseA} />
+          <SectionBadge n={4} label={croPhaseB ? 'Nuestra principal recomendación' : 'Si solo pudieras hacer UNA cosa'} croPhaseA={croPhaseA} />
           <p
             className={cn(
               'mb-3 leading-relaxed text-slate-600',
-              croPhaseA ? 'text-base sm:text-lg' : 'text-sm sm:text-base',
+              croPhaseB
+                ? 'text-lg font-medium text-[#1e2a5a] sm:text-xl'
+                : croPhaseA
+                  ? 'text-base sm:text-lg'
+                  : 'text-sm sm:text-base',
             )}
           >
-            La oportunidad con mayor impacto para ganar visibilidad en decisiones de compra.
+            {croPhaseB
+              ? model.executiveNarrative.primaryActionLead
+              : 'La oportunidad con mayor impacto para ganar visibilidad en decisiones de compra.'}
           </p>
-          <ReportBlock className="overflow-hidden">
+          <ReportBlock
+            className={cn(
+              'overflow-hidden',
+              croPhaseB && 'border-2 border-violet-200 shadow-md shadow-violet-100/60',
+            )}
+          >
             <div className={croPhaseA ? 'bg-slate-50/70 p-5 sm:p-6' : 'bg-slate-50/70 p-4 sm:p-5'}>
               <div className="flex gap-4 sm:gap-5">
                 <Image
@@ -802,7 +976,37 @@ export function DiagnosticoGratuitoV2({
 
         {/* 6 — Buenas noticias */}
         <section>
-          <SectionBadge n={6} label="Buenas noticias" croPhaseA={croPhaseA} />
+          <SectionBadge
+            n={6}
+            label={croPhaseB ? 'Tu roadmap de 90 días' : 'Buenas noticias'}
+            croPhaseA={croPhaseA}
+          />
+          {croPhaseB ? (
+            <div className="overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff] p-5 sm:p-7">
+              <SectionIntro croPhaseB>
+                No necesitás rehacer tu sitio. Encontramos una oportunidad clara — esto es cómo la ejecutaríamos
+                semana a semana.
+              </SectionIntro>
+              <div className="rounded-xl border border-slate-200/80 bg-white p-5 sm:p-6">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Preview del plan personalizado
+                </p>
+                <div className="mt-5">
+                  <RoadmapTimeline items={model.roadmapPreview} />
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <p className="text-sm font-medium text-slate-600">
+                    … y {Math.max(model.hiddenActionCount - 3, 0)} acciones más, ordenadas por impacto
+                  </p>
+                  <Lock className="h-4 w-4 shrink-0 text-slate-300" aria-hidden />
+                </div>
+              </div>
+              <p className="mt-5 font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
+                Esto es solo el comienzo — el plan completo incluye {model.hiddenActionCount} acciones, prompts y
+                checklist.
+              </p>
+            </div>
+          ) : (
           <div className={cn('relative overflow-hidden rounded-2xl border border-violet-100/90 bg-[#f7f5ff]', croPhaseA ? 'p-5 sm:p-7' : 'p-4 sm:p-6')}>
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(140px,0.62fr)] lg:items-start lg:gap-4">
               <div className="relative flex min-w-0 flex-col pb-12 pr-14 lg:pb-14 lg:pr-16">
@@ -863,20 +1067,27 @@ export function DiagnosticoGratuitoV2({
               </div>
             </div>
           </div>
+          )}
         </section>
 
         {/* 7 — Mientras leías */}
         <section>
-          <SectionBadge n={7} label="Mientras vos leías este diagnóstico…" croPhaseA={croPhaseA} />
+          <SectionBadge
+            n={7}
+            label={croPhaseB ? 'Tu plan ya está listo' : 'Mientras vos leías este diagnóstico…'}
+            croPhaseA={croPhaseA}
+          />
           <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             <div className="mb-4 max-w-3xl space-y-2">
-              <p className="text-sm font-semibold text-[#1e2a5a]">
-                Nuestro motor terminó de trabajar sobre {model.brandName}.
+              <p className={cn('font-semibold text-[#1e2a5a]', croPhaseB ? 'text-base sm:text-lg' : 'text-sm')}>
+                {croPhaseB
+                  ? 'Nuestro motor ya hizo el trabajo sobre tu empresa.'
+                  : `Nuestro motor terminó de trabajar sobre ${model.brandName}.`}
               </p>
               <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
-                Ya analizó todas las oportunidades. Ya calculó cuáles tienen mayor impacto. Ya descartó las que hoy
-                no mueven la aguja. Y ya armó un plan de ejecución personalizado para que sepas exactamente qué hacer
-                primero.
+                {croPhaseB
+                  ? 'Analizó oportunidades, calculó impacto, descartó lo que no mueve la aguja y armó un plan de ejecución personalizado. Solo falta activarlo.'
+                  : 'Ya analizó todas las oportunidades. Ya calculó cuáles tienen mayor impacto. Ya descartó las que hoy no mueven la aguja. Y ya armó un plan de ejecución personalizado para que sepas exactamente qué hacer primero.'}
               </p>
               <p className="text-xs font-bold text-violet-700 sm:text-sm">Todo ya está listo. Solo falta activarlo.</p>
             </div>
@@ -886,36 +1097,42 @@ export function DiagnosticoGratuitoV2({
               value={model.deliverables[0].value}
               label={model.deliverables[0].label}
               croPhaseA={croPhaseA}
+              croPhaseB={croPhaseB}
             />
             <DeliverableCard
               icon={<Lightbulb className="h-6 w-6" />}
               value={model.deliverables[1].value}
               label={model.deliverables[1].label}
               croPhaseA={croPhaseA}
+              croPhaseB={croPhaseB}
             />
             <DeliverableCard
               icon={<FileText className="h-6 w-6" />}
               value={model.deliverables[2].value}
               label={model.deliverables[2].label}
               croPhaseA={croPhaseA}
+              croPhaseB={croPhaseB}
             />
             <DeliverableCard
               icon={<Users className="h-6 w-6" />}
               value={model.deliverables[3].value}
               label={model.deliverables[3].label}
               croPhaseA={croPhaseA}
+              croPhaseB={croPhaseB}
             />
             <DeliverableCard
               icon={<Zap className="h-6 w-6" />}
               value={model.deliverables[4].value}
               label={model.deliverables[4].label}
               croPhaseA={croPhaseA}
+              croPhaseB={croPhaseB}
             />
             <DeliverableCard
               icon={<Target className="h-6 w-6" />}
               value={model.deliverables[5].value}
               label={model.deliverables[5].label}
               croPhaseA={croPhaseA}
+              croPhaseB={croPhaseB}
             />
             </div>
           </ReportBlock>
@@ -989,14 +1206,38 @@ export function DiagnosticoGratuitoV2({
         </footer>
         </div>
 
-        {croPhaseA ? (
+        {croPhaseB ? (
           <p className="mt-6 text-center text-xs text-slate-500">
-            Preview Fase A CRO ·{' '}
+            Preview Fase B CRO (narrativa) ·{' '}
+            <Link
+              href={`/ver-resultado/v2/cro-preview?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Ver Fase A
+            </Link>
+            {' · '}
             <Link
               href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
               className="font-medium text-violet-600 underline-offset-2 hover:underline"
             >
-              Comparar con informe v2 en producción
+              Comparar con producción
+            </Link>
+          </p>
+        ) : croPhaseA ? (
+          <p className="mt-6 text-center text-xs text-slate-500">
+            Preview Fase A CRO ·{' '}
+            <Link
+              href={`/ver-resultado/v2/cro-preview-b?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Ver Fase B (narrativa)
+            </Link>
+            {' · '}
+            <Link
+              href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="font-medium text-violet-600 underline-offset-2 hover:underline"
+            >
+              Comparar con producción
             </Link>
           </p>
         ) : (
