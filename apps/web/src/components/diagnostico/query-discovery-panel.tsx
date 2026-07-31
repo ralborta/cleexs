@@ -179,7 +179,7 @@ function QueryDiscoveryInsight({
   return (
     <div
       className={cn(
-        'relative flex w-full max-w-[175px] flex-col overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:px-4 sm:py-4',
+        'relative flex w-full flex-col overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:max-w-[175px] sm:px-4 sm:py-4',
         className,
       )}
     >
@@ -213,11 +213,11 @@ export function QueryDiscoveryPanel({
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_175px] sm:items-start sm:gap-5">
         <div className="min-w-0">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-4 lg:gap-5">
             <QueryDonut total={discovery.totalQueries} columns={funnelColumns} />
-            <div className="grid min-w-0 flex-1 gap-4 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3 sm:gap-3 lg:grid-cols-4 lg:gap-4 lg:p-3.5">
               {funnelColumns.map((column) => (
                 <FunnelPointColumn
                   key={column.title}
@@ -231,7 +231,7 @@ export function QueryDiscoveryPanel({
           </div>
         </div>
 
-        <QueryDiscoveryInsight discovery={discovery} className="lg:justify-self-end" />
+        <QueryDiscoveryInsight discovery={discovery} className="sm:justify-self-end" />
       </div>
     </div>
   );

@@ -35,6 +35,7 @@ import {
   CompetitorLeaderInsight,
   CompetitorShareChart,
 } from '@/components/diagnostico/competitor-share-chart';
+import { CompetitorVisibilityPillarChart } from '@/components/diagnostico/competitor-visibility-pillar-chart';
 import { QueryDiscoveryPanel } from '@/components/diagnostico/query-discovery-panel';
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
 import {
@@ -107,7 +108,7 @@ function NarrativePatternRow({
   return (
     <div
       className={cn(
-        'rounded-xl border px-5 py-4 sm:px-6 sm:py-5',
+        'rounded-xl border px-4 py-3.5 sm:px-6 sm:py-5',
         tone === 'success'
           ? 'border-emerald-200/90 bg-emerald-50/50'
           : 'border-amber-200/90 bg-amber-50/40',
@@ -177,8 +178,8 @@ function SectionBadge({
       </span>
       <h2
         className={cn(
-          'font-bold tracking-tight text-slate-900',
-          croPhaseA ? 'text-xl leading-snug sm:text-2xl' : 'text-base sm:text-lg',
+          'min-w-0 flex-1 font-bold tracking-tight text-slate-900',
+          croPhaseA ? 'text-lg leading-snug sm:text-2xl' : 'text-base sm:text-lg',
         )}
       >
         {label}
@@ -253,7 +254,7 @@ function WhatIfBenefitCard({
 
 function WhatIfOutcomeCard() {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+    <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
       <div className="space-y-1 text-sm font-bold leading-snug text-emerald-700 sm:space-y-1.5 sm:text-base">
         <p>Más visibilidad = más confianza</p>
         <p>Más confianza = más leads</p>
@@ -351,7 +352,7 @@ function EngineSidebar({
               <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
                 <Image src={meta.logo} alt="" width={22} height={22} className="object-contain" />
               </span>
-              <span className="w-[72px] shrink-0 text-sm font-bold text-slate-900">{meta.label}</span>
+              <span className="w-[64px] shrink-0 text-sm font-bold text-slate-900 sm:w-[72px]">{meta.label}</span>
 
               {locked ? (
                 <>
@@ -368,7 +369,7 @@ function EngineSidebar({
                       style={{ width: `${Math.max(pct, 8)}%` }}
                     />
                   </div>
-                  <span className="w-[52px] shrink-0 text-right tabular-nums leading-none">
+                  <span className="w-[46px] shrink-0 text-right tabular-nums leading-none sm:w-[52px]">
                     <span className={cn('text-base font-black', SCORE_NUMBER_CLASS, traffic.textClass)}>{pct}</span>
                     <span className="text-xs font-medium text-slate-400"> /100</span>
                   </span>
@@ -428,7 +429,7 @@ function HeroScoreBlock({
             <p
               className={cn(
                 'font-bold leading-snug text-violet-800',
-                croPhaseA ? 'text-xl sm:text-2xl lg:text-[1.65rem]' : 'text-base lg:text-lg',
+                croPhaseA ? 'text-lg sm:text-2xl lg:text-[1.65rem]' : 'text-base lg:text-lg',
               )}
             >
               {model.verdictLabel}
@@ -443,12 +444,12 @@ function HeroScoreBlock({
           type="button"
           onClick={onScrollCompetitors}
           className={cn(
-            'inline-flex w-fit items-center gap-2 rounded-full bg-violet-50 font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100',
-            croPhaseA ? 'px-4 py-3 text-base' : 'px-4 py-2.5 text-sm sm:text-base',
+            'inline-flex w-full items-center justify-center gap-2 rounded-full bg-violet-50 text-center font-bold text-violet-900 ring-1 ring-violet-100 transition hover:bg-violet-100 sm:w-fit sm:justify-start sm:text-left',
+            croPhaseA ? 'px-4 py-3 text-sm sm:text-base' : 'px-4 py-2.5 text-sm sm:text-base',
           )}
         >
           <Trophy className="h-4 w-4 shrink-0 text-violet-700" aria-hidden />
-          #{model.brandRank} de {competitorTotal} competidores analizados
+          <span className="min-w-0">#{model.brandRank} de {competitorTotal} competidores analizados</span>
         </button>
       </div>
     </div>
@@ -514,9 +515,9 @@ function RevenueCalculator({
         <div className="mt-6 space-y-6">
           {sliderFields.map((field) => (
             <div key={field.label}>
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                 <span className="text-sm font-semibold text-slate-600">{field.label}</span>
-                <span className="text-lg font-black tabular-nums text-[#1e2a5a]">
+                <span className="text-xl font-black tabular-nums text-[#1e2a5a] sm:text-lg">
                   {field.format(field.value)}
                 </span>
               </div>
@@ -537,7 +538,7 @@ function RevenueCalculator({
         </div>
         <div className="mt-6 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 p-5 sm:p-6">
           <p className="text-xs font-bold uppercase tracking-widest text-violet-700">Resultado estimado</p>
-          <p className="mt-2 text-4xl font-black tabular-nums text-[#2563eb] sm:text-5xl">{money(monthly)}</p>
+          <p className="mt-2 text-3xl font-black tabular-nums text-[#2563eb] sm:text-5xl">{money(monthly)}</p>
           <p className="mt-1 text-sm font-medium text-slate-600">de facturación adicional mensual</p>
           <p className="mt-3 text-xs leading-relaxed text-slate-500">
             Estimación basada en tus supuestos. No es una promesa de resultados.
@@ -605,14 +606,16 @@ function DeliverableCard({
     <div
       className={cn(
         'flex flex-col items-center rounded-lg border border-slate-100 bg-white text-center',
-        enlarged ? 'px-3 py-5' : 'px-3 py-4',
+        enlarged ? 'px-2 py-4 sm:px-3 sm:py-5' : 'px-3 py-4',
       )}
     >
-      <div className="mb-2 text-violet-600">{icon}</div>
+      <div className={cn('mb-1.5 text-violet-600 sm:mb-2', enlarged && 'scale-90 sm:scale-100')}>
+        {icon}
+      </div>
       <p
         className={cn(
           'font-black tabular-nums text-[#1e2a5a]',
-          enlarged ? 'text-3xl sm:text-4xl' : 'text-2xl',
+          enlarged ? 'text-2xl sm:text-4xl' : 'text-2xl',
         )}
       >
         {value}
@@ -621,9 +624,9 @@ function DeliverableCard({
         className={cn(
           'mt-1 leading-snug text-slate-600',
           croPhaseB
-            ? 'text-[11px] font-bold uppercase tracking-widest text-slate-500 sm:text-xs'
+            ? 'text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-xs sm:tracking-widest'
             : enlarged
-              ? 'text-sm'
+              ? 'text-xs sm:text-sm'
               : 'text-[11px]',
         )}
       >
@@ -648,9 +651,9 @@ function PlanConquistarCtaPanel({
   if (variant === 'sticky') {
     return (
       <PlanConquistarCheckoutButton
-        className="w-full min-h-[48px] rounded-xl py-3.5 text-base shadow-md"
+        className="w-full min-h-[48px] rounded-xl py-3.5 text-sm font-bold shadow-md sm:text-base"
         variant="sidebar"
-        label={`Desbloquear plan (${model.brandName}) →`}
+        label="Desbloquear mi plan →"
         sourceChannel="ver_resultado_v2"
         unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
         diagnosticId={diagnostic.id}
@@ -672,7 +675,9 @@ function PlanConquistarCtaPanel({
   const buttonClass =
     variant === 'inline'
       ? 'mx-auto w-full max-w-xl min-h-[52px] rounded-2xl py-4 text-base shadow-md sm:text-lg'
-      : 'mx-auto w-full max-w-xl min-h-[56px] rounded-2xl py-5 text-lg shadow-md sm:min-h-[60px] sm:text-xl';
+      : 'mx-auto w-full max-w-xl min-h-[52px] rounded-2xl py-4 text-base shadow-md sm:min-h-[60px] sm:py-5 sm:text-xl';
+
+  const checkoutLabel = 'Desbloquear mi plan de acción →';
 
   return (
     <div className={wrapperClass}>
@@ -680,11 +685,15 @@ function PlanConquistarCtaPanel({
         <p className="mb-4 text-center text-sm font-medium text-violet-100 sm:text-base">
           Ya viste el problema y la acción prioritaria — el plan completo está listo.
         </p>
+      ) : variant === 'main' ? (
+        <p className="mb-4 text-center text-sm font-medium text-violet-100/95 sm:text-base">
+          Plan personalizado para {model.brandName}
+        </p>
       ) : null}
       <PlanConquistarCheckoutButton
         className={buttonClass}
         variant="sidebar"
-        label={`Desbloquear mi plan de acción (${model.brandName}) →`}
+        label={checkoutLabel}
         sourceChannel="ver_resultado_v2"
         unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
         diagnosticId={diagnostic.id}
@@ -803,8 +812,8 @@ export function DiagnosticoGratuitoV2({
       <main
         className={cn(
           'mx-auto max-w-5xl px-4 sm:px-6',
-          croPhaseA ? 'py-6 sm:py-10' : 'py-6 sm:py-8',
-          croPhaseC && 'pb-28 sm:pb-10',
+          croPhaseA ? 'py-5 sm:py-10' : 'py-6 sm:py-8',
+          croPhaseC && 'pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-10',
         )}
       >
         {/* HERO */}
@@ -824,20 +833,20 @@ export function DiagnosticoGratuitoV2({
           </span>
 
           {croPhaseB ? (
-            <div className="mt-5 space-y-6 sm:mt-6">
-              <div className="max-w-3xl space-y-4">
-                <h1 className="text-[2rem] font-black leading-[1.12] tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.85rem]">
+            <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-6">
+              <div className="max-w-3xl space-y-3 sm:space-y-4">
+                <h1 className="text-[1.65rem] font-black leading-[1.14] tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.85rem]">
                   {model.executiveNarrative.headline}
                 </h1>
-                <p className="text-lg font-medium leading-relaxed text-slate-700 sm:text-xl">
+                <p className="text-base font-medium leading-relaxed text-slate-700 sm:text-xl">
                   {model.executiveNarrative.openingLine}
                 </p>
-                <p className="text-base leading-relaxed text-slate-600 sm:text-lg">
+                <p className="text-sm leading-relaxed text-slate-600 sm:text-lg">
                   {model.executiveNarrative.competitorLine}
                 </p>
               </div>
 
-              <div className="border-t border-slate-200/90 pt-8">
+              <div className="border-t border-slate-200/90 pt-5 sm:pt-8">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
                   {model.executiveNarrative.evidenceLabel}
                 </p>
@@ -897,7 +906,7 @@ export function DiagnosticoGratuitoV2({
           )}
         </section>
 
-        <div className={cn(croPhaseA ? 'space-y-10' : 'space-y-6')}>
+        <div className={cn(croPhaseA ? 'space-y-8 sm:space-y-10' : 'space-y-6')}>
         {/* 1 — Hallazgos */}
         <section>
           <SectionBadge
@@ -908,7 +917,7 @@ export function DiagnosticoGratuitoV2({
           {croPhaseB ? (
             <>
               <SectionIntro croPhaseB>{model.executiveNarrative.findingsIntro}</SectionIntro>
-              <div className="grid gap-4 sm:gap-5">
+              <div className="grid gap-3 sm:gap-5">
                 <NarrativePatternRow
                   tone="success"
                   label="Muy fuerte"
@@ -984,7 +993,15 @@ export function DiagnosticoGratuitoV2({
             </SectionIntro>
           ) : null}
           <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_175px] lg:items-start lg:gap-5">
+            {croPhaseA ? (
+              <CompetitorVisibilityPillarChart
+                rows={model.competitors}
+                leaderShare={model.leaderShare}
+                brandShare={model.brandShare}
+                brandRank={model.brandRank}
+              />
+            ) : (
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_175px] sm:items-start sm:gap-5">
               <CompetitorShareChart
                 rows={model.competitors}
                 brandDomain={model.domain}
@@ -996,9 +1013,10 @@ export function DiagnosticoGratuitoV2({
                 brandName={model.brandName}
                 brandShare={model.brandShare}
                 brandRank={model.brandRank}
-                className="lg:justify-self-end"
+                className="sm:justify-self-end"
               />
             </div>
+            )}
           </ReportBlock>
         </section>
 
@@ -1034,13 +1052,13 @@ export function DiagnosticoGratuitoV2({
             )}
           >
             <div className={croPhaseA ? 'bg-slate-50/70 p-5 sm:p-6' : 'bg-slate-50/70 p-4 sm:p-5'}>
-              <div className="flex gap-4 sm:gap-5">
+              <div className="flex flex-col gap-3.5 sm:flex-row sm:gap-4">
                 <Image
                   src="/diagnostico/mission-target.png"
                   alt=""
                   width={64}
                   height={64}
-                  className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16"
+                  className="mx-auto h-12 w-12 shrink-0 object-contain sm:mx-0 sm:h-16 sm:w-16"
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
@@ -1177,7 +1195,7 @@ export function DiagnosticoGratuitoV2({
                 <div className="mt-5">
                   <RoadmapTimeline items={model.roadmapPreview} />
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                   <p className="text-sm font-medium text-slate-600">
                     … y {Math.max(model.hiddenActionCount - 3, 0)} acciones más, ordenadas por impacto
                   </p>
@@ -1272,7 +1290,12 @@ export function DiagnosticoGratuitoV2({
               </p>
               <p className="text-xs font-bold text-violet-700 sm:text-sm">Todo ya está listo. Solo falta activarlo.</p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+            <div
+              className={cn(
+                'grid gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6',
+                croPhaseB && 'grid-cols-3',
+              )}
+            >
             <DeliverableCard
               icon={<ClipboardList className="h-6 w-6" />}
               value={model.deliverables[0].value}
@@ -1436,7 +1459,7 @@ export function DiagnosticoGratuitoV2({
       </main>
 
       {!isPremium && croPhaseC && !heroInView ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 p-3 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 px-3 pt-3 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="sticky" />
           <p className="mt-1.5 text-center text-[10px] font-medium text-slate-500">
             {model.deliverables[0]?.value ?? 0}{' '}

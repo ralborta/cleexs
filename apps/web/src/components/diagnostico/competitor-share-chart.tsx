@@ -158,13 +158,13 @@ function buildTopSixRows(rows: DiagnosticoV2CompetitorRow[]): ChartRow[] {
   });
 }
 
+const CHART_ROW_LAYOUT =
+  'flex min-h-[2.125rem] flex-col gap-1.5 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-x-5 md:gap-x-8 lg:gap-x-14';
+
 function PlaceholderRow({ rank }: { rank: number }) {
   return (
-    <div
-      className="grid min-h-[2.125rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 sm:gap-x-10 lg:gap-x-14"
-      aria-hidden
-    >
-      <div className="flex max-w-[min(100%,240px)] items-center gap-1.5 sm:max-w-[min(100%,280px)]">
+    <div className={CHART_ROW_LAYOUT} aria-hidden>
+      <div className="flex min-w-0 max-w-full items-center gap-1.5 sm:max-w-[min(100%,280px)]">
         <span className="flex h-5 w-5 shrink-0 items-center justify-center text-sm font-semibold tabular-nums text-slate-300">
           {rank}
         </span>
@@ -208,12 +208,9 @@ export function CompetitorShareChart({
           return (
             <div
               key={`${row.rank}-${row.name}`}
-              className={cn(
-                'grid min-h-[2.125rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 sm:gap-x-10 lg:gap-x-14',
-                !highlighted && 'opacity-60',
-              )}
+              className={cn(CHART_ROW_LAYOUT, !highlighted && 'opacity-60')}
             >
-              <div className="flex max-w-[min(100%,220px)] items-center gap-1.5 sm:max-w-[min(100%,260px)]">
+              <div className="flex min-w-0 max-w-full items-center gap-1.5 sm:max-w-[min(100%,260px)]">
                 <RankBadge rank={row.rank} highlighted={highlighted} />
                 {highlighted ? <CompetitorAvatar name={row.name} isBrand={row.isBrand} /> : null}
                 <div className="min-w-0 flex-1">
@@ -260,7 +257,7 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative flex w-full max-w-[175px] flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3 py-3 sm:px-3.5 sm:py-3.5',
+        'relative flex w-full flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:max-w-[175px] sm:px-3.5 sm:py-3.5',
         className,
       )}
     >
