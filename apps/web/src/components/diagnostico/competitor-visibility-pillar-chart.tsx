@@ -1,6 +1,6 @@
 'use client';
 
-import { Info, LineChart, Sparkles } from 'lucide-react';
+import { Info, LineChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DiagnosticoV2CompetitorRow } from '@/lib/diagnostico-v2-data';
 
@@ -26,10 +26,6 @@ function buildTopSixRows(rows: DiagnosticoV2CompetitorRow[]): ChartRow[] {
 
 function formatPct(value: number) {
   return `${value.toFixed(1)}%`;
-}
-
-function formatGap(value: number) {
-  return value.toFixed(1).replace('.', ',');
 }
 
 function shortenLabel(name: string, isBrand: boolean, maxLen = 24): string {
@@ -156,25 +152,13 @@ function PillarColumn({
 
 export function CompetitorVisibilityPillarChart({
   rows,
-  leaderShare,
-  brandShare,
-  brandRank,
   className,
 }: {
   rows: DiagnosticoV2CompetitorRow[];
-  leaderShare: number;
-  brandShare: number;
-  brandRank: number;
   className?: string;
 }) {
   const topRows = buildTopSixRows(rows);
   const maxShare = Math.max(...topRows.filter((r) => !r.placeholder).map((r) => r.share), 1);
-  const gap = Math.max(0, leaderShare - brandShare);
-
-  const insightText =
-    brandRank <= 1 && brandShare >= leaderShare - 0.5
-      ? 'Tu marca lidera o empata en menciones analizadas.'
-      : `Estás a ${formatGap(gap)} puntos porcentuales del liderazgo`;
 
   return (
     <div className={cn('min-w-0', className)}>
@@ -198,28 +182,7 @@ export function CompetitorVisibilityPillarChart({
         </div>
       </div>
 
-      <div className="mt-5 flex items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/80 px-4 py-3.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-          {brandRank <= 1 ? (
-            <Sparkles className="h-4 w-4" strokeWidth={2.2} aria-hidden />
-          ) : (
-            <LineChart className="h-4 w-4" strokeWidth={2.2} aria-hidden />
-          )}
-        </span>
-        <p className="text-sm leading-snug text-slate-700">
-          {brandRank <= 1 ? (
-            insightText
-          ) : (
-            <>
-              Estás a{' '}
-              <span className="font-black text-violet-700">{formatGap(gap)} puntos porcentuales</span> del
-              liderazgo
-            </>
-          )}
-        </p>
-      </div>
-
-      <p className="mt-4 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+      <p className="mt-4 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500 sm:mt-5 sm:text-xs">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
         <span>
           Los porcentajes representan la proporción de consultas analizadas en las que aparece cada marca.

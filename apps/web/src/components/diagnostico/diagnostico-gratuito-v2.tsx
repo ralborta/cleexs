@@ -994,12 +994,17 @@ export function DiagnosticoGratuitoV2({
           ) : null}
           <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             {croPhaseA ? (
-              <CompetitorVisibilityPillarChart
-                rows={model.competitors}
-                leaderShare={model.leaderShare}
-                brandShare={model.brandShare}
-                brandRank={model.brandRank}
-              />
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(150px,175px)] sm:items-stretch sm:gap-5">
+                <CompetitorVisibilityPillarChart rows={model.competitors} />
+                <CompetitorLeaderInsight
+                  leaderName={model.leaderName}
+                  leaderShare={model.leaderShare}
+                  brandName={model.brandName}
+                  brandShare={model.brandShare}
+                  brandRank={model.brandRank}
+                  className="sm:justify-self-end sm:self-stretch"
+                />
+              </div>
             ) : (
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_175px] sm:items-start sm:gap-5">
               <CompetitorShareChart

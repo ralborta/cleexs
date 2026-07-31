@@ -257,7 +257,7 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative flex w-full flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:max-w-[175px] sm:px-3.5 sm:py-3.5',
+        'relative flex h-full min-h-[10.5rem] w-full flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:min-h-0 sm:max-w-[175px] sm:px-3.5 sm:py-3.5',
         className,
       )}
     >
