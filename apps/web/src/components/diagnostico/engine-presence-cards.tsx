@@ -7,7 +7,6 @@ import type { EngineCardKey } from '@/components/diagnostico/cleexs-engine-score
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
 import {
   getScoreTrafficBand,
-  getScoreTrafficColors,
   normalizeScorePct,
 } from '@/lib/score-traffic-colors';
 
@@ -79,7 +78,6 @@ function EnginePresenceCard({
   const meta = ENGINE_META[engineKey];
   const pct = normalizeScorePct(score);
   const diagnosis = visibilityDiagnosis(pct);
-  const traffic = getScoreTrafficColors(pct);
   const clickable = locked && onLockedClick;
 
   return (
