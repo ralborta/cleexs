@@ -1237,7 +1237,7 @@ export function DiagnosticoGratuitoV2({
         <section>
           <SectionBadge
             n={6}
-            label={croPhaseB ? 'Tu roadmap de 90 días' : 'Buenas noticias'}
+            label={croPhaseB ? 'Tu plan de acción de 90 días' : 'Buenas noticias'}
             croPhaseA={croPhaseA}
           />
           {croPhaseB ? (
