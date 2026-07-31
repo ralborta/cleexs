@@ -268,9 +268,9 @@ export function CompetitorLeaderInsight({
         <Trophy className="h-[3.75rem] w-[3.75rem]" strokeWidth={1.1} />
       </div>
       <div className="relative z-[1] pr-5">
-        <p className="text-sm font-bold leading-snug text-violet-900">{copy.title}</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{copy.body}</p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{copy.footer}</p>
+        <p className="text-sm font-bold leading-snug text-violet-900 sm:text-base">{copy.title}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:text-sm">{copy.body}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:text-sm">{copy.footer}</p>
       </div>
     </div>
   );

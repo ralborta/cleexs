@@ -179,18 +179,18 @@ function QueryDiscoveryInsight({
   return (
     <div
       className={cn(
-        'relative flex w-full flex-col overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:max-w-[175px] sm:px-4 sm:py-4',
+        'relative flex w-full flex-col overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-4 py-4 sm:max-w-[200px] sm:px-4 sm:py-4',
         className,
       )}
     >
       <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600">
         <Search className="h-4 w-4" strokeWidth={2.2} aria-hidden />
       </div>
-      <p className="text-[11px] leading-snug text-slate-700 sm:text-xs">
+      <p className="text-sm font-medium leading-snug text-slate-700 sm:text-base">
         {discovery.insightBody}{' '}
         <span className="font-bold text-violet-900">{discovery.insightHighlight}.</span>
       </p>
-      <p className="mt-3 text-[9px] leading-snug text-slate-600 sm:text-[10px]">{discovery.insightFooter}</p>
+      <p className="mt-2.5 text-xs leading-snug text-slate-600 sm:text-sm">{discovery.insightFooter}</p>
     </div>
   );
 }

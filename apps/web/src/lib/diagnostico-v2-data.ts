@@ -337,6 +337,21 @@ function buildQueryDiscovery(
   };
 }
 
+/** Nombre corto para tarjetas estrechas (sin dominio entre paréntesis). */
+function shortCompetitorLabel(name: string, maxLen = 22): string {
+  const base = name.trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if (!base) return 'el líder';
+  if (base.length <= maxLen) return base;
+  return `${base.slice(0, maxLen - 1)}…`;
+}
+
+function shortQueryBucketLabel(label: string): string {
+  const normalized = label.trim().toLowerCase();
+  if (/compar.*proveedor/i.test(normalized)) return 'comparación de proveedores';
+  if (normalized.length <= 36) return normalized;
+  return `${normalized.slice(0, 34)}…`;
+}
+
 function buildQueryInsightCopy(input: {
   promptBuckets: Record<DiagnosticoV2QueryBucket, number>;
   lead: string[];
@@ -350,16 +365,16 @@ function buildQueryInsightCopy(input: {
   const topLose = input.lose[0];
   const topLead = input.lead[0];
   const topCompete = input.compete[0];
-  const leader = input.leaderName.trim() || 'el competidor líder';
+  const leader = shortCompetitorLabel(input.leaderName);
 
   if (input.promptBuckets.lead >= input.promptBuckets.lose && input.promptBuckets.lead >= input.promptBuckets.compete) {
-    const highlight = topLead ? topLead.toLowerCase() : 'consultas de interés temprano';
+    const highlight = topLead ? shortQueryBucketLabel(topLead) : 'consultas de marca';
     return {
-      insightBody: `En ${input.promptBuckets.lead} de ${total} consultas ${input.brandName} ya compite bien, sobre todo en`,
+      insightBody: `En ${input.promptBuckets.lead} de ${total} consultas ${input.brandName} compite bien, sobre todo en`,
       insightHighlight: highlight,
       insightFooter: topLose
-        ? `El hueco está en ${topLose.toLowerCase()}, donde hoy suma más ${leader}.`
-        : `El riesgo es ceder posición a ${leader} en comparación directa.`,
+        ? `Hueco en ${shortQueryBucketLabel(topLose)} — lidera ${leader}.`
+        : `Riesgo de ceder posición a ${leader}.`,
     };
   }
 
@@ -368,7 +383,7 @@ function buildQueryInsightCopy(input: {
       topLose && /compar|proveedor/i.test(topLose)
         ? 'comparando proveedores'
         : topLose
-          ? topLose.toLowerCase()
+          ? shortQueryBucketLabel(topLose)
           : 'decidiendo entre opciones';
     return {
       insightBody:
@@ -376,15 +391,15 @@ function buildQueryInsightCopy(input: {
           ? `La mayoría de las oportunidades están en consultas donde el usuario todavía está`
           : `Perdés visibilidad en ${input.promptBuckets.lose} de ${total} consultas mientras el usuario está`,
       insightHighlight: highlight,
-      insightFooter: `${leader} concentra más menciones en ese tipo de consultas hoy.`,
+      insightFooter: `${leader} lidera en esas consultas.`,
     };
   }
 
-  const highlight = topCompete ? topCompete.toLowerCase() : 'consultas competitivas';
+  const highlight = topCompete ? shortQueryBucketLabel(topCompete) : 'consultas competitivas';
   return {
     insightBody: `En ${input.promptBuckets.compete} de ${total} consultas aparecés, pero no cerrás la recomendación en`,
     insightHighlight: highlight,
-    insightFooter: `${leader} sigue llevándose la primera mención en esos casos.`,
+    insightFooter: `${leader} sigue primero en esas consultas.`,
   };
 }
 
@@ -395,7 +410,7 @@ export function buildCompetitorLeaderInsightCopy(input: {
   leaderName: string;
   leaderShare: number;
 }): { title: string; body: string; footer: string } {
-  const leader = input.leaderName.trim() || 'Competidor líder';
+  const leader = shortCompetitorLabel(input.leaderName, 24);
   const gap = Math.max(0, input.leaderShare - input.brandShare);
 
   if (input.brandRank <= 1 && input.brandShare >= input.leaderShare - 0.5) {
@@ -403,8 +418,8 @@ export function buildCompetitorLeaderInsightCopy(input: {
       title: input.brandRank === 1 ? 'Vas liderando en menciones' : 'Empatás con el líder',
       body:
         input.brandRank === 1
-          ? `Tu marca concentra ${input.brandShare.toFixed(1)}% de las menciones analizadas. El foco es sostenerlo en comparación y decisión.`
-          : `Tu marca y ${leader} están prácticamente empatados. Una página de comparación puede inclinarte a tu favor.`,
+          ? `Tu marca concentra ${input.brandShare.toFixed(1)}% de las menciones. El foco: sostenerlo en comparación.`
+          : `Tu marca y ${leader} están empatados. Una página de comparación puede inclinarte a tu favor.`,
       footer: `${input.brandName} · ${input.brandShare.toFixed(1)}% hoy.`,
     };
   }
@@ -412,23 +427,23 @@ export function buildCompetitorLeaderInsightCopy(input: {
   if (gap <= 5) {
     return {
       title: 'Estás muy cerca del líder',
-      body: `Te separan solo ${gap.toFixed(1)} puntos (${input.brandShare.toFixed(1)}% vs ${input.leaderShare.toFixed(1)}%). Con las acciones correctas podés quedarte con el primer lugar.`,
-      footer: `${leader} lidera hoy con ${input.leaderShare.toFixed(1)}%.`,
+      body: `Te separan ${gap.toFixed(1)} pp (${input.brandShare.toFixed(1)}% vs ${input.leaderShare.toFixed(1)}%). Con las acciones correctas podés quedarte primero.`,
+      footer: `${leader} lidera con ${input.leaderShare.toFixed(1)}%.`,
     };
   }
 
   if (gap <= 15) {
     return {
       title: 'Hay margen para alcanzar al líder',
-      body: `${leader} te saca ${gap.toFixed(1)} pp (${input.leaderShare.toFixed(1)}% vs tu ${input.brandShare.toFixed(1)}%). Todavía es una brecha cerrable con contenido comparativo y autoridad.`,
-      footer: `Vas ${input.brandRank}º en menciones en este análisis.`,
+      body: `${leader} te saca ${gap.toFixed(1)} pp. Todavía es una brecha cerrable con contenido comparativo.`,
+      footer: `Vas ${input.brandRank}º en menciones.`,
     };
   }
 
   return {
     title: 'El líder te saca ventaja clara',
-    body: `${leader} concentra ${input.leaderShare.toFixed(1)}% frente a tu ${input.brandShare.toFixed(1)}%. Hay que atacar consultas de comparación y decisión con páginas concretas.`,
-    footer: `Brecha actual: ${gap.toFixed(1)} puntos porcentuales.`,
+    body: `${leader} concentra ${input.leaderShare.toFixed(1)}% frente a tu ${input.brandShare.toFixed(1)}%. Atacá consultas de comparación con páginas concretas.`,
+    footer: `Brecha: ${gap.toFixed(1)} pp.`,
   };
 }
 

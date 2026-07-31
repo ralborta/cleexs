@@ -693,7 +693,7 @@ function PlanConquistarCtaPanel({
       <PlanConquistarCheckoutButton
         className="w-full min-h-[48px] rounded-xl py-3.5 text-sm font-bold shadow-md sm:text-base"
         variant="sidebar"
-        label="Desbloquear mi plan →"
+        label="Ver plan de acción →"
         sourceChannel="ver_resultado_v2"
         unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
         diagnosticId={diagnostic.id}
@@ -719,7 +719,7 @@ function PlanConquistarCtaPanel({
       ? 'mx-auto w-full max-w-xl min-h-[52px] rounded-2xl py-4 text-base shadow-md sm:text-lg'
       : 'mx-auto w-full max-w-xl min-h-[52px] rounded-2xl py-4 text-base shadow-md sm:min-h-[60px] sm:py-5 sm:text-xl';
 
-  const checkoutLabel = 'Desbloquear mi plan de acción →';
+  const checkoutLabel = 'Ver plan de acción →';
 
   return (
     <div className={wrapperClass}>
@@ -1266,7 +1266,7 @@ export function DiagnosticoGratuitoV2({
                   <Lock className="h-4 w-4 shrink-0 text-slate-300" aria-hidden />
                 </div>
               </div>
-              <p className="mt-5 font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
+              <p className="mt-5 text-lg italic leading-snug text-violet-500 sm:text-xl">
                 Esto es solo el comienzo — el plan completo incluye {model.hiddenActionCount} acciones, prompts y
                 checklist.
               </p>
@@ -1319,7 +1319,7 @@ export function DiagnosticoGratuitoV2({
               </div>
 
               <div className="relative min-w-0 pt-1 lg:pt-2">
-                <p className="relative z-[1] max-w-[12rem] font-serif text-lg italic leading-snug text-violet-500 sm:text-xl">
+                <p className="relative z-[1] max-w-[12rem] text-lg italic leading-snug text-violet-500 sm:text-xl">
                   *Esto es solo el comienzo*
                 </p>
                 <div className="relative mt-2 min-h-[6rem]">
