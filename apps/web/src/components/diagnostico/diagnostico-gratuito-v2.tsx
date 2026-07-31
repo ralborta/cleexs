@@ -36,6 +36,7 @@ import {
   CompetitorShareChart,
 } from '@/components/diagnostico/competitor-share-chart';
 import { CompetitorVisibilityPillarChart } from '@/components/diagnostico/competitor-visibility-pillar-chart';
+import { EnginePresenceCards } from '@/components/diagnostico/engine-presence-cards';
 import { QueryDiscoveryPanel } from '@/components/diagnostico/query-discovery-panel';
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
 import {
@@ -306,6 +307,42 @@ function PlanNoteArrow({ className }: { className?: string }) {
       className={cn('object-contain', className)}
       aria-hidden
     />
+  );
+}
+
+function EngineScoresPanel({
+  croPhaseA,
+  score,
+  engines,
+  onLockedClick,
+  unlockAll,
+}: {
+  croPhaseA?: boolean;
+  score: number;
+  engines: DiagnosticoV2ViewModel['engines'];
+  onLockedClick: (key: EngineCardKey) => void;
+  unlockAll?: boolean;
+}) {
+  if (croPhaseA) {
+    return (
+      <EnginePresenceCards
+        score={score}
+        engines={engines}
+        onLockedClick={onLockedClick}
+        unlockAll={unlockAll}
+      />
+    );
+  }
+
+  return (
+    <ReportBlock className="overflow-hidden">
+      <EngineSidebar
+        score={score}
+        engines={engines}
+        onLockedClick={onLockedClick}
+        unlockAll={unlockAll}
+      />
+    </ReportBlock>
   );
 }
 
@@ -859,20 +896,23 @@ export function DiagnosticoGratuitoV2({
                 </div>
               </div>
 
-              <ReportBlock className="overflow-hidden border-slate-200/70 bg-slate-50/40">
-                <EngineSidebar
-                  score={model.score}
-                  engines={model.engines}
-                  onLockedClick={setPaywallEngine}
-                  unlockAll={isPremium}
-                />
-              </ReportBlock>
+              <EngineScoresPanel
+                croPhaseA={croPhaseA}
+                score={model.score}
+                engines={model.engines}
+                onLockedClick={setPaywallEngine}
+                unlockAll={isPremium}
+              />
             </div>
           ) : (
+            <div className={cn('mt-4', croPhaseA ? 'space-y-6' : undefined)}>
             <div
               className={cn(
-                'mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5',
-                croPhaseA && 'gap-6',
+                'grid gap-5',
+                croPhaseA
+                  ? 'grid-cols-1'
+                  : 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-start lg:gap-x-6 lg:gap-y-5',
+                !croPhaseA && 'mt-0',
               )}
             >
               <h1
@@ -894,14 +934,27 @@ export function DiagnosticoGratuitoV2({
                 />
               </div>
 
-              <ReportBlock className="overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
-                <EngineSidebar
-                  score={model.score}
-                  engines={model.engines}
-                  onLockedClick={setPaywallEngine}
-                  unlockAll={isPremium}
-                />
-              </ReportBlock>
+              {!croPhaseA ? (
+                <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+                  <EngineScoresPanel
+                    score={model.score}
+                    engines={model.engines}
+                    onLockedClick={setPaywallEngine}
+                    unlockAll={isPremium}
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            {croPhaseA ? (
+              <EngineScoresPanel
+                croPhaseA
+                score={model.score}
+                engines={model.engines}
+                onLockedClick={setPaywallEngine}
+                unlockAll={isPremium}
+              />
+            ) : null}
             </div>
           )}
         </section>

@@ -10,12 +10,13 @@ import {
 
 type CleexsScoreRingProps = {
   score: number;
-  size?: 'md' | 'hero' | 'heroLg' | 'heroXl' | 'lg' | 'xl';
+  size?: 'md' | 'hero' | 'heroLg' | 'heroXl' | 'lg' | 'xl' | 'card';
   className?: string;
 };
 
 const RING_SIZE = {
   md: { r: 46, box: 'h-28 w-28', scoreText: 'text-3xl', stroke: 9 },
+  card: { r: 34, box: 'h-[5.25rem] w-[5.25rem] sm:h-[5.75rem] sm:w-[5.75rem]', scoreText: 'text-xl sm:text-2xl', stroke: 7 },
   hero: { r: 62, box: 'h-[9.5rem] w-[9.5rem]', scoreText: 'text-4xl', stroke: 10 },
   heroLg: { r: 68, box: 'h-[11rem] w-[11rem]', scoreText: 'text-6xl', stroke: 11 },
   heroXl: {
