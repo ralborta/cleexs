@@ -2,8 +2,11 @@
 
 export const ADMIN_UI_COOKIE_NAME = 'cleexs_admin_ui';
 
+/** Panel interno abierto por defecto (equipo Cleexs). Forzar login: ADMIN_OPEN_ACCESS=false */
 export function adminOpenAccessEnabled(): boolean {
-  return process.env.ADMIN_OPEN_ACCESS === 'true';
+  const raw = process.env.ADMIN_OPEN_ACCESS?.trim().toLowerCase();
+  if (raw === 'false') return false;
+  return true;
 }
 
 export function adminRequireAuthEnabled(): boolean {

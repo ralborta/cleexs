@@ -30,7 +30,7 @@ export function normalizeEnvSecret(value: string | undefined): string {
 export function createAdminSessionToken(): string {
   const secret = sessionSecret();
   if (!secret) throw new Error('ADMIN_UI_PASSWORD o ADMIN_UI_SESSION_SECRET no configurado');
-  const exp = Date.now() + 8 * 60 * 60 * 1000;
+  const exp = Date.now() + 30 * 24 * 60 * 60 * 1000;
   const payload = String(exp);
   const sig = createHmac('sha256', secret).update(payload).digest('hex');
   return `${payload}.${sig}`;
@@ -55,7 +55,7 @@ export function verifyAdminSessionToken(token: string | undefined | null): boole
 
 /** Path debe incluir `/api/admin-ui/*`: si fuera solo `/admin`, el navegador no envía la cookie en fetch al proxy API y todas las rutas admin-ui devuelven 401. */
 export function adminCookieOptions() {
-  const maxAge = 8 * 60 * 60;
+  const maxAge = 30 * 24 * 60 * 60;
   const secure = process.env.NODE_ENV === 'production';
   return {
     httpOnly: true as const,
