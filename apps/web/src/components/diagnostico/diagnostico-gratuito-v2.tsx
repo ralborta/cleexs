@@ -876,17 +876,9 @@ export function DiagnosticoGratuitoV2({
 
           {croPhaseB ? (
             <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-6">
-              <div className="max-w-3xl space-y-3 sm:space-y-4">
-                <h1 className="text-[1.65rem] font-black leading-[1.14] tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.85rem]">
-                  {model.executiveNarrative.headline}
-                </h1>
-                <p className="text-base font-medium leading-relaxed text-slate-700 sm:text-xl">
-                  {model.executiveNarrative.openingLine}
-                </p>
-                <p className="text-sm leading-relaxed text-slate-600 sm:text-lg">
-                  {model.executiveNarrative.competitorLine}
-                </p>
-              </div>
+              <h1 className="max-w-3xl text-[1.65rem] font-black leading-[1.14] tracking-tight text-[#1e2a5a] sm:text-4xl lg:text-[2.85rem]">
+                {model.executiveNarrative.headline}
+              </h1>
 
               <div className="border-t border-slate-200/90 pt-5 sm:pt-8">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
@@ -899,6 +891,15 @@ export function DiagnosticoGratuitoV2({
                     croPhaseA={croPhaseA}
                   />
                 </div>
+              </div>
+
+              <div className="max-w-3xl space-y-3 sm:space-y-4">
+                <p className="text-base font-medium leading-relaxed text-slate-700 sm:text-xl">
+                  {model.executiveNarrative.openingLine}
+                </p>
+                <p className="text-sm leading-relaxed text-slate-600 sm:text-lg">
+                  {model.executiveNarrative.competitorLine}
+                </p>
               </div>
 
               <EngineScoresPanel
