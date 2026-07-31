@@ -35,7 +35,6 @@ import {
   CompetitorLeaderInsight,
   CompetitorShareChart,
 } from '@/components/diagnostico/competitor-share-chart';
-import { CompetitorVisibilityPillarChart } from '@/components/diagnostico/competitor-visibility-pillar-chart';
 import { EnginePresenceCards } from '@/components/diagnostico/engine-presence-cards';
 import { QueryDiscoveryPanel } from '@/components/diagnostico/query-discovery-panel';
 import { CleexsScoreRing } from '@/components/ui/cleexs-score-ring';
@@ -1054,7 +1053,12 @@ export function DiagnosticoGratuitoV2({
           <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
             {croPhaseA ? (
               <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(150px,175px)] sm:items-stretch sm:gap-5">
-                <CompetitorVisibilityPillarChart rows={model.competitors} />
+                <CompetitorShareChart
+                  rows={model.competitors}
+                  brandDomain={model.domain}
+                  variant="visibility"
+                  className="rounded-none border-0 p-0 shadow-none ring-0"
+                />
                 <CompetitorLeaderInsight
                   leaderName={model.leaderName}
                   leaderShare={model.leaderShare}

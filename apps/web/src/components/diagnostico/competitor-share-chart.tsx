@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, Trophy } from 'lucide-react';
+import { Info, LineChart, Sparkles, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CompetitorNameLink } from '@/components/report/competitor-name-link';
 import type { DiagnosticoV2CompetitorRow } from '@/lib/diagnostico-v2-data';
@@ -15,10 +15,39 @@ function displayDomain(url: string | null | undefined, fallback?: string | null)
     .replace(/\/$/, '');
 }
 
-function RankBadge({ rank, highlighted }: { rank: number; highlighted: boolean }) {
+function RankBadge({
+  rank,
+  highlighted,
+  isBrand,
+  variant = 'default',
+}: {
+  rank: number;
+  highlighted: boolean;
+  isBrand?: boolean;
+  variant?: 'default' | 'visibility';
+}) {
   if (!highlighted) {
     return (
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-xs font-semibold tabular-nums text-slate-400">
+        {rank}
+      </span>
+    );
+  }
+
+  if (variant === 'visibility') {
+    const squareStyles: Record<number, string> = {
+      1: 'bg-rose-400 text-white',
+      2: 'bg-slate-500 text-white',
+      3: isBrand ? 'bg-violet-400 text-white' : 'bg-slate-400 text-white',
+    };
+
+    return (
+      <span
+        className={cn(
+          'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-black tabular-nums shadow-sm',
+          squareStyles[rank] ?? 'bg-slate-300 text-slate-700',
+        )}
+      >
         {rank}
       </span>
     );
@@ -61,9 +90,11 @@ function CompetitorAvatar({ name, isBrand }: { name: string; isBrand: boolean })
 function CompetitorLabel({
   row,
   brandDomain,
+  variant = 'default',
 }: {
   row: DiagnosticoV2CompetitorRow;
   brandDomain?: string | null;
+  variant?: 'default' | 'visibility';
 }) {
   const domain = row.isBrand ? displayDomain(null, brandDomain) : displayDomain(row.url);
   const label = row.isBrand ? 'Tu empresa' : row.name;
@@ -77,7 +108,7 @@ function CompetitorLabel({
       )}
     >
       {row.isBrand ? (
-        <span className="text-[#1e2a5a]">{label}</span>
+        <span className={variant === 'visibility' ? 'text-violet-600' : 'text-[#1e2a5a]'}>{label}</span>
       ) : (
         <CompetitorNameLink
           name={label}
@@ -95,14 +126,48 @@ function ShareBar({
   maxShare,
   highlighted,
   showPct,
+  rank,
+  isBrand,
+  variant = 'default',
 }: {
   share: number;
   maxShare: number;
   highlighted: boolean;
   showPct?: boolean;
+  rank?: number;
+  isBrand?: boolean;
+  variant?: 'default' | 'visibility';
 }) {
   const widthPct = maxShare > 0 ? Math.max((share / maxShare) * 100, highlighted ? 14 : 5) : 0;
   const pctLabel = `${share.toFixed(1)}%`;
+
+  const barClass =
+    variant === 'visibility'
+      ? isBrand
+        ? 'bg-gradient-to-r from-violet-300 to-violet-400'
+        : rank === 1
+          ? 'bg-gradient-to-r from-rose-300 to-rose-400'
+          : rank === 2
+            ? 'bg-gradient-to-r from-slate-400 to-slate-500'
+            : rank === 3
+              ? 'bg-gradient-to-r from-slate-300 to-slate-400'
+              : 'bg-gradient-to-r from-slate-200 to-slate-300'
+      : highlighted
+        ? 'bg-gradient-to-r from-violet-400 to-violet-500'
+        : 'bg-gradient-to-r from-slate-300 to-slate-200';
+
+  const pctClass =
+    variant === 'visibility'
+      ? isBrand
+        ? 'font-bold text-violet-600'
+        : rank === 1
+          ? 'font-bold text-rose-500'
+          : highlighted
+            ? 'font-semibold text-slate-600'
+            : 'font-medium text-slate-400'
+      : highlighted
+        ? 'font-bold text-violet-600'
+        : 'font-medium text-slate-400';
 
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -113,22 +178,12 @@ function ShareBar({
         )}
       >
         <div
-          className={cn(
-            'h-full rounded-full transition-all duration-500',
-            highlighted
-              ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500'
-              : 'bg-gradient-to-r from-slate-300 to-slate-200',
-          )}
+          className={cn('h-full rounded-full transition-all duration-500', barClass)}
           style={{ width: `${Math.min(widthPct, 100)}%` }}
         />
       </div>
       {showPct !== false ? (
-        <span
-          className={cn(
-            'w-9 shrink-0 text-right text-[11px] tabular-nums sm:text-xs',
-            highlighted ? 'font-bold text-violet-700' : 'font-medium text-slate-400',
-          )}
-        >
+        <span className={cn('w-9 shrink-0 text-right text-[11px] tabular-nums sm:text-xs', pctClass)}>
           {pctLabel}
         </span>
       ) : (
@@ -185,19 +240,37 @@ export function CompetitorShareChart({
   rows,
   brandDomain,
   className,
+  variant = 'default',
 }: {
   rows: DiagnosticoV2CompetitorRow[];
   brandDomain?: string | null;
   className?: string;
+  /** visibility = barras horizontales con header (CRO preview) */
+  variant?: 'default' | 'visibility';
 }) {
   const topRows = buildTopSixRows(rows);
   const maxShare = Math.max(...topRows.filter((r) => !r.placeholder).map((r) => r.share), 1);
+  const isVisibility = variant === 'visibility';
 
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="mb-3 text-sm font-medium leading-snug text-slate-500">
-        Participación en respuestas de ChatGPT en consultas relevantes (Top 6 marcas)
-      </p>
+      {isVisibility ? (
+        <div className="mb-5 flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100/80 text-violet-500">
+            <LineChart className="h-5 w-5" strokeWidth={2.2} aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-base font-bold leading-snug text-[#1e2a5a] sm:text-lg">
+              Dónde está perdiendo visibilidad tu marca
+            </h3>
+            <p className="mt-0.5 text-sm text-slate-500">Presencia en respuestas de ChatGPT</p>
+          </div>
+        </div>
+      ) : (
+        <p className="mb-3 text-sm font-medium leading-snug text-slate-500">
+          Participación en respuestas de ChatGPT en consultas relevantes (Top 6 marcas)
+        </p>
+      )}
       <div className="space-y-2.5">
         {topRows.map((row) => {
           if (row.placeholder) {
@@ -208,13 +281,26 @@ export function CompetitorShareChart({
           return (
             <div
               key={`${row.rank}-${row.name}`}
-              className={cn(CHART_ROW_LAYOUT, !highlighted && 'opacity-60')}
+              className={cn(
+                CHART_ROW_LAYOUT,
+                !highlighted && 'opacity-60',
+                isVisibility &&
+                  row.isBrand &&
+                  'rounded-xl border border-violet-100/90 bg-violet-50/50 px-2.5 py-2 sm:px-3',
+              )}
             >
               <div className="flex min-w-0 max-w-full items-center gap-1.5 sm:max-w-[min(100%,260px)]">
-                <RankBadge rank={row.rank} highlighted={highlighted} />
-                {highlighted ? <CompetitorAvatar name={row.name} isBrand={row.isBrand} /> : null}
+                <RankBadge
+                  rank={row.rank}
+                  highlighted={highlighted}
+                  isBrand={row.isBrand}
+                  variant={variant}
+                />
+                {highlighted && !isVisibility ? (
+                  <CompetitorAvatar name={row.name} isBrand={row.isBrand} />
+                ) : null}
                 <div className="min-w-0 flex-1">
-                  <CompetitorLabel row={row} brandDomain={brandDomain} />
+                  <CompetitorLabel row={row} brandDomain={brandDomain} variant={variant} />
                 </div>
               </div>
               <ShareBar
@@ -222,11 +308,22 @@ export function CompetitorShareChart({
                 maxShare={maxShare}
                 highlighted={highlighted}
                 showPct={row.rank <= 4}
+                rank={row.rank}
+                isBrand={row.isBrand}
+                variant={variant}
               />
             </div>
           );
         })}
       </div>
+      {isVisibility ? (
+        <p className="mt-4 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500 sm:mt-5 sm:text-xs">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+          <span>
+            Los porcentajes representan la proporción de consultas analizadas en las que aparece cada marca.
+          </span>
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -257,18 +354,18 @@ export function CompetitorLeaderInsight({
   return (
     <div
       className={cn(
-        'relative flex h-full min-h-[10.5rem] w-full flex-col justify-center overflow-hidden rounded-xl border border-violet-200/90 bg-violet-50/90 px-3.5 py-3.5 sm:min-h-0 sm:max-w-[175px] sm:px-3.5 sm:py-3.5',
+        'relative flex h-full min-h-[10.5rem] w-full flex-col justify-center overflow-hidden rounded-xl border border-violet-100/90 bg-violet-50/70 px-3.5 py-3.5 sm:min-h-0 sm:max-w-[175px] sm:px-3.5 sm:py-3.5',
         className,
       )}
     >
       <div
-        className="pointer-events-none absolute bottom-0 right-0.5 text-violet-500 opacity-[0.13]"
+        className="pointer-events-none absolute bottom-0 right-0.5 text-violet-400 opacity-[0.12]"
         aria-hidden
       >
         <Trophy className="h-[3.75rem] w-[3.75rem]" strokeWidth={1.1} />
       </div>
       <div className="relative z-[1] pr-5">
-        <p className="text-sm font-bold leading-snug text-violet-900 sm:text-base">{copy.title}</p>
+        <p className="text-sm font-bold leading-snug text-violet-800 sm:text-base">{copy.title}</p>
         <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:text-sm">{copy.body}</p>
         <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:text-sm">{copy.footer}</p>
       </div>
