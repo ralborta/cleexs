@@ -782,7 +782,7 @@ function PlanTransitionBanner({
       >
         <p className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold leading-relaxed text-[#1e2a5a] sm:text-sm">
           <Sparkles className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
-          Ya entendiste el problema. y viste el tamaño de la oportunidad
+          Ya entendiste el problema y viste el tamaño de la oportunidad
         </p>
         <p className="mt-2 text-base font-bold text-violet-700 sm:text-lg">
           Ahora te mostramos exactamente cómo resolverlo.
