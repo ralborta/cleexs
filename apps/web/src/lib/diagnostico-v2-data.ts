@@ -600,12 +600,65 @@ function buildFindings(input: {
   ];
 }
 
-function shortenFindingLine(finding: DiagnosticoV2Finding): string {
-  const bodyLead = finding.body.split(/[.!]/)[0]?.trim();
-  if (bodyLead && bodyLead.length <= 110) {
-    return bodyLead.endsWith('.') ? bodyLead : `${bodyLead}.`;
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return '';
+  const parts = trimmed.split(/(?<!\d)[.!](?!\d)/);
+  const lead = parts[0]?.trim() ?? trimmed;
+  if (!lead) return trimmed;
+  return /[.!]$/.test(lead) ? lead : `${lead}.`;
+}
+
+function buildStrengthNarrativeLine(input: {
+  brandShare: number;
+  queryDiscovery: DiagnosticoV2QueryDiscovery;
+}): string {
+  const totalQueries = Math.max(input.queryDiscovery.totalQueries, 1);
+  const mentionRate = Math.round(input.queryDiscovery.funnel.mentionRate);
+  const share = input.brandShare.toFixed(1);
+
+  if (input.brandShare >= 25) {
+    return `ChatGPT te menciona en el ${share}% de las respuestas relevantes (${mentionRate}% de las ${totalQueries} consultas analizadas).`;
   }
-  return finding.title.endsWith('.') ? finding.title : `${finding.title}.`;
+  if (input.brandShare > 0) {
+    return `ChatGPT te nombra en el ${share}% de las respuestas cuando un cliente busca proveedores como vos.`;
+  }
+  return `Aparecés en el ${mentionRate}% de las ${totalQueries} consultas analizadas — hay señal, pero todavía es baja.`;
+}
+
+function buildWeaknessNarrativeLine(input: {
+  brandName: string;
+  brandShare: number;
+  brandRank: number;
+  leaderName: string;
+  leaderShare: number;
+  queryDiscovery: DiagnosticoV2QueryDiscovery;
+  findings: DiagnosticoV2Finding[];
+}): string {
+  const totalQueries = Math.max(input.queryDiscovery.totalQueries, 1);
+  const leader = input.leaderName.trim() || 'tu competidor líder';
+  const gap = Math.max(0, input.leaderShare - input.brandShare);
+
+  if (input.brandRank > 1 && gap >= 3) {
+    return `${leader} concentra ${input.leaderShare.toFixed(1)}% de las menciones vs tu ${input.brandShare.toFixed(1)}% — cuando el cliente compara opciones, ChatGPT lo recomienda más.`;
+  }
+
+  if (input.queryDiscovery.losePromptCount >= Math.ceil(totalQueries * 0.2)) {
+    return `Perdés visibilidad en ${input.queryDiscovery.losePromptCount} de ${totalQueries} consultas, sobre todo cuando el usuario ${input.queryDiscovery.insightHighlight}.`;
+  }
+
+  if (input.queryDiscovery.funnel.top1Rate < 25 && input.queryDiscovery.funnel.mentionRate > 0) {
+    return `Te mencionan, pero solo quedás #1 en el ${Math.round(input.queryDiscovery.funnel.top1Rate)}% de las consultas — casi nunca sos la primera recomendación.`;
+  }
+
+  const weaknessFinding =
+    input.findings.find((f) => f.tone === 'critical') ??
+    input.findings.find((f) => f.tone === 'warning' && !/informe gratuito/i.test(f.body)) ??
+    input.findings.find((f) => f.tone === 'warning');
+
+  if (weaknessFinding) return firstSentence(weaknessFinding.body);
+
+  return `En consultas de comparación y decisión, ${leader} sigue llevándose la recomendación por delante de ${input.brandName}.`;
 }
 
 function buildExecutiveNarrative(input: {
@@ -621,10 +674,6 @@ function buildExecutiveNarrative(input: {
 }): DiagnosticoV2ExecutiveNarrative {
   const leader = input.leaderName.trim() || 'tu competidor líder';
   const totalQueries = Math.max(input.queryDiscovery.totalQueries, 1);
-  const strengthFinding =
-    input.findings.find((f) => f.tone === 'success') ?? input.findings[0];
-  const weaknessFinding =
-    input.findings.find((f) => f.tone !== 'success') ?? input.findings[1] ?? input.findings[0];
 
   let headline: string;
   if (input.verdict === 'yes' && input.brandShare >= 25) {
@@ -644,12 +693,20 @@ function buildExecutiveNarrative(input: {
     openingLine = `Analizamos ${totalQueries} consultas reales de tus potenciales clientes y encontramos una debilidad clara frente a ${leader}.`;
   }
 
-  const strengthLine =
-    strengthFinding?.tone === 'success'
-      ? shortenFindingLine(strengthFinding)
-      : `Aparecés en el ${Math.round(input.queryDiscovery.funnel.mentionRate)}% de las consultas analizadas.`;
+  const strengthLine = buildStrengthNarrativeLine({
+    brandShare: input.brandShare,
+    queryDiscovery: input.queryDiscovery,
+  });
 
-  const weaknessLine = weaknessFinding ? shortenFindingLine(weaknessFinding) : openingLine;
+  const weaknessLine = buildWeaknessNarrativeLine({
+    brandName: input.brandName,
+    brandShare: input.brandShare,
+    brandRank: input.brandRank,
+    leaderName: input.leaderName,
+    leaderShare: input.leaderShare,
+    queryDiscovery: input.queryDiscovery,
+    findings: input.findings,
+  });
 
   const competitorLine =
     input.brandRank > 1
