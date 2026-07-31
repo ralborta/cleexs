@@ -796,8 +796,8 @@ function buildPersonalizedDeliverables(input: {
     },
     {
       value: 1,
-      label: 'roadmap de implementación de 90 días',
-      shortLabel: 'ROADMAP',
+      label: 'plan de acción de 90 días',
+      shortLabel: 'PLAN DE ACCIÓN',
     },
   ];
 

@@ -661,7 +661,7 @@ function DeliverableCard({
         className={cn(
           'mt-1 leading-snug text-slate-600',
           croPhaseB
-            ? 'text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-xs sm:tracking-widest'
+            ? 'text-[8px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px] sm:tracking-widest'
             : enlarged
               ? 'text-xs sm:text-sm'
               : 'text-[11px]',
@@ -677,10 +677,13 @@ function PlanConquistarCtaPanel({
   diagnostic,
   model,
   variant = 'main',
+  embedded = false,
 }: {
   diagnostic: PublicDiagnostic;
   model: DiagnosticoV2ViewModel;
   variant?: 'main' | 'inline' | 'sticky';
+  /** Sin bordes redondeados propios — va pegado debajo del bloque de entregables */
+  embedded?: boolean;
 }) {
   const actions = model.deliverables[0]?.value ?? 0;
   const prompts = model.deliverables[1]?.value ?? 0;
@@ -704,10 +707,12 @@ function PlanConquistarCtaPanel({
   const wrapperClass =
     variant === 'inline'
       ? 'overflow-hidden rounded-2xl bg-violet-600 px-4 py-6 shadow-lg shadow-violet-600/25 sm:px-6 sm:py-7'
-      : cn(
-          'overflow-hidden rounded-2xl bg-violet-600 shadow-lg shadow-violet-600/20',
-          'px-4 py-9 sm:px-8 sm:py-10',
-        );
+      : embedded
+        ? 'overflow-hidden bg-violet-600 px-4 py-8 shadow-none sm:px-8 sm:py-10'
+        : cn(
+            'overflow-hidden rounded-2xl bg-violet-600 shadow-lg shadow-violet-600/20',
+            'px-4 py-9 sm:px-8 sm:py-10',
+          );
 
   const buttonClass =
     variant === 'inline'
@@ -741,7 +746,7 @@ function PlanConquistarCtaPanel({
       {actions > 0 || prompts > 0 ? (
         <p className="mt-3 text-center text-sm font-medium text-violet-100/95 sm:text-base">
           {actions} {actions === 1 ? 'acción' : 'acciones'} · {prompts}{' '}
-          {prompts === 1 ? 'prompt' : 'prompts'} · Roadmap de 90 días
+          {prompts === 1 ? 'prompt' : 'prompts'} · Plan de acción de 90 días
         </p>
       ) : null}
     </div>
@@ -1329,86 +1334,89 @@ export function DiagnosticoGratuitoV2({
           )}
         </section>
 
-        {/* 7 — Mientras leías */}
+        {/* 7 — Mientras leías + CTA */}
         <section>
           <SectionBadge
             n={7}
             label={croPhaseB ? 'Tu plan ya está listo' : 'Mientras vos leías este diagnóstico…'}
             croPhaseA={croPhaseA}
           />
-          <ReportBlock className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
-            <div className="mb-4 max-w-3xl space-y-2">
-              <p className={cn('font-semibold text-[#1e2a5a]', croPhaseB ? 'text-base sm:text-lg' : 'text-sm')}>
-                {croPhaseB
-                  ? 'Nuestro motor ya hizo el trabajo sobre tu empresa.'
-                  : `Nuestro motor terminó de trabajar sobre ${model.brandName}.`}
-              </p>
-              <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
-                {model.deliverablesIntro}
-              </p>
-              <p className="text-xs font-bold text-violet-700 sm:text-sm">Todo ya está listo. Solo falta activarlo.</p>
+          <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm shadow-slate-200/30 ring-1 ring-slate-100">
+            <div className={croPhaseA ? 'p-5 sm:p-6' : 'p-4 sm:p-5'}>
+              <div className="mb-4 max-w-3xl space-y-2">
+                <p className={cn('font-semibold text-[#1e2a5a]', croPhaseB ? 'text-base sm:text-lg' : 'text-sm')}>
+                  {croPhaseB
+                    ? 'Nuestro motor ya hizo el trabajo sobre tu empresa.'
+                    : `Nuestro motor terminó de trabajar sobre ${model.brandName}.`}
+                </p>
+                <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
+                  {model.deliverablesIntro}
+                </p>
+                <p className="text-xs font-bold text-violet-700 sm:text-sm">Todo ya está listo. Solo falta activarlo.</p>
+              </div>
+              <div
+                className={cn(
+                  'grid gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6',
+                  croPhaseB && 'grid-cols-3',
+                )}
+              >
+              <DeliverableCard
+                icon={<ClipboardList className="h-6 w-6" />}
+                value={model.deliverables[0].value}
+                label={model.deliverables[0].label}
+                shortLabel={model.deliverables[0].shortLabel}
+                croPhaseA={croPhaseA}
+                croPhaseB={croPhaseB}
+              />
+              <DeliverableCard
+                icon={<Lightbulb className="h-6 w-6" />}
+                value={model.deliverables[1].value}
+                label={model.deliverables[1].label}
+                shortLabel={model.deliverables[1].shortLabel}
+                croPhaseA={croPhaseA}
+                croPhaseB={croPhaseB}
+              />
+              <DeliverableCard
+                icon={<FileText className="h-6 w-6" />}
+                value={model.deliverables[2].value}
+                label={model.deliverables[2].label}
+                shortLabel={model.deliverables[2].shortLabel}
+                croPhaseA={croPhaseA}
+                croPhaseB={croPhaseB}
+              />
+              <DeliverableCard
+                icon={<Users className="h-6 w-6" />}
+                value={model.deliverables[3].value}
+                label={model.deliverables[3].label}
+                shortLabel={model.deliverables[3].shortLabel}
+                croPhaseA={croPhaseA}
+                croPhaseB={croPhaseB}
+              />
+              <DeliverableCard
+                icon={<Zap className="h-6 w-6" />}
+                value={model.deliverables[4].value}
+                label={model.deliverables[4].label}
+                shortLabel={model.deliverables[4].shortLabel}
+                croPhaseA={croPhaseA}
+                croPhaseB={croPhaseB}
+              />
+              <DeliverableCard
+                icon={<Target className="h-6 w-6" />}
+                value={model.deliverables[5].value}
+                label={model.deliverables[5].label}
+                shortLabel={model.deliverables[5].shortLabel}
+                croPhaseA={croPhaseA}
+                croPhaseB={croPhaseB}
+              />
+              </div>
             </div>
-            <div
-              className={cn(
-                'grid gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6',
-                croPhaseB && 'grid-cols-3',
-              )}
-            >
-            <DeliverableCard
-              icon={<ClipboardList className="h-6 w-6" />}
-              value={model.deliverables[0].value}
-              label={model.deliverables[0].label}
-              shortLabel={model.deliverables[0].shortLabel}
-              croPhaseA={croPhaseA}
-              croPhaseB={croPhaseB}
+            <PlanConquistarCtaPanel
+              diagnostic={diagnostic}
+              model={model}
+              variant="main"
+              embedded
             />
-            <DeliverableCard
-              icon={<Lightbulb className="h-6 w-6" />}
-              value={model.deliverables[1].value}
-              label={model.deliverables[1].label}
-              shortLabel={model.deliverables[1].shortLabel}
-              croPhaseA={croPhaseA}
-              croPhaseB={croPhaseB}
-            />
-            <DeliverableCard
-              icon={<FileText className="h-6 w-6" />}
-              value={model.deliverables[2].value}
-              label={model.deliverables[2].label}
-              shortLabel={model.deliverables[2].shortLabel}
-              croPhaseA={croPhaseA}
-              croPhaseB={croPhaseB}
-            />
-            <DeliverableCard
-              icon={<Users className="h-6 w-6" />}
-              value={model.deliverables[3].value}
-              label={model.deliverables[3].label}
-              shortLabel={model.deliverables[3].shortLabel}
-              croPhaseA={croPhaseA}
-              croPhaseB={croPhaseB}
-            />
-            <DeliverableCard
-              icon={<Zap className="h-6 w-6" />}
-              value={model.deliverables[4].value}
-              label={model.deliverables[4].label}
-              shortLabel={model.deliverables[4].shortLabel}
-              croPhaseA={croPhaseA}
-              croPhaseB={croPhaseB}
-            />
-            <DeliverableCard
-              icon={<Target className="h-6 w-6" />}
-              value={model.deliverables[5].value}
-              label={model.deliverables[5].label}
-              shortLabel={model.deliverables[5].shortLabel}
-              croPhaseA={croPhaseA}
-              croPhaseB={croPhaseB}
-            />
-            </div>
-          </ReportBlock>
-        </section>
-
-        {/* CTA principal — Plan Conquistar */}
-        <section className={croPhaseA ? 'mt-12 sm:mt-14' : 'mt-10 sm:mt-12'}>
-          <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="main" />
+          </div>
         </section>
           </>
         ) : null}
