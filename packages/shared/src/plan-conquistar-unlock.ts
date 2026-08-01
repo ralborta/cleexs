@@ -1,20 +1,25 @@
-/** Botones/enlaces hacia Plan Conquistar — orden fijo para el reporte en admin. */
-export const PLAN_CONQUISTAR_UNLOCK_LINKS = [
+/** Informe diagnóstico v2.25 (preview CRO → prod). Tres CTAs hacia /plan-conquistar. */
+export const INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS = [
   {
     key: 'ver_resultado_v2_transition_banner',
-    label: 'Informe · Banner "Ver Plan Conquistar"',
+    label: 'Informe v2.25 · Banner "Ver Plan Conquistar"',
     order: 1,
   },
   {
     key: 'ver_resultado_v2_cta_plan_accion',
-    label: 'Informe · Botón "Quiero ver mi plan de acción"',
+    label: 'Informe v2.25 · Botón "Ver plan de acción"',
     order: 2,
   },
   {
     key: 'ver_resultado_v2_engine_paywall',
-    label: 'Informe · Modal motor bloqueado',
+    label: 'Informe v2.25 · Modal motor bloqueado',
     order: 3,
   },
+] as const;
+
+/** Botones/enlaces hacia Plan Conquistar — orden fijo para el reporte en admin. */
+export const PLAN_CONQUISTAR_UNLOCK_LINKS = [
+  ...INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS,
   {
     key: 'plan_conquistar_landing_cta',
     label: 'Landing Plan Conquistar · Botón principal',

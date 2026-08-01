@@ -20,7 +20,7 @@ import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admi
 import { DiagnosticReportLink, SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 import { internalReportsApi } from '@/lib/api';
-import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDayInArgentina } from '@cleexs/shared';
+import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDayInArgentina, INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS } from '@cleexs/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -763,6 +763,23 @@ function UnlockClicksModal({
   const uniqueVisitors = detail?.uniqueVisitors ?? 0;
   const uniqueDomains = detail?.uniqueDomains ?? domains.length;
 
+  const informeV225KeySet = useMemo(
+    () => new Set(INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS.map((l) => l.key)),
+    [],
+  );
+  const informeV225Links = useMemo(() => {
+    const byKey = new Map(links.map((row) => [row.unlockKey, row]));
+    return INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS.map((def) => {
+      const row = byKey.get(def.key);
+      return {
+        unlockKey: def.key,
+        label: def.label,
+        count: row?.count ?? 0,
+      };
+    });
+  }, [links]);
+  const otherLinks = links.filter((row) => !informeV225KeySet.has(row.unlockKey));
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px] sm:items-center sm:p-6">
       <div
@@ -855,10 +872,10 @@ function UnlockClicksModal({
 
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Por botón o enlace
+                  Por botón o enlace · Informe v2.25
                 </h3>
                 <ul className="space-y-2">
-                  {links.map((row) => (
+                  {informeV225Links.map((row) => (
                     <li
                       key={row.unlockKey}
                       className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
@@ -871,6 +888,27 @@ function UnlockClicksModal({
                   ))}
                 </ul>
               </div>
+
+              {otherLinks.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Otros enlaces
+                </h3>
+                <ul className="space-y-2">
+                  {otherLinks.map((row) => (
+                    <li
+                      key={row.unlockKey}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
+                    >
+                      <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
+                      <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
+                        {fmt(row.count)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              ) : null}
 
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
