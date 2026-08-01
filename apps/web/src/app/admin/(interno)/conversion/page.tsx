@@ -764,7 +764,7 @@ function UnlockClicksModal({
   const uniqueDomains = detail?.uniqueDomains ?? domains.length;
 
   const informeV225KeySet = useMemo(
-    () => new Set(INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS.map((l) => l.key)),
+    () => new Set<string>(INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS.map((l) => l.key as string)),
     [],
   );
   const informeV225Links = useMemo(() => {

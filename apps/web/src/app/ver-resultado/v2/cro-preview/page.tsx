@@ -157,6 +157,7 @@ function VerResultadoV2CroPreviewContent() {
         model={model}
         sharePath={sharePath}
         layoutVariant="cro-phase-a"
+        showPreviewNav
       />
     </>
   );

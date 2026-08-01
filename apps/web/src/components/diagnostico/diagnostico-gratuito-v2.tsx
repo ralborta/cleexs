@@ -807,6 +807,7 @@ export function DiagnosticoGratuitoV2({
   variant = 'free',
   premiumAppend,
   layoutVariant = 'default',
+  showPreviewNav = false,
 }: {
   diagnostic: PublicDiagnostic;
   model: DiagnosticoV2ViewModel;
@@ -815,6 +816,8 @@ export function DiagnosticoGratuitoV2({
   premiumAppend?: ReactNode;
   /** cro-phase-c = Fase B + CTAs sticky/inline + calculadora sliders */
   layoutVariant?: DiagnosticoV2LayoutVariant;
+  /** Enlaces entre fases CRO — solo rutas /cro-preview* */
+  showPreviewNav?: boolean;
 }) {
   const isPremium = variant === 'premium';
   const croPhaseC = layoutVariant === 'cro-phase-c';
@@ -1457,7 +1460,7 @@ export function DiagnosticoGratuitoV2({
         </footer>
         </div>
 
-        {croPhaseC ? (
+        {showPreviewNav && croPhaseC ? (
           <p className="mt-6 text-center text-xs text-slate-500">
             Preview Fase C CRO (conversión) ·{' '}
             <Link
@@ -1474,7 +1477,7 @@ export function DiagnosticoGratuitoV2({
               Producción
             </Link>
           </p>
-        ) : croPhaseB ? (
+        ) : showPreviewNav && croPhaseB ? (
           <p className="mt-6 text-center text-xs text-slate-500">
             Preview Fase B CRO (narrativa) ·{' '}
             <Link
@@ -1498,7 +1501,7 @@ export function DiagnosticoGratuitoV2({
               Producción
             </Link>
           </p>
-        ) : croPhaseA ? (
+        ) : showPreviewNav && croPhaseA ? (
           <p className="mt-6 text-center text-xs text-slate-500">
             Preview Fase A CRO ·{' '}
             <Link
@@ -1515,18 +1518,21 @@ export function DiagnosticoGratuitoV2({
               Comparar con producción
             </Link>
           </p>
-        ) : (
+        ) : showPreviewNav ? (
           <p className="mt-6 text-center text-[11px] text-slate-400">
             {isPremium ? 'Vista premium de prueba · ' : 'Vista de prueba · '}
-            <Link href={`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
-              Ver informe actual en producción
+            <Link href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
+              Ver producción (v2.25)
             </Link>
             {' · '}
-            <Link href={`/ver-resultado/v2?diagnosticId=${encodeURIComponent(diagnostic.id)}`} className="underline">
-              Ver free v2
+            <Link
+              href={`/ver-resultado/v2/classic?diagnosticId=${encodeURIComponent(diagnostic.id)}`}
+              className="underline"
+            >
+              Versión clásica
             </Link>
           </p>
-        )}
+        ) : null}
       </main>
 
       {!isPremium && croPhaseC && !heroInView ? (
