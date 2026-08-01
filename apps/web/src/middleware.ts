@@ -3,8 +3,12 @@ import type { NextRequest } from 'next/server';
 import {
   ADMIN_UI_COOKIE_NAME,
   adminRequireAuthEnabled,
-  hasAdminSessionCookie,
+  parseAdminSessionLite,
 } from '@/lib/admin-auth-config';
+import {
+  defaultAdminHomeForRole,
+  isAdminPathAllowedForRole,
+} from '@/lib/admin-roles';
 
 /**
  * Rutas públicas para pruebas (sin login).
@@ -66,6 +70,25 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   return false;
 }
 
+function adminRoleGuard(request: NextRequest): NextResponse | null {
+  const pathname = request.nextUrl.pathname;
+  if (!pathname.startsWith('/admin')) return null;
+  if (pathname.startsWith('/admin/login')) return null;
+
+  const token = request.cookies.get(ADMIN_UI_COOKIE_NAME)?.value;
+  const session = parseAdminSessionLite(token);
+  if (!session || session.role === 'admin') return null;
+
+  if (!isAdminPathAllowedForRole(pathname, session.role)) {
+    const url = request.nextUrl.clone();
+    url.pathname = defaultAdminHomeForRole(session.role);
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  return null;
+}
+
 function adminLoginRedirect(request: NextRequest): NextResponse | null {
   const pathname = request.nextUrl.pathname;
   if (!pathname.startsWith('/admin')) return null;
@@ -73,7 +96,7 @@ function adminLoginRedirect(request: NextRequest): NextResponse | null {
   if (!adminRequireAuthEnabled()) return null;
 
   const token = request.cookies.get(ADMIN_UI_COOKIE_NAME)?.value;
-  if (hasAdminSessionCookie(token)) return null;
+  if (parseAdminSessionLite(token)) return null;
 
   const url = request.nextUrl.clone();
   url.pathname = '/admin/login';
@@ -102,6 +125,9 @@ export function middleware(request: NextRequest) {
   if (marketingRedirect) return marketingRedirect;
 
   const pathname = request.nextUrl.pathname;
+  const roleRedirect = adminRoleGuard(request);
+  if (roleRedirect) return roleRedirect;
+
   const adminRedirect = adminLoginRedirect(request);
   if (adminRedirect) return adminRedirect;
 

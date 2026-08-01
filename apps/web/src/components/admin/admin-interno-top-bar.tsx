@@ -3,8 +3,15 @@
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import type { AdminRole } from '@/lib/admin-roles';
+import { ADMIN_ROLE_LABEL } from '@/lib/admin-roles';
 
-export function AdminInternoTopBar() {
+type AdminInternoTopBarProps = {
+  role?: AdminRole;
+  username?: string | null;
+};
+
+export function AdminInternoTopBar({ role = 'admin', username }: AdminInternoTopBarProps) {
   const router = useRouter();
 
   async function logout() {
@@ -24,14 +31,28 @@ export function AdminInternoTopBar() {
           <p className="text-sm font-semibold text-slate-900">Panel interno</p>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => void logout()}
-        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
-      >
-        <LogOut className="h-3.5 w-3.5 opacity-80" aria-hidden />
-        Salir
-      </button>
+
+      <div className="flex items-center gap-3">
+        {username ? (
+          <div className="hidden text-right leading-tight sm:block">
+            <p className="text-xs font-medium text-slate-800">{username}</p>
+            <p className="text-[10px] text-slate-500">{ADMIN_ROLE_LABEL[role]}</p>
+          </div>
+        ) : role === 'marketing' ? (
+          <span className="hidden rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-amber-200/80 sm:inline">
+            {ADMIN_ROLE_LABEL[role]}
+          </span>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+        >
+          <LogOut className="h-3.5 w-3.5 opacity-80" aria-hidden />
+          Salir
+        </button>
+      </div>
     </header>
   );
 }

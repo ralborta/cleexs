@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   Layers,
   Link2,
+  Lock,
   Mail,
   Megaphone,
   MessageCircle,
@@ -23,6 +24,8 @@ import {
   Type,
   Users,
 } from 'lucide-react';
+import type { AdminRole } from '@/lib/admin-roles';
+import { isAdminPathAllowedForRole } from '@/lib/admin-roles';
 
 type NavLink = {
   href: string;
@@ -110,7 +113,29 @@ function isLinkActive(pathname: string | null, link: NavLink): boolean {
   return allPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-export function AdminInternoNav() {
+function isNavLinkAllowed(href: string, role: AdminRole): boolean {
+  return isAdminPathAllowedForRole(href, role);
+}
+
+function LockedNavItem({ label, icon: Icon }: { label: string; icon: typeof Mail }) {
+  return (
+    <span
+      className="group relative flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 select-none"
+      title="Sin acceso con tu perfil"
+      aria-disabled="true"
+    >
+      <Icon className="h-4 w-4 shrink-0 opacity-40" aria-hidden />
+      <span className="blur-[0.35px] opacity-70">{label}</span>
+      <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400/80" aria-hidden />
+    </span>
+  );
+}
+
+type AdminInternoNavProps = {
+  role?: AdminRole;
+};
+
+export function AdminInternoNav({ role = 'admin' }: AdminInternoNavProps) {
   const pathname = usePathname();
 
   return (
@@ -123,6 +148,11 @@ export function AdminInternoNav() {
                 {section.title}
               </p>
               {section.links.map(({ href, label, icon: Icon, extraPrefixes, excludePrefixes }) => {
+                const allowed = isNavLinkAllowed(href, role);
+                if (!allowed) {
+                  return <LockedNavItem key={href} label={label} icon={Icon} />;
+                }
+
                 const active = isLinkActive(pathname, { href, label, icon: Icon, extraPrefixes, excludePrefixes });
                 return (
                   <Link
@@ -147,6 +177,22 @@ export function AdminInternoNav() {
       <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4 py-3 md:hidden">
         {sections.flatMap((section) =>
           section.links.map(({ href, label, icon: Icon, extraPrefixes, excludePrefixes }) => {
+            const allowed = isNavLinkAllowed(href, role);
+            if (!allowed) {
+              return (
+                <span
+                  key={href}
+                  className="flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-400 opacity-70"
+                  title="Sin acceso"
+                  aria-disabled="true"
+                >
+                  <Icon className="h-3.5 w-3.5 opacity-50" aria-hidden />
+                  <span className="blur-[0.3px]">{label.split('·')[0]?.trim()}</span>
+                  <Lock className="h-3 w-3" aria-hidden />
+                </span>
+              );
+            }
+
             const active = isLinkActive(pathname, { href, label, icon: Icon, extraPrefixes, excludePrefixes });
             return (
               <Link

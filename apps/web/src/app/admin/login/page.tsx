@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import { defaultAdminHomeForRole, type AdminRole } from '@/lib/admin-roles';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -22,9 +23,15 @@ export default function AdminLoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        redirectTo?: string;
+        role?: AdminRole;
+      };
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-      router.replace('/admin/cuentas');
+      const target =
+        data.redirectTo || (data.role ? defaultAdminHomeForRole(data.role) : '/admin/cuentas');
+      router.replace(target);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error');
