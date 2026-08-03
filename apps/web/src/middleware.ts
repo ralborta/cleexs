@@ -141,8 +141,10 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function nextWithPathname(request: NextRequest): NextResponse {
+  const pathname = request.nextUrl.pathname;
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+  requestHeaders.set('x-pathname', pathname);
+  requestHeaders.set('x-cleexs-gtm', pathname.startsWith('/admin') ? '0' : '1');
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
