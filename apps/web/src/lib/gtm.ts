@@ -1,4 +1,6 @@
-/** Google Tag Manager — contenedor Cleexs app.cleexs.net */
+/** Google Tag Manager — contenedor Cleexs app.cleexs.net
+ *  IMPORTANTE: no agregar gtag.js ni GA4 directo en paralelo; duplica visitas/eventos.
+ *  GA4 va configurado solo dentro del contenedor GTM-W3KK88LC. */
 export const GTM_CONTAINER_ID = 'GTM-W3KK88LC';
 
 /** GTM en todas las rutas excepto /admin/* (incl. /admin/login). */

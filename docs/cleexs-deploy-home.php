@@ -1,3 +1,19 @@
+<?php
+/**
+ * ONE-SHOT: publicar home nueva en cleexs.net (reemplaza index.html en public_html).
+ *
+ * 1) Subí este archivo a public_html.
+ * 2) Abrí: https://cleexs.net/cleexs-deploy-home.php?key=cleexs-home-20260728
+ * 3) Si ves OK: borrá este script. NO borres index.html.
+ */
+if (!isset($_GET['key']) || $_GET['key'] !== 'cleexs-home-20260728') {
+  http_response_code(403);
+  exit('Forbidden');
+}
+
+header('Content-Type: text/plain; charset=utf-8');
+
+$html = <<<'CLEEXS_HOME'
 <!DOCTYPE html>
 <html lang="es" prefix="og: https://ogp.me/ns#">
 <head>
@@ -1006,3 +1022,26 @@
 
 </body>
 </html>
+
+CLEEXS_HOME;
+
+$target = __DIR__ . '/index.html';
+$backup = __DIR__ . '/index.html.bak-' . date('Ymd-His');
+if (is_file($target)) {
+  if (!@copy($target, $backup)) {
+    http_response_code(500);
+    exit('No pude hacer backup de index.html existente.');
+  }
+}
+
+$written = file_put_contents($target, $html);
+if ($written === false) {
+  http_response_code(500);
+  exit('No pude escribir index.html (permisos).');
+}
+
+echo "OK: index.html escrito (" . strlen($html) . " bytes).\n";
+if (is_file($backup)) echo "Backup: " . basename($backup) . "\n";
+echo "1) SiteGround → Speed → Caching → Purge\n";
+echo "2) Verificá https://cleexs.net/\n";
+echo "3) Borrá este script (cleexs-deploy-home.php).\n";
