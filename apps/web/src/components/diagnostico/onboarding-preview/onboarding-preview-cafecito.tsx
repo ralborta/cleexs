@@ -11,6 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { youtubeEmbedUrl } from '@/lib/youtube';
+import {
+  CLEEXS_FOUNDER_WHATSAPP_PHONE_E164,
+  formatCleexsWhatsAppPhoneDisplay,
+} from '@/lib/site';
 
 function CircularProgress({
   value,

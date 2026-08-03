@@ -30,13 +30,22 @@ export const CLEEXS_TOOLS_PUBLIC_URL = (
   process.env.NEXT_PUBLIC_CLEEXS_TOOLS_URL?.trim().replace(/\/$/, '') || ''
 ) as string;
 
-/** Número WhatsApp Cleexs (solo dígitos E.164, ej. 54911…).
- * Usado en QR de auspiciadores (wa.me) y onboarding.
+/** Número WhatsApp del bot de diagnósticos (solo dígitos E.164, ej. 54911…).
+ * Usado en QR de auspiciadores (wa.me) y canal Baileys / BuilderBot.
  * Override: NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE=54911…
- * Default: número vinculado al bot Baileys (BBC Open).
+ * Default: +54 9 11 6263-0542
  */
 export const CLEEXS_WHATSAPP_PHONE_E164 = (
   process.env.NEXT_PUBLIC_CLEEXS_WHATSAPP_PHONE?.replace(/\D/g, '').trim() || '5491162630542'
+) as string;
+
+/** WhatsApp directo de Gonzalo — solo pantalla cafecito del onboarding.
+ * Override: NEXT_PUBLIC_CLEEXS_FOUNDER_WHATSAPP_PHONE=54911…
+ * Default: +54 9 11 6015-6473
+ */
+export const CLEEXS_FOUNDER_WHATSAPP_PHONE_E164 = (
+  process.env.NEXT_PUBLIC_CLEEXS_FOUNDER_WHATSAPP_PHONE?.replace(/\D/g, '').trim() ||
+  '5491160156473'
 ) as string;
 
 /** Formato legible AR para UI (+54 9 11 …). */
