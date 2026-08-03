@@ -9,15 +9,13 @@ export type AdminSessionLite = {
   username: string;
 };
 
-/** Panel interno abierto por defecto (equipo Cleexs). Forzar login: ADMIN_OPEN_ACCESS=false */
+/** El panel interno siempre exige login. No hay modo abierto. */
 export function adminOpenAccessEnabled(): boolean {
-  const raw = process.env.ADMIN_OPEN_ACCESS?.trim().toLowerCase();
-  if (raw === 'false') return false;
-  return true;
+  return false;
 }
 
+/** Login obligatorio salvo opt-out explícito local (ADMIN_REQUIRE_AUTH=false). */
 export function adminRequireAuthEnabled(): boolean {
-  if (adminOpenAccessEnabled()) return false;
   if (process.env.ADMIN_REQUIRE_AUTH === 'false') return false;
   return true;
 }

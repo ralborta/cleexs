@@ -12,19 +12,6 @@ type StoredAccount = AdminAccount & {
   salt: string;
 };
 
-const PABLO_SALT = 'cleexs-admin-pablo-v1';
-const PABLO_HASH_HEX = '7bff1d1c28297769729037dab58a1855ebbd87e48ab2ed33c9b83bd1df4e6d96';
-
-/** Cuentas embebidas (contraseña hasheada, no en repo). */
-const BUILTIN_ACCOUNTS: StoredAccount[] = [
-  {
-    username: 'pablo',
-    role: 'marketing',
-    salt: PABLO_SALT,
-    passwordHash: Buffer.from(PABLO_HASH_HEX, 'hex'),
-  },
-];
-
 function hashPassword(password: string, salt: string): Buffer {
   return scryptSync(password, salt, 32);
 }
@@ -82,9 +69,6 @@ function envAdminAccount(): StoredAccount | null {
 function allAccounts(): StoredAccount[] {
   const envAdmin = envAdminAccount();
   const map = new Map<string, StoredAccount>();
-  for (const acc of BUILTIN_ACCOUNTS) {
-    map.set(acc.username, acc);
-  }
   for (const acc of parseEnvAccounts()) {
     map.set(acc.username, acc);
   }

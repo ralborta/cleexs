@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { AdminInternoNav } from '@/components/admin/admin-interno-nav';
 import { AdminInternoTopBar } from '@/components/admin/admin-interno-top-bar';
-import { adminRequireAuthEnabled } from '@/lib/admin-auth-config';
 import { assertAdminUiSession, getAdminUiSession, getEffectiveAdminRole } from '@/lib/admin-api';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export default function AdminInternoLayout({ children }: { children: React.ReactNode }) {
   noStore();
 
-  if (adminRequireAuthEnabled() && !assertAdminUiSession()) {
+  if (!assertAdminUiSession()) {
     redirect('/admin/login');
   }
 

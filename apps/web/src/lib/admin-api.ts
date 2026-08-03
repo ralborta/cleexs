@@ -1,7 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import {
-  adminOpenAccessEnabled,
   COOKIE_NAME,
   verifyAdminSessionToken,
   type AdminSessionPayload,
@@ -44,17 +43,6 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
   return jar?.get(COOKIE_NAME)?.value;
 }
 
-/**
- * Bypass para demo: si en Vercel está seteado ADMIN_DEMO_BYPASS=true (o
- * NEXT_PUBLIC_ADMIN_DEMO_BYPASS=true para casos en que la build inline el
- * valor), `assertAdminUiSession` siempre devuelve true y todas las pantallas
- * internas funcionan sin login. Quitar la env var en produccion real para
- * restablecer el login.
- */
-export function adminAuthBypassEnabled(): boolean {
-  return adminOpenAccessEnabled();
-}
-
 /** Sesión verificada por cookie (HMAC). Null si no hay cookie válida. */
 export function getAdminUiSession(request?: Request): AdminSessionPayload | null {
   const fromReqCookie = cookieFromNextRequest(request);
@@ -70,30 +58,24 @@ export function getAdminUiSession(request?: Request): AdminSessionPayload | null
   return verifyAdminSessionToken(c);
 }
 
-/** Rol efectivo en UI: sin cookie + acceso abierto = admin completo. */
+/** Rol del usuario logueado (requiere cookie válida). */
 export function getEffectiveAdminRole(request?: Request): AdminSessionPayload['role'] {
   const session = getAdminUiSession(request);
-  if (session) return session.role;
-  if (adminAuthBypassEnabled()) return 'admin';
-  return 'admin';
+  return session?.role ?? 'admin';
 }
 
 /** Valida sesión admin y permisos por rol en rutas /api/admin-ui/* y /api/reports/*. */
 export function assertAdminUiSession(request?: Request): boolean {
   const session = getAdminUiSession(request);
+  if (!session) return false;
 
-  if (session) {
-    if (session.role === 'marketing' && request?.url) {
-      const pathname = new URL(request.url).pathname;
-      if (pathname.startsWith('/api/admin-ui') || pathname.startsWith('/api/reports')) {
-        return isAdminApiAllowedForRole(pathname, session.role);
-      }
+  if (session.role === 'marketing' && request?.url) {
+    const pathname = new URL(request.url).pathname;
+    if (pathname.startsWith('/api/admin-ui') || pathname.startsWith('/api/reports')) {
+      return isAdminApiAllowedForRole(pathname, session.role);
     }
-    return true;
   }
-
-  if (adminAuthBypassEnabled()) return true;
-  return false;
+  return true;
 }
 
 export async function forwardToCleexsApi(path: string, init: RequestInit): Promise<Response> {
