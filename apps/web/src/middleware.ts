@@ -89,6 +89,24 @@ function adminRoleGuard(request: NextRequest): NextResponse | null {
   return null;
 }
 
+function clearAdminSessionCookie(res: NextResponse) {
+  const secure = process.env.NODE_ENV === 'production';
+  res.cookies.set(ADMIN_UI_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
+  res.cookies.set(ADMIN_UI_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/admin',
+    maxAge: 0,
+  });
+}
+
 function adminLoginRedirect(request: NextRequest): NextResponse | null {
   const pathname = request.nextUrl.pathname;
   if (!pathname.startsWith('/admin')) return null;
@@ -101,7 +119,9 @@ function adminLoginRedirect(request: NextRequest): NextResponse | null {
   const url = request.nextUrl.clone();
   url.pathname = '/admin/login';
   url.search = '';
-  return NextResponse.redirect(url);
+  const res = NextResponse.redirect(url);
+  if (token) clearAdminSessionCookie(res);
+  return res;
 }
 
 function isPublicPath(pathname: string): boolean {
@@ -118,6 +138,12 @@ function isPublicPath(pathname: string): boolean {
   if (path.startsWith('/plan-conquistar')) return true;
   if (path.startsWith('/borrador')) return true;
   return false;
+}
+
+function nextWithPathname(request: NextRequest): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export function middleware(request: NextRequest) {
@@ -159,8 +185,7 @@ export function middleware(request: NextRequest) {
   }
 
   const publicAccess = isPublicPath(pathname);
-  // Sin auth por ahora: todo pasa. Cuando agregues sesión, redirigir a /diagnostico/crear si !publicAccess && !hasSession(request).
-  const res = NextResponse.next();
+  const res = nextWithPathname(request);
   if (publicAccess) res.headers.set('x-cleexs-public', '1');
   return res;
 }

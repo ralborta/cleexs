@@ -4,6 +4,9 @@ import type { AdminRole } from '@/lib/admin-roles';
 
 export const ADMIN_UI_COOKIE_NAME = 'cleexs_admin_ui';
 
+/** Bump para invalidar cookies emitidas antes (fuerza re-login de todos). */
+export const ADMIN_SESSION_VERSION = 2;
+
 export type AdminSessionLite = {
   role: AdminRole;
   username: string;
@@ -20,23 +23,15 @@ export function adminRequireAuthEnabled(): boolean {
   return true;
 }
 
-/** Parseo liviano de cookie (sin HMAC): exp + rol para middleware Edge. */
+/** Parseo liviano de cookie (sin HMAC): exp + versión + rol para middleware Edge. */
 export function parseAdminSessionLite(token: string | undefined | null): AdminSessionLite | null {
   if (!token) return null;
   const parts = token.split('.');
+  if (parts.length !== 5) return null;
 
-  if (parts.length === 2) {
-    const [expStr, sig] = parts;
-    if (!expStr || !sig || !/^[a-f0-9]+$/i.test(sig)) return null;
-    const exp = Number(expStr);
-    if (!Number.isFinite(exp) || exp <= Date.now()) return null;
-    return { role: 'admin', username: 'admin' };
-  }
-
-  if (parts.length !== 4) return null;
-
-  const [expStr, roleRaw, username, sig] = parts;
+  const [expStr, versionStr, roleRaw, username, sig] = parts;
   if (!expStr || !sig || !/^[a-f0-9]+$/i.test(sig)) return null;
+  if (Number(versionStr) !== ADMIN_SESSION_VERSION) return null;
   if (roleRaw !== 'admin' && roleRaw !== 'marketing') return null;
   if (!username?.trim()) return null;
 

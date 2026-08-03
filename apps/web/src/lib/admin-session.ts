@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import {
   adminOpenAccessEnabled,
   adminRequireAuthEnabled,
+  ADMIN_SESSION_VERSION,
   ADMIN_UI_COOKIE_NAME,
 } from '@/lib/admin-auth-config';
 import type { AdminRole } from '@/lib/admin-roles';
@@ -32,11 +33,11 @@ export function normalizeEnvSecret(value: string | undefined): string {
   return trimmed;
 }
 
-/** Token: `${expMs}.${role}.${username}.${hexSig}` · legacy 2-part = admin */
+/** Token: `${expMs}.${version}.${role}.${username}.${hexSig}` */
 export function createAdminSessionToken(session: AdminSessionPayload): string {
   const secret = sessionSecret();
   const exp = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  const payload = `${exp}.${session.role}.${session.username}`;
+  const payload = `${exp}.${ADMIN_SESSION_VERSION}.${session.role}.${session.username}`;
   const sig = createHmac('sha256', secret).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
@@ -45,30 +46,17 @@ export function verifyAdminSessionToken(token: string | undefined | null): Admin
   if (!token) return null;
   const secret = sessionSecret();
   const parts = token.split('.');
+  if (parts.length !== 5) return null;
 
-  if (parts.length === 2) {
-    const [expStr, sig] = parts;
-    const exp = Number(expStr);
-    if (!Number.isFinite(exp) || exp < Date.now()) return null;
-    const expected = createHmac('sha256', secret).update(expStr).digest('hex');
-    try {
-      if (!timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) return null;
-    } catch {
-      return null;
-    }
-    return { role: 'admin', username: normalizeEnvSecret(process.env.ADMIN_UI_USERNAME || 'admin') };
-  }
-
-  if (parts.length !== 4) return null;
-
-  const [expStr, roleRaw, username, sig] = parts;
+  const [expStr, versionStr, roleRaw, username, sig] = parts;
+  if (Number(versionStr) !== ADMIN_SESSION_VERSION) return null;
   if (roleRaw !== 'admin' && roleRaw !== 'marketing') return null;
   if (!username?.trim()) return null;
 
   const exp = Number(expStr);
   if (!Number.isFinite(exp) || exp < Date.now()) return null;
 
-  const payload = `${expStr}.${roleRaw}.${username}`;
+  const payload = `${expStr}.${versionStr}.${roleRaw}.${username}`;
   const expected = createHmac('sha256', secret).update(payload).digest('hex');
   try {
     if (!timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) return null;
