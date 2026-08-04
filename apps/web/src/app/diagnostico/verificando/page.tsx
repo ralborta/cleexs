@@ -28,6 +28,7 @@ import type { SetupStep } from '@/components/diagnostico/onboarding-setup-wizard
 import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
+import { OnboardingMobileProgressHeader } from '@/components/diagnostico/onboarding-preview/onboarding-mobile-progress-header';
 import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
@@ -1035,10 +1036,104 @@ function VerificandoContent() {
     );
   }
 
+  const onboardingFlow = showCafecito ? (
+    <OnboardingPreviewCafecito
+      userName={waUserName}
+      domain={domainShort}
+      brandLabel={brandLabel ?? undefined}
+      founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
+      youtubeVideoId={CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID}
+      whatsappHref={whatsappHref}
+      reportReady={reportReady}
+      reportFinalizing={reportFinalizing}
+      reportProgress={cafecitoReportProgress}
+      reportHref={reportHref}
+      onReportClick={handleOpenReport}
+    />
+  ) : isPreRunBackdrop && !introContinued ? (
+    <OnboardingPreviewIntro
+      brandLabel={brandLabel ?? ''}
+      domain={domainShort}
+      founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
+      processing={setupShowProcessing}
+      ready={!setupShowProcessing && setupDataReady}
+      onContinue={handleIntroContinue}
+    />
+  ) : isPreRunBackdrop && publicSetupStep === 1 ? (
+    <OnboardingPreviewHuman
+      humanOk={setupHumanOk}
+      onHumanOk={setSetupHumanOk}
+      onBack={handleNewFlowBack}
+      onContinue={handleWizardNext}
+      onOpenLegal={setLegalModalSection}
+    />
+  ) : isPreRunBackdrop ? (
+    <OnboardingWizard
+      step={publicSetupStep - 1}
+      country={setupCountry}
+      onCountry={handleSetupCountry}
+      industry={setupIndustry}
+      onIndustry={setSetupIndustry}
+      language={setupLanguage}
+      onLanguage={setSetupLanguage}
+      firstName={setupFirstName}
+      onFirstName={setSetupFirstName}
+      lastName={setupLastName}
+      onLastName={setSetupLastName}
+      howFound={setupHowFound}
+      onHowFound={setSetupHowFound}
+      engines={setupEngines}
+      onToggleEngine={handleToggleEngine}
+      competitorUrls={competitorUrls}
+      onCompetitorChange={handleCompetitorChange}
+      onCompetitorRemove={handleCompetitorRemove}
+      onRestoreSuggested={handleRestoreSuggested}
+      competitorsLoading={competitorsDetecting}
+      competitorsDetectEmpty={competitorsDetectEmpty}
+      suggestedCompetitorCount={suggestedCompetitorCount}
+      filledCompetitorCount={filledSetupCompetitorCount}
+      email={setupEmail}
+      onEmail={setSetupEmail}
+      onBack={handleNewFlowBack}
+      onNext={handleWizardNext}
+      nextLoading={contextLoading || startAnalysisLoading}
+      error={startAnalysisError}
+      onOpenLegal={setLegalModalSection}
+      showEmailCountdown={showEmailCountdown}
+      diagnosticId={diagnosticId ?? undefined}
+      onEmailCountdownExpire={handleEmailCountdownExpire}
+    />
+  ) : null;
+
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
-        <div className="mb-4 shrink-0 sm:mb-5">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col min-h-0 lg:max-w-5xl">
+        {/* Chrome móvil */}
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-3 lg:hidden">
+          <a
+            href={CLEEXS_MARKETING_URL}
+            className="inline-flex shrink-0 rounded-lg transition hover:opacity-90"
+            aria-label="Cleexs"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/CleexsMark.svg" alt="" className="h-8 w-8" />
+          </a>
+          <p className="min-w-0 truncate text-right text-[11px] font-medium text-slate-500">
+            {brandLabel ? `Análisis · ${brandLabel}` : 'Análisis en curso'}
+          </p>
+        </div>
+
+        <div className="mb-4 shrink-0 lg:hidden">
+          <OnboardingMobileProgressHeader
+            analysisRunning={setupLeftProgress}
+            progressPct={setupLeftProgress ? displayBarPct : 0}
+            elapsedSeconds={elapsedSeconds}
+            brandLabel={brandLabel ?? ''}
+          />
+        </div>
+
+        {/* Chrome desktop */}
+        <div className="mb-4 hidden shrink-0 sm:mb-5 lg:block">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
@@ -1060,10 +1155,10 @@ function VerificandoContent() {
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
           <div
             className={cn(
-              'flex min-h-0 min-w-0 flex-col',
+              'hidden min-h-0 min-w-0 flex-col lg:flex',
               !setupLeftProgress && isPreRunBackdrop && 'pointer-events-none select-none opacity-[0.72]'
             )}
           >
@@ -1157,80 +1252,16 @@ function VerificandoContent() {
           </div>
 
           <div className="relative flex min-h-0 min-w-0 flex-col">
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">
-              {showCafecito ? (
-                <OnboardingPreviewCafecito
-                  userName={waUserName}
-                  domain={domainShort}
-                  brandLabel={brandLabel ?? undefined}
-                  founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
-                  youtubeVideoId={CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID}
-                  whatsappHref={whatsappHref}
-                  reportReady={reportReady}
-                  reportFinalizing={reportFinalizing}
-                  reportProgress={cafecitoReportProgress}
-                  reportHref={reportHref}
-                  onReportClick={handleOpenReport}
-                />
-              ) : isPreRunBackdrop && !introContinued ? (
-                <OnboardingPreviewIntro
-                  brandLabel={brandLabel ?? ''}
-                  domain={domainShort}
-                  founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
-                  processing={setupShowProcessing}
-                  ready={!setupShowProcessing && setupDataReady}
-                  onContinue={handleIntroContinue}
-                />
-              ) : isPreRunBackdrop && publicSetupStep === 1 ? (
-                <OnboardingPreviewHuman
-                  humanOk={setupHumanOk}
-                  onHumanOk={setSetupHumanOk}
-                  onBack={handleNewFlowBack}
-                  onContinue={handleWizardNext}
-                  onOpenLegal={setLegalModalSection}
-                />
-              ) : isPreRunBackdrop ? (
-                <OnboardingWizard
-                  step={publicSetupStep - 1}
-                  country={setupCountry}
-                  onCountry={handleSetupCountry}
-                  industry={setupIndustry}
-                  onIndustry={setSetupIndustry}
-                  language={setupLanguage}
-                  onLanguage={setSetupLanguage}
-                  firstName={setupFirstName}
-                  onFirstName={setSetupFirstName}
-                  lastName={setupLastName}
-                  onLastName={setSetupLastName}
-                  howFound={setupHowFound}
-                  onHowFound={setSetupHowFound}
-                  engines={setupEngines}
-                  onToggleEngine={handleToggleEngine}
-                  competitorUrls={competitorUrls}
-                  onCompetitorChange={handleCompetitorChange}
-                  onCompetitorRemove={handleCompetitorRemove}
-                  onRestoreSuggested={handleRestoreSuggested}
-                  competitorsLoading={competitorsDetecting}
-                  competitorsDetectEmpty={competitorsDetectEmpty}
-                  suggestedCompetitorCount={suggestedCompetitorCount}
-                  filledCompetitorCount={filledSetupCompetitorCount}
-                  email={setupEmail}
-                  onEmail={setSetupEmail}
-                  onBack={handleNewFlowBack}
-                  onNext={handleWizardNext}
-                  nextLoading={contextLoading || startAnalysisLoading}
-                  error={startAnalysisError}
-                  onOpenLegal={setLegalModalSection}
-                  showEmailCountdown={showEmailCountdown}
-                  diagnosticId={diagnosticId ?? undefined}
-                  onEmailCountdownExpire={handleEmailCountdownExpire}
-                />
-              ) : null}
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:pb-0">
+              {onboardingFlow}
             </div>
           </div>
         </div>
 
-        <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
+        <p className="mt-3 shrink-0 text-center text-[10px] leading-relaxed text-slate-400 lg:hidden">
+          El análisis suele tardar 30–90 s. Podés dejar esta pantalla abierta.
+        </p>
+        <p className="mt-4 hidden shrink-0 text-center text-xs text-slate-500 lg:block">
           El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te llevamos al
           informe.
         </p>
