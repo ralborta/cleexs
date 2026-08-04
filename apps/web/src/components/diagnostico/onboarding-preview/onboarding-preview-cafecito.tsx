@@ -266,7 +266,10 @@ export function OnboardingPreviewCafecito({
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-tight text-slate-900">Seguimos por WhatsApp</p>
+                <p className="text-[13px] font-bold leading-tight text-slate-900">Gonzalo Arzuaga</p>
+                <p className="text-[11px] font-medium text-slate-600">
+                  {formatCleexsWhatsAppPhoneDisplay(CLEEXS_FOUNDER_WHATSAPP_PHONE_E164)}
+                </p>
                 <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
                   Contame qué te motivó a hacer el análisis
                 </p>

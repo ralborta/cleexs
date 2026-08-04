@@ -7,7 +7,7 @@ import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-prev
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
 import { OnboardingPreviewWizard } from '@/components/diagnostico/onboarding-preview/onboarding-preview-wizard';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
-import { OnboardingPreviewProductionShell } from '@/components/diagnostico/onboarding-preview/onboarding-preview-production-shell';
+import { OnboardingMobileShell } from '@/components/diagnostico/onboarding-preview/onboarding-mobile-shell';
 import { CLEEXS_FOUNDER_PHOTO_URL, CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID } from '@/lib/site';
 import { buildOnboardingWhatsAppHref } from '@/lib/onboarding-whatsapp';
 import { parseYoutubeVideoId } from '@/lib/youtube';
@@ -16,20 +16,16 @@ import { cn } from '@/lib/utils';
 type Stage = 'intro' | 'human' | 'wizard' | 'cafecito';
 
 const STAGE_LABELS: Record<Stage, string> = {
-  intro: 'Intro Gonzalo',
-  human: 'Soy humano',
-  wizard: 'Wizard 1–5',
-  cafecito: 'Cafecito ☕',
+  intro: 'Intro',
+  human: 'Humano',
+  wizard: 'Wizard',
+  cafecito: 'Cafecito',
 };
 
-function buildWhatsAppHref(name: string, domain: string): string {
-  return buildOnboardingWhatsAppHref(name, domain);
-}
-
-function OnboardingPreviewContent() {
+function OnboardingMobilePreviewContent() {
   const searchParams = useSearchParams();
-  const domain = (searchParams.get('domain') || 'empresa.com').trim();
-  const brand = (searchParams.get('brand') || 'Empresa Demo').trim();
+  const domain = (searchParams.get('domain') || 'gsbworld.com').trim();
+  const brand = (searchParams.get('brand') || 'Gsbworld').trim();
   const userName = (searchParams.get('name') || 'Carlos').trim();
   const photo = searchParams.get('photo')?.trim() || CLEEXS_FOUNDER_PHOTO_URL;
   const youtube =
@@ -48,8 +44,8 @@ function OnboardingPreviewContent() {
   const [introReady, setIntroReady] = useState(false);
   const [reportReady, setReportReady] = useState(false);
   const [reportProgress, setReportProgress] = useState(0);
-  /** Arranca con el primer Continuar de la intro (como producción tras confirmar contexto) */
   const [analysisStarted, setAnalysisStarted] = useState(validStage !== 'intro');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const mock = useMemo(
     () => ({
@@ -58,7 +54,7 @@ function OnboardingPreviewContent() {
       email: `${userName.toLowerCase().replace(/\s+/g, '.')}@${domain}`,
       competitors: ['competidor1.com', 'competidor2.com', 'competidor3.com'],
     }),
-    [domain, userName]
+    [domain, userName],
   );
 
   const leftProgressPct = useMemo(() => {
@@ -66,13 +62,15 @@ function OnboardingPreviewContent() {
     if (stage === 'cafecito') return Math.min(100, 25 + Math.round(reportProgress * 0.75));
     if (stage === 'human') return 8;
     if (stage === 'wizard') return 8 + Math.round((wizardStep / 5) * 17);
-    return 0;
+    return 4;
   }, [analysisStarted, stage, wizardStep, reportProgress]);
 
-  const whatsappHref = useMemo(() => buildWhatsAppHref(userName, domain), [userName, domain]);
+  const whatsappHref = useMemo(
+    () => buildOnboardingWhatsAppHref(userName, domain),
+    [userName, domain],
+  );
   const reportHref = `/ver-resultado?diagnosticId=preview&domain=${encodeURIComponent(domain)}`;
 
-  // Simula detección de contexto (intro)
   useEffect(() => {
     if (stage !== 'intro') return;
     setIntroProcessing(true);
@@ -84,7 +82,15 @@ function OnboardingPreviewContent() {
     return () => window.clearTimeout(t);
   }, [stage]);
 
-  // Simula análisis (cafecito) con barra de progreso
+  useEffect(() => {
+    if (!analysisStarted) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const t = window.setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [analysisStarted]);
+
   useEffect(() => {
     if (stage !== 'cafecito') {
       setReportReady(false);
@@ -123,12 +129,9 @@ function OnboardingPreviewContent() {
       setWizardStep(1);
       return;
     }
-    if (stage === 'wizard') {
-      setStage('cafecito');
-    }
+    if (stage === 'wizard') setStage('cafecito');
   }, [stage, handleIntroContinue]);
 
-  // Autoplay demo lineal
   useEffect(() => {
     if (!autoplay) return;
     if (stage === 'intro' && introReady) {
@@ -152,24 +155,26 @@ function OnboardingPreviewContent() {
   }, [autoplay, stage, wizardStep, goNextStage]);
 
   return (
-    <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="sticky top-0 z-50 -mx-4 mb-6 border-b border-amber-200 bg-amber-50 px-4 py-3 shadow-sm sm:-mx-6 sm:px-6">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-              Preview — no es producción
-            </p>
-            <p className="text-sm text-amber-900/80">
-              Layout producción: izquierda = progreso real (intacto) · derecha = onboarding nuevo
-            </p>
+    <main className="relative flex min-h-[100dvh] flex-col bg-[#eef1f6] px-3 py-4 sm:px-4">
+      <div className="sticky top-0 z-50 -mx-3 mb-4 border-b border-violet-200 bg-violet-50 px-3 py-2.5 shadow-sm sm:-mx-4 sm:px-4">
+        <div className="mx-auto flex max-w-md flex-col gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                Preview móvil · webapp
+              </p>
+              <p className="text-xs text-violet-900/80">
+                Sin grilla lateral — progreso compacto arriba
+              </p>
+            </div>
             <Link
-              href="/diagnostico/onboarding-preview/mobile"
-              className="mt-1 inline-block text-xs font-semibold text-violet-700 underline-offset-2 hover:underline"
+              href="/diagnostico/onboarding-preview"
+              className="shrink-0 text-[11px] font-semibold text-violet-700 underline-offset-2 hover:underline"
             >
-              Ver preview móvil (webapp) →
+              Desktop
             </Link>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {(Object.keys(STAGE_LABELS) as Stage[]).map((s) => (
               <button
                 key={s}
@@ -180,10 +185,10 @@ function OnboardingPreviewContent() {
                   else setAnalysisStarted(false);
                 }}
                 className={cn(
-                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition',
+                  'rounded-md px-2 py-1 text-[10px] font-semibold transition',
                   stage === s
                     ? 'bg-violet-600 text-white'
-                    : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200',
                 )}
               >
                 {STAGE_LABELS[s]}
@@ -191,24 +196,13 @@ function OnboardingPreviewContent() {
             ))}
           </div>
         </div>
-        <p className="mx-auto mt-2 max-w-5xl text-[11px] text-amber-900/70">
-          Query:{' '}
-          <code className="rounded bg-white/80 px-1">?domain=</code>{' '}
-          <code className="rounded bg-white/80 px-1">?brand=</code>{' '}
-          <code className="rounded bg-white/80 px-1">?name=</code>{' '}
-          <code className="rounded bg-white/80 px-1">?photo=URL</code> (opcional, default Gonzalo){' '}
-          <code className="rounded bg-white/80 px-1">?yt=URL_o_ID</code> (opcional){' '}
-          <code className="rounded bg-white/80 px-1">?autoplay=1</code>{' '}
-          <code className="rounded bg-white/80 px-1">?stage=human</code>{' '}
-          <code className="rounded bg-white/80 px-1">?stage=cafecito</code>
-        </p>
       </div>
 
-      <OnboardingPreviewProductionShell
+      <OnboardingMobileShell
         brandLabel={brand}
         analysisRunning={analysisStarted}
-        leftProgressPct={leftProgressPct}
-        showSandboxHint
+        progressPct={leftProgressPct}
+        elapsedSeconds={elapsedSeconds}
       >
         {stage === 'intro' ? (
           <OnboardingPreviewIntro
@@ -253,21 +247,21 @@ function OnboardingPreviewContent() {
             reportHref={reportHref}
           />
         ) : null}
-      </OnboardingPreviewProductionShell>
+      </OnboardingMobileShell>
     </main>
   );
 }
 
-export default function OnboardingPreviewPage() {
+export default function OnboardingMobilePreviewPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-600">
-          Cargando preview…
+        <main className="flex min-h-[100dvh] items-center justify-center bg-[#eef1f6] text-sm text-slate-600">
+          Cargando preview móvil…
         </main>
       }
     >
-      <OnboardingPreviewContent />
+      <OnboardingMobilePreviewContent />
     </Suspense>
   );
 }
