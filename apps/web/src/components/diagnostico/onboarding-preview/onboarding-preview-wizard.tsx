@@ -28,7 +28,7 @@ const ENGINES = [
 ] as const;
 
 const HOW_FOUND_OPTIONS = [
-  { value: '', label: 'Seleccioná una opción (opcional)' },
+  { value: '', label: 'Seleccioná una opción' },
   { value: 'google', label: 'Búsqueda en Google' },
   { value: 'redes', label: 'Redes sociales' },
   { value: 'recomendacion', label: 'Recomendación de alguien' },
@@ -114,7 +114,7 @@ export function OnboardingPreviewWizard({
             ) : null}
             {idx === 4 ? (
               <p className="mt-1.5 text-sm text-slate-600">
-                Te enviamos el informe por correo cuando esté listo. Los campos opcionales podés dejarlos vacíos.
+                Te enviamos el informe por correo cuando esté listo.
               </p>
             ) : null}
           </div>
@@ -252,7 +252,7 @@ export function OnboardingPreviewWizard({
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs font-semibold text-slate-500">¿Cómo nos encontraste?</span>
+                <span className="text-sm font-bold text-slate-800">¿Cómo nos encontraste? (opcional)</span>
                 <div className="relative mt-1.5">
                   <select
                     className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 shadow-sm"
