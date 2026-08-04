@@ -6,7 +6,7 @@ export default function PagoPendientePage() {
     <PaymentStatusScreen
       tone="pending"
       badge="Mercado Pago"
-      icon={<Clock3 className="h-8 w-8" />}
+      icon={<Clock3 className="h-8 w-8 animate-spin [animation-duration:2.8s]" />}
       title="Pago pendiente"
       description="La suscripción quedó pendiente de confirmación. Te avisamos cuando Mercado Pago confirme el cobro y se active tu acceso."
       primaryHref="/portal-cliente"
