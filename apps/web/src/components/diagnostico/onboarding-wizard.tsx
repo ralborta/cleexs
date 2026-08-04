@@ -362,15 +362,6 @@ export function OnboardingWizard({
           )}
         </div>
 
-        {idx === 0 ? (
-          <div className="mt-5 flex gap-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-3.5">
-            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-            <p className="text-xs leading-relaxed text-violet-900/80">
-              Este dato nos ayuda a personalizar benchmarks y competidores para tu mercado.
-            </p>
-          </div>
-        ) : null}
-
         {idx === 4 && showEmailCountdown && onEmailCountdownExpire ? (
           <OnboardingEmailCountdown
             active
@@ -387,6 +378,15 @@ export function OnboardingWizard({
           nextLabel={idx === 4 ? (nextLoading ? 'Arrancando…' : 'Arrancar análisis') : 'Continuar'}
           nextDisabled={!canNext || nextLoading}
         />
+
+        {idx === 0 ? (
+          <div className="mt-4 flex gap-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-3.5">
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+            <p className="text-xs leading-relaxed text-violet-900/80">
+              Este dato nos ayuda a personalizar benchmarks y competidores para tu mercado.
+            </p>
+          </div>
+        ) : null}
       </div>
     </OnboardingPreviewCard>
   );
