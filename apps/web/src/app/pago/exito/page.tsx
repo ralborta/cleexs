@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { CheckCircle2, Loader2, Mail, Sparkles } from 'lucide-react';
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
+import { PaymentStatusScreen } from '@/components/pago/payment-status-screen';
 
 const API_URL = resolveApiBaseUrl();
 
@@ -65,75 +65,106 @@ function PagoExitoContent() {
   const portalUrl = status?.portalUrl || '/portal-crecimiento';
   const portalEmail = status?.portalEmail;
 
+  const tone = premiumReady ? 'success' : polling ? 'processing' : pending ? 'pending' : 'success';
+  const badge = premiumReady
+    ? 'Plan Conquistar'
+    : polling
+      ? 'Confirmando pago'
+      : pending
+        ? 'En proceso'
+        : 'Pago recibido';
+  const title = pending
+    ? 'Pago en proceso'
+    : premiumReady
+      ? '¡Premium activado!'
+      : polling
+        ? 'Estamos activando tu Premium'
+        : 'Pago recibido';
+
+  const description =
+    product === 'plan-conquistar' ? (
+      premiumReady ? (
+        <>
+          Tu Plan Conquistar ya está activo. Te enviamos un email con acceso al portal Premium
+          {portalEmail ? (
+            <>
+              {' '}
+              para <strong className="font-semibold text-slate-800">{portalEmail}</strong>
+            </>
+          ) : null}
+          .
+        </>
+      ) : polling ? (
+        'Estamos confirmando tu pago con Mercado Pago y activando Cleexs Premium…'
+      ) : pending ? (
+        'Mercado Pago está procesando el pago. Cuando se apruebe, activamos tu Premium y te llega el email de acceso.'
+      ) : (
+        'Mercado Pago nos notifica la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y entrá al portal.'
+      )
+    ) : (
+      'Mercado Pago nos va a notificar la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y volvé al portal.'
+    );
+
   return (
-    <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4 py-16">
-      <section className="w-full max-w-lg rounded-2xl border border-emerald-100 bg-white p-8 text-center shadow-sm">
-        <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
-          {pending ? 'Pago en proceso' : premiumReady ? '¡Premium activado!' : 'Pago recibido'}
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          {product === 'plan-conquistar' ? (
-            premiumReady ? (
-              <>
-                Tu Plan Conquistar ya está activo. Te enviamos un email con acceso al portal Premium
-                {portalEmail ? (
-                  <>
-                    {' '}
-                    para <strong>{portalEmail}</strong>
-                  </>
-                ) : null}
-                .
-              </>
-            ) : polling ? (
-              'Estamos confirmando tu pago y activando Cleexs Premium…'
-            ) : pending ? (
-              'Mercado Pago está procesando el pago. Cuando se apruebe, activamos tu Premium y te llega el email de acceso.'
-            ) : (
-              'Mercado Pago nos notifica la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y entrá al portal.'
-            )
-          ) : (
-            'Mercado Pago nos va a notificar la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y volvé al portal.'
-          )}
-        </p>
+    <PaymentStatusScreen
+      tone={tone}
+      badge={badge}
+      icon={
+        polling ? (
+          <Loader2 className="h-8 w-8 animate-spin" />
+        ) : premiumReady ? (
+          <Sparkles className="h-8 w-8" />
+        ) : (
+          <CheckCircle2 className="h-8 w-8" />
+        )
+      }
+      title={title}
+      description={description}
+      primaryHref={portalUrl}
+      primaryLabel="Ir al portal Premium"
+      secondaryHref="/plan-conquistar"
+      secondaryLabel="Ver detalle del plan"
+    >
+      {polling ? (
+        <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-800">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Activando tu cuenta Premium…
+        </div>
+      ) : null}
 
-        {polling ? (
-          <div className="mt-5 inline-flex items-center gap-2 text-sm text-violet-700">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Activando tu cuenta Premium…
-          </div>
-        ) : null}
+      {portalEmail ? (
+        <div className="mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white px-4 py-3.5 text-left text-sm text-violet-950">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+            <Mail className="h-4 w-4" />
+          </span>
+          <p className="leading-relaxed">
+            Accedé al portal Premium con tu email{' '}
+            <strong className="font-semibold">{portalEmail}</strong>. Si es cuenta nueva, la
+            contraseña temporal llega en el mismo correo.
+          </p>
+        </div>
+      ) : null}
+    </PaymentStatusScreen>
+  );
+}
 
-        {portalEmail ? (
-          <div className="mx-auto mt-5 flex max-w-md items-start gap-2 rounded-xl border border-violet-100 bg-violet-50/70 px-4 py-3 text-left text-sm text-violet-950">
-            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-            <p>
-              Accedé al portal Premium con tu email <strong>{portalEmail}</strong>. Si es cuenta nueva, la contraseña
-              temporal llega en el mismo correo.
-            </p>
-          </div>
-        ) : null}
-
-        <Link
-          href={portalUrl}
-          className="mt-6 inline-flex rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
-        >
-          Ir al portal Premium
-        </Link>
-      </section>
-    </main>
+function ExitoFallback() {
+  return (
+    <PaymentStatusScreen
+      tone="processing"
+      badge="Cargando"
+      icon={<Loader2 className="h-8 w-8 animate-spin" />}
+      title="Confirmando tu pago"
+      description="Un momento mientras verificamos el estado…"
+      primaryHref="/portal-crecimiento"
+      primaryLabel="Ir al portal Premium"
+    />
   );
 }
 
 export default function PagoExitoPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4 py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
-        </main>
-      }
-    >
+    <Suspense fallback={<ExitoFallback />}>
       <PagoExitoContent />
     </Suspense>
   );
