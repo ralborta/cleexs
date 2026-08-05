@@ -3,18 +3,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDown,
+  Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Clock,
   DollarSign,
   Filter,
+  Info,
   Loader2,
   Mail,
   RefreshCw,
+  Search,
   Share2,
-  ShoppingBag,
+  SlidersHorizontal,
   Target,
   TrendingDown,
+  Upload,
   Users,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -371,36 +377,318 @@ function AcquisitionFunnelPanel({
   );
 }
 
-function CohortCard({
-  icon,
-  label,
-  sub,
-  count,
-  rate,
+function CumulativeConversionTimeline({
   eligible,
+  h24,
+  d30,
+  d60,
+  d90,
 }: {
-  icon: ReactNode;
-  label: string;
-  sub: string;
-  count: number;
-  rate: number | null;
   eligible: number;
+  h24: FunnelStep;
+  d30: FunnelStep;
+  d60: FunnelStep;
+  d90: FunnelStep;
+}) {
+  const nodes = [
+    { key: 'h24', label: '24 horas', icon: <Clock className="h-4 w-4" />, count: h24.count, rate: h24.pct },
+    { key: 'd30', label: '30 días', icon: <Mail className="h-4 w-4" />, count: d30.count, rate: d30.pct },
+    { key: 'd60', label: '60 días', icon: <Users className="h-4 w-4" />, count: d60.count, rate: d60.pct },
+    { key: 'd90', label: '90 días', icon: <Calendar className="h-4 w-4" />, count: d90.count, rate: d90.pct },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="mb-6">
+        <h2 className="text-base font-semibold text-slate-900">Conversión acumulada por ventana</h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Compras Plan Conquistar después del diagnóstico · {fmt(eligible)} emails elegibles
+        </p>
+      </div>
+
+      <div className="relative mx-auto max-w-3xl px-2 pt-2">
+        <div className="absolute left-[12%] right-[12%] top-[22px] hidden h-0.5 bg-violet-100 sm:block" />
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 sm:gap-2">
+          {nodes.map((node) => (
+            <div key={node.key} className="relative flex flex-col items-center text-center">
+              <span className="relative z-[1] flex h-11 w-11 items-center justify-center rounded-full border-2 border-violet-200 bg-white text-violet-600 shadow-sm">
+                {node.icon}
+              </span>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-violet-600/90">
+                {node.label}
+              </p>
+              <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-slate-900">{fmt(node.count)}</p>
+              <p className="mt-0.5 text-xs font-semibold text-emerald-600">{pctLabel(node.rate)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EconomicsCards({
+  eco,
+  adSpendInput,
+  setAdSpendInput,
+  onApplySpend,
+  loading,
+}: {
+  eco: FunnelMetrics['economics'] | undefined;
+  adSpendInput: string;
+  setAdSpendInput: (v: string) => void;
+  onApplySpend: () => void;
+  loading: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
-          {icon}
-        </span>
-        {label}
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-slate-500">Inversión publicitaria</p>
+            <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-slate-900">
+              {fmtUsd(eco?.adSpendUsd ?? 0)}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">Meta Ads · rango actual</p>
+          </div>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+            <DollarSign className="h-4 w-4" />
+          </span>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={adSpendInput}
+            placeholder="USD"
+            onChange={(e) => setAdSpendInput(e.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+          />
+          <button
+            type="button"
+            onClick={onApplySpend}
+            disabled={loading}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Cargar
+          </button>
+        </div>
       </div>
-      <p className="mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight text-slate-900">{fmt(count)}</p>
-      <div className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-sm font-semibold text-emerald-600">{pctLabel(rate)}</span>
-        <span className="text-[10px] text-slate-400">de {fmt(eligible)} con email</span>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-slate-500">CAC</p>
+            <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-slate-900">
+              {fmtUsd(eco?.cacUsd ?? 0)}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {eco && eco.payingCustomers > 0 && eco.adSpendUsd > 0
+                ? `÷ ${fmt(eco.payingCustomers)} compradores`
+                : 'Cargá inversión para calcular'}
+            </p>
+          </div>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+            <Target className="h-4 w-4" />
+          </span>
+        </div>
       </div>
-      <p className="mt-2 text-[11px] leading-snug text-slate-500">{sub}</p>
-    </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-slate-500">LTV</p>
+            <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-slate-900">
+              {fmtUsd(eco?.ltvUsd ?? 0)}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {eco && eco.payingCustomers > 0 ? 'Promedio ingreso PC' : 'Sin compras en el cohort'}
+            </p>
+          </div>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <TrendingDown className="h-4 w-4 rotate-180" />
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-slate-500">Payback</p>
+            <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-slate-900">
+              {fmt(eco?.paybackDays ?? 0)}{' '}
+              <span className="text-base font-semibold text-slate-400">días</span>
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">Días para recuperar el CAC</p>
+          </div>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <Clock className="h-4 w-4" />
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const REFERRER_PAGE_SIZE = 8;
+
+function ReferrersCampaignsTable({
+  rows,
+}: {
+  rows: FunnelMetrics['byReferrer'];
+}) {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [organicOnly, setOrganicOnly] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (organicOnly && r.refCode !== '__sin_referidor__') return false;
+      if (!q) return true;
+      return (
+        r.name.toLowerCase().includes(q) ||
+        r.refCode.toLowerCase().includes(q)
+      );
+    });
+  }, [rows, query, organicOnly]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / REFERRER_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const slice = filtered.slice((safePage - 1) * REFERRER_PAGE_SIZE, safePage * REFERRER_PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, organicOnly]);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-violet-600" />
+          <h2 className="text-sm font-semibold text-slate-900">Referidores y campañas</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative block min-w-[180px] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar campaña"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setOrganicOnly((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+              organicOnly
+                ? 'border-violet-400 bg-violet-50 text-violet-800'
+                : 'border-violet-200 bg-white text-violet-700 hover:bg-violet-50'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Filtros
+          </button>
+        </div>
+      </div>
+
+      {slice.length === 0 ? (
+        <p className="px-5 py-8 text-sm text-slate-500">Sin campañas en el rango (0).</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <th className="px-5 py-3">Campaña</th>
+                <th className="px-3 py-3">Diagnósticos</th>
+                <th className="px-3 py-3">Completados</th>
+                <th className="px-3 py-3">Con email</th>
+                <th className="px-3 py-3">Emails únicos</th>
+                <th className="px-5 py-3">
+                  <span className="inline-flex items-center gap-1">
+                    Conversión
+                    <Info className="h-3 w-3" aria-label="Emails con diagnóstico / diagnósticos" />
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {slice.map((row) => {
+                const conv = pctOf(row.withEmail, row.diagnostics);
+                const bar = conv == null ? 0 : Math.min(100, conv);
+                const isOrganic = row.refCode === '__sin_referidor__';
+                return (
+                  <tr
+                    key={row.refCode}
+                    className={`border-b border-slate-50 last:border-0 ${
+                      isOrganic ? 'bg-violet-50/70' : 'bg-white'
+                    }`}
+                  >
+                    <td className="px-5 py-3">
+                      <p className="font-semibold text-slate-900">{row.name}</p>
+                      {!isOrganic ? (
+                        <p className="text-[11px] text-slate-400">{row.refCode}</p>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-3 font-mono tabular-nums text-slate-700">{fmt(row.diagnostics)}</td>
+                    <td className="px-3 py-3 font-mono tabular-nums text-slate-700">{fmt(row.completed)}</td>
+                    <td className="px-3 py-3 font-mono tabular-nums text-slate-700">{fmt(row.withEmail)}</td>
+                    <td className="px-3 py-3 font-mono tabular-nums text-slate-700">{fmt(row.uniqueEmails)}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex min-w-[120px] items-center gap-2">
+                        <span className="w-12 shrink-0 text-xs font-semibold tabular-nums text-slate-700">
+                          {conv == null ? '—' : `${String(conv).replace('.', ',')}%`}
+                        </span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-emerald-500"
+                            style={{ width: `${bar}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <p>
+          Mostrando {slice.length} de {filtered.length} campañas
+          {organicOnly ? ' · filtro orgánico' : ''}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={safePage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+            aria-label="Página anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-violet-300 bg-violet-50 px-2 font-semibold text-violet-800">
+            {safePage}
+          </span>
+          <button
+            type="button"
+            disabled={safePage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+            aria-label="Página siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -571,140 +859,23 @@ export default function AdminFunnelPage() {
             </p>
           ) : null}
 
-          <section>
-            <div className="mb-3">
-              <h2 className="text-base font-semibold text-slate-900">Compras Plan Conquistar</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                De quienes dejaron email en el rango, cuántos compraron después (por ventana)
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <CohortCard
-                icon={<Clock className="h-3.5 w-3.5" />}
-                label="24 horas"
-                sub="Compra el mismo día o dentro de las primeras 24 h"
-                count={f.purchaseH24.count}
-                rate={f.purchaseH24.pct}
-                eligible={data?.cohorts.eligible ?? 0}
-              />
-              <CohortCard
-                icon={<Mail className="h-3.5 w-3.5" />}
-                label="30 días"
-                sub="Incluye efecto de la secuencia de emails"
-                count={f.purchaseD30.count}
-                rate={f.purchaseD30.pct}
-                eligible={data?.cohorts.eligible ?? 0}
-              />
-              <CohortCard
-                icon={<Users className="h-3.5 w-3.5" />}
-                label="60 días"
-                sub="Ventana de nurture medio"
-                count={f.purchaseD60.count}
-                rate={f.purchaseD60.pct}
-                eligible={data?.cohorts.eligible ?? 0}
-              />
-              <CohortCard
-                icon={<ShoppingBag className="h-3.5 w-3.5" />}
-                label="90 días"
-                sub="Ciclo completo post-diagnóstico"
-                count={f.purchaseD90.count}
-                rate={f.purchaseD90.pct}
-                eligible={data?.cohorts.eligible ?? 0}
-              />
-            </div>
-          </section>
+          <CumulativeConversionTimeline
+            eligible={data?.cohorts.eligible ?? 0}
+            h24={f.purchaseH24}
+            d30={f.purchaseD30}
+            d60={f.purchaseD60}
+            d90={f.purchaseD90}
+          />
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2 text-slate-500">
-                <DollarSign className="h-4 w-4" />
-                <span className="text-xs font-semibold uppercase tracking-wide">Ad spend (Meta)</span>
-              </div>
-              <label className="mt-3 flex flex-col gap-1 text-[11px] font-medium text-slate-500">
-                USD gastados en el rango
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={adSpendInput}
-                  placeholder="0"
-                  onChange={(e) => setAdSpendInput(e.target.value)}
-                  className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
-                />
-              </label>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                Pegá el spend de Meta Ads y tocá Actualizar. Sin dato → CAC y Payback en 0.
-              </p>
-            </div>
+          <EconomicsCards
+            eco={eco}
+            adSpendInput={adSpendInput}
+            setAdSpendInput={setAdSpendInput}
+            onApplySpend={() => void load()}
+            loading={loading}
+          />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">CAC</p>
-              <p className="mt-2 font-mono text-2xl font-bold text-slate-900">{fmtUsd(eco?.cacUsd ?? 0)}</p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                {eco && eco.payingCustomers > 0 && eco.adSpendUsd > 0
-                  ? `Spend ÷ ${fmt(eco.payingCustomers)} compradores`
-                  : 'Pendiente: conectar Meta Ads o cargar spend'}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">LTV</p>
-              <p className="mt-2 font-mono text-2xl font-bold text-slate-900">{fmtUsd(eco?.ltvUsd ?? 0)}</p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                {eco && eco.payingCustomers > 0
-                  ? `Promedio ingreso PC del cohort (${fmtUsd(eco.revenueUsd)} / ${fmt(eco.payingCustomers)})`
-                  : 'Pendiente: renovaciones / más compras'}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payback</p>
-              <p className="mt-2 font-mono text-2xl font-bold text-slate-900">
-                {fmt(eco?.paybackDays ?? 0)} <span className="text-base font-semibold text-slate-500">días</span>
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Estimado (CAC/LTV × 30). 0 si falta spend o LTV.
-              </p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Users className="h-4 w-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-900">Referidores / campañas</h2>
-            </div>
-            {data?.byReferrer?.length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-[11px] uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="px-2 py-2 font-semibold">Campaña</th>
-                      <th className="px-2 py-2 font-semibold">Diags</th>
-                      <th className="px-2 py-2 font-semibold">Completados</th>
-                      <th className="px-2 py-2 font-semibold">Con email</th>
-                      <th className="px-2 py-2 font-semibold">Emails únicos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.byReferrer.map((row) => (
-                      <tr key={row.refCode} className="border-t border-slate-100">
-                        <td className="px-2 py-2">
-                          <span className="font-medium text-slate-900">{row.name}</span>
-                          <span className="ml-2 text-[11px] text-slate-400">{row.refCode}</span>
-                        </td>
-                        <td className="px-2 py-2 font-mono tabular-nums">{fmt(row.diagnostics)}</td>
-                        <td className="px-2 py-2 font-mono tabular-nums">{fmt(row.completed)}</td>
-                        <td className="px-2 py-2 font-mono tabular-nums">{fmt(row.withEmail)}</td>
-                        <td className="px-2 py-2 font-mono tabular-nums">{fmt(row.uniqueEmails)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">Sin referidores en el rango (0).</p>
-            )}
-          </section>
+          <ReferrersCampaignsTable rows={data?.byReferrer ?? []} />
 
           <p className="flex items-start gap-2 text-[11px] leading-relaxed text-slate-500">
             <Share2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
