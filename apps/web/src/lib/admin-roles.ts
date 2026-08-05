@@ -10,6 +10,7 @@ export const ADMIN_ROLE_LABEL: Record<AdminRole, string> = {
 /** Rutas permitidas para el perfil marketing (prefijos). */
 export const MARKETING_ADMIN_PATH_PREFIXES = [
   '/admin/conversion',
+  '/admin/funnel',
   '/admin/marcas',
   '/admin/reportes',
   '/admin/auditoria-agentica',
@@ -38,6 +39,7 @@ export function defaultAdminHomeForRole(role: AdminRole): string {
 /** Prefijos de API /api/admin-ui/* permitidos para marketing. */
 export const MARKETING_ADMIN_API_PREFIXES = [
   '/api/admin-ui/conversion',
+  '/api/admin-ui/funnel',
   '/api/admin-ui/agentic-audits',
   '/api/admin-ui/aeo-audits',
   '/api/admin-ui/promo',

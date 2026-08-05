@@ -22,6 +22,7 @@ export default function AdminInternoLayout({ children }: { children: React.React
     role === 'marketing'
       ? [
           { href: '/admin/conversion', label: 'Conversión' },
+          { href: '/admin/funnel', label: 'Funnel' },
           { href: '/admin/marcas', label: 'Marcas' },
           { href: '/admin/reportes', label: 'Reportes' },
         ]

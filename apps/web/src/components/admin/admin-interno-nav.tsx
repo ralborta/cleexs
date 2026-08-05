@@ -7,6 +7,7 @@ import {
   Building2,
   CalendarClock,
   CreditCard,
+  Filter,
   FileSpreadsheet,
   Layers,
   Link2,
@@ -46,6 +47,7 @@ const sections: NavSection[] = [
     links: [
       { href: '/admin/dashboard', label: 'Dashboard', icon: BarChart3, extraPrefixes: ['/dashboard'] },
       { href: '/admin/conversion', label: 'Métricas de Conversión', icon: TrendingUp, extraPrefixes: ['/conversion'] },
+      { href: '/admin/funnel', label: 'Funnel', icon: Filter, extraPrefixes: ['/funnel'] },
       { href: '/admin/runs', label: 'Runs · diagnósticos', icon: Layers, extraPrefixes: ['/runs'] },
       { href: '/admin/outreach', label: 'Outreach competidores', icon: Sparkles, extraPrefixes: ['/outreach'] },
     ],

@@ -1,17 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Clock, Sparkles } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { trackUnlockClick } from '@/lib/track';
 
-/** 3 minutos y medio; email + Plan Conquistar visibles desde el inicio (minuto 0). */
+/** 3 minutos y medio de espera mientras se completa el email. */
 export const ONBOARDING_EMAIL_COUNTDOWN_SEC = 210;
 
 export const ONBOARDING_EMAIL_COUNTDOWN_HALF_SEC = Math.floor(ONBOARDING_EMAIL_COUNTDOWN_SEC / 2);
-
-const PLAN_CONQUISTAR_UNLOCK_KEY = 'onboarding_countdown_plan_conquistar';
 
 function formatCountdown(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -21,12 +17,12 @@ function formatCountdown(totalSeconds: number): string {
 
 export function OnboardingEmailCountdown({
   active,
-  diagnosticId,
   onExpire,
   className,
   variant = 'inline',
 }: {
   active: boolean;
+  /** Reservado: callers pueden seguir pasándolo; ya no se usa en la barra. */
   diagnosticId?: string;
   onExpire: () => void;
   className?: string;
@@ -66,17 +62,6 @@ export function OnboardingEmailCountdown({
 
   const phaseTwo = secondsLeft <= ONBOARDING_EMAIL_COUNTDOWN_HALF_SEC;
   const urgent = secondsLeft <= 60;
-  const planHref = diagnosticId
-    ? `/plan-conquistar?diagnosticId=${encodeURIComponent(diagnosticId)}`
-    : '/plan-conquistar';
-
-  const handlePlanClick = () => {
-    trackUnlockClick({
-      unlockKey: PLAN_CONQUISTAR_UNLOCK_KEY,
-      label: 'Onboarding · Barra email · Plan Conquistar',
-      ...(diagnosticId ? { diagnosticId } : {}),
-    });
-  };
 
   const emailHeadline = phaseTwo
     ? 'Completá tu email — no pierdas tu análisis'
@@ -85,19 +70,6 @@ export function OnboardingEmailCountdown({
   const emailSubline = phaseTwo
     ? 'Dejanos tu correo y arrancamos la corrida.'
     : 'Te enviamos el informe cuando esté listo.';
-
-  const planConquistarBlock = (
-    <div className="rounded-lg border border-violet-200/80 bg-violet-50 px-3 py-2.5">
-      <p className="text-xs font-semibold leading-snug text-violet-950">4 motores + plan de acción</p>
-      <Link
-        href={planHref}
-        onClick={handlePlanClick}
-        className="mt-1 inline-flex text-xs font-semibold text-violet-700 underline-offset-2 hover:text-violet-900 hover:underline"
-      >
-        Conocé Plan Conquistar →
-      </Link>
-    </div>
-  );
 
   if (variant === 'inline') {
     return (
@@ -133,8 +105,6 @@ export function OnboardingEmailCountdown({
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">{emailSubline}</p>
             </div>
           </div>
-
-          {planConquistarBlock}
         </div>
 
         <div className="h-1 bg-amber-100">
@@ -173,7 +143,6 @@ export function OnboardingEmailCountdown({
             <p className="text-sm font-bold text-slate-900">{emailHeadline}</p>
             <p className="mt-0.5 text-[11px] text-slate-500">{emailSubline}</p>
           </div>
-          {planConquistarBlock}
         </div>
         <div className="h-1 bg-amber-100">
           <div

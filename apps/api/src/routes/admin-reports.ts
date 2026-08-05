@@ -9,6 +9,7 @@ import { buildDomainRatingSnapshot } from '../lib/ahrefs-domain-rating';
 import { resolveConversionRange, isPlanConquistarUnlockKey, PLAN_CONQUISTAR_UNLOCK_LINKS, planConquistarUnlockLabel } from '@cleexs/shared';
 import {
   aggregateDiagnosticsByRefCode,
+  isPlaceholderDiagnosticEmail,
   normalizeReferralRefCode,
   SIN_REFERIDOR_LABEL,
   SIN_REFERIDOR_SLUG,
@@ -2362,6 +2363,257 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
         total: rows.length,
         items: rows,
+      };
+    }
+  );
+
+  /**
+   * Embudo de negocio (admin Funnel).
+   * Cohortes de compra: diagnostic.createdAt → Payment Plan Conquistar approved por email.
+   * CAC / LTV / Payback: adSpend vía query (Meta manual); sin dato → 0.
+   */
+  fastify.get<{ Querystring: { from?: string; to?: string; adSpendUsd?: string } }>(
+    '/internal/funnel-metrics',
+    async (request) => {
+      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      const where = { createdAt: { gte: from, lte: to } };
+      const pct = (num: number, den: number): number | null =>
+        den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+
+      const adSpendRaw = Number(request.query.adSpendUsd);
+      const adSpendUsd =
+        Number.isFinite(adSpendRaw) && adSpendRaw >= 0 ? adSpendRaw : 0;
+
+      const MS_DAY = 24 * 60 * 60 * 1000;
+      const WINDOWS = [
+        { key: 'h24' as const, label: 'Compra 24 h', ms: MS_DAY },
+        { key: 'd30' as const, label: 'Compra 30 días', ms: 30 * MS_DAY },
+        { key: 'd60' as const, label: 'Compra 60 días', ms: 60 * MS_DAY },
+        { key: 'd90' as const, label: 'Compra 90 días', ms: 90 * MS_DAY },
+      ];
+
+      const isPlanConquistarRaw = (raw: unknown): boolean => {
+        if (!raw || typeof raw !== 'object') return false;
+        const obj = raw as Record<string, unknown>;
+        if (obj.product === 'plan_conquistar_90d') return true;
+        const meta = obj.metadata;
+        if (meta && typeof meta === 'object' && (meta as { product?: string }).product === 'plan_conquistar_90d') {
+          return true;
+        }
+        const payment = obj.payment;
+        if (payment && typeof payment === 'object') {
+          const p = payment as { metadata?: { product?: string } };
+          if (p.metadata?.product === 'plan_conquistar_90d') return true;
+        }
+        return false;
+      };
+
+      const [
+        pageViewsTotal,
+        visitorGroups,
+        diagnosticsStarted,
+        diagnosticsCompleted,
+        emailDiagRows,
+        shareGroups,
+        allPayments,
+        emailAggRows,
+        campaignMap,
+      ] = await Promise.all([
+        prisma.pageView.count({ where }),
+        prisma.pageView.groupBy({
+          by: ['visitorId'],
+          where: { ...where, visitorId: { not: null } },
+        }),
+        prisma.publicDiagnostic.count({ where }),
+        prisma.publicDiagnostic.count({ where: { ...where, status: 'completed' } }),
+        prisma.publicDiagnostic.findMany({
+          where: {
+            ...where,
+            email: { not: null },
+            NOT: { email: '' },
+          },
+          select: {
+            id: true,
+            email: true,
+            createdAt: true,
+            refCode: true,
+            utmSource: true,
+            utmCampaign: true,
+            status: true,
+          },
+        }),
+        prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
+        prisma.payment.findMany({
+          where: {
+            status: 'approved',
+            OR: [{ paidAt: { gte: from } }, { paidAt: null, createdAt: { gte: from } }],
+          },
+          select: {
+            id: true,
+            payerEmail: true,
+            paidAt: true,
+            createdAt: true,
+            amountUsd: true,
+            amountArs: true,
+            rawPayload: true,
+          },
+          take: 8000,
+          orderBy: { createdAt: 'desc' },
+        }),
+        aggregateDiagnosticsByRefCode({ from, to }),
+        loadReferrerCampaignMap(),
+      ]);
+
+      const visitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
+
+      const emailRows = emailDiagRows.filter((r) => !isPlaceholderDiagnosticEmail(r.email));
+      const emailsCaptured = emailRows.length;
+
+      const shareByChannel = shareGroups
+        .map((g) => ({ channel: g.channel, count: g._count._all }))
+        .sort((a, b) => b.count - a.count);
+      const shares = shareByChannel.reduce((acc, r) => acc + r.count, 0);
+
+      const pcPayments = allPayments
+        .filter((p) => isPlanConquistarRaw(p.rawPayload))
+        .map((p) => ({
+          email: (p.payerEmail || '').trim().toLowerCase(),
+          paidAt: (p.paidAt ?? p.createdAt).getTime(),
+          amountUsd: p.amountUsd != null ? Number(p.amountUsd) : null,
+        }))
+        .filter((p) => Boolean(p.email));
+
+      // Una fila por email: el diagnóstico más reciente del rango (para cohorte).
+      const byEmail = new Map<string, { createdAt: number; refCode: string | null }>();
+      for (const row of emailRows) {
+        const email = (row.email || '').trim().toLowerCase();
+        if (!email) continue;
+        const ts = row.createdAt.getTime();
+        const prev = byEmail.get(email);
+        if (!prev || ts > prev.createdAt) {
+          byEmail.set(email, {
+            createdAt: ts,
+            refCode: row.refCode?.trim().toLowerCase() || null,
+          });
+        }
+      }
+      const eligible = byEmail.size;
+
+      const cohortCounts: Record<(typeof WINDOWS)[number]['key'], number> = {
+        h24: 0,
+        d30: 0,
+        d60: 0,
+        d90: 0,
+      };
+      let revenueUsd = 0;
+      let payingCustomers = 0;
+
+      for (const [email, diag] of byEmail) {
+        const purchases = pcPayments
+          .filter((p) => p.email === email && p.paidAt >= diag.createdAt)
+          .sort((a, b) => a.paidAt - b.paidAt);
+        if (purchases.length === 0) continue;
+        const first = purchases[0]!;
+        const delta = first.paidAt - diag.createdAt;
+        for (const w of WINDOWS) {
+          if (delta <= w.ms) cohortCounts[w.key] += 1;
+        }
+        payingCustomers += 1;
+        if (first.amountUsd != null && Number.isFinite(first.amountUsd)) {
+          revenueUsd += first.amountUsd;
+        }
+      }
+
+      const ltvUsd =
+        payingCustomers > 0 ? Math.round((revenueUsd / payingCustomers) * 100) / 100 : 0;
+      const cacUsd =
+        payingCustomers > 0 && adSpendUsd > 0
+          ? Math.round((adSpendUsd / payingCustomers) * 100) / 100
+          : 0;
+      // Payback simplificado: días para recuperar CAC con LTV del plan (asumiendo ingreso único PC).
+      // Si LTV ≈ precio one-shot, payback ≈ 0 días post-compra; mostramos CAC/LTV * 30 como proxy mensual o 0.
+      const paybackDays =
+        cacUsd > 0 && ltvUsd > 0 ? Math.round((cacUsd / ltvUsd) * 30) : 0;
+
+      const byReferrer = enrichAndSortReferrerMetrics(
+        emailAggRows.map((r) => {
+          const ref = normalizeReferralRefCode(r.ref_code);
+          return {
+            refCode: ref === SIN_REFERIDOR_SLUG ? SIN_REFERIDOR_SLUG : ref,
+            visits: r.diagnostics,
+            diagnostics: r.diagnostics,
+            withEmail: r.with_email,
+            uniqueEmails: r.unique_emails,
+            completed: r.completed,
+          };
+        }),
+        campaignMap,
+        { limit: 25 }
+      ).map((row) => ({
+        refCode: row.refCode,
+        name: row.refCode === SIN_REFERIDOR_SLUG ? SIN_REFERIDOR_LABEL : row.name,
+        diagnostics: row.diagnostics,
+        withEmail: row.withEmail,
+        uniqueEmails: row.uniqueEmails,
+        completed: row.completed,
+        isSponsor: row.isSponsor,
+        registered: row.registered,
+      }));
+
+      const step = (count: number, den: number) => ({
+        count,
+        pct: pct(count, den),
+      });
+
+      return {
+        ok: true,
+        range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+        notes: {
+          purchaseLinkage: 'email_proxy',
+          purchaseLinkageDetail:
+            'Compra↔diagnóstico se une por email (Payment.payerEmail = PublicDiagnostic.email). No hay FK durable aún.',
+          cacSource: adSpendUsd > 0 ? 'manual_ad_spend' : 'pending_meta_ads',
+          ltvSource: payingCustomers > 0 ? 'avg_plan_conquistar_revenue' : 'pending_renewals',
+          paybackSource: cacUsd > 0 && ltvUsd > 0 ? 'cac_over_ltv_x30' : 'pending',
+        },
+        funnel: {
+          visitors: { count: visitors, pageViews: pageViewsTotal },
+          diagnosticsStarted: step(diagnosticsStarted, visitors),
+          diagnosticsCompleted: step(diagnosticsCompleted, diagnosticsStarted || visitors),
+          emailsCaptured: step(emailsCaptured, diagnosticsCompleted || diagnosticsStarted || visitors),
+          shares: {
+            ...step(shares, emailsCaptured || diagnosticsCompleted || visitors),
+            byChannel: shareByChannel,
+          },
+          purchaseH24: step(cohortCounts.h24, eligible || emailsCaptured),
+          purchaseD30: step(cohortCounts.d30, eligible || emailsCaptured),
+          purchaseD60: step(cohortCounts.d60, eligible || emailsCaptured),
+          purchaseD90: step(cohortCounts.d90, eligible || emailsCaptured),
+        },
+        cohorts: {
+          eligible,
+          linkage: 'email_proxy' as const,
+          windows: Object.fromEntries(
+            WINDOWS.map((w) => [
+              w.key,
+              {
+                label: w.label,
+                eligible,
+                converted: cohortCounts[w.key],
+                rate: pct(cohortCounts[w.key], eligible),
+              },
+            ])
+          ),
+        },
+        economics: {
+          adSpendUsd,
+          payingCustomers,
+          revenueUsd: Math.round(revenueUsd * 100) / 100,
+          cacUsd,
+          ltvUsd,
+          paybackDays,
+        },
+        byReferrer,
       };
     }
   );
