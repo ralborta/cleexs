@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ArrowDown,
+  CheckCircle2,
+  ClipboardList,
   Clock,
   DollarSign,
   Filter,
@@ -10,6 +13,8 @@ import {
   RefreshCw,
   Share2,
   ShoppingBag,
+  Target,
+  TrendingDown,
   Users,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -82,6 +87,11 @@ function pctLabel(p: number | null) {
   return p == null ? '—' : `${p}%`;
 }
 
+function pctOf(num: number, den: number): number | null {
+  if (den <= 0) return null;
+  return Math.round((num / den) * 1000) / 10;
+}
+
 function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
   const today = formatDayInArgentina();
   if (preset === 'hoy') return { from: today, to: today };
@@ -102,81 +112,262 @@ const CHANNEL_LABEL: Record<string, string> = {
   other: 'Otro',
 };
 
-type FunnelStage = {
+type StageTone = 'blue' | 'indigo' | 'violet' | 'orange';
+
+type AcquisitionStage = {
   key: string;
   label: string;
   count: number;
-  stepPct: number | null;
-  tone: 'sky' | 'teal' | 'emerald' | 'amber' | 'violet';
+  icon: ReactNode;
+  tone: StageTone;
 };
 
-const TONE_BAR: Record<FunnelStage['tone'], string> = {
-  sky: 'from-sky-500 to-sky-600',
-  teal: 'from-teal-500 to-teal-600',
-  emerald: 'from-emerald-500 to-emerald-600',
-  amber: 'from-amber-500 to-orange-500',
-  violet: 'from-violet-500 to-violet-700',
+const BAR_CLASS: Record<StageTone, string> = {
+  blue: 'bg-[#3B82F6]',
+  indigo: 'bg-[#6366F1]',
+  violet: 'bg-[#8B5CF6]',
+  orange: 'bg-[#F97316]',
 };
 
-/** Embudo visual que se estrecha respecto al primer paso (visitantes). */
-function FunnelChart({ stages }: { stages: FunnelStage[] }) {
-  const base = Math.max(stages[0]?.count ?? 0, 1);
+function buildAcquisitionStages(f: FunnelMetrics['funnel']): AcquisitionStage[] {
+  return [
+    {
+      key: 'visitors',
+      label: 'Visitantes',
+      count: f.visitors.count,
+      icon: <Users className="h-4 w-4" />,
+      tone: 'blue',
+    },
+    {
+      key: 'started',
+      label: 'Inicio del diagnóstico',
+      count: f.diagnosticsStarted.count,
+      icon: <ClipboardList className="h-4 w-4" />,
+      tone: 'blue',
+    },
+    {
+      key: 'completed',
+      label: 'Diagnóstico completado',
+      count: f.diagnosticsCompleted.count,
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      tone: 'indigo',
+    },
+    {
+      key: 'email',
+      label: 'Email capturado',
+      count: f.emailsCaptured.count,
+      icon: <Mail className="h-4 w-4" />,
+      tone: 'violet',
+    },
+    {
+      key: 'shares',
+      label: 'Compartieron',
+      count: f.shares.count,
+      icon: <Share2 className="h-4 w-4" />,
+      tone: 'orange',
+    },
+  ];
+}
+
+function AcquisitionFunnelPanel({
+  stages,
+  periodLabel,
+}: {
+  stages: AcquisitionStage[];
+  periodLabel: string;
+}) {
+  const base = Math.max(stages[0]?.count ?? 0, 0);
+  const last = stages[stages.length - 1];
+  const finalConv = pctOf(last?.count ?? 0, base || 1);
+
+  let worstDrop = { from: '', to: '', abandoned: 0, dropPct: 0, advancePct: 100 };
+  for (let i = 1; i < stages.length; i += 1) {
+    const prev = stages[i - 1]!;
+    const cur = stages[i]!;
+    const abandoned = Math.max(0, prev.count - cur.count);
+    const advancePct = pctOf(cur.count, prev.count) ?? 0;
+    const dropPct = prev.count > 0 ? Math.round((abandoned / prev.count) * 1000) / 10 : 0;
+    if (abandoned > worstDrop.abandoned) {
+      worstDrop = {
+        from: prev.label,
+        to: cur.label,
+        abandoned,
+        dropPct,
+        advancePct,
+      };
+    }
+  }
+
+  const shortLabel = (label: string) => {
+    if (label.startsWith('Email')) return 'Email';
+    if (label.startsWith('Compart')) return 'Compartir';
+    if (label.startsWith('Inicio')) return 'Inicio';
+    if (label.startsWith('Diagnóstico')) return 'Completado';
+    return label.split(' ')[0] || label;
+  };
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white p-5 shadow-sm sm:p-6">
-      <div className="mb-5 flex items-end justify-between gap-3">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">Embudo de adquisición</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Ancho relativo a visitantes · % = conversión vs paso anterior</p>
+          <h2 className="text-lg font-semibold text-slate-900">Embudo de adquisición</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Conversión por etapa · {periodLabel}</p>
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-1.5">
-        {stages.map((stage, index) => {
-          const widthPct = Math.min(100, Math.max((stage.count / base) * 100, stage.count > 0 ? 18 : 12));
-          const prev = index > 0 ? stages[index - 1] : null;
-          const drop = prev && prev.count > stage.count ? prev.count - stage.count : 0;
+      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3 sm:p-5">
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-mono text-2xl font-bold tabular-nums text-slate-900">{fmt(base)}</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">Visitantes</p>
+            </div>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+              <Users className="h-4 w-4" />
+            </span>
+          </div>
+        </div>
 
-          return (
-            <div key={stage.key} className="w-full">
-              {index > 0 && stage.stepPct != null ? (
-                <div className="mb-1.5 flex items-center justify-center gap-2">
-                  <span className="h-px w-6 bg-slate-200" />
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${
-                      stage.stepPct >= 70
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : stage.stepPct >= 40
-                          ? 'bg-amber-50 text-amber-800'
-                          : 'bg-rose-50 text-rose-700'
-                    }`}
-                  >
-                    {pctLabel(stage.stepPct)}
-                    {drop > 0 ? ` · −${fmt(drop)}` : ''}
-                  </span>
-                  <span className="h-px w-6 bg-slate-200" />
-                </div>
-              ) : null}
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-mono text-2xl font-bold tabular-nums text-slate-900">
+                {finalConv == null ? '—' : `${String(finalConv).replace('.', ',')}%`}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">Conversión final</p>
+            </div>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+              <Filter className="h-4 w-4" />
+            </span>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">Visitantes → compartieron</p>
+        </div>
 
-              <div className="flex justify-center">
-                <div
-                  className={`relative flex h-12 items-center justify-between gap-3 bg-gradient-to-r px-4 text-white shadow-sm sm:h-14 sm:px-5 ${TONE_BAR[stage.tone]}`}
-                  style={{
-                    width: `${widthPct}%`,
-                    minWidth: '9.5rem',
-                    clipPath: 'polygon(1.5% 0, 98.5% 0, 100% 100%, 0 100%)',
-                    borderRadius: index === 0 ? '12px 12px 4px 4px' : index === stages.length - 1 ? '4px 4px 12px 12px' : '4px',
-                  }}
-                >
-                  <span className="truncate text-xs font-semibold tracking-tight sm:text-sm">{stage.label}</span>
-                  <span className="shrink-0 font-mono text-base font-bold tabular-nums sm:text-lg">{fmt(stage.count)}</span>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-mono text-2xl font-bold tabular-nums text-slate-900">
+                {fmt(worstDrop.abandoned)}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">Mayor abandono</p>
+            </div>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
+              <TrendingDown className="h-4 w-4" />
+            </span>
+          </div>
+          {worstDrop.abandoned > 0 ? (
+            <p className="mt-2 text-[11px] font-medium text-slate-600">
+              {shortLabel(worstDrop.from)} → {shortLabel(worstDrop.to)}
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] text-slate-400">Sin abandonos en el rango</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-0 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-0 p-5">
+          {stages.map((stage, index) => {
+            const ofTotal = pctOf(stage.count, base || 1);
+            const widthPct =
+              base > 0 ? Math.min(100, Math.max((stage.count / base) * 100, stage.count > 0 ? 6 : 0)) : 0;
+            const prev = index > 0 ? stages[index - 1] : null;
+            const advanced = prev ? pctOf(stage.count, prev.count) : null;
+            const abandoned = prev ? Math.max(0, prev.count - stage.count) : 0;
+            const isWorst =
+              prev &&
+              worstDrop.abandoned > 0 &&
+              prev.label === worstDrop.from &&
+              stage.label === worstDrop.to;
+
+            return (
+              <div key={stage.key}>
+                {index > 0 && prev ? (
+                  <div className="mb-3 ml-10 flex items-center gap-2 py-1 text-[11px] sm:ml-12">
+                    <ArrowDown
+                      className={`h-3.5 w-3.5 ${isWorst ? 'text-rose-500' : 'text-slate-300'}`}
+                    />
+                    <span className="font-medium text-slate-500">
+                      {pctLabel(advanced)} avanzó
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className={isWorst ? 'font-semibold text-rose-600' : 'text-slate-500'}>
+                      {fmt(abandoned)} abandonaron
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="flex gap-3 sm:gap-4">
+                  <div className="flex w-8 shrink-0 flex-col items-center sm:w-9">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-bold text-slate-500 shadow-sm sm:h-9 sm:w-9 sm:text-xs">
+                      {index + 1}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1 pb-4">
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400">{stage.icon}</span>
+                          <p className="text-sm font-semibold text-slate-900">{stage.label}</p>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {fmt(stage.count)} usuarios
+                          {ofTotal != null ? (
+                            <>
+                              {' '}
+                              · {String(ofTotal).replace('.', ',')}% del total
+                            </>
+                          ) : null}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full transition-all ${BAR_CLASS[stage.tone]}`}
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        <aside className="border-t border-slate-100 bg-gradient-to-b from-orange-50 to-amber-50/60 p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+              <Target className="h-5 w-5" />
+            </span>
+            <h3 className="mt-4 text-sm font-semibold text-slate-900">Principal oportunidad</h3>
+            {worstDrop.abandoned > 0 && worstDrop.dropPct > 0 ? (
+              <p className="mt-2 text-sm leading-relaxed text-slate-700">
+                El{' '}
+                <span className="font-bold text-slate-900">
+                  {String(worstDrop.dropPct).replace('.', ',')}%
+                </span>{' '}
+                abandona entre{' '}
+                <span className="font-semibold">{shortLabel(worstDrop.from).toLowerCase()}</span> y{' '}
+                <span className="font-semibold">{shortLabel(worstDrop.to).toLowerCase()}</span>
+                {worstDrop.from.startsWith('Email')
+                  ? ' — después de dejar su email.'
+                  : '.'}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Todavía no hay un cuello de botella claro en este rango. Cuando haya más volumen, acá
+                verás el mayor abandono.
+              </p>
+            )}
+            {worstDrop.abandoned > 0 ? (
+              <p className="mt-auto pt-6 text-[11px] text-slate-500">
+                {fmt(worstDrop.abandoned)} personas se perdieron en ese paso
+              </p>
+            ) : null}
+          </div>
+        </aside>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -214,10 +405,10 @@ function CohortCard({
 }
 
 export default function AdminFunnelPage() {
-  const initial = useMemo(() => rangeForPreset('15'), []);
+  const initial = useMemo(() => rangeForPreset('30'), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [activePreset, setActivePreset] = useState<string | null>('15');
+  const [activePreset, setActivePreset] = useState<string | null>('30');
   const [adSpendInput, setAdSpendInput] = useState('');
   const [data, setData] = useState<FunnelMetrics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -254,12 +445,26 @@ export default function AdminFunnelPage() {
     setActivePreset(preset);
   }
 
+  const periodLabel =
+    activePreset === 'hoy'
+      ? 'Hoy'
+      : activePreset === 'ayer'
+        ? 'Ayer'
+        : activePreset === '7'
+          ? 'Últimos 7 días'
+          : activePreset === '15'
+            ? 'Últimos 15 días'
+            : activePreset === '30'
+              ? 'Últimos 30 días'
+              : `${from} → ${to}`;
+
   if (error && looksLikeAdminAuthError(error)) {
     return <AdminAuthExpiredCard />;
   }
 
   const f = data?.funnel;
   const eco = data?.economics;
+  const stages = f ? buildAcquisitionStages(f) : [];
 
   return (
     <div className="space-y-6">
@@ -271,8 +476,7 @@ export default function AdminFunnelPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Funnel</h1>
             <p className="text-sm text-slate-600">
-              Embudo de negocio: visitantes → diagnóstico → compra Plan Conquistar (cohortes). Métricas de Conversión
-              queda igual; acá medimos unit economics. Días en hora Argentina.
+              Embudo de negocio y cohortes de compra. Métricas de Conversión queda igual.
             </p>
           </div>
         </div>
@@ -355,49 +559,11 @@ export default function AdminFunnelPage() {
 
       {f ? (
         <>
-          <FunnelChart
-            stages={[
-              {
-                key: 'visitors',
-                label: 'Visitantes',
-                count: f.visitors.count,
-                stepPct: null,
-                tone: 'sky',
-              },
-              {
-                key: 'started',
-                label: 'Inicio diagnóstico',
-                count: f.diagnosticsStarted.count,
-                stepPct: f.diagnosticsStarted.pct,
-                tone: 'teal',
-              },
-              {
-                key: 'completed',
-                label: 'Diagnóstico listo',
-                count: f.diagnosticsCompleted.count,
-                stepPct: f.diagnosticsCompleted.pct,
-                tone: 'emerald',
-              },
-              {
-                key: 'email',
-                label: 'Email capturado',
-                count: f.emailsCaptured.count,
-                stepPct: f.emailsCaptured.pct,
-                tone: 'amber',
-              },
-              {
-                key: 'shares',
-                label: 'Compartieron',
-                count: f.shares.count,
-                stepPct: f.shares.pct,
-                tone: 'violet',
-              },
-            ]}
-          />
+          <AcquisitionFunnelPanel stages={stages} periodLabel={periodLabel} />
 
           {f.shares.byChannel.length > 0 ? (
-            <p className="text-center text-[11px] text-slate-500">
-              Canales:{' '}
+            <p className="-mt-3 text-center text-[11px] text-slate-500">
+              Canales de share:{' '}
               {f.shares.byChannel
                 .slice(0, 5)
                 .map((c) => `${CHANNEL_LABEL[c.channel] || c.channel} ${c.count}`)
