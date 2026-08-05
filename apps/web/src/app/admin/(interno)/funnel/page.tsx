@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Clock,
   DollarSign,
   Filter,
   Loader2,
+  Mail,
   RefreshCw,
   Share2,
+  ShoppingBag,
   Users,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 import { addDaysToDayString, formatDayInArgentina } from '@cleexs/shared';
@@ -98,40 +102,113 @@ const CHANNEL_LABEL: Record<string, string> = {
   other: 'Otro',
 };
 
-function FunnelRow({
-  label,
-  hint,
-  count,
-  pct,
-  emphasize,
-}: {
+type FunnelStage = {
+  key: string;
   label: string;
-  hint?: string;
   count: number;
-  pct: number | null;
-  emphasize?: boolean;
-}) {
-  const width = pct == null ? 0 : Math.min(100, Math.max(pct, count > 0 ? 2 : 0));
+  stepPct: number | null;
+  tone: 'sky' | 'teal' | 'emerald' | 'amber' | 'violet';
+};
+
+const TONE_BAR: Record<FunnelStage['tone'], string> = {
+  sky: 'from-sky-500 to-sky-600',
+  teal: 'from-teal-500 to-teal-600',
+  emerald: 'from-emerald-500 to-emerald-600',
+  amber: 'from-amber-500 to-orange-500',
+  violet: 'from-violet-500 to-violet-700',
+};
+
+/** Embudo visual que se estrecha respecto al primer paso (visitantes). */
+function FunnelChart({ stages }: { stages: FunnelStage[] }) {
+  const base = Math.max(stages[0]?.count ?? 0, 1);
+
   return (
-    <div className={`rounded-xl border px-4 py-3 ${emphasize ? 'border-violet-200 bg-violet-50/60' : 'border-slate-200 bg-white'}`}>
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <p className={`text-sm font-semibold ${emphasize ? 'text-violet-950' : 'text-slate-900'}`}>{label}</p>
-          {hint ? <p className="mt-0.5 text-[11px] text-slate-500">{hint}</p> : null}
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="font-mono text-lg font-bold tabular-nums text-slate-900">{fmt(count)}</p>
-          <p className="text-[11px] font-medium text-slate-500">
-            {pct == null ? 'base del embudo' : `${pctLabel(pct)} del paso anterior`}
-          </p>
+    <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white p-5 shadow-sm sm:p-6">
+      <div className="mb-5 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Embudo de adquisición</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Ancho relativo a visitantes · % = conversión vs paso anterior</p>
         </div>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className={`h-full rounded-full transition-all ${emphasize ? 'bg-violet-500' : 'bg-emerald-500'}`}
-          style={{ width: `${width}%` }}
-        />
+
+      <div className="mx-auto flex max-w-2xl flex-col items-center gap-1.5">
+        {stages.map((stage, index) => {
+          const widthPct = Math.min(100, Math.max((stage.count / base) * 100, stage.count > 0 ? 18 : 12));
+          const prev = index > 0 ? stages[index - 1] : null;
+          const drop = prev && prev.count > stage.count ? prev.count - stage.count : 0;
+
+          return (
+            <div key={stage.key} className="w-full">
+              {index > 0 && stage.stepPct != null ? (
+                <div className="mb-1.5 flex items-center justify-center gap-2">
+                  <span className="h-px w-6 bg-slate-200" />
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${
+                      stage.stepPct >= 70
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : stage.stepPct >= 40
+                          ? 'bg-amber-50 text-amber-800'
+                          : 'bg-rose-50 text-rose-700'
+                    }`}
+                  >
+                    {pctLabel(stage.stepPct)}
+                    {drop > 0 ? ` · −${fmt(drop)}` : ''}
+                  </span>
+                  <span className="h-px w-6 bg-slate-200" />
+                </div>
+              ) : null}
+
+              <div className="flex justify-center">
+                <div
+                  className={`relative flex h-12 items-center justify-between gap-3 bg-gradient-to-r px-4 text-white shadow-sm sm:h-14 sm:px-5 ${TONE_BAR[stage.tone]}`}
+                  style={{
+                    width: `${widthPct}%`,
+                    minWidth: '9.5rem',
+                    clipPath: 'polygon(1.5% 0, 98.5% 0, 100% 100%, 0 100%)',
+                    borderRadius: index === 0 ? '12px 12px 4px 4px' : index === stages.length - 1 ? '4px 4px 12px 12px' : '4px',
+                  }}
+                >
+                  <span className="truncate text-xs font-semibold tracking-tight sm:text-sm">{stage.label}</span>
+                  <span className="shrink-0 font-mono text-base font-bold tabular-nums sm:text-lg">{fmt(stage.count)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
+    </div>
+  );
+}
+
+function CohortCard({
+  icon,
+  label,
+  sub,
+  count,
+  rate,
+  eligible,
+}: {
+  icon: ReactNode;
+  label: string;
+  sub: string;
+  count: number;
+  rate: number | null;
+  eligible: number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+          {icon}
+        </span>
+        {label}
+      </div>
+      <p className="mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight text-slate-900">{fmt(count)}</p>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-sm font-semibold text-emerald-600">{pctLabel(rate)}</span>
+        <span className="text-[10px] text-slate-400">de {fmt(eligible)} con email</span>
+      </div>
+      <p className="mt-2 text-[11px] leading-snug text-slate-500">{sub}</p>
     </div>
   );
 }
@@ -278,72 +355,97 @@ export default function AdminFunnelPage() {
 
       {f ? (
         <>
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Embudo</h2>
-            <FunnelRow
-              label="Visitantes"
-              hint={`${fmt(f.visitors.pageViews)} pageviews`}
-              count={f.visitors.count}
-              pct={null}
-            />
-            <FunnelRow
-              label="Inicio del diagnóstico"
-              hint="URL / dominio enviado"
-              count={f.diagnosticsStarted.count}
-              pct={f.diagnosticsStarted.pct}
-            />
-            <FunnelRow
-              label="Diagnóstico completado"
-              hint="status = completed"
-              count={f.diagnosticsCompleted.count}
-              pct={f.diagnosticsCompleted.pct}
-            />
-            <FunnelRow
-              label="Emails capturados"
-              hint="Sin placeholders de WhatsApp"
-              count={f.emailsCaptured.count}
-              pct={f.emailsCaptured.pct}
-            />
-            <FunnelRow
-              label="Compartidos"
-              hint={
-                f.shares.byChannel.length
-                  ? f.shares.byChannel
-                      .slice(0, 4)
-                      .map((c) => `${CHANNEL_LABEL[c.channel] || c.channel}: ${c.count}`)
-                      .join(' · ')
-                  : 'ShareEvent'
-              }
-              count={f.shares.count}
-              pct={f.shares.pct}
-            />
-            <FunnelRow
-              label="Compra Plan Conquistar · 24 h"
-              hint="Misma persona (email) compró dentro de 24 h del diagnóstico"
-              count={f.purchaseH24.count}
-              pct={f.purchaseH24.pct}
-              emphasize
-            />
-            <FunnelRow
-              label="Compra · 30 días"
-              hint="Cohorte: compró dentro de 30 días posteriores al diagnóstico"
-              count={f.purchaseD30.count}
-              pct={f.purchaseD30.pct}
-              emphasize
-            />
-            <FunnelRow
-              label="Compra · 60 días"
-              count={f.purchaseD60.count}
-              pct={f.purchaseD60.pct}
-              emphasize
-            />
-            <FunnelRow
-              label="Compra · 90 días"
-              hint="Incluye efecto de la secuencia de emails"
-              count={f.purchaseD90.count}
-              pct={f.purchaseD90.pct}
-              emphasize
-            />
+          <FunnelChart
+            stages={[
+              {
+                key: 'visitors',
+                label: 'Visitantes',
+                count: f.visitors.count,
+                stepPct: null,
+                tone: 'sky',
+              },
+              {
+                key: 'started',
+                label: 'Inicio diagnóstico',
+                count: f.diagnosticsStarted.count,
+                stepPct: f.diagnosticsStarted.pct,
+                tone: 'teal',
+              },
+              {
+                key: 'completed',
+                label: 'Diagnóstico listo',
+                count: f.diagnosticsCompleted.count,
+                stepPct: f.diagnosticsCompleted.pct,
+                tone: 'emerald',
+              },
+              {
+                key: 'email',
+                label: 'Email capturado',
+                count: f.emailsCaptured.count,
+                stepPct: f.emailsCaptured.pct,
+                tone: 'amber',
+              },
+              {
+                key: 'shares',
+                label: 'Compartieron',
+                count: f.shares.count,
+                stepPct: f.shares.pct,
+                tone: 'violet',
+              },
+            ]}
+          />
+
+          {f.shares.byChannel.length > 0 ? (
+            <p className="text-center text-[11px] text-slate-500">
+              Canales:{' '}
+              {f.shares.byChannel
+                .slice(0, 5)
+                .map((c) => `${CHANNEL_LABEL[c.channel] || c.channel} ${c.count}`)
+                .join(' · ')}
+            </p>
+          ) : null}
+
+          <section>
+            <div className="mb-3">
+              <h2 className="text-base font-semibold text-slate-900">Compras Plan Conquistar</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                De quienes dejaron email en el rango, cuántos compraron después (por ventana)
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <CohortCard
+                icon={<Clock className="h-3.5 w-3.5" />}
+                label="24 horas"
+                sub="Compra el mismo día o dentro de las primeras 24 h"
+                count={f.purchaseH24.count}
+                rate={f.purchaseH24.pct}
+                eligible={data?.cohorts.eligible ?? 0}
+              />
+              <CohortCard
+                icon={<Mail className="h-3.5 w-3.5" />}
+                label="30 días"
+                sub="Incluye efecto de la secuencia de emails"
+                count={f.purchaseD30.count}
+                rate={f.purchaseD30.pct}
+                eligible={data?.cohorts.eligible ?? 0}
+              />
+              <CohortCard
+                icon={<Users className="h-3.5 w-3.5" />}
+                label="60 días"
+                sub="Ventana de nurture medio"
+                count={f.purchaseD60.count}
+                rate={f.purchaseD60.pct}
+                eligible={data?.cohorts.eligible ?? 0}
+              />
+              <CohortCard
+                icon={<ShoppingBag className="h-3.5 w-3.5" />}
+                label="90 días"
+                sub="Ciclo completo post-diagnóstico"
+                count={f.purchaseD90.count}
+                rate={f.purchaseD90.pct}
+                eligible={data?.cohorts.eligible ?? 0}
+              />
+            </div>
           </section>
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
