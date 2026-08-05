@@ -82,7 +82,7 @@ function QueryDonut({
         <span className="text-2xl font-black tabular-nums leading-none text-[#1e2a5a] sm:text-[34px]">
           {total}
         </span>
-        <span className="mt-1 px-1 text-[8px] font-medium leading-tight text-slate-500 sm:text-[9px]">
+        <span className="mt-1 px-1 text-[10px] font-medium leading-tight text-slate-500 sm:text-[11px]">
           consultas
           <br />
           analizadas
@@ -124,7 +124,7 @@ function FunnelPointColumn({
             >
               <Check className="h-2 w-2" strokeWidth={3} aria-hidden />
             </span>
-            <span className="min-w-0 text-[10px] leading-snug text-slate-700 sm:text-xs">{item}</span>
+            <span className="min-w-0 text-xs leading-snug text-slate-700">{item}</span>
           </li>
         ))}
       </ul>
@@ -215,9 +215,9 @@ export function QueryDiscoveryPanel({
 
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_175px] sm:items-start sm:gap-5">
         <div className="min-w-0">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-4 lg:gap-5">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-4 lg:gap-5">
             <QueryDonut total={discovery.totalQueries} columns={funnelColumns} />
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3 sm:gap-3 lg:grid-cols-4 lg:gap-4 lg:p-3.5">
+            <div className="grid min-w-0 w-full flex-1 grid-cols-1 gap-3 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4 lg:gap-4 lg:p-3.5">
               {funnelColumns.map((column) => (
                 <FunnelPointColumn
                   key={column.title}
@@ -231,7 +231,7 @@ export function QueryDiscoveryPanel({
           </div>
         </div>
 
-        <QueryDiscoveryInsight discovery={discovery} className="sm:justify-self-end" />
+        <QueryDiscoveryInsight discovery={discovery} className="w-full sm:justify-self-end" />
       </div>
     </div>
   );

@@ -96,8 +96,8 @@ function EnginePresenceCard({
           : undefined
       }
       className={cn(
-        'flex min-h-[9.5rem] flex-col rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/80 sm:min-h-[10rem] sm:p-4',
-        clickable && 'cursor-pointer transition hover:border-violet-200 hover:shadow-md',
+        'flex min-h-[10.25rem] flex-col rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm ring-1 ring-slate-100/80 sm:min-h-[10rem] sm:p-4',
+        clickable && 'cursor-pointer transition hover:border-violet-200 hover:shadow-md active:scale-[0.99]',
         locked && 'bg-slate-50/40',
       )}
     >
@@ -117,20 +117,20 @@ function EnginePresenceCard({
 
         <div className="min-w-0 flex-1">
           {locked ? (
-            <p className="text-[11px] font-medium leading-snug text-slate-500 sm:text-xs">
+            <p className="text-xs font-medium leading-snug text-slate-500">
               Disponible en Plan Conquistar
             </p>
           ) : (
             <div className="space-y-2">
               <span
                 className={cn(
-                  'inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 sm:text-[11px]',
+                  'inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 sm:text-xs',
                   diagnosis.pillClass,
                 )}
               >
                 {diagnosis.label}
               </span>
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-700 sm:text-xs">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-700">
                 <LineChart className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
                 Motor analizado
               </p>
@@ -181,7 +181,7 @@ export function EnginePresenceCards({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 p-3.5 sm:gap-3 sm:p-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 p-3 sm:gap-3 sm:p-4 lg:grid-cols-4">
         {ENGINE_ORDER.map((key) => {
           const locked = !unlockAll && key !== 'chatgpt' && engines[key].status === 'locked';
           const engineScore =
@@ -204,9 +204,9 @@ export function EnginePresenceCards({
       </div>
 
       {!unlockAll ? (
-        <p className="flex items-center justify-center gap-2 border-t border-slate-100 px-4 py-3 text-center text-[11px] leading-snug text-slate-500 sm:text-xs">
+        <p className="flex items-center justify-center gap-2 border-t border-slate-100 px-3 py-3 text-center text-xs leading-snug text-slate-500 sm:px-4">
           <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-          Desbloquea el análisis completo en los 4 motores con el Plan Conquistar
+          Desbloqueá el análisis completo en los 4 motores con el Plan Conquistar
         </p>
       ) : null}
     </section>

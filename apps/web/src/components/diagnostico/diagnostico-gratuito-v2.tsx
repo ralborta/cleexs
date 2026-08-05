@@ -254,7 +254,7 @@ function WhatIfBenefitCard({
 
 function WhatIfOutcomeCard() {
   return (
-    <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+    <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:col-span-2 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
       <div className="space-y-1 text-sm font-bold leading-snug text-emerald-700 sm:space-y-1.5 sm:text-base">
         <p>Más visibilidad = más confianza</p>
         <p>Más confianza = más leads</p>
@@ -660,10 +660,10 @@ function DeliverableCard({
         className={cn(
           'mt-1 leading-snug text-slate-600',
           croPhaseB
-            ? 'text-[8px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px] sm:tracking-widest'
+            ? 'text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px] sm:tracking-widest'
             : enlarged
               ? 'text-xs sm:text-sm'
-              : 'text-[11px]',
+              : 'text-xs',
         )}
       >
         {croPhaseB ? shortLabel || label : label}
@@ -690,8 +690,8 @@ function PlanConquistarCtaPanel({
   if (variant === 'sticky') {
     return (
       <PlanConquistarCheckoutButton
-        className="w-full min-h-[48px] rounded-xl py-3.5 text-sm font-bold shadow-md sm:text-base"
-        variant="sidebar"
+        className="w-full min-h-[48px] rounded-xl bg-violet-600 py-3.5 text-[15px] font-bold text-white shadow-md hover:bg-violet-700"
+        variant="promo"
         label="Ver plan de acción →"
         sourceChannel="ver_resultado_v2"
         unlockKey={VER_RESULTADO_V2_UNLOCK.ctaPlanAccion}
@@ -857,7 +857,7 @@ export function DiagnosticoGratuitoV2({
         className={cn(
           'mx-auto max-w-5xl px-4 sm:px-6',
           croPhaseA ? 'py-5 sm:py-10' : 'py-6 sm:py-8',
-          croPhaseC && 'pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-10',
+          croPhaseC && 'pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-10',
         )}
       >
         {/* HERO */}
@@ -1170,17 +1170,17 @@ export function DiagnosticoGratuitoV2({
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-white px-4 py-4 text-center sm:py-5">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-white px-3 py-3.5 text-center sm:px-4 sm:py-5">
                   <p className="text-xs font-semibold text-slate-500 sm:text-sm">Impacto esperado</p>
-                  <div className="my-2.5">
+                  <div className="my-2 sm:my-2.5">
                     <StarRow count={model.primaryAction.impactStars} tone="violet" />
                   </div>
                   <p className="text-sm font-bold text-[#1e2a5a] sm:text-base">{model.primaryAction.impactLabel}</p>
                 </div>
 
-                <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-white px-4 py-4 text-center sm:py-5">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-white px-3 py-3.5 text-center sm:px-4 sm:py-5">
                   <p className="text-xs font-semibold text-slate-500 sm:text-sm">Esfuerzo estimado</p>
-                  <div className="my-2.5">
+                  <div className="my-2 sm:my-2.5">
                     <StarRow count={model.primaryAction.effortStars} tone="violet" />
                   </div>
                   <p className="text-sm font-bold text-[#1e2a5a] sm:text-base">{model.primaryAction.effortLabel}</p>
@@ -1209,7 +1209,7 @@ export function DiagnosticoGratuitoV2({
         <section>
           <SectionBadge n={5} label="¿Qué pasaría si lo hacés?" croPhaseA={croPhaseA} />
           {croPhaseC ? (
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-5">
               {WHAT_IF_BENEFITS.map((item) => (
                 <WhatIfBenefitCard key={item.title} icon={item.icon} title={item.title} body={item.body} />
               ))}
@@ -1364,8 +1364,7 @@ export function DiagnosticoGratuitoV2({
               </div>
               <div
                 className={cn(
-                  'grid gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6',
-                  croPhaseB && 'grid-cols-3',
+                  'grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6',
                 )}
               >
               <DeliverableCard
@@ -1536,11 +1535,11 @@ export function DiagnosticoGratuitoV2({
       </main>
 
       {!isPremium && croPhaseC && !heroInView ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 px-3 pt-3 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 px-3 pt-2.5 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.65rem,env(safe-area-inset-bottom))]">
           <PlanConquistarCtaPanel diagnostic={diagnostic} model={model} variant="sticky" />
-          <p className="mt-1.5 text-center text-[10px] font-medium text-slate-500">
+          <p className="mt-1.5 text-center text-[11px] font-medium leading-tight text-slate-500">
             {model.deliverables[0]?.value ?? 0}{' '}
-            {(model.deliverables[0]?.value ?? 0) === 1 ? 'acción' : 'acciones'} · roadmap 90 días
+            {(model.deliverables[0]?.value ?? 0) === 1 ? 'acción' : 'acciones'} · roadmap 90 días · USD 99
           </p>
         </div>
       ) : null}
