@@ -1,9 +1,18 @@
 'use client';
 
-import { Suspense, useEffect, useState, type CSSProperties } from 'react';
+import { Suspense, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Lock, Loader2 } from 'lucide-react';
+import {
+  Lock,
+  Loader2,
+  Calendar,
+  Target,
+  Clock,
+  TrendingUp,
+  BarChart3,
+  Users,
+} from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { brandAssetsApi, publicDiagnosticApi } from '@/lib/api';
 import {
@@ -14,6 +23,7 @@ import {
 } from '@/lib/brand-accent-from-logo';
 import {
   buildPlanConquistarLandingContext,
+  formatCompetitorList,
   type PlanConquistarLandingContext,
 } from '@/lib/plan-conquistar-landing-context';
 import { cn } from '@/lib/utils';
@@ -22,33 +32,33 @@ import { cn } from '@/lib/utils';
  * Shell visual del “Plan de Ataque” (borrador).
  * - Menú / opciones: NO funcionales (solo maqueta).
  * - Color de marca: líneas + títulos desde el logo.
+ * - Métricas: datos reales del diagnóstico cuando existen.
  */
-
-const SIDEBAR_ITEMS: Array<{ label: string; locked: boolean; active?: boolean }> = [
-  { label: 'Portada', locked: false },
-  { label: 'Índice', locked: false },
-  { label: '★ Prioridad #1', locked: false, active: true },
-  { label: 'Competidores', locked: true },
-  { label: 'Preguntas perdidas', locked: true },
-  { label: 'Quick Wins', locked: true },
-  { label: 'Contenido recomendado', locked: true },
-  { label: 'Schema & datos', locked: true },
-  { label: 'Roadmap 90 días', locked: true },
-  { label: 'Calendario', locked: true },
-  { label: 'Checklist', locked: true },
-  { label: 'IA Overview', locked: true },
-  { label: 'FAQ', locked: true },
-  { label: 'Recursos', locked: true },
-];
 
 function AccentLine({ accent, className }: { accent: BrandAccent; className?: string }) {
   return (
     <div
-      className={cn('h-1 w-full rounded-full', className)}
+      className={cn('h-1.5 w-14 rounded-full', className)}
       style={{ backgroundColor: accent.primary }}
       aria-hidden
     />
   );
+}
+
+function impactLabel(ctx: PlanConquistarLandingContext): string {
+  const ops = ctx.opportunityCount ?? 0;
+  const score = ctx.cleexsScore;
+  if (ops >= 20 || (score != null && score < 40)) return 'Alto';
+  if (ops >= 10 || (score != null && score < 60)) return 'Medio';
+  if (ops > 0 || score != null) return 'Moderado';
+  return 'A estimar';
+}
+
+function estimatedHours(ctx: PlanConquistarLandingContext): number | null {
+  const ops = ctx.opportunityCount;
+  if (ops == null || ops <= 0) return null;
+  // Heurística borrador: ~45 min por oportunidad, piso 6h
+  return Math.max(6, Math.round(ops * 0.75));
 }
 
 function PlanAtaqueShell({
@@ -66,16 +76,117 @@ function PlanAtaqueShell({
     year: 'numeric',
   });
 
-  const faqs = [
-    `¿Cómo elegir ${ctx.brandName} frente a alternativas?`,
-    ctx.competitors[0]
-      ? `¿Por qué ${ctx.brandName} aparece menos que ${ctx.competitors[0].name} en ChatGPT?`
-      : `¿Dónde encontrar información confiable de ${ctx.brandName}?`,
-    ctx.industry
-      ? `¿Qué ofrece ${ctx.brandName} en ${ctx.industry}?`
-      : `¿Qué servicios ofrece ${ctx.brandName}?`,
-    `¿Cómo contactar o comprar en ${ctx.domain}?`,
+  const actions = ctx.opportunityCount;
+  const hours = estimatedHours(ctx);
+  const impact = impactLabel(ctx);
+  const rivals = formatCompetitorList(ctx.competitors.map((c) => c.name));
+  const enginesText =
+    ctx.engines.length === 0
+      ? 'ChatGPT'
+      : ctx.engines.length <= 2
+        ? ctx.engines.join(' y ')
+        : `${ctx.engines.slice(0, -1).join(', ')} y ${ctx.engines[ctx.engines.length - 1]}`;
+
+  const sidebarItems = useMemo(() => {
+    const priorityLabel =
+      ctx.topActions[0] != null
+        ? `★ Prioridad #1`
+        : '★ Prioridad #1';
+    return [
+      { label: 'Portada', locked: false, active: true },
+      { label: 'Índice', locked: false },
+      { label: priorityLabel, locked: false },
+      {
+        label:
+          ctx.competitors.length > 0
+            ? `Competidores (${ctx.competitors.length})`
+            : 'Competidores',
+        locked: true,
+      },
+      { label: 'Preguntas perdidas', locked: true },
+      { label: 'Quick Wins', locked: true },
+      { label: 'Contenido recomendado', locked: true },
+      { label: 'Schema & datos', locked: true },
+      { label: 'Roadmap 90 días', locked: true },
+      { label: 'Calendario', locked: true },
+      { label: 'Checklist', locked: true },
+      {
+        label: ctx.engines.length ? `IA · ${ctx.engines[0]}` : 'IA Overview',
+        locked: true,
+      },
+      { label: 'FAQ', locked: true },
+      { label: 'Recursos', locked: true },
+    ];
+  }, [ctx.competitors.length, ctx.engines, ctx.topActions]);
+
+  const metricCards = [
+    {
+      value: actions != null ? String(actions) : '—',
+      label: 'Acciones',
+      hint: actions != null ? 'priorizadas del diagnóstico' : 'sin corrida aún',
+    },
+    {
+      value: hours != null ? String(hours) : '—',
+      label: 'Horas est.',
+      hint: hours != null ? 'estimación borrador' : 'pendiente',
+    },
+    {
+      value: impact,
+      label: 'Impacto',
+      hint: 'esperado',
+    },
+    {
+      value: '90',
+      label: 'Días roadmap',
+      hint: 'horizonte fijo',
+    },
   ];
+
+  const coverMetrics: Array<{ icon: typeof Calendar; text: string }> = [
+    { icon: Calendar, text: `Generado el: ${today}` },
+    {
+      icon: Target,
+      text:
+        actions != null
+          ? `${actions} acciones priorizadas`
+          : 'Acciones: pendiente de corrida',
+    },
+    {
+      icon: Clock,
+      text: hours != null ? `${hours} horas estimadas` : 'Horas: a estimar',
+    },
+    {
+      icon: TrendingUp,
+      text: `Impacto esperado: ${impact}`,
+    },
+  ];
+
+  if (ctx.cleexsScore != null) {
+    coverMetrics.push({
+      icon: BarChart3,
+      text: `Cleexs Score: ${ctx.cleexsScore}`,
+    });
+  }
+  if (ctx.competitors.length > 0) {
+    coverMetrics.push({
+      icon: Users,
+      text: `${ctx.competitors.length} competidor${ctx.competitors.length === 1 ? '' : 'es'} en el plan`,
+    });
+  }
+
+  const faqs =
+    ctx.topActions.length > 0
+      ? ctx.topActions.slice(0, 4)
+      : [
+          `Definir la intención #1 donde ${ctx.brandName} quiere ser recomendada`,
+          ctx.competitors[0]
+            ? `Comparativa clara vs ${ctx.competitors[0].name}`
+            : `Mejorar señales de marca en ${ctx.domain}`,
+          ctx.industry
+            ? `FAQs concretas de ${ctx.industry}`
+            : `Publicar FAQs accionables en el sitio`,
+          `Alinear contenido con ${enginesText}`,
+        ];
 
   return (
     <div
@@ -85,90 +196,85 @@ function PlanAtaqueShell({
           '--brand': accent.primary,
           '--brand-ink': accent.ink,
           '--brand-soft': accent.soft,
-        } as React.CSSProperties
+        } as CSSProperties
       }
     >
-      {/* Banner borrador */}
       <div className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900 sm:text-sm">
-        Borrador · Plan de Ataque · menú y opciones aún no funcionan · acento{' '}
+        Borrador · Plan de Ataque · menú aún no navega · acento{' '}
         <span className="font-mono">{accent.primary}</span> ({accent.source}
         {logoUrl ? '' : ', sin logo'})
       </div>
 
-      {/* Barra confidencial con línea de marca */}
       <div
-        className="flex items-center justify-between gap-3 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white sm:px-6 sm:text-xs"
+        className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-white sm:text-xs"
         style={{ backgroundColor: accent.ink }}
       >
-        <span>Confidencial</span>
-        <span className="truncate text-center font-medium normal-case tracking-normal opacity-95">
-          Preparado exclusivamente para {ctx.domain}
-        </span>
-        <span className="shrink-0 tracking-normal text-white/90">cleexs</span>
+        Confidencial · Preparado exclusivamente para {ctx.domain}
       </div>
-      <AccentLine accent={accent} className="rounded-none" />
+      <div className="h-1 w-full" style={{ backgroundColor: accent.primary }} aria-hidden />
 
       <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-10">
-        {/* Hero copy */}
-        <header className="mb-6 sm:mb-8">
+        {/* Intro centrada */}
+        <header className="mb-6 text-center sm:mb-8">
           <p className="text-sm font-medium text-slate-500">Borrador visual</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+          <h1 className="mx-auto mt-1 max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
             Ya terminé el plan para{' '}
             <span style={{ color: accent.ink }}>{ctx.domain}</span>
-            {ctx.brandName && ctx.brandName.toLowerCase() !== ctx.domain.toLowerCase() ? (
-              <span className="text-slate-500"> · {ctx.brandName}</span>
-            ) : null}
           </h1>
-          <p className="mt-2 max-w-2xl text-base text-slate-600 sm:text-lg">
-            Esto no es un reporte genérico: es un plan de ejecución a medida. El menú de la
-            izquierda es maqueta (todavía no navega).
+          <p className="mx-auto mt-2 max-w-2xl text-base text-slate-600 sm:text-lg">
+            Plan de ejecución a medida
+            {ctx.country ? ` · ${ctx.country}${ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}` : ''}
+            {ctx.industry ? ` · ${ctx.industry}` : ''}.
+            {rivals ? ` Frente a ${rivals}.` : ''}
           </p>
 
-          {/* Stats decorativos — números placeholder, no reales */}
-          <div className="mt-5 flex flex-wrap gap-3 sm:gap-4">
-            {[
-              { value: '—', label: 'acciones' },
-              { value: '—', label: 'horas est.' },
-              { value: '—', label: 'impacto' },
-              { value: '90', label: 'días roadmap' },
-            ].map((s) => (
+          {/* Métricas reales centradas */}
+          <div className="mx-auto mt-6 flex max-w-3xl flex-wrap items-stretch justify-center gap-3">
+            {metricCards.map((s) => (
               <div
                 key={s.label}
-                className="min-w-[4.5rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm"
+                className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm sm:max-w-[9rem]"
               >
-                <p className="text-lg font-bold sm:text-xl" style={{ color: accent.ink }}>
+                <p className="text-xl font-bold sm:text-2xl" style={{ color: accent.ink }}>
                   {s.value}
                 </p>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                   {s.label}
                 </p>
+                <p className="mt-0.5 text-[10px] text-slate-400">{s.hint}</p>
               </div>
             ))}
           </div>
         </header>
 
-        {/* Layout: sidebar + documento */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
-          <div className="grid lg:grid-cols-[220px_1fr]">
-            {/* Sidebar — no funcional */}
-            <aside className="border-b border-slate-200 bg-slate-900 text-slate-200 lg:border-b-0 lg:border-r lg:border-slate-800">
-              <div className="flex items-center gap-3 border-b border-slate-700 px-4 py-4">
-                <BrandLogo
-                  name={ctx.brandName}
-                  domain={ctx.domain}
-                  size={36}
-                  variant="icon"
-                  hideIfMissing
-                  className="rounded-lg"
-                />
-                <div className="min-w-0">
+          <div className="grid lg:grid-cols-[230px_1fr]">
+            {/* Sidebar gris oscuro (no negro) para que se vean logos */}
+            <aside className="border-b border-slate-300 bg-slate-600 text-slate-100 lg:border-b-0 lg:border-r lg:border-slate-500">
+              <div className="flex flex-col items-center gap-2 border-b border-slate-500 px-4 py-5 text-center">
+                <div className="rounded-xl bg-white p-2 shadow-sm">
+                  <BrandLogo
+                    name={ctx.brandName}
+                    domain={ctx.domain}
+                    size={48}
+                    variant="icon"
+                    hideIfMissing
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="min-w-0 w-full">
                   <p className="truncate text-sm font-semibold text-white">{ctx.brandName}</p>
-                  <p className="truncate text-[11px] text-slate-400">{ctx.domain}</p>
+                  <p className="truncate text-[11px] text-slate-300">{ctx.domain}</p>
+                  {ctx.cleexsScore != null ? (
+                    <p className="mt-1 text-[11px] font-medium text-slate-200">
+                      Score {ctx.cleexsScore}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <nav className="px-2 py-3" aria-label="Índice del plan (maqueta)">
                 <ul className="space-y-0.5">
-                  {SIDEBAR_ITEMS.map((item) => (
+                  {sidebarItems.map((item) => (
                     <li key={item.label}>
                       <button
                         type="button"
@@ -177,8 +283,8 @@ function PlanAtaqueShell({
                         className={cn(
                           'flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-[13px]',
                           item.active
-                            ? 'bg-white/10 font-semibold text-white'
-                            : 'text-slate-400'
+                            ? 'bg-white/15 font-semibold text-white'
+                            : 'text-slate-200/85'
                         )}
                         style={
                           item.active
@@ -187,7 +293,9 @@ function PlanAtaqueShell({
                         }
                       >
                         <span className="truncate">{item.label}</span>
-                        {item.locked ? <Lock className="h-3.5 w-3.5 shrink-0 opacity-70" /> : null}
+                        {item.locked ? (
+                          <Lock className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        ) : null}
                       </button>
                     </li>
                   ))}
@@ -195,7 +303,7 @@ function PlanAtaqueShell({
                 <button
                   type="button"
                   disabled
-                  className="mt-3 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-500"
+                  className="mt-3 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-500 px-3 py-2 text-xs text-slate-300"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   + páginas más
@@ -203,116 +311,128 @@ function PlanAtaqueShell({
               </nav>
             </aside>
 
-            {/* Visor documento */}
-            <div className="bg-slate-50 p-3 sm:p-5 lg:p-6">
-              <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
-                <span>Vista previa · maqueta</span>
-                <span>pág. 3 / —</span>
-              </div>
+            {/* Documento: portada grande centrada (estilo muestra) + prioridad */}
+            <div className="bg-slate-50 p-3 sm:p-5 lg:p-8">
+              <p className="mb-4 text-center text-xs text-slate-500">Vista previa · maqueta</p>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* Portada */}
-                <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <AccentLine accent={accent} className="mb-3 w-12" />
+              {/* PORTADA — pieza importante */}
+              <article className="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white px-6 py-8 text-center shadow-sm sm:px-10 sm:py-10">
+                <div className="mx-auto mb-6 flex justify-center">
+                  <div className="rounded-2xl bg-white p-2">
+                    <BrandLogo
+                      name={ctx.brandName}
+                      domain={ctx.domain}
+                      size={72}
+                      variant="logo"
+                      hideIfMissing
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                  Tu Plan de Ataque
+                </h2>
+                <div className="mt-3 flex justify-center">
+                  <AccentLine accent={accent} />
+                </div>
+
+                <p className="mx-auto mt-4 max-w-md text-base leading-snug text-slate-800 sm:text-lg">
+                  Cómo conseguir más clientes desde {enginesText}{' '}
+                  <span className="font-semibold" style={{ color: accent.primary }}>
+                    en los próximos 90 días
+                  </span>
+                </p>
+
+                <div className="mx-auto mt-6 max-w-sm border-t border-slate-200 pt-5">
+                  <p className="text-xs text-slate-500">Preparado exclusivamente para:</p>
                   <p
-                    className="text-[10px] font-bold uppercase tracking-widest"
+                    className="mt-1 text-xl font-bold tracking-tight sm:text-2xl"
                     style={{ color: accent.primary }}
                   >
-                    Tu Plan de Ataque
+                    {ctx.domain}
                   </p>
-                  <h2
-                    className="mt-2 text-base font-bold leading-snug"
-                    style={{ color: accent.ink }}
-                  >
-                    Cómo conseguir más clientes desde ChatGPT en 90 días
-                  </h2>
-                  <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-                    Para {ctx.brandName}
-                    {ctx.country ? ` · ${ctx.country}` : ''}
-                    <br />
-                    Generado {today}
-                  </p>
-                  <div className="mt-4 space-y-1.5">
-                    {['Acciones priorizadas', 'Roadmap 90 días', 'Checklist'].map((t) => (
-                      <div key={t} className="flex items-center gap-2 text-[11px] text-slate-600">
-                        <span
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{ backgroundColor: accent.primary }}
-                        />
-                        {t}
-                      </div>
-                    ))}
-                  </div>
-                </article>
+                  {ctx.brandName.toLowerCase() !== ctx.domain.toLowerCase() ? (
+                    <p className="mt-0.5 text-sm text-slate-500">{ctx.brandName}</p>
+                  ) : null}
+                </div>
 
-                {/* Índice blur */}
-                <article className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <AccentLine accent={accent} className="mb-3 w-12" />
-                  <h2 className="text-sm font-bold" style={{ color: accent.ink }}>
-                    Índice
-                  </h2>
-                  <ul className="mt-3 space-y-2 blur-[3px] select-none" aria-hidden>
-                    {['Resumen', 'Competidores', 'Quick Wins', 'Roadmap', 'FAQ'].map((t) => (
-                      <li key={t} className="text-xs text-slate-600">
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/50">
-                    <Lock className="h-8 w-8 text-slate-400" />
-                  </div>
-                </article>
-
-                {/* Prioridad #1 */}
-                <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:col-span-1">
-                  <div
-                    className="mb-3 inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-                    style={{ backgroundColor: accent.primary }}
-                  >
-                    Prioridad #1
-                  </div>
-                  <h2 className="text-sm font-bold leading-snug" style={{ color: accent.ink }}>
-                    Publicar las siguientes FAQ
-                  </h2>
-                  <AccentLine accent={accent} className="mt-2 mb-3 w-16" />
-                  <ol className="space-y-2">
-                    {faqs.map((q, i) => (
-                      <li key={q} className="flex gap-2 text-[11px] leading-snug text-slate-700">
-                        <span
-                          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                          style={{ backgroundColor: accent.primary }}
-                        >
-                          {i + 1}
-                        </span>
-                        <span>{q}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <div className="relative mt-4 overflow-hidden rounded-md bg-slate-50 p-3">
-                    <p className="blur-[2px] select-none text-[11px] text-slate-500">
-                      Detalle de implementación, ejemplos de schema y checklist…
-                    </p>
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/40">
-                      <Lock className="h-5 w-5 text-slate-400" />
+                <div className="mx-auto mt-8 flex max-w-xl flex-col items-center gap-3 sm:gap-2.5">
+                  {coverMetrics.map(({ icon: Icon, text }) => (
+                    <div
+                      key={text}
+                      className="flex w-full max-w-md items-center justify-center gap-2.5 text-sm text-slate-700 sm:justify-start sm:text-[15px]"
+                    >
+                      <Icon
+                        className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]"
+                        style={{ color: accent.primary }}
+                      />
+                      <span className="text-center sm:text-left">{text}</span>
                     </div>
-                  </div>
-                </article>
-              </div>
+                  ))}
+                </div>
+
+                <div className="mt-10 flex items-center justify-between">
+                  <span className="text-xs font-semibold tracking-wide text-slate-400">cleexs</span>
+                  <span
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full"
+                    style={{ backgroundColor: accent.soft }}
+                    title="Secciones bloqueadas (maqueta)"
+                  >
+                    <Lock className="h-4 w-4" style={{ color: accent.ink }} />
+                  </span>
+                </div>
+              </article>
+
+              {/* Prioridad #1 — acciones reales si hay */}
+              <article className="mx-auto mt-5 max-w-2xl rounded-xl border border-slate-200 bg-white px-6 py-6 text-center shadow-sm sm:px-8">
+                <div
+                  className="mx-auto inline-flex items-center rounded px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white"
+                  style={{ backgroundColor: accent.primary }}
+                >
+                  Prioridad #1
+                </div>
+                <h3 className="mt-3 text-lg font-bold text-slate-900 sm:text-xl">
+                  {ctx.topActions.length > 0
+                    ? 'Primeras acciones de tu diagnóstico'
+                    : 'Primeras acciones sugeridas'}
+                </h3>
+                <div className="mt-2 flex justify-center">
+                  <AccentLine accent={accent} className="w-16" />
+                </div>
+                <ol className="mx-auto mt-5 max-w-lg space-y-3 text-left">
+                  {faqs.map((q, i) => (
+                    <li key={`${i}-${q.slice(0, 24)}`} className="flex gap-3 text-sm text-slate-700">
+                      <span
+                        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                        style={{ backgroundColor: accent.primary }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="leading-snug">{q}</span>
+                    </li>
+                  ))}
+                </ol>
+                {ctx.topActions.length === 0 ? (
+                  <p className="mt-4 text-xs text-slate-400">
+                    Todavía no hay oportunidades en la corrida; mostramos base según onboarding.
+                  </p>
+                ) : null}
+              </article>
             </div>
           </div>
 
-          {/* CTA inferior — no funcional */}
-          <div className="border-t border-slate-200 bg-slate-900 px-4 py-5 text-center sm:px-6">
+          <div className="border-t border-slate-200 bg-slate-700 px-4 py-5 text-center sm:px-6">
             <p className="text-base font-semibold text-white sm:text-lg">
               Desbloqueá el plan completo
             </p>
-            <p className="mt-1 text-sm text-slate-400">
-              Botón y checkout: todavía no cableados en este borrador.
+            <p className="mt-1 text-sm text-slate-300">
+              Checkout todavía no cableado en este borrador.
             </p>
             <button
               type="button"
               disabled
-              className="mt-4 cursor-not-allowed rounded-xl px-5 py-2.5 text-sm font-semibold text-white opacity-80"
+              className="mt-4 cursor-not-allowed rounded-xl px-5 py-2.5 text-sm font-semibold text-white opacity-90"
               style={{ backgroundColor: accent.primary }}
             >
               Desbloquear (próximamente)
@@ -324,12 +444,8 @@ function PlanAtaqueShell({
           <Link href="/borrador/plan-conquistar" className="underline hover:text-slate-700">
             ← Borrador landing Plan Conquistar
           </Link>
-          {ctx.domain ? (
-            <>
-              {' · '}
-              <span className="font-medium text-slate-600">{ctx.domain}</span>
-            </>
-          ) : null}
+          {' · '}
+          <span className="font-medium text-slate-600">{ctx.domain}</span>
         </p>
       </div>
     </div>
