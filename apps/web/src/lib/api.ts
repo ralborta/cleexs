@@ -1378,7 +1378,7 @@ export type BrandAssetResolveResult = {
   domain: string;
   brandName: string | null;
   logoUrl: string | null;
-  source: 'curated' | 'brandfetch' | 'logo.dev' | 'none';
+  source: 'curated' | 'brandfetch' | 'logo.dev' | 'site' | 'none';
   status: 'ok' | 'missing';
   confidence: number | null;
   cached: boolean;
