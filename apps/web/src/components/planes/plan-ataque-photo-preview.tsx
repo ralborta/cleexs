@@ -25,8 +25,9 @@ import { cn } from '@/lib/utils';
 
 const MENU_BG = '#E9EDF2';
 const BAR_BG = '#E1E6EC';
-const DESIGN_W = 820;
-const DESIGN_H = 500;
+/** Lienzo más alto: título + 4 KPIs + viewer + pie de 6 métricas */
+const DESIGN_W = 920;
+const DESIGN_H = 720;
 
 function impactLabel(ctx: PlanConquistarLandingContext): string {
   const ops = ctx.opportunityCount ?? 0;
@@ -43,7 +44,7 @@ function estimatedHours(ctx: PlanConquistarLandingContext): number | null {
   return Math.max(6, Math.round(ops * 0.75));
 }
 
-/** Foto automática del Plan de Ataque — sin candados, menú en español. */
+/** Foto automática del Plan de Ataque — título + viewer + pie (como la captura completa). */
 export function PlanAtaquePhotoPreview({
   ctx,
   className,
@@ -145,6 +146,7 @@ export function PlanAtaquePhotoPreview({
     {
       label: ctx.engines[0] ? `Visión IA · ${ctx.engines[0]}` : 'Visión IA',
     },
+    { label: 'Preguntas frecuentes' },
   ];
 
   const indexItems = [
@@ -156,10 +158,53 @@ export function PlanAtaquePhotoPreview({
     'Plan 90 días',
     'Lista de tareas',
     'Preguntas frecuentes',
+    'Recursos y enlaces',
+  ];
+
+  const nAcciones = actions ?? Math.max(ctx.topActions.length, 6);
+  const nPrompts = Math.max(ctx.engines.length * 2, ctx.topActions.length, 4);
+  const nPaginas = Math.max(3, Math.round(nAcciones * 0.65));
+  const nComparativas = Math.max(ctx.competitors.length, 1);
+  const nMejoras = Math.max(2, Math.round(nAcciones * 0.55));
+  const footerStats = [
+    { Icon: ClipboardList, value: String(nAcciones), label: 'Acciones' },
+    { Icon: Lightbulb, value: String(nPrompts), label: 'Prompts' },
+    { Icon: FileText, value: String(nPaginas), label: 'Páginas' },
+    { Icon: Users, value: String(nComparativas), label: 'Comparativas' },
+    { Icon: Zap, value: String(nMejoras), label: 'Mejoras' },
+    { Icon: Target, value: '1', label: 'Plan de acción' },
+  ];
+
+  const heroMetrics = [
+    {
+      Icon: Target,
+      primary: actions != null ? String(actions) : '—',
+      secondary: 'acciones priorizadas',
+      brand: true,
+    },
+    {
+      Icon: Clock,
+      primary: hours != null ? String(hours) : '—',
+      secondary: 'horas estimadas',
+      brand: false,
+    },
+    {
+      Icon: TrendingUp,
+      primary: impact,
+      secondary: 'Impacto esperado',
+      brand: true,
+      emphasize: true,
+    },
+    {
+      Icon: Calendar,
+      primary: '90',
+      secondary: 'días de plan',
+      brand: false,
+    },
   ];
 
   return (
-    <div className={cn('mx-auto w-full max-w-[820px]', className)}>
+    <div className={cn('mx-auto w-full max-w-[920px]', className)}>
       <div
         ref={frameRef}
         className="pointer-events-none relative w-full select-none overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
@@ -177,200 +222,254 @@ export function PlanAtaquePhotoPreview({
             transform: `scale(${scale})`,
           }}
         >
-          <div className="grid h-full grid-cols-[150px_1fr]">
-            <aside style={{ backgroundColor: MENU_BG }} className="border-r border-slate-200">
-              <div className="flex flex-col items-center gap-1.5 border-b border-slate-200 px-2.5 py-3 text-center">
-                <div className="rounded-xl bg-white p-2.5 shadow-sm">
-                  <BrandLogo
-                    name={ctx.brandName}
-                    domain={ctx.domain}
-                    size={68}
-                    variant="icon"
-                    hideIfMissing
-                    className="rounded-lg"
-                  />
-                </div>
-                <p className="w-full truncate text-[13px] font-semibold text-slate-900">
-                  {ctx.brandName}
-                </p>
-                <p className="w-full truncate text-[11px] text-slate-500">{ctx.domain}</p>
-              </div>
-              <ul className="space-y-0.5 px-1.5 py-2">
-                {sidebarItems.map((item) => (
-                  <li key={item.label}>
-                    <div
-                      className={cn(
-                        'rounded-md px-2 py-1.5 text-[11px] leading-tight',
-                        item.active ? 'bg-white font-semibold text-slate-900' : 'text-slate-600'
-                      )}
-                      style={
-                        item.active
-                          ? { boxShadow: `inset 2px 0 0 ${accent.primary}` }
-                          : undefined
-                      }
-                    >
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-auto px-2 pb-2 text-center text-[10px] font-semibold tracking-wide text-slate-400">
-                cleexs
+          <div className="flex h-full flex-col bg-white">
+            {/* Barra confidencial */}
+            <div
+              className="flex items-center justify-between px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-white"
+              style={{ backgroundColor: accent.primary }}
+            >
+              <span>Confidencial</span>
+              <span className="normal-case tracking-normal opacity-95">
+                Preparado exclusivamente para <strong>{ctx.domain}</strong>
+              </span>
+              <span className="normal-case tracking-normal opacity-95">cleexs</span>
+            </div>
+
+            {/* Título + 4 KPIs (lo que faltaba en la captura) */}
+            <div className="shrink-0 px-5 pb-3 pt-4 text-center">
+              <h2 className="text-[22px] font-bold leading-tight tracking-tight text-slate-900">
+                Ya terminé el plan para{' '}
+                <span style={{ color: accent.primary }}>{ctx.domain}</span>
+                {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
+              </h2>
+              <p className="mx-auto mt-1.5 max-w-lg text-[12px] text-slate-600">
+                No es un reporte genérico. Es un plan de ejecución creado para{' '}
+                <span className="font-semibold text-slate-800">TU</span> empresa.
               </p>
-            </aside>
-
-            <div className="flex h-full flex-col bg-slate-50">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-400">
-                <span>Vista previa</span>
-                <span>3 · 100%</span>
-              </div>
-
-              {/* Portada ancha + índice/prioridad más estrechos */}
-              <div className="grid flex-1 grid-cols-[1.85fr_0.7fr_0.75fr] gap-2 p-2.5">
-                <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3 text-center">
-                  <div className="mb-2 flex justify-center">
-                    <BrandLogo
-                      name={ctx.brandName}
-                      domain={ctx.domain}
-                      size={72}
-                      variant="logo"
-                      hideIfMissing
-                      className="rounded-lg"
-                    />
-                  </div>
-                  <p className="text-[15px] font-bold text-slate-900">Tu Plan de Ataque</p>
+              <div className="mx-auto mt-3 flex max-w-3xl flex-wrap items-stretch justify-center gap-2">
+                {heroMetrics.map(({ Icon, primary, secondary, brand, emphasize }) => (
                   <div
-                    className="mx-auto mt-1.5 h-1 w-12 rounded-full"
-                    style={{ backgroundColor: accent.primary }}
-                  />
-                  <p className="mt-2 text-[11px] leading-snug text-slate-600">
-                    Cómo conseguir más clientes desde {enginesText}{' '}
-                    <span className="font-semibold" style={{ color: accent.primary }}>
-                      en los próximos 90 días
-                    </span>
+                    key={secondary}
+                    className="flex min-w-[9.5rem] flex-1 items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-2.5 py-2 shadow-sm"
+                  >
+                    <Icon
+                      className="h-6 w-6 shrink-0"
+                      strokeWidth={1.75}
+                      style={{ color: brand ? accent.primary : '#0f172a' }}
+                    />
+                    <div className="min-w-0 text-left leading-tight">
+                      <p
+                        className="truncate text-[15px] font-bold"
+                        style={emphasize ? { color: accent.primary } : undefined}
+                      >
+                        {primary}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-600">{secondary}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Viewer: menú + 3 paneles */}
+            <div className="mx-3 mb-2 min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+              <div className="grid h-full grid-cols-[148px_1fr]">
+                <aside style={{ backgroundColor: MENU_BG }} className="border-r border-slate-200">
+                  <div className="flex flex-col items-center gap-1 border-b border-slate-200 px-2 py-2.5 text-center">
+                    <div className="rounded-xl bg-white p-2 shadow-sm">
+                      <BrandLogo
+                        name={ctx.brandName}
+                        domain={ctx.domain}
+                        size={64}
+                        variant="icon"
+                        hideIfMissing
+                        className="rounded-lg"
+                      />
+                    </div>
+                    <p className="w-full truncate text-[12px] font-semibold text-slate-900">
+                      {ctx.brandName}
+                    </p>
+                    <p className="w-full truncate text-[10px] text-slate-500">{ctx.domain}</p>
+                  </div>
+                  <ul className="space-y-0.5 px-1.5 py-1.5">
+                    {sidebarItems.map((item) => (
+                      <li key={item.label}>
+                        <div
+                          className={cn(
+                            'rounded-md px-1.5 py-1 text-[10px] leading-tight',
+                            item.active ? 'bg-white font-semibold text-slate-900' : 'text-slate-600'
+                          )}
+                          style={
+                            item.active
+                              ? { boxShadow: `inset 2px 0 0 ${accent.primary}` }
+                              : undefined
+                          }
+                        >
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="px-2 pb-1.5 text-center text-[9px] font-semibold tracking-wide text-slate-400">
+                    + páginas del plan · cleexs
                   </p>
-                  <div className="mt-2 border-t border-slate-100 pt-2">
-                    <p className="text-[10px] text-slate-500">Preparado exclusivamente para</p>
-                    <p className="text-[13px] font-bold" style={{ color: accent.primary }}>
-                      {ctx.domain}
+                </aside>
+
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-white px-2.5 py-1 text-[10px] text-slate-400">
+                    <span>Vista previa</span>
+                    <span>3 · 100%</span>
+                  </div>
+
+                  <div className="grid min-h-0 flex-1 grid-cols-[1.85fr_0.7fr_0.75fr] gap-1.5 p-2">
+                    {/* Portada */}
+                    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 text-center">
+                      <div className="mb-1.5 flex justify-center">
+                        <BrandLogo
+                          name={ctx.brandName}
+                          domain={ctx.domain}
+                          size={70}
+                          variant="logo"
+                          hideIfMissing
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <p className="text-[14px] font-bold text-slate-900">Tu Plan de Ataque</p>
+                      <div
+                        className="mx-auto mt-1 h-1 w-11 rounded-full"
+                        style={{ backgroundColor: accent.primary }}
+                      />
+                      <p className="mt-1.5 text-[10px] leading-snug text-slate-600">
+                        Cómo conseguir más clientes desde {enginesText}{' '}
+                        <span className="font-semibold" style={{ color: accent.primary }}>
+                          en los próximos 90 días
+                        </span>
+                      </p>
+                      <div className="mt-1.5 border-t border-slate-100 pt-1.5">
+                        <p className="text-[9px] text-slate-500">Preparado exclusivamente para</p>
+                        <p className="text-[12px] font-bold" style={{ color: accent.primary }}>
+                          {ctx.domain}
+                        </p>
+                      </div>
+                      <div className="mt-1.5 space-y-0.5 text-left">
+                        {[
+                          { Icon: Calendar, t: `Generado el: ${today}` },
+                          {
+                            Icon: Target,
+                            t: actions != null ? `${actions} acciones priorizadas` : '—',
+                          },
+                          {
+                            Icon: Clock,
+                            t: hours != null ? `${hours} horas estimadas` : '—',
+                          },
+                          { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
+                        ].map(({ Icon, t }) => (
+                          <div
+                            key={t}
+                            className="flex items-center gap-1 text-[9px] text-slate-600"
+                          >
+                            <Icon
+                              className="h-3 w-3 shrink-0"
+                              style={{ color: accent.primary }}
+                            />
+                            <span className="truncate">{t}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-auto border-t border-slate-100 pt-1.5 text-left text-[8px] leading-snug text-slate-500">
+                        {[
+                          ctx.country ? `Mercado: ${ctx.country}` : null,
+                          ctx.industry,
+                          ctx.cleexsScore != null ? `Cleexs Score ${ctx.cleexsScore}` : null,
+                          ctx.competitors.length > 0
+                            ? `${ctx.competitors.length} competidores`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || 'Plan personalizado Cleexs'}
+                      </div>
+                    </div>
+
+                    {/* Índice */}
+                    <div className="relative min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-2">
+                      <p
+                        className="text-center text-[11px] font-bold uppercase tracking-wide"
+                        style={{ color: accent.primary }}
+                      >
+                        Índice
+                      </p>
+                      <ol className="mt-1.5 space-y-1">
+                        {indexItems.map((t, i) => (
+                          <li key={t} className="flex gap-1 text-[9px] text-slate-600">
+                            <span className="font-semibold" style={{ color: accent.primary }}>
+                              {i + 1}.
+                            </span>
+                            <span>{t}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-white via-white/90 to-transparent" />
+                    </div>
+
+                    {/* Prioridad */}
+                    <div className="relative min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-2">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-wide"
+                        style={{ color: accent.primary }}
+                      >
+                        Prioridad #1
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-semibold leading-tight text-slate-900">
+                        Primeras acciones de tu diagnóstico
+                      </p>
+                      <div
+                        className="mt-1 h-1 w-9 rounded-full"
+                        style={{ backgroundColor: accent.primary }}
+                      />
+                      <ol className="mt-1.5 space-y-1">
+                        {faqs.map((q, i) => (
+                          <li
+                            key={`${i}-${q.slice(0, 16)}`}
+                            className="flex gap-1 text-[9px] text-slate-700"
+                          >
+                            <span
+                              className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                              style={{ backgroundColor: accent.primary }}
+                            >
+                              {i + 1}
+                            </span>
+                            <span className="leading-snug">{q}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-white from-25% via-white/85 to-transparent backdrop-blur-[1.5px]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie: 6 métricas (como imagen 3) */}
+            <div
+              className="shrink-0 border-t border-slate-200 px-3 py-2.5"
+              style={{ backgroundColor: BAR_BG }}
+            >
+              <div className="grid grid-cols-6 gap-1.5">
+                {footerStats.map(({ Icon, value, label }) => (
+                  <div
+                    key={label}
+                    className="flex flex-col items-center rounded-lg border border-slate-200/80 bg-white px-1 py-2"
+                  >
+                    <Icon className="h-4 w-4" style={{ color: accent.primary }} />
+                    <p className="mt-0.5 text-[14px] font-bold leading-none text-slate-900">
+                      {value}
+                    </p>
+                    <p className="mt-0.5 text-center text-[7px] font-semibold uppercase tracking-wide text-slate-500">
+                      {label}
                     </p>
                   </div>
-                  <div className="mt-2 space-y-1 text-left">
-                    {[
-                      { Icon: Calendar, t: today },
-                      { Icon: Target, t: actions != null ? `${actions} acciones priorizadas` : '—' },
-                      { Icon: Clock, t: hours != null ? `${hours} horas estimadas` : '—' },
-                      { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
-                    ].map(({ Icon, t }) => (
-                      <div key={t} className="flex items-center gap-1.5 text-[10px] text-slate-600">
-                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: accent.primary }} />
-                        <span className="truncate">{t}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Pie con datos disponibles */}
-                  <div className="mt-auto border-t border-slate-100 pt-2 text-left text-[9px] leading-snug text-slate-500">
-                    {[ctx.country, ctx.industry, ctx.cleexsScore != null ? `Score ${ctx.cleexsScore}` : null]
-                      .filter(Boolean)
-                      .join(' · ') || 'Plan personalizado Cleexs'}
-                  </div>
-                </div>
-
-                {/* Índice — sin candado, algo difuminado abajo */}
-                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5">
-                  <p
-                    className="text-center text-[12px] font-bold uppercase tracking-wide"
-                    style={{ color: accent.primary }}
-                  >
-                    Índice
-                  </p>
-                  <ol className="mt-2 space-y-1.5">
-                    {indexItems.map((t, i) => (
-                      <li key={t} className="flex gap-1.5 text-[10px] text-slate-600">
-                        <span className="font-semibold" style={{ color: accent.primary }}>
-                          {i + 1}.
-                        </span>
-                        <span>{t}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-white via-white/90 to-transparent" />
-                </div>
-
-                {/* Prioridad — ~⅓ legible, resto difuminado, SIN candado */}
-                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5">
-                  <p
-                    className="text-[10px] font-bold uppercase tracking-wide"
-                    style={{ color: accent.primary }}
-                  >
-                    Prioridad #1
-                  </p>
-                  <p className="mt-0.5 text-[12px] font-semibold leading-tight text-slate-900">
-                    Primeras acciones de tu diagnóstico
-                  </p>
-                  <div
-                    className="mt-1.5 h-1 w-10 rounded-full"
-                    style={{ backgroundColor: accent.primary }}
-                  />
-                  <ol className="mt-2 space-y-1.5">
-                    {faqs.map((q, i) => (
-                      <li
-                        key={`${i}-${q.slice(0, 16)}`}
-                        className="flex gap-1.5 text-[10px] text-slate-700"
-                      >
-                        <span
-                          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                          style={{ backgroundColor: accent.primary }}
-                        >
-                          {i + 1}
-                        </span>
-                        <span className="leading-snug">{q}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  {/* ~⅔ inferior difuminado */}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-white from-25% via-white/85 to-transparent backdrop-blur-[1.5px]" />
-                </div>
+                ))}
               </div>
-
-              {(() => {
-                const nAcciones = actions ?? Math.max(ctx.topActions.length, 6);
-                const nPrompts = Math.max(ctx.engines.length * 2, ctx.topActions.length, 4);
-                const nPaginas = Math.max(3, Math.round(nAcciones * 0.65));
-                const nComparativas = Math.max(ctx.competitors.length, 1);
-                const nMejoras = Math.max(2, Math.round(nAcciones * 0.55));
-                const stats = [
-                  { Icon: ClipboardList, value: String(nAcciones), label: 'Acciones' },
-                  { Icon: Lightbulb, value: String(nPrompts), label: 'Prompts' },
-                  { Icon: FileText, value: String(nPaginas), label: 'Páginas' },
-                  { Icon: Users, value: String(nComparativas), label: 'Comparativas' },
-                  { Icon: Zap, value: String(nMejoras), label: 'Mejoras' },
-                  { Icon: Target, value: '1', label: 'Plan' },
-                ];
-                return (
-                  <div
-                    className="mt-auto border-t border-slate-200 px-2 py-2"
-                    style={{ backgroundColor: BAR_BG }}
-                  >
-                    <div className="grid grid-cols-6 gap-1.5">
-                      {stats.map(({ Icon, value, label }) => (
-                        <div
-                          key={label}
-                          className="flex flex-col items-center rounded-md border border-slate-200/80 bg-white px-1 py-1.5"
-                        >
-                          <Icon className="h-3.5 w-3.5" style={{ color: accent.primary }} />
-                          <p className="mt-0.5 text-[12px] font-bold leading-none text-slate-900">
-                            {value}
-                          </p>
-                          <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-wide text-slate-500">
-                            {label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         </div>
