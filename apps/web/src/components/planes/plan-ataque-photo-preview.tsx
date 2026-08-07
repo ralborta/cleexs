@@ -242,10 +242,6 @@ export function PlanAtaquePhotoPreview({
                 <span style={{ color: accent.primary }}>{ctx.domain}</span>
                 {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
               </h2>
-              <p className="mx-auto mt-1.5 max-w-lg text-[12px] text-slate-600">
-                No es un reporte genérico. Es un plan de ejecución creado para{' '}
-                <span className="font-semibold text-slate-800">TU</span> empresa.
-              </p>
               <div className="mx-auto mt-3 flex max-w-3xl flex-wrap items-stretch justify-center gap-2">
                 {heroMetrics.map(({ Icon, primary, secondary, brand, emphasize }) => (
                   <div

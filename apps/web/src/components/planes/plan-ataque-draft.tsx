@@ -183,10 +183,6 @@ function PlanAtaqueShell({
           <span style={{ color: accent.primary }}>{ctx.domain}</span>
           {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
         </h1>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600 sm:text-[15px]">
-          No es un reporte genérico. Es un plan de ejecución creado para{' '}
-          <span className="font-semibold text-slate-800">TU</span> empresa.
-        </p>
 
         {/* Tarjetas métricas — icono izq + texto (letras chicas) */}
         <div className="mx-auto mt-5 flex max-w-4xl flex-wrap items-stretch justify-center gap-2.5 sm:gap-3">
