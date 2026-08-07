@@ -195,8 +195,8 @@ function OnboardingDatosMini({ ctx }: { ctx: PlanConquistarLandingContext }) {
   ];
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+    <div className="mx-auto w-full max-w-[280px] sm:max-w-none">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
         Datos..
       </p>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/90 shadow-sm">
@@ -204,12 +204,12 @@ function OnboardingDatosMini({ ctx }: { ctx: PlanConquistarLandingContext }) {
           {rows.map((row) => (
             <div
               key={row.label}
-              className="grid grid-cols-[4.5rem_1fr] gap-2 px-2.5 py-1 sm:grid-cols-[5.5rem_1fr] sm:px-3 sm:py-1.5"
+              className="grid grid-cols-[5rem_1fr] gap-2 px-3 py-1.5 sm:grid-cols-[5.5rem_1fr] sm:px-3.5 sm:py-2"
             >
-              <dt className="text-[10px] font-medium text-slate-400 sm:text-[11px]">{row.label}</dt>
+              <dt className="text-[11px] font-medium text-slate-400 sm:text-xs">{row.label}</dt>
               <dd
                 className={cn(
-                  'min-h-[1rem] text-[11px] font-medium text-slate-800 sm:text-xs',
+                  'min-h-[1.1rem] text-xs font-medium text-slate-800 sm:text-[13px]',
                   row.blank && 'text-transparent'
                 )}
               >
@@ -388,7 +388,11 @@ function DraftLandingBody({
   loading: boolean;
 }) {
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-violet-50/60 via-white to-white pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-0">
+    <main
+      className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-violet-50/60 via-white to-white pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-0"
+      /* ~+3pt en toda la página (borrador) */
+      style={{ zoom: 1.12 }}
+    >
       <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900 sm:text-sm">
         Borrador · no es producción · la landing live sigue en{' '}
         <Link href="/plan-conquistar" className="underline hover:text-amber-950">
@@ -415,12 +419,14 @@ function DraftLandingBody({
       {!loading && !loadError && ctx && (
         <>
           <HeroPersonalized ctx={ctx} />
-          <section className="px-4 pb-4 sm:px-6">
-            <div className="mx-auto max-w-3xl">
-              <PlanAtaquePhotoPreview ctx={ctx} />
-            </div>
-            <div className="mt-3">
-              <OnboardingDatosMini ctx={ctx} />
+          <section className="px-4 pb-5 sm:px-6">
+            <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center lg:gap-8">
+              <div className="w-full max-w-[520px] shrink-0">
+                <PlanAtaquePhotoPreview ctx={ctx} />
+              </div>
+              <div className="w-full max-w-sm lg:pt-1">
+                <OnboardingDatosMini ctx={ctx} />
+              </div>
             </div>
           </section>
           <div className="px-4 pb-6 sm:px-6">

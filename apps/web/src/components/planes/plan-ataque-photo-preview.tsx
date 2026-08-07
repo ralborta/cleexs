@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, Clock, Lock, Target, TrendingUp } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { brandAssetsApi } from '@/lib/api';
@@ -15,6 +15,9 @@ import { cn } from '@/lib/utils';
 
 const MENU_BG = '#E9EDF2';
 const BAR_BG = '#E1E6EC';
+/** Ancho/alto de diseño: se escala al contenedor sin deformar. */
+const DESIGN_W = 720;
+const DESIGN_H = 430;
 
 function impactLabel(ctx: PlanConquistarLandingContext): string {
   const ops = ctx.opportunityCount ?? 0;
@@ -32,8 +35,8 @@ function estimatedHours(ctx: PlanConquistarLandingContext): number | null {
 }
 
 /**
- * “Foto” automática del Plan de Ataque (solo bloque de datos).
- * Escala + sombra + sin interacción — se genera sola por diagnóstico.
+ * “Foto” automática del Plan de Ataque.
+ * Lienzo fijo + scale → recuadro angosto sin aplastar.
  */
 export function PlanAtaquePhotoPreview({
   ctx,
@@ -42,9 +45,21 @@ export function PlanAtaquePhotoPreview({
   ctx: PlanConquistarLandingContext;
   className?: string;
 }) {
-  const [accent, setAccent] = useState<BrandAccent>(() =>
-    accentFromDomain(ctx.domain) || CLEEXS_FALLBACK
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.72);
+  const [accent, setAccent] = useState<BrandAccent>(
+    () => accentFromDomain(ctx.domain) || CLEEXS_FALLBACK
   );
+
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const apply = () => setScale(el.clientWidth / DESIGN_W);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,151 +140,169 @@ export function PlanAtaquePhotoPreview({
   ];
 
   return (
-    <div
-      className={cn(
-        'pointer-events-none select-none overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]',
-        className
-      )}
-      aria-hidden
-    >
-      <div className="grid grid-cols-[118px_1fr] sm:grid-cols-[132px_1fr]">
-        {/* Menú */}
-        <aside style={{ backgroundColor: MENU_BG }} className="border-r border-slate-200/80">
-          <div className="flex flex-col items-center gap-1 border-b border-slate-200 px-2 py-2.5 text-center">
-            <div className="rounded-md bg-white p-1 shadow-sm">
-              <BrandLogo
-                name={ctx.brandName}
-                domain={ctx.domain}
-                size={28}
-                variant="icon"
-                hideIfMissing
-                className="rounded"
-              />
-            </div>
-            <p className="w-full truncate text-[10px] font-semibold text-slate-900">
-              {ctx.brandName}
-            </p>
-            <p className="w-full truncate text-[8px] text-slate-500">{ctx.domain}</p>
-          </div>
-          <ul className="space-y-px px-1 py-1.5">
-            {sidebarItems.map((item) => (
-              <li key={item.label}>
-                <div
-                  className={cn(
-                    'flex items-center justify-between gap-1 rounded px-1.5 py-1 text-[9px] leading-tight',
-                    item.active ? 'bg-white font-semibold text-slate-900' : 'text-slate-600'
-                  )}
-                  style={
-                    item.active
-                      ? { boxShadow: `inset 2px 0 0 ${accent.primary}` }
-                      : undefined
-                  }
-                >
-                  <span className="truncate">{item.label}</span>
-                  {item.locked ? <Lock className="h-2.5 w-2.5 shrink-0 text-slate-400" /> : null}
+    <div className={cn('mx-auto w-full max-w-[520px]', className)}>
+      <div
+        ref={frameRef}
+        className="pointer-events-none relative w-full select-none overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_48px_rgba(15,23,42,0.14)]"
+        style={{ height: DESIGN_H * scale }}
+        aria-hidden
+      >
+        <div
+          className="absolute left-0 top-0 origin-top-left"
+          style={{
+            width: DESIGN_W,
+            height: DESIGN_H,
+            transform: `scale(${scale})`,
+          }}
+        >
+          <div className="grid h-full grid-cols-[168px_1fr]">
+            <aside style={{ backgroundColor: MENU_BG }} className="border-r border-slate-200">
+              <div className="flex flex-col items-center gap-1.5 border-b border-slate-200 px-3 py-3.5 text-center">
+                <div className="rounded-lg bg-white p-1.5 shadow-sm">
+                  <BrandLogo
+                    name={ctx.brandName}
+                    domain={ctx.domain}
+                    size={40}
+                    variant="icon"
+                    hideIfMissing
+                    className="rounded-md"
+                  />
                 </div>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        {/* Páginas */}
-        <div className="bg-slate-50">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-2 py-1 text-[8px] text-slate-400">
-            <span>Vista previa</span>
-            <span>3 / —</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-            <div className="rounded border border-slate-200 bg-white p-1.5 text-center sm:p-2">
-              <div className="mb-1 flex justify-center">
-                <BrandLogo
-                  name={ctx.brandName}
-                  domain={ctx.domain}
-                  size={22}
-                  variant="icon"
-                  hideIfMissing
-                />
+                <p className="w-full truncate text-[13px] font-semibold text-slate-900">
+                  {ctx.brandName}
+                </p>
+                <p className="w-full truncate text-[11px] text-slate-500">{ctx.domain}</p>
               </div>
-              <p className="text-[9px] font-bold text-slate-900 sm:text-[10px]">Tu Plan de Ataque</p>
-              <div
-                className="mx-auto mt-1 h-0.5 w-6 rounded-full"
-                style={{ backgroundColor: accent.primary }}
-              />
-              <p className="mt-1 text-[7px] leading-snug text-slate-600 sm:text-[8px]">
-                Clientes desde {enginesText}{' '}
-                <span style={{ color: accent.primary }}>en 90 días</span>
-              </p>
-              <p className="mt-1 text-[8px] font-bold" style={{ color: accent.primary }}>
-                {ctx.domain}
-              </p>
-              <div className="mt-1.5 space-y-0.5 text-left">
-                {[
-                  { Icon: Calendar, t: today },
-                  { Icon: Target, t: actions != null ? `${actions} acciones` : '—' },
-                  { Icon: Clock, t: hours != null ? `${hours} h` : '—' },
-                  { Icon: TrendingUp, t: impact },
-                ].map(({ Icon, t }) => (
-                  <div key={t} className="flex items-center gap-1 text-[7px] text-slate-600">
-                    <Icon className="h-2.5 w-2.5" style={{ color: accent.primary }} />
-                    <span className="truncate">{t}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative overflow-hidden rounded border border-slate-200 bg-white p-1.5 sm:p-2">
-              <p className="text-center text-[8px] font-bold uppercase tracking-wide text-slate-700">
-                Índice
-              </p>
-              <ul className="mt-1.5 space-y-1 blur-[1.5px]" aria-hidden>
-                {['Resumen', 'Competidores', 'Quick Wins', 'Roadmap'].map((t) => (
-                  <li key={t} className="text-[7px] text-slate-500">
-                    {t}
+              <ul className="space-y-0.5 px-2 py-2.5">
+                {sidebarItems.map((item) => (
+                  <li key={item.label}>
+                    <div
+                      className={cn(
+                        'flex items-center justify-between gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] leading-tight',
+                        item.active ? 'bg-white font-semibold text-slate-900' : 'text-slate-600'
+                      )}
+                      style={
+                        item.active
+                          ? { boxShadow: `inset 2px 0 0 ${accent.primary}` }
+                          : undefined
+                      }
+                    >
+                      <span className="truncate">{item.label}</span>
+                      {item.locked ? (
+                        <Lock className="h-3 w-3 shrink-0 text-slate-400" />
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
-              <div className="absolute inset-0 flex items-center justify-center bg-white/50">
-                <Lock className="h-4 w-4 text-slate-400" />
+            </aside>
+
+            <div className="flex h-full flex-col bg-slate-50">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-400">
+                <span>Vista previa</span>
+                <span>3 / — · 100%</span>
+              </div>
+              <div className="grid flex-1 grid-cols-3 gap-2.5 p-2.5">
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-center">
+                  <div className="mb-1.5 flex justify-center">
+                    <BrandLogo
+                      name={ctx.brandName}
+                      domain={ctx.domain}
+                      size={36}
+                      variant="icon"
+                      hideIfMissing
+                    />
+                  </div>
+                  <p className="text-[13px] font-bold text-slate-900">Tu Plan de Ataque</p>
+                  <div
+                    className="mx-auto mt-1.5 h-1 w-10 rounded-full"
+                    style={{ backgroundColor: accent.primary }}
+                  />
+                  <p className="mt-1.5 text-[10px] leading-snug text-slate-600">
+                    Clientes desde {enginesText}{' '}
+                    <span className="font-semibold" style={{ color: accent.primary }}>
+                      en 90 días
+                    </span>
+                  </p>
+                  <p className="mt-1.5 text-[12px] font-bold" style={{ color: accent.primary }}>
+                    {ctx.domain}
+                  </p>
+                  <div className="mt-2 space-y-1 text-left">
+                    {[
+                      { Icon: Calendar, t: today },
+                      { Icon: Target, t: actions != null ? `${actions} acciones` : '—' },
+                      { Icon: Clock, t: hours != null ? `${hours} h` : '—' },
+                      { Icon: TrendingUp, t: impact },
+                    ].map(({ Icon, t }) => (
+                      <div key={t} className="flex items-center gap-1.5 text-[10px] text-slate-600">
+                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: accent.primary }} />
+                        <span className="truncate">{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5">
+                  <p className="text-center text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                    Índice
+                  </p>
+                  <ul className="mt-2 space-y-1.5 blur-[2px]" aria-hidden>
+                    {['Resumen', 'Competidores', 'Quick Wins', 'Roadmap'].map((t) => (
+                      <li key={t} className="text-[11px] text-slate-500">
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/55">
+                    <Lock className="h-6 w-6 text-slate-400" />
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-wide"
+                    style={{ color: accent.primary }}
+                  >
+                    Prioridad #1
+                  </p>
+                  <p className="mt-0.5 text-[12px] font-semibold leading-tight text-slate-900">
+                    Primeras acciones
+                  </p>
+                  <ol className="mt-2 space-y-1.5">
+                    {faqs.map((q, i) => (
+                      <li
+                        key={`${i}-${q.slice(0, 16)}`}
+                        className="flex gap-1.5 text-[10px] text-slate-700"
+                      >
+                        <span
+                          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                          style={{ backgroundColor: accent.primary }}
+                        >
+                          {i + 1}
+                        </span>
+                        <span className="line-clamp-2 leading-snug">{q}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+
+              <div
+                className="mt-auto flex items-center gap-2.5 border-t border-slate-200 px-3 py-2.5"
+                style={{ backgroundColor: BAR_BG }}
+              >
+                <Lock className="h-4 w-4 shrink-0 text-slate-500" />
+                <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-slate-800">
+                  Desbloqueá el plan completo
+                </p>
+                <span
+                  className="shrink-0 rounded-md px-2.5 py-1 text-[11px] font-semibold text-white"
+                  style={{ backgroundColor: accent.primary }}
+                >
+                  Desbloquear
+                </span>
               </div>
             </div>
-
-            <div className="rounded border border-slate-200 bg-white p-1.5 sm:p-2">
-              <p className="text-[8px] font-bold uppercase" style={{ color: accent.primary }}>
-                Prioridad #1
-              </p>
-              <p className="mt-0.5 text-[8px] font-semibold leading-tight text-slate-900 sm:text-[9px]">
-                Primeras acciones
-              </p>
-              <ol className="mt-1.5 space-y-1">
-                {faqs.map((q, i) => (
-                  <li key={`${i}-${q.slice(0, 16)}`} className="flex gap-1 text-[7px] text-slate-700">
-                    <span
-                      className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full text-[6px] font-bold text-white"
-                      style={{ backgroundColor: accent.primary }}
-                    >
-                      {i + 1}
-                    </span>
-                    <span className="line-clamp-2 leading-snug">{q}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-
-          <div
-            className="flex items-center gap-2 border-t border-slate-200 px-2 py-1.5"
-            style={{ backgroundColor: BAR_BG }}
-          >
-            <Lock className="h-3 w-3 shrink-0 text-slate-500" />
-            <p className="min-w-0 flex-1 truncate text-[8px] font-semibold text-slate-800 sm:text-[9px]">
-              Desbloqueá el plan completo
-            </p>
-            <span
-              className="shrink-0 rounded px-2 py-0.5 text-[8px] font-semibold text-white"
-              style={{ backgroundColor: accent.primary }}
-            >
-              Desbloquear
-            </span>
           </div>
         </div>
       </div>
