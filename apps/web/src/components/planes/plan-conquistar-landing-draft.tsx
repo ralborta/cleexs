@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import {
 import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
 import { PlanConquistarPageCheckout } from '@/components/planes/plan-conquistar-page-checkout';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { CountryFlag } from '@/components/country/country-picker';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import {
   buildLandingRoadmapTabs,
@@ -167,8 +168,8 @@ function RoadmapTabs({ ctx }: { ctx: PlanConquistarLandingContext }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="mb-4 text-center sm:mb-5">
-        <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Tu roadmap de 90 días</h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Tu roadmap de 90 días</h2>
+        <p className="mt-1 text-base text-slate-600 sm:text-lg">
           Así se estructura el plan para {ctx.brandName}
           {ctx.country ? ` en ${ctx.country}` : ''}.
         </p>
@@ -241,6 +242,95 @@ function StatsBar({ ctx }: { ctx: PlanConquistarLandingContext }) {
   );
 }
 
+function OnboardingProfileCard({ ctx }: { ctx: PlanConquistarLandingContext }) {
+  const rivalsText = formatCompetitorList(ctx.competitors.map((c) => c.name));
+  const enginesText = ctx.engines.length ? ctx.engines.join(', ') : null;
+  const personName =
+    ctx.firstName || ctx.lastName
+      ? [ctx.firstName, ctx.lastName].filter(Boolean).join(' ')
+      : null;
+
+  const rows: Array<{ label: string; value: ReactNode; missing?: boolean }> = [
+    {
+      label: 'Sitio',
+      value: ctx.domain || ctx.brandName,
+    },
+    {
+      label: 'País',
+      value: ctx.country ? (
+        <span className="inline-flex items-center gap-2">
+          {ctx.countryIso ? (
+            <CountryFlag iso={ctx.countryIso} className="h-4 w-6 rounded-sm shadow-sm" />
+          ) : null}
+          {ctx.country}
+          {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
+        </span>
+      ) : (
+        'No cargado'
+      ),
+      missing: !ctx.country,
+    },
+    {
+      label: 'Rubro',
+      value: ctx.industry || 'No cargado',
+      missing: !ctx.industry,
+    },
+    {
+      label: 'Idioma',
+      value: ctx.languageLabel || ctx.language || 'No cargado',
+      missing: !ctx.languageLabel && !ctx.language,
+    },
+    {
+      label: 'Motores IA',
+      value: enginesText || 'No cargado',
+      missing: !enginesText,
+    },
+    {
+      label: 'Competidores',
+      value: rivalsText || 'No cargado',
+      missing: !rivalsText,
+    },
+    {
+      label: 'Nombre',
+      value: personName || 'Opcional — no lo cargó',
+      missing: !personName,
+    },
+  ];
+
+  return (
+    <section className="px-4 pb-6 sm:px-6">
+      <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border-2 border-violet-200 bg-white shadow-md">
+        <div className="border-b border-violet-100 bg-violet-50 px-4 py-3 sm:px-5 sm:py-4">
+          <p className="text-sm font-bold text-violet-800 sm:text-base">
+            Datos de tu onboarding
+          </p>
+          <p className="mt-0.5 text-sm text-violet-700/80 sm:text-[15px]">
+            Esto es lo que dejaste al configurar el diagnóstico (no inventado).
+          </p>
+        </div>
+        <dl className="divide-y divide-slate-100">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-[7.5rem_1fr] gap-3 px-4 py-3 sm:grid-cols-[9rem_1fr] sm:px-5 sm:py-3.5"
+            >
+              <dt className="text-sm font-medium text-slate-500 sm:text-[15px]">{row.label}</dt>
+              <dd
+                className={cn(
+                  'text-base font-semibold text-slate-900 sm:text-lg',
+                  row.missing && 'font-normal text-slate-400'
+                )}
+              >
+                {row.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
 function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
   const greeting = ctx.firstName
     ? `${ctx.firstName}${ctx.lastName ? ` ${ctx.lastName}` : ''}, `
@@ -256,17 +346,29 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
         ? ctx.engines.join(' y ')
         : `${ctx.engines.slice(0, -1).join(', ')} y ${ctx.engines[ctx.engines.length - 1]}`;
 
-  const profileChips: string[] = [];
-  if (countryWithFlag) profileChips.push(countryWithFlag);
-  if (ctx.industry) profileChips.push(ctx.industry);
-  if (ctx.languageLabel) profileChips.push(ctx.languageLabel);
-  if (ctx.domain) profileChips.push(ctx.domain);
+  const profileChips: Array<{ key: string; node: ReactNode }> = [];
+  if (ctx.country) {
+    profileChips.push({
+      key: 'country',
+      node: (
+        <span className="inline-flex items-center gap-1.5">
+          {ctx.countryIso ? (
+            <CountryFlag iso={ctx.countryIso} className="h-3.5 w-5 rounded-[2px]" />
+          ) : null}
+          {countryWithFlag}
+        </span>
+      ),
+    });
+  }
+  if (ctx.industry) profileChips.push({ key: 'industry', node: ctx.industry });
+  if (ctx.languageLabel) profileChips.push({ key: 'lang', node: ctx.languageLabel });
+  if (ctx.domain) profileChips.push({ key: 'domain', node: ctx.domain });
 
   return (
-    <section className="px-4 pt-10 pb-8 sm:px-6 sm:pt-16 sm:pb-12">
+    <section className="px-4 pt-10 pb-6 sm:px-6 sm:pt-16 sm:pb-8">
       <div className="mx-auto max-w-3xl text-center">
-        <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 shadow-sm sm:mb-5 sm:px-4 sm:py-2 sm:text-sm">
-          <Sparkles className="h-4 w-4 shrink-0" />
+        <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-violet-200 bg-white px-3.5 py-2 text-sm font-medium text-violet-700 shadow-sm sm:mb-5 sm:px-4 sm:py-2.5 sm:text-base">
+          <Sparkles className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
           <span className="truncate">Plan Conquistar · armado con tu onboarding</span>
         </div>
 
@@ -274,19 +376,25 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
           <BrandLogo
             name={ctx.brandName}
             domain={ctx.domain}
-            size={52}
+            size={56}
             variant="logo"
             hideIfMissing
             className="rounded-xl shadow-sm ring-1 ring-slate-200/80 px-2"
           />
         </div>
 
-        <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+        <h1 className="text-[1.9rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-[3.15rem]">
           {greeting}ya terminé el plan para{' '}
           <span className="text-violet-600">{ctx.domain || ctx.brandName}</span>
-          {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
+          {ctx.countryIso ? (
+            <span className="ml-2 inline-flex align-middle">
+              <CountryFlag iso={ctx.countryIso} className="h-6 w-9 rounded-sm shadow-sm sm:h-8 sm:w-12" />
+            </span>
+          ) : ctx.countryFlag ? (
+            <span className="ml-1">{ctx.countryFlag}</span>
+          ) : null}
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:mt-5 sm:text-lg">
+        <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-slate-600 sm:mt-5 sm:text-xl">
           No es un reporte genérico. Es un plan de ejecución creado para{' '}
           <strong className="font-semibold text-slate-800">{ctx.brandName}</strong>
           {ctx.industry ? (
@@ -302,19 +410,19 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             {profileChips.map((chip) => (
               <span
-                key={chip}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm sm:text-sm"
+                key={chip.key}
+                className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm sm:text-[15px]"
               >
-                {chip}
+                {chip.node}
               </span>
             ))}
           </div>
         )}
 
-        <ul className="mx-auto mt-6 max-w-xl space-y-2.5 text-left text-sm leading-relaxed text-slate-700 sm:text-base">
+        <ul className="mx-auto mt-6 max-w-xl space-y-3 text-left text-base leading-relaxed text-slate-700 sm:text-lg">
           {countryWithFlag && (
             <li className="flex gap-2.5">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <Check className="mt-1 h-5 w-5 shrink-0 text-emerald-500" />
               <span>
                 Comparado contra empresas de <strong className="font-semibold">{countryWithFlag}</strong>.
               </span>
@@ -322,7 +430,7 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
           )}
           {ctx.country && (
             <li className="flex gap-2.5">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <Check className="mt-1 h-5 w-5 shrink-0 text-emerald-500" />
               <span>
                 Priorizamos oportunidades para <strong className="font-semibold">{ctx.country}</strong>.
               </span>
@@ -330,21 +438,21 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
           )}
           {rivalsText && (
             <li className="flex gap-2.5">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <Check className="mt-1 h-5 w-5 shrink-0 text-emerald-500" />
               <span>
                 Competidores que cargaste: <strong className="font-semibold">{rivalsText}</strong>.
               </span>
             </li>
           )}
           <li className="flex gap-2.5">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+            <Check className="mt-1 h-5 w-5 shrink-0 text-emerald-500" />
             <span>
               Motores elegidos: <strong className="font-semibold">{enginesText}</strong>.
             </span>
           </li>
         </ul>
 
-        <div className="mt-6 flex w-full flex-col items-stretch gap-3 sm:mt-8 sm:items-center">
+        <div className="mt-7 flex w-full flex-col items-stretch gap-3 sm:mt-9 sm:items-center">
           <PlanConquistarPageCheckout className="w-full sm:w-auto" />
           <PlanConquistarPromoPrice size="md" className="justify-center" />
         </div>
@@ -415,18 +523,19 @@ function DraftLandingBody({
       {!loading && !loadError && ctx && (
         <>
           <HeroPersonalized ctx={ctx} />
+          <OnboardingProfileCard ctx={ctx} />
           <div className="px-4 pb-6 sm:px-6">
             <StatsBar ctx={ctx} />
           </div>
           <section className="px-4 py-6 sm:px-6 sm:py-8">
             <div className="mx-auto max-w-3xl">
               <div className="mb-5 text-center">
-                <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">
+                <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
                   Ya preparamos tu plan
                 </h2>
-                <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600 sm:text-base">
+                <p className="mx-auto mt-2 max-w-xl text-base text-slate-600 sm:text-lg">
                   No es un paywall vacío: el plan para {ctx.brandName} ya está armado a partir de tu
-                  diagnóstico. Al comprar desbloqueás el reporte completo y el seguimiento.
+                  onboarding y diagnóstico. Al comprar desbloqueás el reporte completo y el seguimiento.
                 </p>
               </div>
               <PlanIndexPreview ctx={ctx} />
