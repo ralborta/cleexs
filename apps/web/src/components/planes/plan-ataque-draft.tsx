@@ -123,16 +123,13 @@ function PlanAtaqueShell({
       { label: 'Preguntas perdidas', locked: true },
       { label: 'Quick Wins', locked: true },
       { label: 'Contenido recomendado', locked: true },
-      { label: 'Schema & Datos', locked: true },
       { label: 'Roadmap 90 días', locked: true },
-      { label: 'Calendario', locked: true },
       { label: 'Checklist', locked: true },
       {
         label: ctx.engines[0] ? `IA · ${ctx.engines[0]}` : 'IA Overview',
         locked: true,
       },
       { label: 'FAQ', locked: true },
-      { label: 'Recursos', locked: true },
     ],
     [ctx.competitors.length, ctx.engines]
   );
@@ -165,17 +162,16 @@ function PlanAtaqueShell({
         {logoUrl ? '' : ', sin logo'})
       </div>
 
-      {/* Barra superior — color de marca (formato muestra) */}
-      <div
-        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-white sm:px-5 sm:text-[11px]"
-        style={{ backgroundColor: accent.primary }}
-      >
-        <span className="justify-self-start">Confidencial</span>
-        <span className="max-w-[70vw] truncate text-center font-medium normal-case tracking-normal opacity-95">
-          Preparado exclusivamente para{' '}
-          <span className="font-bold">{ctx.domain}</span>
-        </span>
-        <span className="justify-self-end tracking-normal opacity-90">cleexs</span>
+      {/* Barra superior — más angosta; Confidencial/cleexs alineados al recuadro */}
+      <div style={{ backgroundColor: accent.primary }}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white sm:px-5 sm:text-[11px]">
+          <span className="shrink-0">Confidencial</span>
+          <span className="min-w-0 truncate text-center font-medium normal-case tracking-normal opacity-95">
+            Preparado exclusivamente para{' '}
+            <span className="font-bold">{ctx.domain}</span>
+          </span>
+          <span className="shrink-0 tracking-normal opacity-95">cleexs</span>
+        </div>
       </div>
 
       {/* Hero */}
@@ -227,10 +223,10 @@ function PlanAtaqueShell({
       {/* App shell: sidebar + documento */}
       <div className="mx-auto max-w-6xl px-3 pb-10 sm:px-5">
         <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-lg shadow-slate-200/70">
-          <div className="grid lg:grid-cols-[200px_1fr]">
-            {/* Menú gris oscuro */}
-            <aside className="bg-slate-700 text-slate-100 lg:min-h-[520px]">
-              <div className="flex flex-col items-center gap-2 border-b border-slate-600 px-3 py-4 text-center">
+          <div className="grid lg:grid-cols-[200px_1fr] lg:items-start">
+            {/* Menú gris más claro (logos visibles) */}
+            <aside className="bg-slate-400 text-slate-900 lg:self-start">
+              <div className="flex flex-col items-center gap-2 border-b border-slate-300/80 px-3 py-3 text-center">
                 <div className="rounded-lg bg-white p-1.5 shadow-sm">
                   <BrandLogo
                     name={ctx.brandName}
@@ -242,8 +238,8 @@ function PlanAtaqueShell({
                   />
                 </div>
                 <div className="min-w-0 w-full">
-                  <p className="truncate text-xs font-semibold text-white">{ctx.brandName}</p>
-                  <p className="truncate text-[10px] text-slate-300">{ctx.domain}</p>
+                  <p className="truncate text-xs font-semibold text-slate-900">{ctx.brandName}</p>
+                  <p className="truncate text-[10px] text-slate-700">{ctx.domain}</p>
                 </div>
               </div>
               <nav className="px-1.5 py-2" aria-label="Índice (maqueta)">
@@ -256,12 +252,14 @@ function PlanAtaqueShell({
                         title="Aún no funcional"
                         className={cn(
                           'flex w-full cursor-not-allowed items-center justify-between gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[12px]',
-                          item.active ? 'font-semibold text-white' : 'text-slate-200/90'
+                          item.active
+                            ? 'font-semibold text-slate-900'
+                            : 'text-slate-800/90'
                         )}
                         style={
                           item.active
                             ? {
-                                backgroundColor: `${accent.primary}33`,
+                                backgroundColor: 'rgba(255,255,255,0.45)',
                                 boxShadow: `inset 2px 0 0 ${accent.primary}`,
                               }
                             : undefined
@@ -269,7 +267,7 @@ function PlanAtaqueShell({
                       >
                         <span className="truncate">{item.label}</span>
                         {item.locked ? (
-                          <Lock className="h-3 w-3 shrink-0 opacity-60" />
+                          <Lock className="h-3 w-3 shrink-0 text-slate-700 opacity-70" />
                         ) : null}
                       </button>
                     </li>
@@ -278,7 +276,7 @@ function PlanAtaqueShell({
                 <button
                   type="button"
                   disabled
-                  className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-md border border-slate-500 px-2 py-1.5 text-[11px] text-slate-300"
+                  className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-md border border-slate-500/50 px-2 py-1.5 text-[11px] text-slate-800"
                 >
                   <Lock className="h-3 w-3" />
                   + páginas más
@@ -404,11 +402,11 @@ function PlanAtaqueShell({
                 </article>
               </div>
 
-              {/* CTA inferior */}
-              <div className="border-t border-slate-700 bg-slate-700 px-4 py-4 sm:px-5">
+              {/* CTA inferior — gris más claro */}
+              <div className="border-t border-slate-300 bg-slate-500 px-4 py-4 sm:px-5">
                 <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20"
                     aria-hidden
                   >
                     <Lock className="h-5 w-5 text-white" />
@@ -417,15 +415,17 @@ function PlanAtaqueShell({
                     <p className="text-sm font-semibold text-white sm:text-base">
                       Desbloqueá el plan completo
                     </p>
-                    <ul className="mt-1.5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] text-slate-300 sm:justify-start">
+                    <ul className="mt-1.5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] text-slate-100 sm:justify-start">
                       {[
-                        actions != null ? `+${Math.max(0, actions - 4)} recomendaciones` : 'Recomendaciones',
+                        actions != null
+                          ? `+${Math.max(0, actions - 4)} recomendaciones`
+                          : 'Recomendaciones',
                         'Quick Wins',
                         'Checklist de tareas',
                         'Roadmap 90 días',
                       ].map((t) => (
                         <li key={t} className="inline-flex items-center gap-1">
-                          <span style={{ color: accent.primary }}>✓</span>
+                          <span style={{ color: accent.soft }}>✓</span>
                           {t}
                         </li>
                       ))}
