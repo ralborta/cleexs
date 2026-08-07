@@ -8,7 +8,7 @@ const CURATED: Record<string, string> = {
   'nintendo.com': '/brand-logos/nintendo.png',
 };
 
-export type BrandAssetSource = 'curated' | 'brandfetch' | 'logo.dev' | 'none';
+export type BrandAssetSource = 'curated' | 'brandfetch' | 'logo.dev' | 'site' | 'none';
 export type BrandAssetStatus = 'ok' | 'missing';
 
 export type BrandAssetResult = {
@@ -80,12 +80,13 @@ function logoDevLogoUrl(domain: string): string {
   return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${encodeURIComponent(token)}&size=256&format=png&fallback=404`;
 }
 
-async function probeLogoDev(url: string): Promise<boolean> {
+async function probeImageUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, {
       method: 'GET',
       signal: AbortSignal.timeout(6_000),
-      headers: { Accept: 'image/*' },
+      headers: { Accept: 'image/*,*/*;q=0.8' },
+      redirect: 'follow',
     });
     if (!res.ok) return false;
     const ct = res.headers.get('content-type') || '';
@@ -96,6 +97,96 @@ async function probeLogoDev(url: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function absolutizeUrl(href: string, base: URL): string | null {
+  try {
+    return new URL(href, base).toString();
+  } catch {
+    return null;
+  }
+}
+
+function scoreSiteIcon(href: string, rel: string, sizesAttr: string | null): number {
+  let score = 10;
+  const relL = rel.toLowerCase();
+  const hrefL = href.toLowerCase();
+  if (relL.includes('apple-touch')) score += 40;
+  if (relL === 'icon' || relL.includes('shortcut')) score += 15;
+  if (/\.(png|webp|svg)(\?|$)/i.test(hrefL)) score += 20;
+  if (/\.ico(\?|$)/i.test(hrefL)) score -= 10;
+  if (sizesAttr) {
+    const m = sizesAttr.match(/(\d+)\s*[x×]\s*(\d+)/i);
+    if (m) {
+      const n = Math.max(parseInt(m[1], 10), parseInt(m[2], 10));
+      if (n >= 128) score += Math.min(n, 512) / 4;
+      if (n < 48) score -= 20;
+    }
+  }
+  // Prefer filenames that look like logos
+  if (/logo|brand|mark/i.test(hrefL)) score += 25;
+  return score;
+}
+
+/**
+ * Capa 2 ligera: lee <link rel="icon|apple-touch-icon"> del sitio.
+ * No usa og:image (suele ser foto hero, no logo).
+ */
+async function scrapeSiteLogo(domain: string): Promise<string | null> {
+  const origins = [`https://${domain}/`, `https://www.${domain}/`];
+  const candidates: { url: string; score: number }[] = [];
+
+  for (const origin of origins) {
+    try {
+      const res = await fetch(origin, {
+        method: 'GET',
+        signal: AbortSignal.timeout(8_000),
+        headers: {
+          Accept: 'text/html,application/xhtml+xml',
+          'User-Agent': 'Mozilla/5.0 (compatible; CleexsBrandBot/1.0)',
+        },
+        redirect: 'follow',
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      if (!html || html.length < 200) continue;
+      const base = new URL(res.url);
+
+      const linkRe =
+        /<link\b[^>]*\brel=["']([^"']*icon[^"']*)["'][^>]*>/gi;
+      let m: RegExpExecArray | null;
+      while ((m = linkRe.exec(html)) !== null) {
+        const tag = m[0];
+        const rel = m[1] || '';
+        const hrefM = tag.match(/\bhref=["']([^"']+)["']/i);
+        if (!hrefM) continue;
+        const abs = absolutizeUrl(hrefM[1], base);
+        if (!abs) continue;
+        const sizesM = tag.match(/\bsizes=["']([^"']+)["']/i);
+        candidates.push({
+          url: abs,
+          score: scoreSiteIcon(abs, rel, sizesM?.[1] ?? null),
+        });
+      }
+
+      // Favicon clásico como último candidato de este origen
+      const fav = absolutizeUrl('/favicon.ico', base);
+      if (fav) candidates.push({ url: fav, score: 5 });
+
+      if (candidates.length) break;
+    } catch {
+      // siguiente origen
+    }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  const seen = new Set<string>();
+  for (const c of candidates.slice(0, 6)) {
+    if (seen.has(c.url)) continue;
+    seen.add(c.url);
+    if (await probeImageUrl(c.url)) return c.url;
+  }
+  return null;
 }
 
 function isFresh(checkedAt: Date, status: string): boolean {
@@ -136,14 +227,12 @@ async function persist(result: Omit<BrandAssetResult, 'cached'>): Promise<BrandA
 }
 
 /**
- * Resuelve logo de marca (capa 1):
- * cache → curated → Logo.dev (probe) → Brandfetch (solo si Client ID) → missing.
+ * Resuelve logo de marca:
+ * cache → curated → Logo.dev (probe) → scrape sitio (icons) → Brandfetch → missing.
  *
- * Logo.dev primero: responde imagen real verificable server-side.
- * Brandfetch CDN bloquea hotlink programático y a menudo falla en browser
- * si el Client ID no tiene el dominio allowlisted → no lo cacheamos como ok
- * sin poder probaro; se deja como fallback de URL para el cliente.
- * No scrapea el sitio (capa 2).
+ * Logo.dev primero (imagen verificable). Si no hay cobertura (marcas locales),
+ * capa 2 lee apple-touch-icon / favicon del propio sitio.
+ * Brandfetch queda como último intento de URL (hotlink frágil).
  */
 export async function resolveBrandAsset(input: {
   domain: string;
@@ -189,7 +278,7 @@ export async function resolveBrandAsset(input: {
   // 1) Logo.dev (GET + content-type image) — fuente confiable hoy
   if (logoDevToken()) {
     const url = logoDevLogoUrl(domain);
-    const ok = await probeLogoDev(url);
+    const ok = await probeImageUrl(url);
     if (ok) {
       return persist({
         domain,
@@ -202,9 +291,20 @@ export async function resolveBrandAsset(input: {
     }
   }
 
-  // 2) Brandfetch como URL de intento (wordmark). No lo marcamos ok de forma
-  // ciega: el CDN exige Referer allowlisted; el cliente puede probarlo y caer
-  // a Logo.dev / hideIfMissing.
+  // 2) Capa 2: icons del sitio (útil para marcas locales sin cobertura CDN)
+  const siteLogo = await scrapeSiteLogo(domain);
+  if (siteLogo) {
+    return persist({
+      domain,
+      brandName,
+      logoUrl: siteLogo,
+      source: 'site',
+      status: 'ok',
+      confidence: 70,
+    });
+  }
+
+  // 3) Brandfetch como URL de intento (wordmark). Hotlink frágil.
   if (brandfetchClientId()) {
     return persist({
       domain,
