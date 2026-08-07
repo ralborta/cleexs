@@ -224,9 +224,9 @@ function PlanAtaqueShell({
       <div className="mx-auto max-w-6xl px-3 pb-10 sm:px-5">
         <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-lg shadow-slate-200/70">
           <div className="grid lg:grid-cols-[200px_1fr] lg:items-start">
-            {/* Menú gris más claro (logos visibles) */}
-            <aside className="bg-slate-400 text-slate-900 lg:self-start">
-              <div className="flex flex-col items-center gap-2 border-b border-slate-300/80 px-3 py-3 text-center">
+            {/* Menú lateral #E9EDF2 */}
+            <aside className="text-slate-800 lg:self-start" style={{ backgroundColor: '#E9EDF2' }}>
+              <div className="flex flex-col items-center gap-2 border-b border-slate-200 px-3 py-3 text-center">
                 <div className="rounded-lg bg-white p-1.5 shadow-sm">
                   <BrandLogo
                     name={ctx.brandName}
@@ -239,7 +239,7 @@ function PlanAtaqueShell({
                 </div>
                 <div className="min-w-0 w-full">
                   <p className="truncate text-xs font-semibold text-slate-900">{ctx.brandName}</p>
-                  <p className="truncate text-[10px] text-slate-700">{ctx.domain}</p>
+                  <p className="truncate text-[10px] text-slate-600">{ctx.domain}</p>
                 </div>
               </div>
               <nav className="px-1.5 py-2" aria-label="Índice (maqueta)">
@@ -254,12 +254,12 @@ function PlanAtaqueShell({
                           'flex w-full cursor-not-allowed items-center justify-between gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[12px]',
                           item.active
                             ? 'font-semibold text-slate-900'
-                            : 'text-slate-800/90'
+                            : 'text-slate-700'
                         )}
                         style={
                           item.active
                             ? {
-                                backgroundColor: 'rgba(255,255,255,0.45)',
+                                backgroundColor: '#ffffff',
                                 boxShadow: `inset 2px 0 0 ${accent.primary}`,
                               }
                             : undefined
@@ -267,7 +267,7 @@ function PlanAtaqueShell({
                       >
                         <span className="truncate">{item.label}</span>
                         {item.locked ? (
-                          <Lock className="h-3 w-3 shrink-0 text-slate-700 opacity-70" />
+                          <Lock className="h-3 w-3 shrink-0 text-slate-500 opacity-80" />
                         ) : null}
                       </button>
                     </li>
@@ -276,7 +276,7 @@ function PlanAtaqueShell({
                 <button
                   type="button"
                   disabled
-                  className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-md border border-slate-500/50 px-2 py-1.5 text-[11px] text-slate-800"
+                  className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white/60 px-2 py-1.5 text-[11px] text-slate-600"
                 >
                   <Lock className="h-3 w-3" />
                   + páginas más
