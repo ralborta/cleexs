@@ -1374,6 +1374,28 @@ export const publicDiagnosticApi = {
     ),
 };
 
+export type BrandAssetResolveResult = {
+  domain: string;
+  brandName: string | null;
+  logoUrl: string | null;
+  source: 'curated' | 'brandfetch' | 'logo.dev' | 'none';
+  status: 'ok' | 'missing';
+  confidence: number | null;
+  cached: boolean;
+};
+
+/** Logos de marca (capa 1: cache + Brandfetch / Logo.dev). */
+export const brandAssetsApi = {
+  resolve: (input: { domain: string; brandName?: string; refresh?: boolean }) => {
+    const q = new URLSearchParams({ domain: input.domain });
+    if (input.brandName) q.set('brandName', input.brandName);
+    if (input.refresh) q.set('refresh', '1');
+    return api<BrandAssetResolveResult>(`/api/public/brand-assets/resolve?${q.toString()}`, {
+      cache: 'no-store',
+    });
+  },
+};
+
 /** Canal WhatsApp (BuilderBot). Requiere `WHATSAPP_CHANNEL_API_KEY` en la API. */
 export const publicDiagnosticWhatsAppApi = {
   create: (body: {

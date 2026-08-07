@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { brandAssetsApi } from '@/lib/api';
 import {
   getCuratedBrandLogoUrl,
   normalizeBrandDomain,
@@ -22,6 +23,10 @@ interface BrandLogoProps {
    * Si true y no hay URL usable, no renderiza nada (evita iniciales/favicons basura en landings).
    */
   hideIfMissing?: boolean;
+  /**
+   * Usa el resolver de API (cache + Brandfetch/Logo.dev). Default true si hay dominio.
+   */
+  resolveViaApi?: boolean;
 }
 
 function brandfetchUrl(
@@ -31,7 +36,6 @@ function brandfetchUrl(
   clientId: string
 ): string {
   const type = variant === 'logo' ? 'logo' : 'icon';
-  // Wordmark: ancho mayor; icon: cuadrado.
   const w = variant === 'logo' ? Math.max(size * 3, 180) : size * 2;
   const h = size * 2;
   const fallback = variant === 'logo' ? 'transparent' : 'lettermark';
@@ -48,9 +52,34 @@ function logoDevUrl(domain: string | null, name: string, size: number, token: st
   return null;
 }
 
+function clientFallbackUrl(
+  name: string,
+  domain: string | null,
+  variant: BrandLogoVariant,
+  size: number
+): string | null {
+  const curated = getCuratedBrandLogoUrl(domain);
+  if (curated) return curated;
+
+  const brandfetchClientId = process.env.NEXT_PUBLIC_BRANDFETCH_CLIENT_ID?.trim() || '';
+  const logoDevToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN?.trim() || '';
+
+  if (brandfetchClientId && domain) {
+    return brandfetchUrl(domain, variant, size, brandfetchClientId);
+  }
+  if (logoDevToken) {
+    return logoDevUrl(domain, name, size, logoDevToken);
+  }
+  if (variant === 'icon' && domain) {
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${Math.min(size, 256)}`;
+  }
+  return null;
+}
+
 /**
  * Logos de marca.
- * Orden: override curado → Brandfetch (`type=logo|icon`) → Logo.dev → (solo icon) favicon → inicial.
+ * Capa 1: API resolve (cache DB → Brandfetch/Logo.dev) + fallback cliente.
+ * En landings usar hideIfMissing para no mostrar basura.
  */
 export function BrandLogo({
   name,
@@ -59,35 +88,63 @@ export function BrandLogo({
   className = '',
   variant = 'icon',
   hideIfMissing = false,
+  resolveViaApi,
 }: BrandLogoProps) {
+  const cleanDomain = normalizeBrandDomain(domain);
+  const shouldResolve = resolveViaApi ?? Boolean(cleanDomain);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(() =>
+    shouldResolve ? null : clientFallbackUrl(name, cleanDomain, variant, size)
+  );
+  const [resolved, setResolved] = useState(!shouldResolve);
   const [imgError, setImgError] = useState(false);
 
-  const brandfetchClientId = process.env.NEXT_PUBLIC_BRANDFETCH_CLIENT_ID?.trim() || '';
-  const logoDevToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN?.trim() || '';
-  const cleanDomain = normalizeBrandDomain(domain);
-  const curatedUrl = getCuratedBrandLogoUrl(cleanDomain);
+  useEffect(() => {
+    if (!shouldResolve || !cleanDomain) {
+      setResolvedUrl(clientFallbackUrl(name, cleanDomain, variant, size));
+      setResolved(true);
+      return;
+    }
 
-  let logoUrl: string | null = curatedUrl;
-  let source: 'curated' | 'brandfetch' | 'logo.dev' | 'favicon' | null = curatedUrl ? 'curated' : null;
+    let cancelled = false;
+    setImgError(false);
+    setResolved(false);
 
-  if (!logoUrl && brandfetchClientId && cleanDomain) {
-    logoUrl = brandfetchUrl(cleanDomain, variant, size, brandfetchClientId);
-    source = 'brandfetch';
+    brandAssetsApi
+      .resolve({ domain: cleanDomain, brandName: name })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.status === 'ok' && res.logoUrl) {
+          setResolvedUrl(res.logoUrl);
+        } else {
+          // missing en API: no favicon basura en landings
+          setResolvedUrl(hideIfMissing ? null : clientFallbackUrl(name, cleanDomain, variant, size));
+        }
+        setResolved(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setResolvedUrl(clientFallbackUrl(name, cleanDomain, variant, size));
+        setResolved(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cleanDomain, name, variant, size, shouldResolve, hideIfMissing]);
+
+  const logoUrl = resolvedUrl;
+  const isWide = variant === 'logo' || Boolean(logoUrl?.includes('/brand-logos/'));
+
+  if (!resolved) {
+    if (hideIfMissing) return null;
+    return (
+      <div
+        className={`rounded-lg bg-slate-100 shrink-0 animate-pulse ${className}`}
+        style={{ width: size, height: size }}
+        aria-hidden
+      />
+    );
   }
-
-  if (!logoUrl && logoDevToken) {
-    logoUrl = logoDevUrl(cleanDomain, name, size, logoDevToken);
-    if (logoUrl) source = 'logo.dev';
-  }
-
-  // Favicon solo para iconos chicos; en wordmark ensucia (Mario, app icons).
-  if (!logoUrl && variant === 'icon' && cleanDomain) {
-    logoUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(cleanDomain)}&sz=${Math.min(size, 256)}`;
-    source = 'favicon';
-  }
-
-  const initial = name?.charAt(0)?.toUpperCase() || '?';
-  const isWide = variant === 'logo' || source === 'curated';
 
   if (logoUrl && !imgError) {
     return (
@@ -112,6 +169,7 @@ export function BrandLogo({
 
   if (hideIfMissing) return null;
 
+  const initial = name?.charAt(0)?.toUpperCase() || '?';
   return (
     <div
       className={`rounded-lg flex items-center justify-center bg-gradient-to-br from-primary-600 to-primary-700 text-white font-semibold shrink-0 ${className}`}

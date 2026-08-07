@@ -1268,3 +1268,26 @@ model DomainRatingCache {
 
   @@map("domain_rating_cache")
 }
+
+/// Capa 1 de logos de marca: cache de URL resuelta (Brandfetch / Logo.dev / curado).
+/// No guarda el binario; guarda la decisión (URL + fuente) para no reconsultar.
+model BrandAsset {
+  /// Dominio normalizado sin www (ej. carsenlatam.com).
+  domain     String   @id
+  brandName  String?  @map("brand_name")
+  /// URL del logo (CDN o asset propio). null = se resolvió y no hay logo confiable.
+  logoUrl    String?  @map("logo_url") @db.Text
+  /// curated | brandfetch | logo.dev | none
+  source     String?
+  /// ok | missing
+  status     String   @default("missing")
+  /// 0–100 heurístico (capa 1: 100 curated, ~85 brandfetch, ~70 logo.dev).
+  confidence Int?
+  checkedAt  DateTime @default(now()) @map("checked_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([checkedAt])
+  @@map("brand_assets")
+}
