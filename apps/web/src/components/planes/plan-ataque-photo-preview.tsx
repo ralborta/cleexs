@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, Clock, Lock, Target, TrendingUp } from 'lucide-react';
+import { Calendar, Clock, Target, TrendingUp } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { brandAssetsApi } from '@/lib/api';
 import {
@@ -15,9 +15,8 @@ import { cn } from '@/lib/utils';
 
 const MENU_BG = '#E9EDF2';
 const BAR_BG = '#E1E6EC';
-/** Ancho/alto de diseño: se escala al contenedor sin deformar. */
-const DESIGN_W = 720;
-const DESIGN_H = 430;
+const DESIGN_W = 780;
+const DESIGN_H = 460;
 
 function impactLabel(ctx: PlanConquistarLandingContext): string {
   const ops = ctx.opportunityCount ?? 0;
@@ -34,10 +33,7 @@ function estimatedHours(ctx: PlanConquistarLandingContext): number | null {
   return Math.max(6, Math.round(ops * 0.75));
 }
 
-/**
- * “Foto” automática del Plan de Ataque.
- * Lienzo fijo + scale → recuadro angosto sin aplastar.
- */
+/** Foto automática del Plan de Ataque — sin candados, menú en español. */
 export function PlanAtaquePhotoPreview({
   ctx,
   className,
@@ -110,33 +106,46 @@ export function PlanAtaquePhotoPreview({
 
   const faqs =
     ctx.topActions.length > 0
-      ? ctx.topActions.slice(0, 3)
+      ? ctx.topActions.slice(0, 5)
       : [
           `Definir la intención #1 para ${ctx.brandName}`,
           ctx.competitors[0]
             ? `Comparativa vs ${ctx.competitors[0].name}`
             : `Mejorar señales en ${ctx.domain}`,
-          `FAQs accionables en el sitio`,
+          `Publicar preguntas frecuentes accionables`,
+          `Alinear contenido con ${enginesText}`,
+          `Checklist de implementación 30/60/90`,
         ];
 
   const sidebarItems = [
-    { label: 'Portada', locked: false, active: true },
-    { label: 'Índice', locked: false },
-    { label: '★ Prioridad #1', locked: false },
+    { label: 'Portada', active: true },
+    { label: 'Índice' },
+    { label: 'Prioridad #1' },
     {
       label:
         ctx.competitors.length > 0
           ? `Competidores (${ctx.competitors.length})`
           : 'Competidores',
-      locked: true,
     },
-    { label: 'Quick Wins', locked: true },
-    { label: 'Roadmap 90 días', locked: true },
-    { label: 'Checklist', locked: true },
+    { label: 'Preguntas perdidas' },
+    { label: 'Victorias rápidas' },
+    { label: 'Contenido sugerido' },
+    { label: 'Plan 90 días' },
+    { label: 'Lista de tareas' },
     {
-      label: ctx.engines[0] ? `IA · ${ctx.engines[0]}` : 'IA Overview',
-      locked: true,
+      label: ctx.engines[0] ? `Visión IA · ${ctx.engines[0]}` : 'Visión IA',
     },
+  ];
+
+  const indexItems = [
+    'Resumen ejecutivo',
+    'Competidores',
+    'Tendencias en IA',
+    'Victorias rápidas',
+    'Contenido sugerido',
+    'Plan 90 días',
+    'Lista de tareas',
+    'Preguntas frecuentes',
   ];
 
   return (
@@ -158,17 +167,17 @@ export function PlanAtaquePhotoPreview({
             transform: `scale(${scale})`,
           }}
         >
-          <div className="grid h-full grid-cols-[168px_1fr]">
+          <div className="grid h-full grid-cols-[150px_1fr]">
             <aside style={{ backgroundColor: MENU_BG }} className="border-r border-slate-200">
-              <div className="flex flex-col items-center gap-1.5 border-b border-slate-200 px-3 py-3.5 text-center">
-                <div className="rounded-lg bg-white p-1.5 shadow-sm">
+              <div className="flex flex-col items-center gap-1.5 border-b border-slate-200 px-2.5 py-3 text-center">
+                <div className="rounded-xl bg-white p-2 shadow-sm">
                   <BrandLogo
                     name={ctx.brandName}
                     domain={ctx.domain}
-                    size={40}
+                    size={56}
                     variant="icon"
                     hideIfMissing
-                    className="rounded-md"
+                    className="rounded-lg"
                   />
                 </div>
                 <p className="w-full truncate text-[13px] font-semibold text-slate-900">
@@ -176,12 +185,12 @@ export function PlanAtaquePhotoPreview({
                 </p>
                 <p className="w-full truncate text-[11px] text-slate-500">{ctx.domain}</p>
               </div>
-              <ul className="space-y-0.5 px-2 py-2.5">
+              <ul className="space-y-0.5 px-1.5 py-2">
                 {sidebarItems.map((item) => (
                   <li key={item.label}>
                     <div
                       className={cn(
-                        'flex items-center justify-between gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] leading-tight',
+                        'rounded-md px-2 py-1.5 text-[11px] leading-tight',
                         item.active ? 'bg-white font-semibold text-slate-900' : 'text-slate-600'
                       )}
                       style={
@@ -191,51 +200,58 @@ export function PlanAtaquePhotoPreview({
                       }
                     >
                       <span className="truncate">{item.label}</span>
-                      {item.locked ? (
-                        <Lock className="h-3 w-3 shrink-0 text-slate-400" />
-                      ) : null}
                     </div>
                   </li>
                 ))}
               </ul>
+              <p className="mt-auto px-2 pb-2 text-center text-[10px] font-semibold tracking-wide text-slate-400">
+                cleexs
+              </p>
             </aside>
 
             <div className="flex h-full flex-col bg-slate-50">
               <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-400">
                 <span>Vista previa</span>
-                <span>3 / — · 100%</span>
+                <span>3 · 100%</span>
               </div>
-              <div className="grid flex-1 grid-cols-3 gap-2.5 p-2.5">
-                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-center">
-                  <div className="mb-1.5 flex justify-center">
+
+              {/* Portada más ancha + índice + prioridad */}
+              <div className="grid flex-1 grid-cols-[1.35fr_0.9fr_0.95fr] gap-2.5 p-2.5">
+                {/* Portada (imagen 3) — más grande */}
+                <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3 text-center">
+                  <div className="mb-2 flex justify-center">
                     <BrandLogo
                       name={ctx.brandName}
                       domain={ctx.domain}
-                      size={36}
-                      variant="icon"
+                      size={52}
+                      variant="logo"
                       hideIfMissing
+                      className="rounded-lg"
                     />
                   </div>
-                  <p className="text-[13px] font-bold text-slate-900">Tu Plan de Ataque</p>
+                  <p className="text-[15px] font-bold text-slate-900">Tu Plan de Ataque</p>
                   <div
-                    className="mx-auto mt-1.5 h-1 w-10 rounded-full"
+                    className="mx-auto mt-1.5 h-1 w-12 rounded-full"
                     style={{ backgroundColor: accent.primary }}
                   />
-                  <p className="mt-1.5 text-[10px] leading-snug text-slate-600">
-                    Clientes desde {enginesText}{' '}
+                  <p className="mt-2 text-[11px] leading-snug text-slate-600">
+                    Cómo conseguir más clientes desde {enginesText}{' '}
                     <span className="font-semibold" style={{ color: accent.primary }}>
-                      en 90 días
+                      en los próximos 90 días
                     </span>
                   </p>
-                  <p className="mt-1.5 text-[12px] font-bold" style={{ color: accent.primary }}>
-                    {ctx.domain}
-                  </p>
+                  <div className="mt-2 border-t border-slate-100 pt-2">
+                    <p className="text-[10px] text-slate-500">Preparado exclusivamente para</p>
+                    <p className="text-[13px] font-bold" style={{ color: accent.primary }}>
+                      {ctx.domain}
+                    </p>
+                  </div>
                   <div className="mt-2 space-y-1 text-left">
                     {[
                       { Icon: Calendar, t: today },
-                      { Icon: Target, t: actions != null ? `${actions} acciones` : '—' },
-                      { Icon: Clock, t: hours != null ? `${hours} h` : '—' },
-                      { Icon: TrendingUp, t: impact },
+                      { Icon: Target, t: actions != null ? `${actions} acciones priorizadas` : '—' },
+                      { Icon: Clock, t: hours != null ? `${hours} horas estimadas` : '—' },
+                      { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
                     ].map(({ Icon, t }) => (
                       <div key={t} className="flex items-center gap-1.5 text-[10px] text-slate-600">
                         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: accent.primary }} />
@@ -243,25 +259,37 @@ export function PlanAtaquePhotoPreview({
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5">
-                  <p className="text-center text-[11px] font-bold uppercase tracking-wide text-slate-700">
-                    Índice
-                  </p>
-                  <ul className="mt-2 space-y-1.5 blur-[2px]" aria-hidden>
-                    {['Resumen', 'Competidores', 'Quick Wins', 'Roadmap'].map((t) => (
-                      <li key={t} className="text-[11px] text-slate-500">
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/55">
-                    <Lock className="h-6 w-6 text-slate-400" />
+                  {/* Pie con datos disponibles */}
+                  <div className="mt-auto border-t border-slate-100 pt-2 text-left text-[9px] leading-snug text-slate-500">
+                    {[ctx.country, ctx.industry, ctx.cleexsScore != null ? `Score ${ctx.cleexsScore}` : null]
+                      .filter(Boolean)
+                      .join(' · ') || 'Plan personalizado Cleexs'}
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                {/* Índice — sin candado, algo difuminado abajo */}
+                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5">
+                  <p
+                    className="text-center text-[12px] font-bold uppercase tracking-wide"
+                    style={{ color: accent.primary }}
+                  >
+                    Índice
+                  </p>
+                  <ol className="mt-2 space-y-1.5">
+                    {indexItems.map((t, i) => (
+                      <li key={t} className="flex gap-1.5 text-[10px] text-slate-600">
+                        <span className="font-semibold" style={{ color: accent.primary }}>
+                          {i + 1}.
+                        </span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-white via-white/90 to-transparent" />
+                </div>
+
+                {/* Prioridad — ~⅓ legible, resto difuminado, SIN candado */}
+                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5">
                   <p
                     className="text-[10px] font-bold uppercase tracking-wide"
                     style={{ color: accent.primary }}
@@ -269,8 +297,12 @@ export function PlanAtaquePhotoPreview({
                     Prioridad #1
                   </p>
                   <p className="mt-0.5 text-[12px] font-semibold leading-tight text-slate-900">
-                    Primeras acciones
+                    Primeras acciones de tu diagnóstico
                   </p>
+                  <div
+                    className="mt-1.5 h-1 w-10 rounded-full"
+                    style={{ backgroundColor: accent.primary }}
+                  />
                   <ol className="mt-2 space-y-1.5">
                     {faqs.map((q, i) => (
                       <li
@@ -283,10 +315,12 @@ export function PlanAtaquePhotoPreview({
                         >
                           {i + 1}
                         </span>
-                        <span className="line-clamp-2 leading-snug">{q}</span>
+                        <span className="leading-snug">{q}</span>
                       </li>
                     ))}
                   </ol>
+                  {/* ~⅔ inferior difuminado */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-white from-25% via-white/85 to-transparent backdrop-blur-[1.5px]" />
                 </div>
               </div>
 
@@ -294,9 +328,10 @@ export function PlanAtaquePhotoPreview({
                 className="mt-auto flex items-center gap-2.5 border-t border-slate-200 px-3 py-2.5"
                 style={{ backgroundColor: BAR_BG }}
               >
-                <Lock className="h-4 w-4 shrink-0 text-slate-500" />
                 <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-slate-800">
                   Desbloqueá el plan completo
+                  {ctx.country ? ` · ${ctx.country}` : ''}
+                  {actions != null ? ` · ${actions} acciones` : ''}
                 </p>
                 <span
                   className="shrink-0 rounded-md px-2.5 py-1 text-[11px] font-semibold text-white"
