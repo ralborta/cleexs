@@ -133,7 +133,8 @@ async function persist(result: Omit<BrandAssetResult, 'cached'>): Promise<BrandA
 
 /**
  * Resuelve logo de marca (capa 1):
- * cache → curated → Brandfetch CDN → Logo.dev (probe) → missing.
+ * cache → curated → Brandfetch → Logo.dev (probe) → missing.
+ * Brandfetch y Logo.dev son ambos parte del stack (no opcionales en prod).
  * No scrapea el sitio (capa 2).
  */
 export async function resolveBrandAsset(input: {
@@ -172,6 +173,7 @@ export async function resolveBrandAsset(input: {
     });
   }
 
+  // 1) Brandfetch wordmark (CDN; el browser lo carga con Referer)
   if (brandfetchClientId()) {
     return persist({
       domain,
@@ -183,6 +185,7 @@ export async function resolveBrandAsset(input: {
     });
   }
 
+  // 2) Logo.dev (verificado con GET); requerido en prod como 2º proveedor
   if (logoDevToken()) {
     const url = logoDevLogoUrl(domain);
     const ok = await probeLogoDev(url);
@@ -193,7 +196,7 @@ export async function resolveBrandAsset(input: {
         logoUrl: url,
         source: 'logo.dev',
         status: 'ok',
-        confidence: 70,
+        confidence: 75,
       });
     }
   }
@@ -206,4 +209,12 @@ export async function resolveBrandAsset(input: {
     status: 'missing',
     confidence: 0,
   });
+}
+
+/** URL Logo.dev para un dominio (si hay token). Útil como fallback en el cliente. */
+export function buildLogoDevUrl(domain: string, size = 256): string | null {
+  const token = logoDevToken();
+  const d = normalizeBrandAssetDomain(domain);
+  if (!token || !d) return null;
+  return `https://img.logo.dev/${encodeURIComponent(d)}?token=${encodeURIComponent(token)}&size=${size}&format=png`;
 }

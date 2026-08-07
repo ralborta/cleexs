@@ -28,7 +28,7 @@ La app **web** (Next.js en `apps/web`) **no usa Prisma** en tiempo de build. Si 
 |----------|-------------|-------------|
 | **NEXT_PUBLIC_API_URL** | ✅ | URL de la API en producción (ej. `https://tu-api.railway.app`). |
 | **NEXT_PUBLIC_APP_URL** | Recomendada | URL canónica del producto (ej. `https://app.cleexs.net`). Enlaces en código y docs; si no está, se usa `https://app.cleexs.net` por defecto. |
-| NEXT_PUBLIC_BRANDFETCH_CLIENT_ID | Recomendada | Brandfetch Logo API (wordmark `type=logo` en landings; `type=icon` en listas). Gratis: https://developers.brandfetch.com/register |
-| NEXT_PUBLIC_LOGO_DEV_TOKEN | Opcional | Fallback Logo.dev si no hay Brandfetch. |
+| NEXT_PUBLIC_BRANDFETCH_CLIENT_ID | ✅ | Brandfetch Logo API (`type=logo` / `type=icon`). https://developers.brandfetch.com/register |
+| NEXT_PUBLIC_LOGO_DEV_TOKEN | ✅ | Logo.dev (fallback si Brandfetch falla). https://www.logo.dev — Publishable key |
 
 Flujo: GitHub → Vercel (web) + Railway (API). En Railway definí `FRONTEND_URL` con la misma URL pública del front (ej. `https://app.cleexs.net`) para emails y CORS.
