@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
 import { PlanConquistarPageCheckout } from '@/components/planes/plan-conquistar-page-checkout';
+import { PlanAtaquePhotoPreview } from '@/components/planes/plan-ataque-photo-preview';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { CountryFlag } from '@/components/country/country-picker';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
@@ -242,7 +243,7 @@ function StatsBar({ ctx }: { ctx: PlanConquistarLandingContext }) {
   );
 }
 
-function OnboardingProfileCard({ ctx }: { ctx: PlanConquistarLandingContext }) {
+function OnboardingDatosMini({ ctx }: { ctx: PlanConquistarLandingContext }) {
   const rivalsText = formatCompetitorList(ctx.competitors.map((c) => c.name));
   const enginesText = ctx.engines.length ? ctx.engines.join(', ') : null;
   const personName =
@@ -250,84 +251,61 @@ function OnboardingProfileCard({ ctx }: { ctx: PlanConquistarLandingContext }) {
       ? [ctx.firstName, ctx.lastName].filter(Boolean).join(' ')
       : null;
 
-  const rows: Array<{ label: string; value: ReactNode; missing?: boolean }> = [
-    {
-      label: 'Sitio',
-      value: ctx.domain || ctx.brandName,
-    },
+  const rows: Array<{ label: string; value: ReactNode; blank?: boolean }> = [
+    { label: 'Sitio', value: ctx.domain || ctx.brandName },
     {
       label: 'País',
       value: ctx.country ? (
-        <span className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-1">
           {ctx.countryIso ? (
-            <CountryFlag iso={ctx.countryIso} className="h-4 w-6 rounded-sm shadow-sm" />
+            <CountryFlag iso={ctx.countryIso} className="h-2.5 w-4 rounded-[1px]" />
           ) : null}
           {ctx.country}
           {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
         </span>
       ) : (
-        'No cargado'
+        ''
       ),
-      missing: !ctx.country,
+      blank: !ctx.country,
     },
-    {
-      label: 'Rubro',
-      value: ctx.industry || 'No cargado',
-      missing: !ctx.industry,
-    },
+    { label: 'Rubro', value: ctx.industry || '', blank: !ctx.industry },
     {
       label: 'Idioma',
-      value: ctx.languageLabel || ctx.language || 'No cargado',
-      missing: !ctx.languageLabel && !ctx.language,
+      value: ctx.languageLabel || ctx.language || '',
+      blank: !ctx.languageLabel && !ctx.language,
     },
-    {
-      label: 'Motores IA',
-      value: enginesText || 'No cargado',
-      missing: !enginesText,
-    },
-    {
-      label: 'Competidores',
-      value: rivalsText || 'No cargado',
-      missing: !rivalsText,
-    },
-    {
-      label: 'Nombre',
-      value: personName || 'Opcional — no lo cargó',
-      missing: !personName,
-    },
+    { label: 'Motores IA', value: enginesText || '', blank: !enginesText },
+    { label: 'Competidores', value: rivalsText || '', blank: !rivalsText },
+    // Si no hay nombre: fila en blanco (sin placeholder)
+    { label: 'Nombre', value: personName || '', blank: !personName },
   ];
 
   return (
-    <section className="px-4 pb-6 sm:px-6">
-      <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border-2 border-violet-200 bg-white shadow-md">
-        <div className="border-b border-violet-100 bg-violet-50 px-4 py-3 sm:px-5 sm:py-4">
-          <p className="text-sm font-bold text-violet-800 sm:text-base">
-            Datos de tu onboarding
-          </p>
-          <p className="mt-0.5 text-sm text-violet-700/80 sm:text-[15px]">
-            Esto es lo que dejaste al configurar el diagnóstico (no inventado).
-          </p>
-        </div>
+    <div className="mx-auto max-w-3xl">
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        Datos..
+      </p>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/90 shadow-sm">
         <dl className="divide-y divide-slate-100">
           {rows.map((row) => (
             <div
               key={row.label}
-              className="grid grid-cols-[7.5rem_1fr] gap-3 px-4 py-3 sm:grid-cols-[9rem_1fr] sm:px-5 sm:py-3.5"
+              className="grid grid-cols-[4.5rem_1fr] gap-2 px-2.5 py-1 sm:grid-cols-[5.5rem_1fr] sm:px-3 sm:py-1.5"
             >
-              <dt className="text-sm font-medium text-slate-500 sm:text-[15px]">{row.label}</dt>
+              <dt className="text-[10px] font-medium text-slate-400 sm:text-[11px]">{row.label}</dt>
               <dd
                 className={cn(
-                  'text-base font-semibold text-slate-900 sm:text-lg',
-                  row.missing && 'font-normal text-slate-400'
+                  'min-h-[1rem] text-[11px] font-medium text-slate-800 sm:text-xs',
+                  row.blank && 'text-transparent'
                 )}
               >
-                {row.value}
+                {row.blank ? '\u00a0' : row.value}
               </dd>
             </div>
           ))}
         </dl>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -523,22 +501,26 @@ function DraftLandingBody({
       {!loading && !loadError && ctx && (
         <>
           <HeroPersonalized ctx={ctx} />
-          <OnboardingProfileCard ctx={ctx} />
+          <section className="px-4 pb-4 sm:px-6">
+            <div className="mx-auto max-w-3xl">
+              <PlanAtaquePhotoPreview ctx={ctx} />
+            </div>
+            <div className="mt-3">
+              <OnboardingDatosMini ctx={ctx} />
+            </div>
+          </section>
           <div className="px-4 pb-6 sm:px-6">
             <StatsBar ctx={ctx} />
           </div>
           <section className="px-4 py-6 sm:px-6 sm:py-8">
-            <div className="mx-auto max-w-3xl">
-              <div className="mb-5 text-center">
-                <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-                  Ya preparamos tu plan
-                </h2>
-                <p className="mx-auto mt-2 max-w-xl text-base text-slate-600 sm:text-lg">
-                  No es un paywall vacío: el plan para {ctx.brandName} ya está armado a partir de tu
-                  onboarding y diagnóstico. Al comprar desbloqueás el reporte completo y el seguimiento.
-                </p>
-              </div>
-              <PlanIndexPreview ctx={ctx} />
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                Ya preparamos tu plan
+              </h2>
+              <p className="mx-auto mt-2 max-w-xl text-base text-slate-600 sm:text-lg">
+                No es un paywall vacío: el plan para {ctx.brandName} ya está armado a partir de tu
+                onboarding y diagnóstico. Al comprar desbloqueás el reporte completo y el seguimiento.
+              </p>
             </div>
           </section>
           <section className="px-4 py-6 sm:px-6 sm:py-8">
