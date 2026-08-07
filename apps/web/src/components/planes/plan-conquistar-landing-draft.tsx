@@ -15,7 +15,6 @@ import {
   ClipboardCheck,
   RefreshCw,
   Gift,
-  FileText,
   Loader2,
 } from 'lucide-react';
 import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
@@ -75,91 +74,6 @@ const INCLUYE: Array<{ icon: typeof Check; title: string; desc: string }> = [
     desc: 'Medimos nuevamente tu progreso y verificamos cuánto avanzaste en estos primeros 75 días.',
   },
 ];
-
-function PlanIndexPreview({ ctx }: { ctx: PlanConquistarLandingContext }) {
-  const indexItems = [
-    'Resumen ejecutivo y Cleexs Score',
-    ctx.competitors.length
-      ? `Comparativa vs ${ctx.competitors
-          .slice(0, 2)
-          .map((c) => c.name)
-          .join(' y ')}`
-      : 'Comparativa contra competidores',
-    'Oportunidades priorizadas por impacto',
-    'Roadmap 90 días (hora → semana → 30/60/90)',
-    'Checklist + curso express',
-  ];
-
-  const actions =
-    ctx.topActions.length > 0
-      ? ctx.topActions.slice(0, 4)
-      : [
-          `Definir la intención #1 donde ${ctx.brandName} quiere ser recomendada`,
-          `Mejorar la página clave del sitio (${ctx.domain})`,
-          ctx.competitors[0]
-            ? `Comparativa honesta vs ${ctx.competitors[0].name}`
-            : 'Sumar FAQs verificables en el sitio',
-          'Preparar señales de autoridad externas',
-        ];
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-lg shadow-violet-100/60">
-      <div className="flex items-center gap-3 border-b border-violet-100 bg-gradient-to-r from-violet-50 to-white px-4 py-3 sm:px-5">
-        <BrandLogo
-          name={ctx.brandName}
-          domain={ctx.domain}
-          size={40}
-          variant="logo"
-          hideIfMissing
-          className="rounded-xl"
-        />
-        <div className="min-w-0 text-left">
-          <p className="text-xs font-medium uppercase tracking-wide text-violet-600">Plan listo</p>
-          <p className="truncate text-sm font-semibold text-slate-900 sm:text-base">
-            Plan Conquistar · {ctx.brandName}
-            {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
-          </p>
-        </div>
-      </div>
-      <div className="grid gap-0 sm:grid-cols-2">
-        <div className="border-b border-slate-100 p-4 sm:border-b-0 sm:border-r sm:p-5">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <FileText className="h-3.5 w-3.5" />
-            Índice
-          </p>
-          <ul className="space-y-2">
-            {indexItems.map((item) => (
-              <li key={item} className="flex gap-2 text-sm text-slate-700">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="p-4 sm:p-5">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Primeras acciones
-          </p>
-          <ol className="space-y-2.5">
-            {actions.map((item, i) => (
-              <li key={`${i}-${item.slice(0, 24)}`} className="flex gap-2.5 text-sm text-slate-700">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[11px] font-bold text-violet-700">
-                  {i + 1}
-                </span>
-                <span className="leading-snug">{item}</span>
-              </li>
-            ))}
-          </ol>
-          {ctx.topActions.length === 0 && (
-            <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-              Acciones base según tu diagnóstico. El detalle completo se desbloquea al comprar.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function RoadmapTabs({ ctx }: { ctx: PlanConquistarLandingContext }) {
   const tabs = useMemo(() => buildLandingRoadmapTabs(ctx), [ctx]);
