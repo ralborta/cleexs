@@ -1,7 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, Clock, Target, TrendingUp } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  Target,
+  TrendingUp,
+  ClipboardList,
+  Lightbulb,
+  FileText,
+  Users,
+  Zap,
+} from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { brandAssetsApi } from '@/lib/api';
 import {
@@ -15,8 +25,8 @@ import { cn } from '@/lib/utils';
 
 const MENU_BG = '#E9EDF2';
 const BAR_BG = '#E1E6EC';
-const DESIGN_W = 780;
-const DESIGN_H = 460;
+const DESIGN_W = 820;
+const DESIGN_H = 500;
 
 function impactLabel(ctx: PlanConquistarLandingContext): string {
   const ops = ctx.opportunityCount ?? 0;
@@ -170,11 +180,11 @@ export function PlanAtaquePhotoPreview({
           <div className="grid h-full grid-cols-[150px_1fr]">
             <aside style={{ backgroundColor: MENU_BG }} className="border-r border-slate-200">
               <div className="flex flex-col items-center gap-1.5 border-b border-slate-200 px-2.5 py-3 text-center">
-                <div className="rounded-xl bg-white p-2 shadow-sm">
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
                   <BrandLogo
                     name={ctx.brandName}
                     domain={ctx.domain}
-                    size={56}
+                    size={68}
                     variant="icon"
                     hideIfMissing
                     className="rounded-lg"
@@ -215,15 +225,14 @@ export function PlanAtaquePhotoPreview({
                 <span>3 · 100%</span>
               </div>
 
-              {/* Portada más ancha + índice + prioridad */}
-              <div className="grid flex-1 grid-cols-[1.35fr_0.9fr_0.95fr] gap-2.5 p-2.5">
-                {/* Portada (imagen 3) — más grande */}
+              {/* Portada ancha + índice/prioridad más estrechos */}
+              <div className="grid flex-1 grid-cols-[1.85fr_0.7fr_0.75fr] gap-2 p-2.5">
                 <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3 text-center">
                   <div className="mb-2 flex justify-center">
                     <BrandLogo
                       name={ctx.brandName}
                       domain={ctx.domain}
-                      size={52}
+                      size={72}
                       variant="logo"
                       hideIfMissing
                       className="rounded-lg"
@@ -324,22 +333,44 @@ export function PlanAtaquePhotoPreview({
                 </div>
               </div>
 
-              <div
-                className="mt-auto flex items-center gap-2.5 border-t border-slate-200 px-3 py-2.5"
-                style={{ backgroundColor: BAR_BG }}
-              >
-                <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-slate-800">
-                  Desbloqueá el plan completo
-                  {ctx.country ? ` · ${ctx.country}` : ''}
-                  {actions != null ? ` · ${actions} acciones` : ''}
-                </p>
-                <span
-                  className="shrink-0 rounded-md px-2.5 py-1 text-[11px] font-semibold text-white"
-                  style={{ backgroundColor: accent.primary }}
-                >
-                  Desbloquear
-                </span>
-              </div>
+              {(() => {
+                const nAcciones = actions ?? Math.max(ctx.topActions.length, 6);
+                const nPrompts = Math.max(ctx.engines.length * 2, ctx.topActions.length, 4);
+                const nPaginas = Math.max(3, Math.round(nAcciones * 0.65));
+                const nComparativas = Math.max(ctx.competitors.length, 1);
+                const nMejoras = Math.max(2, Math.round(nAcciones * 0.55));
+                const stats = [
+                  { Icon: ClipboardList, value: String(nAcciones), label: 'Acciones' },
+                  { Icon: Lightbulb, value: String(nPrompts), label: 'Prompts' },
+                  { Icon: FileText, value: String(nPaginas), label: 'Páginas' },
+                  { Icon: Users, value: String(nComparativas), label: 'Comparativas' },
+                  { Icon: Zap, value: String(nMejoras), label: 'Mejoras' },
+                  { Icon: Target, value: '1', label: 'Plan' },
+                ];
+                return (
+                  <div
+                    className="mt-auto border-t border-slate-200 px-2 py-2"
+                    style={{ backgroundColor: BAR_BG }}
+                  >
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {stats.map(({ Icon, value, label }) => (
+                        <div
+                          key={label}
+                          className="flex flex-col items-center rounded-md border border-slate-200/80 bg-white px-1 py-1.5"
+                        >
+                          <Icon className="h-3.5 w-3.5" style={{ color: accent.primary }} />
+                          <p className="mt-0.5 text-[12px] font-bold leading-none text-slate-900">
+                            {value}
+                          </p>
+                          <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-wide text-slate-500">
+                            {label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -9,6 +9,11 @@ import {
   Target,
   Clock,
   TrendingUp,
+  ClipboardList,
+  Lightbulb,
+  FileText,
+  Users,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -224,11 +229,11 @@ function PlanAtaqueShell({
             {/* Menú lateral #E9EDF2 — sin candados, todo en español */}
             <aside className="flex flex-col text-slate-800 lg:self-start" style={{ backgroundColor: '#E9EDF2' }}>
               <div className="flex flex-col items-center gap-2 border-b border-slate-200 px-3 py-4 text-center">
-                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                <div className="rounded-xl bg-white p-3 shadow-sm">
                   <BrandLogo
                     name={ctx.brandName}
                     domain={ctx.domain}
-                    size={64}
+                    size={80}
                     variant="icon"
                     hideIfMissing
                     className="rounded-lg"
@@ -283,14 +288,14 @@ function PlanAtaqueShell({
                 <span>3 / — · 100%</span>
               </div>
 
-              <div className="grid gap-3 p-3 sm:p-4 md:grid-cols-[1.35fr_0.9fr_0.95fr]">
-                {/* Portada — más grande / logo notorio + pie con datos */}
+              <div className="grid gap-3 p-3 sm:p-4 md:grid-cols-[1.75fr_0.7fr_0.75fr]">
+                {/* Portada — logo aún más grande; derecha más estrecha */}
                 <article className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 text-center shadow-sm">
                   <div className="mb-3 flex justify-center">
                     <BrandLogo
                       name={ctx.brandName}
                       domain={ctx.domain}
-                      size={72}
+                      size={96}
                       variant="logo"
                       hideIfMissing
                       className="rounded-xl"
@@ -413,42 +418,61 @@ function PlanAtaqueShell({
                 </article>
               </div>
 
-              {/* Barra inferior #E1E6EC — sin candados, textos en español */}
-              <div
-                className="border-t border-slate-200 px-4 py-4 sm:px-5"
-                style={{ backgroundColor: '#E1E6EC' }}
-              >
-                <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 sm:text-base">
-                      Desbloqueá el plan completo
-                    </p>
-                    <ul className="mt-1.5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] text-slate-600 sm:justify-start">
-                      {[
-                        actions != null
-                          ? `+${Math.max(0, actions - 4)} recomendaciones`
-                          : 'Recomendaciones personalizadas',
-                        'Victorias rápidas',
-                        'Lista de tareas',
-                        'Plan completo de 90 días',
-                      ].map((t) => (
-                        <li key={t} className="inline-flex items-center gap-1">
-                          <span style={{ color: accent.primary }}>✓</span>
-                          {t}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <button
-                    type="button"
-                    disabled
-                    className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-semibold text-white opacity-90"
-                    style={{ backgroundColor: accent.primary }}
+              {/* Pie estilo métricas (imagen 3) — datos reales / derivados */}
+              {(() => {
+                const nAcciones = actions ?? Math.max(ctx.topActions.length, 6);
+                const nPrompts = Math.max(ctx.engines.length * 2, ctx.topActions.length, 4);
+                const nPaginas = Math.max(3, Math.round(nAcciones * 0.65));
+                const nComparativas = Math.max(ctx.competitors.length, 1);
+                const nMejoras = Math.max(2, Math.round(nAcciones * 0.55));
+                const footerStats: Array<{
+                  icon: LucideIcon;
+                  value: string;
+                  label: string;
+                }> = [
+                  { icon: ClipboardList, value: String(nAcciones), label: 'Acciones' },
+                  { icon: Lightbulb, value: String(nPrompts), label: 'Prompts' },
+                  { icon: FileText, value: String(nPaginas), label: 'Páginas' },
+                  { icon: Users, value: String(nComparativas), label: 'Comparativas' },
+                  { icon: Zap, value: String(nMejoras), label: 'Mejoras' },
+                  { icon: Target, value: '1', label: 'Plan de acción' },
+                ];
+                return (
+                  <div
+                    className="border-t border-slate-200 px-3 py-3 sm:px-4"
+                    style={{ backgroundColor: '#E1E6EC' }}
                   >
-                    Desbloquear
-                  </button>
-                </div>
-              </div>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-2.5">
+                      {footerStats.map(({ icon: Icon, value, label }) => (
+                        <div
+                          key={label}
+                          className="flex flex-col items-center rounded-xl border border-slate-200/80 bg-white px-2 py-2.5 text-center shadow-sm"
+                        >
+                          <Icon
+                            className="h-5 w-5"
+                            strokeWidth={1.75}
+                            style={{ color: accent.primary }}
+                          />
+                          <p className="mt-1 text-lg font-bold leading-none text-slate-900">{value}</p>
+                          <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                            {label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex justify-center">
+                      <button
+                        type="button"
+                        disabled
+                        className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-semibold text-white opacity-90"
+                        style={{ backgroundColor: accent.primary }}
+                      >
+                        Desbloquear plan completo
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
