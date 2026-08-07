@@ -76,7 +76,8 @@ function brandfetchLogoUrl(domain: string): string {
 
 function logoDevLogoUrl(domain: string): string {
   const token = logoDevToken();
-  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${encodeURIComponent(token)}&size=256&format=png`;
+  // fallback=404 evita monogramas falsos cacheados como "ok"
+  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${encodeURIComponent(token)}&size=256&format=png&fallback=404`;
 }
 
 async function probeLogoDev(url: string): Promise<boolean> {
@@ -88,7 +89,10 @@ async function probeLogoDev(url: string): Promise<boolean> {
     });
     if (!res.ok) return false;
     const ct = res.headers.get('content-type') || '';
-    return ct.startsWith('image/');
+    if (!ct.startsWith('image/')) return false;
+    // Rechazar respuestas vacías / 1x1 sospechosas
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf.byteLength > 200;
   } catch {
     return false;
   }
@@ -133,8 +137,12 @@ async function persist(result: Omit<BrandAssetResult, 'cached'>): Promise<BrandA
 
 /**
  * Resuelve logo de marca (capa 1):
- * cache → curated → Brandfetch → Logo.dev (probe) → missing.
- * Brandfetch y Logo.dev son ambos parte del stack (no opcionales en prod).
+ * cache → curated → Logo.dev (probe) → Brandfetch (solo si Client ID) → missing.
+ *
+ * Logo.dev primero: responde imagen real verificable server-side.
+ * Brandfetch CDN bloquea hotlink programático y a menudo falla en browser
+ * si el Client ID no tiene el dominio allowlisted → no lo cacheamos como ok
+ * sin poder probaro; se deja como fallback de URL para el cliente.
  * No scrapea el sitio (capa 2).
  */
 export async function resolveBrandAsset(input: {
@@ -148,7 +156,12 @@ export async function resolveBrandAsset(input: {
 
   if (!input.refresh) {
     const cached = await prisma.brandAsset.findUnique({ where: { domain } });
-    if (cached && isFresh(cached.checkedAt, cached.status)) {
+    // Invalidar cache viejo de Brandfetch: URLs que el browser no puede cargar
+    const brandfetchCached =
+      cached?.source === 'brandfetch' &&
+      typeof cached.logoUrl === 'string' &&
+      cached.logoUrl.includes('brandfetch.io');
+    if (cached && isFresh(cached.checkedAt, cached.status) && !brandfetchCached) {
       return {
         domain: cached.domain,
         brandName: cached.brandName,
@@ -173,19 +186,7 @@ export async function resolveBrandAsset(input: {
     });
   }
 
-  // 1) Brandfetch wordmark (CDN; el browser lo carga con Referer)
-  if (brandfetchClientId()) {
-    return persist({
-      domain,
-      brandName,
-      logoUrl: brandfetchLogoUrl(domain),
-      source: 'brandfetch',
-      status: 'ok',
-      confidence: 85,
-    });
-  }
-
-  // 2) Logo.dev (verificado con GET); requerido en prod como 2º proveedor
+  // 1) Logo.dev (GET + content-type image) — fuente confiable hoy
   if (logoDevToken()) {
     const url = logoDevLogoUrl(domain);
     const ok = await probeLogoDev(url);
@@ -196,9 +197,23 @@ export async function resolveBrandAsset(input: {
         logoUrl: url,
         source: 'logo.dev',
         status: 'ok',
-        confidence: 75,
+        confidence: 80,
       });
     }
+  }
+
+  // 2) Brandfetch como URL de intento (wordmark). No lo marcamos ok de forma
+  // ciega: el CDN exige Referer allowlisted; el cliente puede probarlo y caer
+  // a Logo.dev / hideIfMissing.
+  if (brandfetchClientId()) {
+    return persist({
+      domain,
+      brandName,
+      logoUrl: brandfetchLogoUrl(domain),
+      source: 'brandfetch',
+      status: 'ok',
+      confidence: 50,
+    });
   }
 
   return persist({
@@ -216,5 +231,5 @@ export function buildLogoDevUrl(domain: string, size = 256): string | null {
   const token = logoDevToken();
   const d = normalizeBrandAssetDomain(domain);
   if (!token || !d) return null;
-  return `https://img.logo.dev/${encodeURIComponent(d)}?token=${encodeURIComponent(token)}&size=${size}&format=png`;
+  return `https://img.logo.dev/${encodeURIComponent(d)}?token=${encodeURIComponent(token)}&size=${size}&format=png&fallback=404`;
 }

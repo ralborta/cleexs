@@ -24,7 +24,7 @@ interface BrandLogoProps {
    */
   hideIfMissing?: boolean;
   /**
-   * Usa el resolver de API (cache + Brandfetch/Logo.dev). Default true si hay dominio.
+   * Usa el resolver de API (cache + Logo.dev/Brandfetch). Default true si hay dominio.
    */
   resolveViaApi?: boolean;
 }
@@ -43,7 +43,8 @@ function brandfetchUrl(
 }
 
 function logoDevUrl(domain: string, size: number, token: string): string {
-  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${encodeURIComponent(token)}&size=${size}&format=png`;
+  // fallback=404: sin monograma inventado; onError puede ocultar / probar otra fuente
+  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${encodeURIComponent(token)}&size=${size}&format=png&fallback=404`;
 }
 
 function clientLogoDevUrl(domain: string | null, size: number): string | null {
@@ -62,9 +63,13 @@ function clientBrandfetchUrl(
   return brandfetchUrl(domain, variant, size, clientId);
 }
 
+function isBrandfetchUrl(url: string | null | undefined): boolean {
+  return Boolean(url && url.includes('brandfetch.io'));
+}
+
 /**
  * Logos de marca — capa 1.
- * Orden: API (cache/Brandfetch) → onError Logo.dev → curated → (icon) nada/inicial.
+ * Orden: curated → API (Logo.dev preferido) → Logo.dev cliente → Brandfetch → hide/inicial.
  */
 export function BrandLogo({
   name,
@@ -80,13 +85,13 @@ export function BrandLogo({
   const curated = getCuratedBrandLogoUrl(cleanDomain);
 
   const [logoUrl, setLogoUrl] = useState<string | null>(curated);
-  const [triedLogoDev, setTriedLogoDev] = useState(false);
+  const [fallbackStage, setFallbackStage] = useState(0);
   const [resolved, setResolved] = useState(!shouldResolve || Boolean(curated));
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     setImgError(false);
-    setTriedLogoDev(false);
+    setFallbackStage(0);
 
     if (curated) {
       setLogoUrl(curated);
@@ -94,11 +99,12 @@ export function BrandLogo({
       return;
     }
 
+    const localPreferred =
+      clientLogoDevUrl(cleanDomain, Math.max(size, 128)) ||
+      clientBrandfetchUrl(cleanDomain, variant, size);
+
     if (!shouldResolve || !cleanDomain) {
-      setLogoUrl(
-        clientBrandfetchUrl(cleanDomain, variant, size) ||
-          clientLogoDevUrl(cleanDomain, size)
-      );
+      setLogoUrl(localPreferred);
       setResolved(true);
       return;
     }
@@ -110,22 +116,17 @@ export function BrandLogo({
       .resolve({ domain: cleanDomain, brandName: name })
       .then((res) => {
         if (cancelled) return;
-        if (res.status === 'ok' && res.logoUrl) {
+        // Si la API aún devuelve Brandfetch roto, preferir Logo.dev local
+        if (res.status === 'ok' && res.logoUrl && !isBrandfetchUrl(res.logoUrl)) {
           setLogoUrl(res.logoUrl);
         } else {
-          setLogoUrl(
-            clientBrandfetchUrl(cleanDomain, variant, size) ||
-              clientLogoDevUrl(cleanDomain, size)
-          );
+          setLogoUrl(localPreferred || res.logoUrl || null);
         }
         setResolved(true);
       })
       .catch(() => {
         if (cancelled) return;
-        setLogoUrl(
-          clientBrandfetchUrl(cleanDomain, variant, size) ||
-            clientLogoDevUrl(cleanDomain, size)
-        );
+        setLogoUrl(localPreferred);
         setResolved(true);
       });
 
@@ -135,20 +136,39 @@ export function BrandLogo({
   }, [cleanDomain, name, variant, size, shouldResolve, curated]);
 
   const handleError = () => {
-    // Si falló Brandfetch (u otra URL), probar Logo.dev una vez
-    if (!triedLogoDev && cleanDomain) {
+    if (!cleanDomain) {
+      setImgError(true);
+      return;
+    }
+
+    // 1) Logo.dev
+    if (fallbackStage < 1) {
       const ld = clientLogoDevUrl(cleanDomain, Math.max(size, 128));
       if (ld && ld !== logoUrl) {
-        setTriedLogoDev(true);
+        setFallbackStage(1);
         setImgError(false);
         setLogoUrl(ld);
         return;
       }
+      setFallbackStage(1);
     }
+
+    // 2) Brandfetch (wordmark) — necesita Referer allowlisted
+    if (fallbackStage < 2) {
+      const bf = clientBrandfetchUrl(cleanDomain, variant, size);
+      if (bf && bf !== logoUrl) {
+        setFallbackStage(2);
+        setImgError(false);
+        setLogoUrl(bf);
+        return;
+      }
+    }
+
     setImgError(true);
   };
 
   const isWide = variant === 'logo' || Boolean(logoUrl?.includes('/brand-logos/'));
+  const needsReferrer = isBrandfetchUrl(logoUrl);
 
   if (!resolved) {
     if (hideIfMissing) return null;
@@ -171,6 +191,7 @@ export function BrandLogo({
         height={size}
         className={`rounded-lg object-contain bg-white shrink-0 ${className}`}
         onError={handleError}
+        referrerPolicy={needsReferrer ? 'origin' : undefined}
         style={{
           minHeight: size,
           maxHeight: size,
