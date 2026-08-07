@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { IndustryCoverWatermark } from '@/components/planes/industry-cover-watermark';
 import { brandAssetsApi, publicDiagnosticApi } from '@/lib/api';
 import {
   CLEEXS_FALLBACK,
@@ -285,55 +286,66 @@ function PlanAtaqueShell({
               </div>
 
               <div className="grid gap-3 p-3 sm:p-4 md:grid-cols-[1.75fr_0.7fr_0.75fr]">
-                {/* Portada — logo aún más grande; derecha más estrecha */}
-                <article className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 text-center shadow-sm">
-                  <div className="mb-3 flex justify-center">
-                    <BrandLogo
-                      name={ctx.brandName}
-                      domain={ctx.domain}
-                      size={96}
-                      variant="logo"
-                      hideIfMissing
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Tu Plan de Ataque</h2>
-                  <div
-                    className="mx-auto mt-2 h-1.5 w-14 rounded-full"
-                    style={{ backgroundColor: accent.primary }}
+                {/* Portada — watermark del rubro a la derecha (como la pizza de referencia) */}
+                <article className="relative flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm">
+                  <IndustryCoverWatermark
+                    industry={ctx.industry}
+                    domain={ctx.domain}
+                    brandName={ctx.brandName}
+                    accent={accent}
                   />
-                  <p className="mt-3 text-xs leading-snug text-slate-700 sm:text-[13px]">
-                    Cómo conseguir más clientes desde {enginesText}{' '}
-                    <span className="font-semibold" style={{ color: accent.primary }}>
-                      en los próximos 90 días
-                    </span>
-                  </p>
-                  <div className="mt-4 border-t border-slate-100 pt-3">
-                    <p className="text-[11px] text-slate-500">Preparado exclusivamente para</p>
-                    <p className="text-base font-bold" style={{ color: accent.primary }}>
-                      {ctx.domain}
+                  <div className="relative z-10 flex max-w-[62%] flex-col">
+                    <div className="mb-3">
+                      <BrandLogo
+                        name={ctx.brandName}
+                        domain={ctx.domain}
+                        size={96}
+                        variant="logo"
+                        hideIfMissing
+                        className="rounded-xl"
+                      />
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Tu Plan de Ataque</h2>
+                    <div
+                      className="mt-2 h-1.5 w-14 rounded-full"
+                      style={{ backgroundColor: accent.primary }}
+                    />
+                    <p className="mt-3 text-xs leading-snug text-slate-700 sm:text-[13px]">
+                      Cómo conseguir más clientes desde {enginesText}{' '}
+                      <span className="font-semibold" style={{ color: accent.primary }}>
+                        en los próximos 90 días
+                      </span>
                     </p>
+                    <div className="mt-4 border-t border-slate-100 pt-3">
+                      <p className="text-[11px] text-slate-500">Preparado exclusivamente para</p>
+                      <p className="text-base font-bold" style={{ color: accent.primary }}>
+                        {ctx.domain}
+                      </p>
+                    </div>
+                    <div className="mt-3 space-y-1.5">
+                      {[
+                        { Icon: Calendar, t: `Generado el: ${today}` },
+                        {
+                          Icon: Target,
+                          t:
+                            actions != null
+                              ? `${actions} acciones priorizadas`
+                              : 'Acciones a confirmar',
+                        },
+                        {
+                          Icon: Clock,
+                          t: hours != null ? `${hours} horas estimadas` : 'Horas a estimar',
+                        },
+                        { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
+                      ].map(({ Icon, t }) => (
+                        <div key={t} className="flex items-center gap-2 text-[11px] text-slate-600">
+                          <Icon className="h-3.5 w-3.5" style={{ color: accent.primary }} />
+                          <span>{t}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="mt-3 space-y-1.5 text-left">
-                    {[
-                      { Icon: Calendar, t: `Generado el: ${today}` },
-                      {
-                        Icon: Target,
-                        t: actions != null ? `${actions} acciones priorizadas` : 'Acciones a confirmar',
-                      },
-                      {
-                        Icon: Clock,
-                        t: hours != null ? `${hours} horas estimadas` : 'Horas a estimar',
-                      },
-                      { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
-                    ].map(({ Icon, t }) => (
-                      <div key={t} className="flex items-center gap-2 text-[11px] text-slate-600">
-                        <Icon className="h-3.5 w-3.5" style={{ color: accent.primary }} />
-                        <span>{t}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-auto border-t border-slate-100 pt-3 text-left text-[11px] leading-snug text-slate-500">
+                  <div className="relative z-10 mt-auto border-t border-slate-100 pt-3 text-[11px] leading-snug text-slate-500">
                     {[
                       ctx.country ? `Mercado: ${ctx.country}` : null,
                       ctx.industry ? ctx.industry : null,

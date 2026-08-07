@@ -13,6 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { IndustryCoverWatermark } from '@/components/planes/industry-cover-watermark';
 import { brandAssetsApi } from '@/lib/api';
 import {
   CLEEXS_FALLBACK,
@@ -318,61 +319,69 @@ export function PlanAtaquePhotoPreview({
                   </div>
 
                   <div className="grid min-h-0 flex-1 grid-cols-[1.85fr_0.7fr_0.75fr] gap-1.5 p-2">
-                    {/* Portada */}
-                    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 text-center">
-                      <div className="mb-1.5 flex justify-center">
-                        <BrandLogo
-                          name={ctx.brandName}
-                          domain={ctx.domain}
-                          size={70}
-                          variant="logo"
-                          hideIfMissing
-                          className="rounded-lg"
-                        />
-                      </div>
-                      <p className="text-[14px] font-bold text-slate-900">Tu Plan de Ataque</p>
-                      <div
-                        className="mx-auto mt-1 h-1 w-11 rounded-full"
-                        style={{ backgroundColor: accent.primary }}
+                    {/* Portada + watermark del rubro (derecha, como la pizza) */}
+                    <div className="relative flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 text-left">
+                      <IndustryCoverWatermark
+                        industry={ctx.industry}
+                        domain={ctx.domain}
+                        brandName={ctx.brandName}
+                        accent={accent}
                       />
-                      <p className="mt-1.5 text-[10px] leading-snug text-slate-600">
-                        Cómo conseguir más clientes desde {enginesText}{' '}
-                        <span className="font-semibold" style={{ color: accent.primary }}>
-                          en los próximos 90 días
-                        </span>
-                      </p>
-                      <div className="mt-1.5 border-t border-slate-100 pt-1.5">
-                        <p className="text-[9px] text-slate-500">Preparado exclusivamente para</p>
-                        <p className="text-[12px] font-bold" style={{ color: accent.primary }}>
-                          {ctx.domain}
+                      <div className="relative z-10 max-w-[60%]">
+                        <div className="mb-1.5">
+                          <BrandLogo
+                            name={ctx.brandName}
+                            domain={ctx.domain}
+                            size={70}
+                            variant="logo"
+                            hideIfMissing
+                            className="rounded-lg"
+                          />
+                        </div>
+                        <p className="text-[14px] font-bold text-slate-900">Tu Plan de Ataque</p>
+                        <div
+                          className="mt-1 h-1 w-11 rounded-full"
+                          style={{ backgroundColor: accent.primary }}
+                        />
+                        <p className="mt-1.5 text-[10px] leading-snug text-slate-600">
+                          Cómo conseguir más clientes desde {enginesText}{' '}
+                          <span className="font-semibold" style={{ color: accent.primary }}>
+                            en los próximos 90 días
+                          </span>
                         </p>
+                        <div className="mt-1.5 border-t border-slate-100 pt-1.5">
+                          <p className="text-[9px] text-slate-500">Preparado exclusivamente para</p>
+                          <p className="text-[12px] font-bold" style={{ color: accent.primary }}>
+                            {ctx.domain}
+                          </p>
+                        </div>
+                        <div className="mt-1.5 space-y-0.5">
+                          {[
+                            { Icon: Calendar, t: `Generado el: ${today}` },
+                            {
+                              Icon: Target,
+                              t: actions != null ? `${actions} acciones priorizadas` : '—',
+                            },
+                            {
+                              Icon: Clock,
+                              t: hours != null ? `${hours} horas estimadas` : '—',
+                            },
+                            { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
+                          ].map(({ Icon, t }) => (
+                            <div
+                              key={t}
+                              className="flex items-center gap-1 text-[9px] text-slate-600"
+                            >
+                              <Icon
+                                className="h-3 w-3 shrink-0"
+                                style={{ color: accent.primary }}
+                              />
+                              <span className="truncate">{t}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="mt-1.5 space-y-0.5 text-left">
-                        {[
-                          { Icon: Calendar, t: `Generado el: ${today}` },
-                          {
-                            Icon: Target,
-                            t: actions != null ? `${actions} acciones priorizadas` : '—',
-                          },
-                          {
-                            Icon: Clock,
-                            t: hours != null ? `${hours} horas estimadas` : '—',
-                          },
-                          { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
-                        ].map(({ Icon, t }) => (
-                          <div
-                            key={t}
-                            className="flex items-center gap-1 text-[9px] text-slate-600"
-                          >
-                            <Icon
-                              className="h-3 w-3 shrink-0"
-                              style={{ color: accent.primary }}
-                            />
-                            <span className="truncate">{t}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-auto border-t border-slate-100 pt-1.5 text-left text-[8px] leading-snug text-slate-500">
+                      <div className="relative z-10 mt-auto border-t border-slate-100 pt-1.5 text-[8px] leading-snug text-slate-500">
                         {[
                           ctx.country ? `Mercado: ${ctx.country}` : null,
                           ctx.industry,
