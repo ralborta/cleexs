@@ -114,7 +114,7 @@ export function PlanAtaquePhotoPreview({
             : `Mejorar señales en ${ctx.domain}`,
           `Publicar preguntas frecuentes accionables`,
           `Alinear contenido con ${enginesText}`,
-          `Checklist de implementación 30/60/90`,
+          `Lista de tareas 30/60/90`,
         ];
 
   const sidebarItems = [

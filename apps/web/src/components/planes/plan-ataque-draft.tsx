@@ -139,7 +139,7 @@ function PlanAtaqueShell({
           ctx.competitors[0]
             ? `Comparativa clara vs ${ctx.competitors[0].name}`
             : `Mejorar señales de marca en ${ctx.domain}`,
-          `Publicar FAQs accionables en el sitio`,
+          `Publicar preguntas frecuentes accionables`,
           `Alinear contenido con ${enginesText}`,
         ];
 
