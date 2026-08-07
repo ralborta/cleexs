@@ -294,8 +294,8 @@ function PlanAtaqueShell({
                     brandName={ctx.brandName}
                     accent={accent}
                   />
-                  <div className="relative z-10 flex max-w-[62%] flex-col">
-                    <div className="mb-3">
+                  <div className="relative z-10 flex flex-col">
+                    <div className="mb-3 w-fit rounded-xl bg-white/90 p-1 shadow-sm backdrop-blur-[2px]">
                       <BrandLogo
                         name={ctx.brandName}
                         domain={ctx.domain}

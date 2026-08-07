@@ -2,8 +2,8 @@ import { resolveIndustryWatermark } from '@/lib/industry-watermark';
 import type { BrandAccent } from '@/lib/brand-accent-from-logo';
 
 /**
- * Marca de agua del rubro a la derecha de la portada
- * (misma posición que la pizza en el Plan de Ataque de referencia).
+ * Marca de agua del rubro: grande, atrás (z-0), logo/texto se sobreponen sin problema.
+ * Posición derecha, tipo la pizza de la referencia.
  */
 export function IndustryCoverWatermark({
   industry,
@@ -24,17 +24,15 @@ export function IndustryCoverWatermark({
     <div
       className={
         className ??
-        'pointer-events-none absolute inset-y-0 right-0 z-0 w-[52%] overflow-hidden'
+        'pointer-events-none absolute inset-0 z-0 overflow-hidden'
       }
       aria-hidden
     >
       <Icon
-        className="absolute left-[18%] top-1/2 h-[92%] w-[92%] -translate-y-1/2"
-        strokeWidth={0.65}
-        style={{ color: accent.primary, opacity: 0.13 }}
+        className="absolute -right-[18%] top-1/2 h-[135%] w-[135%] max-w-none -translate-y-1/2"
+        strokeWidth={0.55}
+        style={{ color: accent.primary, opacity: 0.11 }}
       />
-      {/* Degradé para que no compita con el texto de la izquierda */}
-      <div className="absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-white via-white/70 to-transparent" />
     </div>
   );
 }

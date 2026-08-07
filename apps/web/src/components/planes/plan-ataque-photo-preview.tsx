@@ -327,8 +327,8 @@ export function PlanAtaquePhotoPreview({
                         brandName={ctx.brandName}
                         accent={accent}
                       />
-                      <div className="relative z-10 max-w-[60%]">
-                        <div className="mb-1.5">
+                      <div className="relative z-10">
+                        <div className="mb-1.5 w-fit rounded-lg bg-white/90 p-0.5 shadow-sm backdrop-blur-[2px]">
                           <BrandLogo
                             name={ctx.brandName}
                             domain={ctx.domain}
