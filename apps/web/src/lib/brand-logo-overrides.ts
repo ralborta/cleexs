@@ -7,14 +7,15 @@ const BRAND_LOGO_OVERRIDES: Record<string, string> = {
 };
 
 export function normalizeBrandDomain(input: string | undefined | null): string | null {
-  let d = input?.trim();
-  if (!d) return null;
+  let raw = input?.trim();
+  if (!raw) return null;
+  let d: string;
   try {
-    if (d.startsWith('http')) d = new URL(d).hostname;
-    if (d.startsWith('www.')) d = d.slice(4);
-    d = d.toLowerCase() || null;
+    if (raw.startsWith('http')) raw = new URL(raw).hostname;
+    if (raw.startsWith('www.')) raw = raw.slice(4);
+    d = raw.toLowerCase();
   } catch {
-    d = d.replace(/^www\./i, '').toLowerCase() || null;
+    d = raw.replace(/^www\./i, '').toLowerCase();
   }
   if (!d) return null;
 
