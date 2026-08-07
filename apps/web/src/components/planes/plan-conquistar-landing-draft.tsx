@@ -420,11 +420,12 @@ function DraftLandingBody({
         <>
           <HeroPersonalized ctx={ctx} />
           <section className="px-4 pb-5 sm:px-6">
-            <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center lg:gap-8">
-              <div className="w-full max-w-[520px] shrink-0">
+            <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 lg:flex-row lg:items-start lg:justify-center lg:gap-5">
+              <div className="w-full max-w-[820px] shrink-0">
                 <PlanAtaquePhotoPreview ctx={ctx} />
               </div>
-              <div className="w-full max-w-sm lg:pt-1">
+              {/* Datos: recuadro chico al costado, NO del mismo tamaño que la foto */}
+              <div className="w-auto shrink-0 self-center lg:self-start lg:pt-6">
                 <OnboardingDatosMini ctx={ctx} />
               </div>
             </div>

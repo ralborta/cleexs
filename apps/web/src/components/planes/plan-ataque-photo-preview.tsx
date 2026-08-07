@@ -140,7 +140,7 @@ export function PlanAtaquePhotoPreview({
   ];
 
   return (
-    <div className={cn('mx-auto w-full max-w-[620px]', className)}>
+    <div className={cn('mx-auto w-full max-w-[820px]', className)}>
       <div
         ref={frameRef}
         className="pointer-events-none relative w-full select-none overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
