@@ -18,7 +18,6 @@ import {
   FileText,
   Loader2,
 } from 'lucide-react';
-import { BrandLogo } from '@/components/ui/brand-logo';
 import { PlanConquistarPromoPrice } from '@/components/planes/plan-conquistar-checkout-button';
 import { PlanConquistarPageCheckout } from '@/components/planes/plan-conquistar-page-checkout';
 import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
@@ -101,15 +100,12 @@ function PlanIndexPreview({ ctx }: { ctx: PlanConquistarLandingContext }) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-lg shadow-violet-100/60">
-      <div className="flex items-center gap-3 border-b border-violet-100 bg-gradient-to-r from-violet-50 to-white px-4 py-3 sm:px-5">
-        <BrandLogo name={ctx.brandName} domain={ctx.domain} size={40} />
-        <div className="min-w-0 text-left">
-          <p className="text-xs font-medium uppercase tracking-wide text-violet-600">Plan listo</p>
-          <p className="truncate text-sm font-semibold text-slate-900 sm:text-base">
-            Plan Conquistar · {ctx.brandName}
-            {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
-          </p>
-        </div>
+      <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50 to-white px-4 py-3 text-left sm:px-5">
+        <p className="text-xs font-medium uppercase tracking-wide text-violet-600">Plan listo</p>
+        <p className="truncate text-sm font-semibold text-slate-900 sm:text-base">
+          Plan Conquistar · {ctx.brandName}
+          {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
+        </p>
       </div>
       <div className="grid gap-0 sm:grid-cols-2">
         <div className="border-b border-slate-100 p-4 sm:border-b-0 sm:border-r sm:p-5">
@@ -249,10 +245,6 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
         <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 shadow-sm sm:mb-5 sm:px-4 sm:py-2 sm:text-sm">
           <Sparkles className="h-4 w-4 shrink-0" />
           <span className="truncate">Plan Conquistar ChatGPT en 90 Días</span>
-        </div>
-
-        <div className="mb-5 flex justify-center">
-          <BrandLogo name={ctx.brandName} domain={ctx.domain} size={56} className="rounded-2xl" />
         </div>
 
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
