@@ -25,6 +25,7 @@ import { publicDiagnosticApi, type PublicDiagnostic } from '@/lib/api';
 import {
   buildLandingRoadmapTabs,
   buildPlanConquistarLandingContext,
+  formatCompetitorList,
   type PlanConquistarLandingContext,
   type RoadmapTabId,
 } from '@/lib/plan-conquistar-landing-context';
@@ -206,17 +207,20 @@ function RoadmapTabs({ ctx }: { ctx: PlanConquistarLandingContext }) {
 
 function StatsBar({ ctx }: { ctx: PlanConquistarLandingContext }) {
   const stats: Array<{ label: string; value: string }> = [];
-  if (ctx.cleexsScore != null) {
-    stats.push({ label: 'Cleexs Score', value: String(ctx.cleexsScore) });
-  }
-  if (ctx.opportunityCount != null && ctx.opportunityCount > 0) {
-    stats.push({ label: 'Oportunidades', value: String(ctx.opportunityCount) });
+  if (ctx.country) {
+    stats.push({
+      label: 'Mercado',
+      value: `${ctx.countryFlag ? `${ctx.countryFlag} ` : ''}${ctx.country}`,
+    });
   }
   if (ctx.competitors.length > 0) {
     stats.push({ label: 'Competidores', value: String(ctx.competitors.length) });
   }
   if (ctx.engines.length > 0) {
-    stats.push({ label: 'Motores IA', value: String(ctx.engines.length) });
+    stats.push({ label: 'Motores', value: String(ctx.engines.length) });
+  }
+  if (ctx.cleexsScore != null) {
+    stats.push({ label: 'Cleexs Score', value: String(ctx.cleexsScore) });
   }
   if (stats.length === 0) return null;
 
@@ -225,9 +229,9 @@ function StatsBar({ ctx }: { ctx: PlanConquistarLandingContext }) {
       {stats.map((s) => (
         <div
           key={s.label}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm sm:px-4"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm sm:min-w-[7rem] sm:px-4"
         >
-          <p className="text-lg font-bold tabular-nums text-violet-700 sm:text-xl">{s.value}</p>
+          <p className="text-sm font-bold text-violet-700 sm:text-base">{s.value}</p>
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-[11px]">
             {s.label}
           </p>
@@ -238,24 +242,32 @@ function StatsBar({ ctx }: { ctx: PlanConquistarLandingContext }) {
 }
 
 function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
-  const greeting = ctx.firstName ? `${ctx.firstName}, ` : '';
-  const countryLine = ctx.country
-    ? ` en ${ctx.country}${ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}`
+  const greeting = ctx.firstName
+    ? `${ctx.firstName}${ctx.lastName ? ` ${ctx.lastName}` : ''}, `
     : '';
-  const rivalNames = ctx.competitors.slice(0, 3).map((c) => c.name);
-  const rivalsText =
-    rivalNames.length === 0
-      ? null
-      : rivalNames.length === 1
-        ? rivalNames[0]
-        : `${rivalNames.slice(0, -1).join(', ')} y ${rivalNames[rivalNames.length - 1]}`;
+  const countryWithFlag = ctx.country
+    ? `${ctx.country}${ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}`
+    : null;
+  const rivalsText = formatCompetitorList(ctx.competitors.slice(0, 3).map((c) => c.name));
+  const enginesText =
+    ctx.engines.length === 0
+      ? 'ChatGPT'
+      : ctx.engines.length <= 2
+        ? ctx.engines.join(' y ')
+        : `${ctx.engines.slice(0, -1).join(', ')} y ${ctx.engines[ctx.engines.length - 1]}`;
+
+  const profileChips: string[] = [];
+  if (countryWithFlag) profileChips.push(countryWithFlag);
+  if (ctx.industry) profileChips.push(ctx.industry);
+  if (ctx.languageLabel) profileChips.push(ctx.languageLabel);
+  if (ctx.domain) profileChips.push(ctx.domain);
 
   return (
     <section className="px-4 pt-10 pb-8 sm:px-6 sm:pt-16 sm:pb-12">
       <div className="mx-auto max-w-3xl text-center">
         <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 shadow-sm sm:mb-5 sm:px-4 sm:py-2 sm:text-sm">
           <Sparkles className="h-4 w-4 shrink-0" />
-          <span className="truncate">Plan Conquistar ChatGPT en 90 Días</span>
+          <span className="truncate">Plan Conquistar · armado con tu onboarding</span>
         </div>
 
         <div className="mb-5 flex justify-center">
@@ -270,26 +282,67 @@ function HeroPersonalized({ ctx }: { ctx: PlanConquistarLandingContext }) {
         </div>
 
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-          {greeting}tu Plan Conquistar para{' '}
-          <span className="text-violet-600">{ctx.brandName}</span>
-          {countryLine}
+          {greeting}ya terminé el plan para{' '}
+          <span className="text-violet-600">{ctx.domain || ctx.brandName}</span>
+          {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:mt-5 sm:text-lg">
-          Ya preparamos el plan de acción personalizado para que {ctx.brandName} sea favorita de{' '}
-          {ctx.engines.slice(0, 3).join(', ')}
-          {ctx.engines.length > 3 ? ' y más' : ''}. Es lo que haríamos si tu empresa fuera nuestra.
+          No es un reporte genérico. Es un plan de ejecución creado para{' '}
+          <strong className="font-semibold text-slate-800">{ctx.brandName}</strong>
+          {ctx.industry ? (
+            <>
+              {' '}
+              en <strong className="font-semibold text-slate-800">{ctx.industry}</strong>
+            </>
+          ) : null}
+          , usando lo que cargaste en el onboarding.
         </p>
-        {rivalsText && (
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-500 sm:text-base">
-            Enfocamos el plan contra lo que hoy te gana atención: <strong className="font-semibold text-slate-700">{rivalsText}</strong>.
-          </p>
+
+        {profileChips.length > 0 && (
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {profileChips.map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm sm:text-sm"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
         )}
-        {ctx.industry && (
-          <p className="mx-auto mt-2 text-sm text-slate-500">
-            Contexto: {ctx.industry}
-            {ctx.domain ? ` · ${ctx.domain}` : ''}
-          </p>
-        )}
+
+        <ul className="mx-auto mt-6 max-w-xl space-y-2.5 text-left text-sm leading-relaxed text-slate-700 sm:text-base">
+          {countryWithFlag && (
+            <li className="flex gap-2.5">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <span>
+                Comparado contra empresas de <strong className="font-semibold">{countryWithFlag}</strong>.
+              </span>
+            </li>
+          )}
+          {ctx.country && (
+            <li className="flex gap-2.5">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <span>
+                Priorizamos oportunidades para <strong className="font-semibold">{ctx.country}</strong>.
+              </span>
+            </li>
+          )}
+          {rivalsText && (
+            <li className="flex gap-2.5">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <span>
+                Competidores que cargaste: <strong className="font-semibold">{rivalsText}</strong>.
+              </span>
+            </li>
+          )}
+          <li className="flex gap-2.5">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+            <span>
+              Motores elegidos: <strong className="font-semibold">{enginesText}</strong>.
+            </span>
+          </li>
+        </ul>
 
         <div className="mt-6 flex w-full flex-col items-stretch gap-3 sm:mt-8 sm:items-center">
           <PlanConquistarPageCheckout className="w-full sm:w-auto" />
@@ -397,8 +450,11 @@ function DraftLandingBody({
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
             {ctx
               ? `Descubrí exactamente por qué ${
-                  ctx.competitors[0]?.name || 'tus competidores'
-                } aparecen en ChatGPT, Claude, Gemini y Perplexity más que ${ctx.brandName}… y qué tenés que hacer para superarlos.`
+                  formatCompetitorList(ctx.competitors.slice(0, 2).map((c) => c.name)) ||
+                  'tus competidores'
+                } aparecen más que ${ctx.brandName}${
+                  ctx.country ? ` en ${ctx.country}` : ''
+                }… y qué tenés que hacer para superarlos.`
               : 'Descubrí exactamente por qué tus competidores aparecen en ChatGPT, Claude, Gemini y Perplexity más que vos... y qué tenés que hacer para superarlos.'}
           </p>
         </div>

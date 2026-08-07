@@ -12,16 +12,35 @@ export type PlanConquistarLandingContext = {
   brandName: string;
   domain: string;
   firstName: string | null;
+  lastName: string | null;
   country: string | null;
   countryIso: string | null;
   countryFlag: string | null;
   industry: string | null;
+  language: string | null;
+  languageLabel: string | null;
   competitors: LandingCompetitor[];
   engines: string[];
   cleexsScore: number | null;
   opportunityCount: number | null;
   topActions: string[];
   status: PublicDiagnostic['status'];
+};
+
+const LANGUAGE_LABEL: Record<string, string> = {
+  es: 'Español',
+  pt: 'Português',
+  en: 'English',
+  fr: 'Français',
+  de: 'Deutsch',
+  it: 'Italiano',
+};
+
+const ENGINE_LABEL: Record<string, string> = {
+  chatgpt: 'ChatGPT',
+  gemini: 'Gemini',
+  claude: 'Claude',
+  perplexity: 'Perplexity',
 };
 
 function hostFromUrl(raw: string): string | null {
@@ -38,7 +57,50 @@ function hostFromUrl(raw: string): string | null {
 
 function brandFromHost(host: string): string {
   const base = host.split('.')[0] || host;
+  const pretty: Record<string, string> = {
+    playstation: 'PlayStation',
+    xbox: 'Xbox',
+    steampowered: 'Steam',
+    nintendo: 'Nintendo',
+  };
+  const key = base.toLowerCase();
+  if (pretty[key]) return pretty[key];
   return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+/** Limpia "Playstation (playstation.com)" → "PlayStation". */
+export function cleanCompetitorName(raw: string, domainHint?: string | null): string {
+  let name = raw.trim();
+  const paren = name.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+  if (paren) {
+    name = paren[1].trim();
+    domainHint = domainHint || paren[2].trim();
+  }
+  if (domainHint) {
+    const host = hostFromUrl(domainHint);
+    if (host) {
+      const fromHost = brandFromHost(host);
+      // Si el nombre es casi el host, preferimos el pretty del host
+      if (normalizeLoose(name) === normalizeLoose(host.split('.')[0] || '') || name.length < 3) {
+        return fromHost;
+      }
+    }
+  }
+  const known: Record<string, string> = {
+    playstation: 'PlayStation',
+    xbox: 'Xbox',
+    steampowered: 'Steam',
+    steam: 'Steam',
+  };
+  return known[normalizeLoose(name)] || name;
+}
+
+function normalizeLoose(v: string) {
+  return v
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
 }
 
 /** Bandera emoji desde ISO-3166 alfa-2 (ej. BO → 🇧🇴). */
@@ -69,24 +131,31 @@ function competitorsFromRun(run: PublicDiagnosticRunResult): LandingCompetitor[]
     return run.competitorDetails
       .filter((c) => c.name?.trim())
       .slice(0, 5)
-      .map((c) => ({ name: c.name.trim(), domain: c.domain ?? null }));
+      .map((c) => ({
+        name: cleanCompetitorName(c.name, c.domain),
+        domain: c.domain ?? null,
+      }));
   }
   if (run.competitors?.length) {
     return run.competitors
       .filter((name) => name?.trim())
       .slice(0, 5)
-      .map((name) => ({ name: name.trim(), domain: null }));
+      .map((name) => ({ name: cleanCompetitorName(name), domain: null }));
   }
   return [];
 }
 
-const ENGINE_LABEL: Record<string, string> = {
-  chatgpt: 'ChatGPT',
-  gemini: 'Gemini',
-  claude: 'Claude',
-  perplexity: 'Perplexity',
-};
+export function formatCompetitorList(names: string[]): string | null {
+  if (!names.length) return null;
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
+}
 
+/**
+ * Contexto de landing priorizando datos del onboarding (setupDraft).
+ * El run del diagnóstico solo complementa score/acciones y rivales si faltan URLs.
+ */
 export function buildPlanConquistarLandingContext(
   diagnostic: PublicDiagnostic
 ): PlanConquistarLandingContext {
@@ -101,18 +170,21 @@ export function buildPlanConquistarLandingContext(
   const country = countryRow?.name ?? countryRaw;
   const industry =
     draft?.confirmedIndustry?.trim() || draft?.suggestedIndustry?.trim() || null;
+  const language = draft?.selectedLanguage?.trim() || null;
+  const languageLabel = language ? LANGUAGE_LABEL[language] || language : null;
 
-  const fromUrls = competitorsFromUrls(
+  // Gonzalo: lo que el cliente cargó en onboarding primero
+  const fromOnboarding = competitorsFromUrls(
     draft?.confirmedCompetitorUrls?.length
       ? draft.confirmedCompetitorUrls
       : draft?.suggestedCompetitorUrls
   );
   const fromRun = diagnostic.runResult ? competitorsFromRun(diagnostic.runResult) : [];
-  const competitors = fromRun.length ? fromRun : fromUrls;
+  const competitors = fromOnboarding.length ? fromOnboarding : fromRun;
 
   const enginesRaw = draft?.selectedEngines?.length
     ? draft.selectedEngines
-    : ['chatgpt', 'gemini', 'claude', 'perplexity'];
+    : ['chatgpt'];
   const engines = enginesRaw.map((e) => ENGINE_LABEL[e.toLowerCase()] || e);
 
   let cleexsScore: number | null = null;
@@ -149,10 +221,13 @@ export function buildPlanConquistarLandingContext(
     brandName: diagnostic.brandName,
     domain: diagnostic.domain.replace(/^www\./, ''),
     firstName: draft?.firstName?.trim() || null,
+    lastName: draft?.lastName?.trim() || null,
     country,
     countryIso,
     countryFlag: flagEmojiFromIso(countryIso),
     industry,
+    language,
+    languageLabel,
     competitors,
     engines,
     cleexsScore,
@@ -176,6 +251,7 @@ export function buildLandingRoadmapTabs(ctx: PlanConquistarLandingContext): Road
   const rival = ctx.competitors[0]?.name;
   const industryBit = ctx.industry ? ` en ${ctx.industry}` : '';
   const countryBit = ctx.country ? ` (${ctx.country})` : '';
+  const enginesBit = ctx.engines.slice(0, 2).join(' y ') || 'ChatGPT';
 
   const action1 = ctx.topActions[0];
   const action2 = ctx.topActions[1];
@@ -189,7 +265,7 @@ export function buildLandingRoadmapTabs(ctx: PlanConquistarLandingContext): Road
       items: [
         action1 ||
           `Revisá el diagnóstico de ${brand}${countryBit} y marcá la intención más débil.`,
-        `Anotá cómo aparece hoy ${brand} frente a ${rival || 'tus competidores'} en ChatGPT.`,
+        `Anotá cómo aparece hoy ${brand} frente a ${rival || 'tus competidores'} en ${enginesBit}.`,
         `Definí 1 página del sitio que responda mejor esa consulta${industryBit}.`,
       ],
     },
@@ -198,8 +274,7 @@ export function buildLandingRoadmapTabs(ctx: PlanConquistarLandingContext): Road
       label: 'Semana 1',
       title: 'Quick wins de esta semana',
       items: [
-        action2 ||
-          `Publicá o mejorá una pieza clara para la prioridad #1 de ${brand}.`,
+        action2 || `Publicá o mejorá una pieza clara para la prioridad #1 de ${brand}.`,
         action3 ||
           `Sumá 3 FAQs verificables sobre lo que preguntan los clientes de ${brand}.`,
         rival
@@ -210,7 +285,9 @@ export function buildLandingRoadmapTabs(ctx: PlanConquistarLandingContext): Road
     {
       id: 'd30',
       label: '30 días',
-      title: 'Mes 1 — señales que la IA entiende',
+      title: ctx.country
+        ? `Mes 1 — señales que ${enginesBit} entiende en ${ctx.country}`
+        : 'Mes 1 — señales que la IA entiende',
       items: [
         `Publicá 2–3 piezas que cubran intenciones con bajo score de ${brand}.`,
         `Unificá descripción, rubro y propuesta de valor en el sitio y perfiles externos.`,
@@ -225,7 +302,7 @@ export function buildLandingRoadmapTabs(ctx: PlanConquistarLandingContext): Road
       title: 'Mes 2 — autoridad y cobertura',
       items: [
         `Ampliá cobertura a intenciones secundarias detectadas para ${brand}.`,
-        `Aparecé en 1–2 fuentes externas del sector (directorios, comunidades, demos).`,
+        `Aparecé en 1–2 fuentes externas del sector${industryBit || ''}.`,
         `Reforzá comparativas y FAQs con contenido actualizado y citables.`,
       ],
     },
