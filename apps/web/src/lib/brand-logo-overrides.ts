@@ -12,10 +12,25 @@ export function normalizeBrandDomain(input: string | undefined | null): string |
   try {
     if (d.startsWith('http')) d = new URL(d).hostname;
     if (d.startsWith('www.')) d = d.slice(4);
-    return d.toLowerCase() || null;
+    d = d.toLowerCase() || null;
   } catch {
-    return d.replace(/^www\./i, '').toLowerCase() || null;
+    d = d.replace(/^www\./i, '').toLowerCase() || null;
   }
+  if (!d) return null;
+
+  // Typos comunes de TLD que rompen lookups de logo (ej. deeppsy.oi → deeppsy.io)
+  const typoFix: Record<string, string> = {
+    '.oi': '.io',
+    '.con': '.com',
+    '.comm': '.com',
+  };
+  for (const [bad, good] of Object.entries(typoFix)) {
+    if (d.endsWith(bad)) {
+      d = `${d.slice(0, -bad.length)}${good}`;
+      break;
+    }
+  }
+  return d;
 }
 
 /** URL local/curada si existe; si no, null. */
