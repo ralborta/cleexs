@@ -140,11 +140,14 @@ export function PlanAtaquePhotoPreview({
   ];
 
   return (
-    <div className={cn('mx-auto w-full max-w-[520px]', className)}>
+    <div className={cn('mx-auto w-full max-w-[620px]', className)}>
       <div
         ref={frameRef}
-        className="pointer-events-none relative w-full select-none overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_48px_rgba(15,23,42,0.14)]"
-        style={{ height: DESIGN_H * scale }}
+        className="pointer-events-none relative w-full select-none overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
+        style={{
+          height: DESIGN_H * scale,
+          boxShadow: `0 10px 36px -8px ${accent.primary}55, 0 4px 14px -4px ${accent.primary}33`,
+        }}
         aria-hidden
       >
         <div

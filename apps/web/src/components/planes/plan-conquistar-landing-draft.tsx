@@ -195,21 +195,21 @@ function OnboardingDatosMini({ ctx }: { ctx: PlanConquistarLandingContext }) {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[280px] sm:max-w-none">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="w-full max-w-[200px]">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
         Datos..
       </p>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/90 shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm">
         <dl className="divide-y divide-slate-100">
           {rows.map((row) => (
             <div
               key={row.label}
-              className="grid grid-cols-[5rem_1fr] gap-2 px-3 py-1.5 sm:grid-cols-[5.5rem_1fr] sm:px-3.5 sm:py-2"
+              className="grid grid-cols-[3.4rem_1fr] gap-1 px-2 py-0.5"
             >
-              <dt className="text-[11px] font-medium text-slate-400 sm:text-xs">{row.label}</dt>
+              <dt className="text-[9px] font-medium leading-tight text-slate-400">{row.label}</dt>
               <dd
                 className={cn(
-                  'min-h-[1.1rem] text-xs font-medium text-slate-800 sm:text-[13px]',
+                  'min-h-[0.85rem] truncate text-[9px] font-medium leading-tight text-slate-700',
                   row.blank && 'text-transparent'
                 )}
               >
