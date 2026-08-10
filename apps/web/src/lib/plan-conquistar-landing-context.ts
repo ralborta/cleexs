@@ -111,25 +111,60 @@ export function flagEmojiFromIso(iso: string | null | undefined): string | null 
   return String.fromCodePoint(...[...code].map((c) => 127397 + c.charCodeAt(0)));
 }
 
-function competitorsFromUrls(urls: string[] | undefined): LandingCompetitor[] {
+function registrableKey(host: string): string {
+  const h = host.toLowerCase().replace(/^www\./, '');
+  const parts = h.split('.').filter(Boolean);
+  if (parts.length <= 2) return h;
+  // ej. foo.com.ar / foo.com.br → últimos 3; foo.co.uk similar
+  const last = parts[parts.length - 1];
+  const mid = parts[parts.length - 2];
+  if (last.length === 2 && mid.length <= 3) return parts.slice(-3).join('.');
+  return parts.slice(-2).join('.');
+}
+
+function isSameBrandDomain(candidateHost: string, brandDomain: string): boolean {
+  const a = registrableKey(candidateHost);
+  const b = registrableKey(hostFromUrl(brandDomain) || brandDomain);
+  return Boolean(a && b && a === b);
+}
+
+function competitorsFromUrls(
+  urls: string[] | undefined,
+  brandDomain: string,
+  nameByDomain?: Map<string, string>
+): LandingCompetitor[] {
   if (!urls?.length) return [];
   const seen = new Set<string>();
   const out: LandingCompetitor[] = [];
   for (const url of urls) {
     const domain = hostFromUrl(url);
     if (!domain) continue;
-    const key = domain.toLowerCase();
+    if (isSameBrandDomain(domain, brandDomain)) continue;
+    const key = registrableKey(domain);
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ name: brandFromHost(domain), domain });
+    const fromRun = nameByDomain?.get(key);
+    out.push({
+      name: fromRun ? cleanCompetitorName(fromRun, domain) : brandFromHost(domain),
+      domain,
+    });
+    if (out.length >= 5) break;
   }
   return out;
 }
 
-function competitorsFromRun(run: PublicDiagnosticRunResult): LandingCompetitor[] {
+function competitorsFromRun(
+  run: PublicDiagnosticRunResult,
+  brandDomain: string
+): LandingCompetitor[] {
   if (run.competitorDetails?.length) {
     return run.competitorDetails
       .filter((c) => c.name?.trim())
+      .filter((c) => {
+        if (!c.domain) return true;
+        const host = hostFromUrl(c.domain);
+        return !host || !isSameBrandDomain(host, brandDomain);
+      })
       .slice(0, 5)
       .map((c) => ({
         name: cleanCompetitorName(c.name, c.domain),
@@ -143,6 +178,19 @@ function competitorsFromRun(run: PublicDiagnosticRunResult): LandingCompetitor[]
       .map((name) => ({ name: cleanCompetitorName(name), domain: null }));
   }
   return [];
+}
+
+/** Mapa dominio→nombre real del run para no inventar solo desde el host. */
+function nameMapFromRun(run: PublicDiagnosticRunResult | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!run?.competitorDetails?.length) return map;
+  for (const c of run.competitorDetails) {
+    if (!c.domain || !c.name?.trim()) continue;
+    const host = hostFromUrl(c.domain);
+    if (!host) continue;
+    map.set(registrableKey(host), c.name.trim());
+  }
+  return map;
 }
 
 export function formatCompetitorList(names: string[]): string | null {
@@ -173,13 +221,18 @@ export function buildPlanConquistarLandingContext(
   const language = draft?.selectedLanguage?.trim() || null;
   const languageLabel = language ? LANGUAGE_LABEL[language] || language : null;
 
-  // Gonzalo: lo que el cliente cargó en onboarding primero
+  // Onboarding primero; nombres del run si el dominio coincide; nunca incluir dominio propio
+  const nameByDomain = nameMapFromRun(diagnostic.runResult);
   const fromOnboarding = competitorsFromUrls(
     draft?.confirmedCompetitorUrls?.length
       ? draft.confirmedCompetitorUrls
-      : draft?.suggestedCompetitorUrls
+      : draft?.suggestedCompetitorUrls,
+    diagnostic.domain,
+    nameByDomain
   );
-  const fromRun = diagnostic.runResult ? competitorsFromRun(diagnostic.runResult) : [];
+  const fromRun = diagnostic.runResult
+    ? competitorsFromRun(diagnostic.runResult, diagnostic.domain)
+    : [];
   const competitors = fromOnboarding.length ? fromOnboarding : fromRun;
 
   const enginesRaw = draft?.selectedEngines?.length
