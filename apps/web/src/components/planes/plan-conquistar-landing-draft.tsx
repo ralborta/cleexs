@@ -382,23 +382,31 @@ function DraftLandingBody({
   ctx,
   loadError,
   loading,
+  production = false,
 }: {
   ctx: PlanConquistarLandingContext | null;
   loadError: string | null;
   loading: boolean;
+  /** Si true: sin banner ámbar ni zoom de borrador (ruta /plan-conquistar). */
+  production?: boolean;
 }) {
   return (
     <main
       className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-violet-50/60 via-white to-white pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-0"
-      /* ~+3pt en toda la página (borrador) */
-      style={{ zoom: 1.12 }}
+      style={production ? undefined : { zoom: 1.12 }}
     >
-      <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900 sm:text-sm">
-        Borrador · no es producción · la landing live sigue en{' '}
-        <Link href="/plan-conquistar" className="underline hover:text-amber-950">
-          /plan-conquistar
-        </Link>
-      </div>
+      {!production && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900 sm:text-sm">
+          Borrador · espejo de la landing · live en{' '}
+          <Link href="/plan-conquistar" className="underline hover:text-amber-950">
+            /plan-conquistar
+          </Link>
+          {' · '}
+          <Link href="/borrador/plan-conquistar-prod-bkp" className="underline hover:text-amber-950">
+            ver backup anterior
+          </Link>
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center gap-2 py-16 text-slate-500">
@@ -554,7 +562,7 @@ function DraftLandingBody({
   );
 }
 
-function PlanConquistarLandingDraftInner() {
+function PlanConquistarLandingDraftInner({ production }: { production: boolean }) {
   const searchParams = useSearchParams();
   const diagnosticId = searchParams.get('diagnosticId');
   const [loading, setLoading] = useState(Boolean(diagnosticId));
@@ -593,17 +601,28 @@ function PlanConquistarLandingDraftInner() {
     };
   }, [diagnosticId]);
 
-  return <DraftLandingBody ctx={ctx} loadError={loadError} loading={loading} />;
+  return (
+    <DraftLandingBody
+      ctx={ctx}
+      loadError={loadError}
+      loading={loading}
+      production={production}
+    />
+  );
 }
 
-export function PlanConquistarLandingDraft() {
+export function PlanConquistarLandingDraft({
+  production = false,
+}: {
+  production?: boolean;
+} = {}) {
   return (
     <Suspense
       fallback={
-        <DraftLandingBody ctx={null} loadError={null} loading />
+        <DraftLandingBody ctx={null} loadError={null} loading production={production} />
       }
     >
-      <PlanConquistarLandingDraftInner />
+      <PlanConquistarLandingDraftInner production={production} />
     </Suspense>
   );
 }

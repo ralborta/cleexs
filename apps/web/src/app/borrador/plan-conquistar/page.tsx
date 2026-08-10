@@ -4,7 +4,7 @@ import { PlanConquistarLandingDraft } from '@/components/planes/plan-conquistar-
 export const metadata: Metadata = {
   title: 'Borrador · Plan Conquistar personalizado | Cleexs',
   description:
-    'Borrador de landing Plan Conquistar personalizada con datos del diagnóstico. No es producción.',
+    'Espejo de la landing Plan Conquistar personalizada. La producción vive en /plan-conquistar.',
   robots: { index: false, follow: false },
 };
 
