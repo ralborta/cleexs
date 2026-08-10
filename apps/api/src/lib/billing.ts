@@ -43,17 +43,32 @@ export function getPlanConquistarAmountUsd(): number {
 }
 
 /**
- * Monto ARS cobrado en Mercado Pago (preference unit_price).
- * Si `PLAN_CONQUISTAR_ARS` está seteado (ej. 1530 para pruebas), manda ese valor.
- * Si no, convierte USD → ARS con el FX habitual.
+ * Override temporal de monto ARS en checkouts Mercado Pago (pruebas).
+ * Lee `MP_CHECKOUT_ARS_OVERRIDE` o, por compat, `PLAN_CONQUISTAR_ARS`.
+ */
+export function getMpCheckoutArsOverride(): number | null {
+  const raw =
+    process.env.MP_CHECKOUT_ARS_OVERRIDE?.trim() || process.env.PLAN_CONQUISTAR_ARS?.trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+}
+
+/**
+ * Monto ARS cobrado en Mercado Pago para Plan Conquistar (preference unit_price).
+ * Con override de prueba → ese valor; si no, USD → ARS con FX.
  */
 export function getPlanConquistarAmountArs(rate = getBillingUsdToArsRate()): number {
-  const raw = process.env.PLAN_CONQUISTAR_ARS?.trim();
-  if (raw) {
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed > 0) return Math.round(parsed);
-  }
-  return usdToArs(getPlanConquistarAmountUsd(), rate);
+  return getMpCheckoutArsOverride() ?? usdToArs(getPlanConquistarAmountUsd(), rate);
+}
+
+/** Monto ARS de suscripción Premium (preapproval). Respeta el mismo override de prueba. */
+export function getPremiumSubscriptionAmountArs(
+  amountUsd: number,
+  rate = getBillingUsdToArsRate()
+): number {
+  return getMpCheckoutArsOverride() ?? usdToArs(amountUsd, rate);
 }
 
 export function getBillingCurrency(): BillingCurrency {

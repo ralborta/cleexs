@@ -6,6 +6,8 @@ import {
   getBillingCurrency,
   getPlanConquistarAmountUsd,
   getPlanConquistarAmountArs,
+  getPremiumSubscriptionAmountArs,
+  getMpCheckoutArsOverride,
   getBillingUsdToArsRate,
   getPlanBillingAmountUsd,
   usdToArs,
@@ -137,12 +139,17 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
       const plan = await ensurePremiumPlan(prisma);
       const fxRate = getBillingUsdToArsRate();
       const amountUsd = getPlanBillingAmountUsd(parsed.data.planId, interval);
-      const amountArs = usdToArs(amountUsd, fxRate);
+      const amountArs = getPremiumSubscriptionAmountArs(amountUsd, fxRate);
       const publicUrl = getPublicAppUrl();
+      const arsOverride = getMpCheckoutArsOverride();
       const reason =
         interval === BillingInterval.annual
-          ? `Cleexs Premium anual - ${amountUsd} USD referenciales`
-          : `Cleexs Premium mensual - ${amountUsd} USD referenciales`;
+          ? arsOverride
+            ? `Cleexs Premium anual - ARS ${amountArs} (prueba)`
+            : `Cleexs Premium anual - ${amountUsd} USD referenciales`
+          : arsOverride
+            ? `Cleexs Premium mensual - ARS ${amountArs} (prueba)`
+            : `Cleexs Premium mensual - ${amountUsd} USD referenciales`;
 
       const subscription = await prisma.subscription.create({
         data: {
