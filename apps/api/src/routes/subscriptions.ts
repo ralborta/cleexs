@@ -447,6 +447,13 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         select: { email: true },
       });
 
+      const planAtaquePath =
+        typeof raw.planAtaquePath === 'string' && raw.planAtaquePath.trim()
+          ? raw.planAtaquePath.trim()
+          : typeof raw.diagnosticId === 'string' && raw.diagnosticId.trim()
+            ? `/portal-crecimiento/plan-ataque?diagnosticId=${encodeURIComponent(raw.diagnosticId.trim())}`
+            : '/portal-crecimiento';
+
       return {
         ok: true,
         paymentId: payment.id,
@@ -455,7 +462,10 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         premiumActive: planKey === 'crecimiento' || planKey === 'enterprise',
         portalEmail: owner?.email ?? payment.payerEmail,
         paidAt: payment.paidAt,
-        portalUrl: `${getPublicAppUrl()}/portal-crecimiento`,
+        portalUrl: `${getPublicAppUrl()}${planAtaquePath.startsWith('/') ? '' : '/'}${planAtaquePath}`,
+        planAtaquePath,
+        diagnosticId: typeof raw.diagnosticId === 'string' ? raw.diagnosticId : null,
+        planGenerated: Boolean(raw.planDeliverable),
       };
     },
   );

@@ -85,11 +85,12 @@ function PagoExitoContent() {
     product === 'plan-conquistar' ? (
       premiumReady ? (
         <>
-          Tu Plan Conquistar ya está activo. Te enviamos un email con acceso al portal Premium
+          Tu Plan Conquistar ya está activo y tu Plan de Ataque quedó listo. Te enviamos un email
+          con acceso
           {portalEmail ? (
             <>
               {' '}
-              para <strong className="font-semibold text-slate-800">{portalEmail}</strong>
+              a <strong className="font-semibold text-slate-800">{portalEmail}</strong>
             </>
           ) : null}
           .
@@ -121,9 +122,13 @@ function PagoExitoContent() {
       title={title}
       description={description}
       primaryHref={portalUrl}
-      primaryLabel="Ir al portal Premium"
-      secondaryHref="/plan-conquistar"
-      secondaryLabel="Ver detalle del plan"
+      primaryLabel={
+        product === 'plan-conquistar' ? 'Ver mi Plan de Ataque' : 'Ir al portal Premium'
+      }
+      secondaryHref={product === 'plan-conquistar' ? '/portal-crecimiento' : '/plan-conquistar'}
+      secondaryLabel={
+        product === 'plan-conquistar' ? 'Ir al portal Premium' : 'Ver detalle del plan'
+      }
     >
       {polling ? (
         <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-800">

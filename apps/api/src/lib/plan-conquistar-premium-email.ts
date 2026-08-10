@@ -38,14 +38,14 @@ export async function sendPlanConquistarPremiumWelcomeEmail(input: {
         Iniciá sesión con la <strong>misma contraseña</strong> que ya usás en Cleexs.
       </p>`;
 
-  const subject = 'Plan Conquistar activo · Acceso al portal Premium';
+  const subject = 'Plan Conquistar activo · Tu Plan de Ataque está listo';
   const text =
     `¡Tu pago fue confirmado!\n\n` +
     `Ya tenés Cleexs Premium (Plan Conquistar) activo hasta ${formatDateEs(input.premiumUntil)}.\n\n` +
-    `Portal Premium: ${portalUrl}\n` +
+    `Tu Plan de Ataque: ${portalUrl}\n` +
     `Email de acceso: ${input.loginEmail}\n` +
     (input.temporaryPassword ? `Contraseña temporal: ${input.temporaryPassword}\n` : '') +
-    `\nEntrá al portal para ver tu informe completo, score por motores y plan de acción.`;
+    `\nEntrá para ver tu plan de acción de 90 días, score por motores e informe completo.`;
 
   const html = `
     <div style="margin:0;padding:0;background:#f8fafc;">
@@ -53,14 +53,14 @@ export async function sendPlanConquistarPremiumWelcomeEmail(input: {
         <div style="background:linear-gradient(135deg,#6d28d9 0%,#4f46e5 100%);padding:28px 32px;color:#fff;">
           <p style="margin:0 0 8px 0;font-size:12px;letter-spacing:2px;font-weight:700;opacity:0.9;">CLEEXS PREMIUM</p>
           <h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:800;">Plan Conquistar activado</h1>
-          <p style="margin:12px 0 0 0;font-size:15px;line-height:1.5;opacity:0.95;">Tu pago fue confirmado. Ya podés entrar al portal Premium con tu email.</p>
+          <p style="margin:12px 0 0 0;font-size:15px;line-height:1.5;opacity:0.95;">Tu pago fue confirmado. Ya está listo tu Plan de Ataque personalizado.</p>
         </div>
         <div style="padding:28px 32px;color:#334155;font-size:15px;line-height:1.6;">
           <p style="margin:0 0 16px 0;">Premium activo hasta <strong>${until}</strong> (90 días).</p>
           <p style="margin:0 0 8px 0;"><strong>Email de acceso:</strong> ${loginEmail}</p>
           ${passwordBlock}
           <p style="margin:20px 0 8px 0;">
-            <a href="${portalUrl}" style="display:inline-block;padding:14px 22px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;">Entrar al portal Premium</a>
+            <a href="${portalUrl}" style="display:inline-block;padding:14px 22px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;">Ver mi Plan de Ataque</a>
           </p>
           <p style="margin:16px 0 0 0;font-size:13px;color:#64748b;">Si el botón no funciona, copiá este link:<br/><span style="word-break:break-all;">${escapeHtml(portalUrl)}</span></p>
         </div>

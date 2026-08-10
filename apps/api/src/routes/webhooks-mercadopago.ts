@@ -257,6 +257,10 @@ async function processPlanConquistarPayment(payment: RawPayment, status: Payment
   const approvedAt = parseDate(payment.date_approved) ?? new Date();
   const amountArs = payment.transaction_amount ?? Number(localPayment.amountArs);
 
+  const prevRaw =
+    localPayment.rawPayload && typeof localPayment.rawPayload === 'object'
+      ? (localPayment.rawPayload as Record<string, unknown>)
+      : {};
   await prisma.payment.update({
     where: { id: localPayment.id },
     data: {
@@ -270,7 +274,9 @@ async function processPlanConquistarPayment(payment: RawPayment, status: Payment
       statusDetail: payment.status_detail,
       payerEmail: payment.payer?.email ?? localPayment.payerEmail,
       paidAt: status === PaymentStatus.approved ? approvedAt : localPayment.paidAt,
+      // Conservar diagnosticId / generatedPassword del checkout
       rawPayload: toJson({
+        ...prevRaw,
         product: 'plan_conquistar_90d',
         payment,
       }),

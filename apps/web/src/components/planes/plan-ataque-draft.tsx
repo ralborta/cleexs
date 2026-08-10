@@ -26,6 +26,7 @@ import {
   type BrandAccent,
 } from '@/lib/brand-accent-from-logo';
 import {
+  buildLandingRoadmapTabs,
   buildPlanConquistarLandingContext,
   type PlanConquistarLandingContext,
 } from '@/lib/plan-conquistar-landing-context';
@@ -91,10 +92,13 @@ function PlanAtaqueShell({
   ctx,
   accent,
   logoUrl,
+  unlocked = false,
 }: {
   ctx: PlanConquistarLandingContext;
   accent: BrandAccent;
   logoUrl: string | null;
+  /** Post-compra: sin blur ni CTA de desbloqueo. */
+  unlocked?: boolean;
 }) {
   const today = new Date().toLocaleDateString('es-AR', {
     day: 'numeric',
@@ -160,10 +164,16 @@ function PlanAtaqueShell({
         } as CSSProperties
       }
     >
-      <div className="border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-center text-[11px] font-medium text-amber-900">
-        Borrador · menú no funcional · acento {accent.primary} ({accent.source}
-        {logoUrl ? '' : ', sin logo'})
-      </div>
+      {!unlocked ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-center text-[11px] font-medium text-amber-900">
+          Borrador · menú no funcional · acento {accent.primary} ({accent.source}
+          {logoUrl ? '' : ', sin logo'})
+        </div>
+      ) : (
+        <div className="border-b border-emerald-200 bg-emerald-50 px-3 py-1.5 text-center text-[11px] font-medium text-emerald-900">
+          Plan Conquistar activo · Plan de Ataque personalizado para {ctx.domain}
+        </div>
+      )}
 
       {/* Barra superior — más angosta; Confidencial/cleexs alineados al recuadro */}
       <div style={{ backgroundColor: accent.primary }}>
@@ -387,10 +397,12 @@ function PlanAtaqueShell({
                       </li>
                     ))}
                   </ol>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-white via-white/90 to-transparent" />
+                  {!unlocked && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-white via-white/90 to-transparent" />
+                  )}
                 </article>
 
-                {/* Prioridad #1 — ~⅓ legible, resto difuminado, SIN candado */}
+                {/* Prioridad #1 — teaser difuminado; post-compra legible */}
                 <article className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                   <p
                     className="text-[11px] font-bold uppercase tracking-wide"
@@ -408,8 +420,10 @@ function PlanAtaqueShell({
                     style={{ backgroundColor: accent.primary }}
                   />
                   <ol className="mt-3 space-y-2.5">
-                    {[...faqs, 'Detalle de implementación y ejemplos…', 'Schema y señales externas…'].map(
-                      (q, i) => (
+                    {(unlocked
+                      ? faqs
+                      : [...faqs, 'Detalle de implementación y ejemplos…', 'Schema y señales externas…']
+                    ).map((q, i) => (
                         <li key={`${i}-${q.slice(0, 20)}`} className="flex gap-2 text-xs text-slate-700">
                           <span
                             className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
@@ -419,10 +433,11 @@ function PlanAtaqueShell({
                           </span>
                           <span className="leading-snug">{q}</span>
                         </li>
-                      )
-                    )}
+                      ))}
                   </ol>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-white from-20% via-white/90 to-transparent" />
+                  {!unlocked && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-white from-20% via-white/90 to-transparent" />
+                  )}
                 </article>
               </div>
 
@@ -468,16 +483,18 @@ function PlanAtaqueShell({
                         </div>
                       ))}
                     </div>
-                    <div className="mt-3 flex justify-center">
-                      <button
-                        type="button"
-                        disabled
-                        className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-semibold text-white opacity-90"
-                        style={{ backgroundColor: accent.primary }}
-                      >
-                        Desbloquear plan completo
-                      </button>
-                    </div>
+                    {!unlocked && (
+                      <div className="mt-3 flex justify-center">
+                        <button
+                          type="button"
+                          disabled
+                          className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-semibold text-white opacity-90"
+                          style={{ backgroundColor: accent.primary }}
+                        >
+                          Desbloquear plan completo
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -485,10 +502,48 @@ function PlanAtaqueShell({
           </div>
         </div>
 
+        {unlocked && (
+          <section className="mx-auto mt-8 max-w-3xl px-1">
+            <h2 className="text-center text-lg font-bold text-slate-900 sm:text-xl">
+              Roadmap 90 días
+            </h2>
+            <p className="mx-auto mt-1 max-w-xl text-center text-sm text-slate-600">
+              Plan de acción priorizado a partir de tu diagnóstico.
+            </p>
+            <div className="mt-4 space-y-3">
+              {buildLandingRoadmapTabs(ctx).map((tab) => (
+                <div
+                  key={tab.id}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <p
+                    className="text-[11px] font-bold uppercase tracking-wide"
+                    style={{ color: accent.primary }}
+                  >
+                    {tab.label}
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-slate-900">{tab.title}</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                    {tab.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <p className="mt-5 text-center text-xs text-slate-500">
-          <Link href="/borrador/plan-conquistar" className="underline hover:text-slate-700">
-            ← Landing Plan Conquistar
-          </Link>
+          {unlocked ? (
+            <Link href="/portal-crecimiento" className="underline hover:text-slate-700">
+              ← Volver al portal Premium
+            </Link>
+          ) : (
+            <Link href="/borrador/plan-conquistar" className="underline hover:text-slate-700">
+              ← Landing Plan Conquistar
+            </Link>
+          )}
           {' · '}
           {ctx.domain}
         </p>
@@ -586,7 +641,99 @@ function PlanAtaqueDraftInner() {
     );
   }
 
-  return <PlanAtaqueShell ctx={ctx} accent={accent} logoUrl={logoUrl} />;
+  return <PlanAtaqueShell ctx={ctx} accent={accent} logoUrl={logoUrl} unlocked={false} />;
+}
+
+function PlanAtaqueUnlockedInner() {
+  const searchParams = useSearchParams();
+  const diagnosticId = searchParams.get('diagnosticId');
+  const [loading, setLoading] = useState(Boolean(diagnosticId));
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [ctx, setCtx] = useState<PlanConquistarLandingContext | null>(null);
+  const [accent, setAccent] = useState<BrandAccent>(CLEEXS_FALLBACK);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!diagnosticId) {
+      setLoading(false);
+      setCtx(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+
+    publicDiagnosticApi
+      .get(diagnosticId)
+      .then(async (diag) => {
+        if (cancelled) return;
+        const next = buildPlanConquistarLandingContext(diag);
+        setCtx(next);
+
+        let resolvedLogo: string | null = null;
+        try {
+          const asset = await brandAssetsApi.resolve({
+            domain: next.domain,
+            brandName: next.brandName,
+          });
+          if (asset.status === 'ok' && asset.logoUrl && !asset.logoUrl.includes('brandfetch.io')) {
+            resolvedLogo = asset.logoUrl;
+          }
+        } catch {
+          // ignore
+        }
+        if (cancelled) return;
+        setLogoUrl(resolvedLogo);
+
+        if (resolvedLogo) {
+          const fromLogo = await extractAccentFromLogoUrl(resolvedLogo, next.domain);
+          if (!cancelled) setAccent(fromLogo);
+        } else {
+          setAccent(accentFromDomain(next.domain));
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError('No pudimos cargar tu Plan de Ataque. Revisá el enlace del email.');
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [diagnosticId]);
+
+  if (!diagnosticId) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold text-slate-900">Plan de Ataque</h1>
+        <p className="mt-2 text-slate-600">Falta el diagnóstico asociado a tu compra.</p>
+        <Link href="/portal-crecimiento" className="mt-4 inline-block text-violet-700 underline">
+          Ir al portal Premium
+        </Link>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center gap-2 text-slate-600">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Cargando tu Plan de Ataque…
+      </div>
+    );
+  }
+
+  if (loadError || !ctx) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-red-600">{loadError || 'Sin datos'}</p>
+      </div>
+    );
+  }
+
+  return <PlanAtaqueShell ctx={ctx} accent={accent} logoUrl={logoUrl} unlocked />;
 }
 
 export function PlanAtaqueDraft() {
@@ -600,6 +747,22 @@ export function PlanAtaqueDraft() {
       }
     >
       <PlanAtaqueDraftInner />
+    </Suspense>
+  );
+}
+
+/** Vista post-compra (Premium / Plan Conquistar). */
+export function PlanAtaqueUnlocked() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center gap-2 text-slate-600">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Cargando tu Plan de Ataque…
+        </div>
+      }
+    >
+      <PlanAtaqueUnlockedInner />
     </Suspense>
   );
 }

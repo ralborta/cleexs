@@ -140,6 +140,8 @@ export async function sendPortalMagicLinkForUser(input: {
   createdBy: string;
   portalTarget?: PortalMagicLinkTarget;
   runId?: string;
+  /** Si se pasa, pisa el redirect automático (ej. Plan de Ataque). */
+  redirectPath?: string | null;
   ttlHours?: number;
   subject?: string;
   intro?: string;
@@ -160,13 +162,15 @@ export async function sendPortalMagicLinkForUser(input: {
   if (!user) return { sent: false, reason: 'user_not_found' };
 
   const target = input.portalTarget ?? 'auto';
-  const redirectPath = await resolvePortalMagicLinkRedirect(
-    prisma,
-    user.id,
-    user.tenantId,
-    target,
-    input.runId,
-  );
+  const redirectPath =
+    input.redirectPath?.trim() ||
+    (await resolvePortalMagicLinkRedirect(
+      prisma,
+      user.id,
+      user.tenantId,
+      target,
+      input.runId,
+    ));
 
   const { url, expiresAt } = await createPortalMagicLink({
     userId: user.id,

@@ -4,6 +4,11 @@ import { getAppBaseUrlForPublicLinks } from './app-public-url';
 import { provisionAccount, randomPortalPassword } from './provision-account-core';
 import { sendPortalMagicLinkForUser } from './portal-magic-link';
 import { sendPlanConquistarPremiumWelcomeEmail } from './plan-conquistar-premium-email';
+import {
+  buildPlanConquistarDeliverable,
+  mergePaymentRawPayload,
+  planAtaqueAbsoluteUrl,
+} from './plan-conquistar-deliverable';
 import { prisma } from './prisma';
 
 const PREMIUM_DAYS = 90;
@@ -201,6 +206,39 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
   const raw = (payment?.rawPayload ?? {}) as Record<string, unknown>;
   const generatedPassword =
     typeof raw.generatedPassword === 'string' ? raw.generatedPassword : undefined;
+  const diagnosticId =
+    typeof raw.diagnosticId === 'string' && raw.diagnosticId.trim()
+      ? raw.diagnosticId.trim()
+      : null;
+
+  let planDeliverable: Awaited<ReturnType<typeof buildPlanConquistarDeliverable>> = null;
+  if (diagnosticId) {
+    try {
+      planDeliverable = await buildPlanConquistarDeliverable(diagnosticId);
+    } catch {
+      planDeliverable = null;
+    }
+  }
+
+  const planAtaquePath =
+    planDeliverable?.planAtaquePath ||
+    (diagnosticId
+      ? `/portal-crecimiento/plan-ataque?diagnosticId=${encodeURIComponent(diagnosticId)}`
+      : '/portal-crecimiento');
+  const planAtaqueUrl = planAtaqueAbsoluteUrl(planAtaquePath);
+
+  if (planDeliverable || diagnosticId) {
+    await prisma.payment.update({
+      where: { id: input.paymentId },
+      data: {
+        rawPayload: mergePaymentRawPayload(raw, {
+          planDeliverable: planDeliverable ?? undefined,
+          planAtaquePath,
+          planGeneratedAt: new Date().toISOString(),
+        }),
+      },
+    });
+  }
 
   const owner = await prisma.user.findFirst({
     where: { tenantId: input.tenantId, role: UserRole.owner },
@@ -218,9 +256,11 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
       userId: owner.id,
       createdBy: 'subscription-premium',
       portalTarget: 'premium',
-      subject: 'Plan Conquistar activo · Acceso directo al portal Premium',
+      runId: planDeliverable?.runId ?? undefined,
+      redirectPath: planAtaquePath,
+      subject: 'Plan Conquistar activo · Tu Plan de Ataque está listo',
       intro:
-        'Tu pago fue confirmado. Entrá con un click a tu portal Premium: no necesitás recordar contraseña en este primer acceso.',
+        'Tu pago fue confirmado. Entrá con un click a tu Plan de Ataque personalizado (90 días) y al portal Premium.',
     });
     emailSent = magic.sent;
     emailSkipReason = magic.reason;
@@ -229,7 +269,7 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
     const mail = await sendPlanConquistarPremiumWelcomeEmail({
       to: loginEmail,
       loginEmail,
-      portalUrl: `${getAppBaseUrlForPublicLinks()}/portal-crecimiento`,
+      portalUrl: planAtaqueUrl,
       premiumUntil: endsAt,
       temporaryPassword: generatedPassword,
     });
@@ -244,5 +284,8 @@ export async function activatePlanConquistarPremiumAfterPayment(input: {
     emailSkipReason,
     loginEmail: loginEmail || null,
     magicLinkUrl,
+    planAtaquePath,
+    diagnosticId,
+    planGenerated: Boolean(planDeliverable),
   };
 }
