@@ -42,6 +42,20 @@ export function getPlanConquistarAmountUsd(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : PLAN_CONQUISTAR_USD;
 }
 
+/**
+ * Monto ARS cobrado en Mercado Pago (preference unit_price).
+ * Si `PLAN_CONQUISTAR_ARS` está seteado (ej. 1530 para pruebas), manda ese valor.
+ * Si no, convierte USD → ARS con el FX habitual.
+ */
+export function getPlanConquistarAmountArs(rate = getBillingUsdToArsRate()): number {
+  const raw = process.env.PLAN_CONQUISTAR_ARS?.trim();
+  if (raw) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) return Math.round(parsed);
+  }
+  return usdToArs(getPlanConquistarAmountUsd(), rate);
+}
+
 export function getBillingCurrency(): BillingCurrency {
   const raw = process.env.BILLING_CURRENCY?.trim().toUpperCase();
   return raw === BillingCurrency.USD ? BillingCurrency.USD : DEFAULT_BILLING_CURRENCY;

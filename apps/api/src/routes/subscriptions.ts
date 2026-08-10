@@ -5,6 +5,7 @@ import {
   ensurePremiumPlan,
   getBillingCurrency,
   getPlanConquistarAmountUsd,
+  getPlanConquistarAmountArs,
   getBillingUsdToArsRate,
   getPlanBillingAmountUsd,
   usdToArs,
@@ -279,7 +280,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
 
         const fxRate = getBillingUsdToArsRate();
         const amountUsd = getPlanConquistarAmountUsd();
-        const amountArs = usdToArs(amountUsd, fxRate);
+        const amountArs = getPlanConquistarAmountArs(fxRate);
         const publicUrl = getPublicAppUrl();
 
         const localPayment = await prisma.payment.create({
@@ -301,6 +302,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
               utmMedium: cleanAttr(parsed.data.utmMedium),
               utmCampaign: cleanAttr(parsed.data.utmCampaign),
               sourceChannel: cleanAttr(parsed.data.sourceChannel),
+              amountArsOverride: process.env.PLAN_CONQUISTAR_ARS?.trim() || null,
             },
           },
         });
@@ -328,7 +330,10 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
                 {
                   id: 'plan_conquistar_90d',
                   title: 'Plan Conquistar ChatGPT',
-                  description: 'Pago único USD 99 — plan de acción personalizado + Cleexs Premium',
+                  description:
+                    amountArs !== usdToArs(amountUsd, fxRate)
+                      ? `Pago único ARS ${amountArs} (prueba) — plan de acción personalizado + Cleexs Premium`
+                      : 'Pago único USD 99 — plan de acción personalizado + Cleexs Premium',
                   quantity: 1,
                   unit_price: amountArs,
                   currency_id: 'ARS',
