@@ -339,15 +339,6 @@ export default function EnrichmentContactPage() {
             </article>
           ))}
         </div>
-
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">Qué muestra esta prueba</p>
-          <p className="mt-1 leading-relaxed">
-            A partir del email corporativo enriquecemos la empresa (empleados, industria, sede,
-            LinkedIn) y el perfil del contacto (nombre y cargo). Pensado para leads B2B donde ya
-            conocés la compañía y necesitás contexto para outreach.
-          </p>
-        </div>
       </div>
     </main>
   );
