@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Building2, MapPin, Users, Briefcase, ExternalLink, Calendar } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Borrador · Enrichment Apollo (10 empresas) | Cleexs',
+  title: 'Borrador · Enrichment contact (10 empresas) | Cleexs',
   robots: { index: false, follow: false },
 };
 
@@ -199,7 +199,7 @@ function industryLabel(raw: string | null) {
     .join(' ');
 }
 
-export default function EnrichmentApolloBakeoffPage() {
+export default function EnrichmentContactPage() {
   const withSize = ROWS.filter((r) => r.org.employees > 0).length;
   const totalEmp = ROWS.reduce((a, r) => a + (r.org.employees > 0 ? r.org.employees : 0), 0);
   const sorted = [...ROWS].sort((a, b) => b.org.employees - a.org.employees);
@@ -212,12 +212,11 @@ export default function EnrichmentApolloBakeoffPage() {
             Cleexs · borrador interno
           </p>
           <h1 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-            Enrichment con Apollo
+            Enrichment contact
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
-            Prueba con 10 dominios corporativos. Fuente: <strong>organizations/enrich</strong> (plan
-            Free). El cargo de la persona viene de Hunter (ya en Cleexs); Apollo Free no habilita
-            people/match.
+            Prueba con 10 dominios corporativos: tamaño de empresa, industria, sede y cargo del
+            contacto a partir del email.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -250,7 +249,7 @@ export default function EnrichmentApolloBakeoffPage() {
             <h2 className="text-lg font-bold text-slate-900">Fichas enriquecidas</h2>
             <p className="text-sm text-slate-500">Ordenadas por tamaño (mayor → menor)</p>
           </div>
-          <p className="text-xs text-slate-400">API Apollo · Free</p>
+          <p className="text-xs text-slate-400">Muestra · 10 empresas</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -308,7 +307,7 @@ export default function EnrichmentApolloBakeoffPage() {
 
               <div className="mt-4 border-t border-slate-100 pt-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  Contacto de prueba (Hunter)
+                  Contacto
                 </p>
                 <p className="mt-0.5 text-sm font-semibold text-slate-800">{row.knownName}</p>
                 <p className="text-sm text-slate-600">{row.knownRole}</p>
@@ -341,13 +340,12 @@ export default function EnrichmentApolloBakeoffPage() {
           ))}
         </div>
 
-        <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
-          <p className="font-semibold">Nota para el cliente</p>
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">Qué muestra esta prueba</p>
           <p className="mt-1 leading-relaxed">
-            Con Apollo Free ya dimensionamos la empresa (tamaño, industria, sede, LinkedIn). El
-            cargo de la persona lo tenemos vía Hunter. Para enriquecer cargo también desde Apollo
-            hace falta plan pago (<code className="rounded bg-amber-100 px-1">people/match</code>
-            ). PDL queda pendiente de activación de cuenta.
+            A partir del email corporativo enriquecemos la empresa (empleados, industria, sede,
+            LinkedIn) y el perfil del contacto (nombre y cargo). Pensado para leads B2B donde ya
+            conocés la compañía y necesitás contexto para outreach.
           </p>
         </div>
       </div>
