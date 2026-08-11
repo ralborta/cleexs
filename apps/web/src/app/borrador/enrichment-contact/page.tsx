@@ -16,22 +16,41 @@ type Org = {
   website: string | null;
 };
 
+type Person = {
+  name: string;
+  title: string | null;
+  seniority: string | null;
+  linkedin: string | null;
+  found: boolean;
+};
+
 type Row = {
   email: string;
   domain: string;
-  knownName: string;
-  /** Rubro del diagnóstico (no cargo laboral). */
+  /** Rubro declarado en el diagnóstico. */
   diagnosticIndustry: string | null;
+  person: Person;
   org: Org;
 };
 
-/** 10 contactos con diagnóstico completed + email corporativo (prod). */
+function li(url: string | null) {
+  if (!url) return null;
+  return url.startsWith('http') ? url : `https://${url}`;
+}
+
+/** 10 contactos con diagnóstico completed + email corporativo (prod). Persona vía PDL. */
 const ROWS: Row[] = [
   {
     email: 'gbergese@coppel.com.ar',
     domain: 'coppel.com.ar',
-    knownName: 'G. Bergese',
     diagnosticIndustry: 'Retail de electrodomésticos y moda',
+    person: {
+      name: 'Gustavo Bergese',
+      title: 'Commercial Director',
+      seniority: 'director',
+      linkedin: li('linkedin.com/in/gustavo-lara-bergese-4867b73'),
+      found: true,
+    },
     org: {
       name: 'Coppel Arg',
       industry: 'retail',
@@ -45,8 +64,14 @@ const ROWS: Row[] = [
   {
     email: 'paolo.mendez@producteca.com',
     domain: 'producteca.com',
-    knownName: 'Paolo Méndez',
     diagnosticIndustry: 'Tecnología para e-commerce',
+    person: {
+      name: 'Paolo Méndez',
+      title: null,
+      seniority: null,
+      linkedin: null,
+      found: false,
+    },
     org: {
       name: 'Producteca',
       industry: 'information technology & services',
@@ -60,8 +85,14 @@ const ROWS: Row[] = [
   {
     email: 'santiago@leadaki.com',
     domain: 'leadaki.com',
-    knownName: 'Santiago Verardi',
     diagnosticIndustry: 'Marketing digital',
+    person: {
+      name: 'Santiago Verardi',
+      title: 'Responsable de ventas (Cliengo & Leadaki)',
+      seniority: null,
+      linkedin: li('linkedin.com/in/santiago-verardi-64b39713'),
+      found: true,
+    },
     org: {
       name: 'Leadaki',
       industry: 'marketing & advertising',
@@ -75,8 +106,14 @@ const ROWS: Row[] = [
   {
     email: 'maria@rumazapatos.com.ar',
     domain: 'rumazapatos.com.ar',
-    knownName: 'María',
     diagnosticIndustry: 'Calzado y accesorios de moda B2C',
+    person: {
+      name: 'María Giannone',
+      title: 'Propietario',
+      seniority: 'owner',
+      linkedin: li('linkedin.com/in/maría-giannone-9b4b2032'),
+      found: true,
+    },
     org: {
       name: 'RUMA Zapatos & Carteras',
       industry: 'apparel & fashion',
@@ -90,8 +127,14 @@ const ROWS: Row[] = [
   {
     email: 'pberttoni@pigal.com',
     domain: 'pigal.com',
-    knownName: 'P. Berttoni',
     diagnosticIndustry: 'Moda y confección de ropa',
+    person: {
+      name: 'P. Berttoni',
+      title: null,
+      seniority: null,
+      linkedin: null,
+      found: false,
+    },
     org: {
       name: 'Pigal Boutique',
       industry: 'apparel & fashion',
@@ -105,8 +148,14 @@ const ROWS: Row[] = [
   {
     email: 'czegada@hormipret.com',
     domain: 'hormipret.com',
-    knownName: 'Carlos Zegada',
     diagnosticIndustry: 'Prefabricados para la construcción',
+    person: {
+      name: 'Carlos Zegada',
+      title: null,
+      seniority: null,
+      linkedin: null,
+      found: false,
+    },
     org: {
       name: 'HORMIPRET Chile',
       industry: 'construction',
@@ -120,8 +169,14 @@ const ROWS: Row[] = [
   {
     email: 'pablo@nowmarketingdigital.com',
     domain: 'nowmarketingdigital.com',
-    knownName: 'Pablo Calderón',
     diagnosticIndustry: 'Marketing digital en Argentina',
+    person: {
+      name: 'Pablo Calderón',
+      title: 'Co-founder',
+      seniority: 'owner',
+      linkedin: li('linkedin.com/in/pablo-santiago-calderon'),
+      found: true,
+    },
     org: {
       name: 'NOW! Marketing Digital',
       industry: 'marketing & advertising',
@@ -135,8 +190,14 @@ const ROWS: Row[] = [
   {
     email: 'mateo.debardeci@deeppsy.io',
     domain: 'deeppsy.io',
-    knownName: 'Mateo de Bardeci',
     diagnosticIndustry: 'Tecnología de salud mental',
+    person: {
+      name: 'Mateo de Bardeci',
+      title: 'Chief Executive Officer & Co-founder',
+      seniority: 'cxo',
+      linkedin: li('linkedin.com/in/mateo-de-bardeci'),
+      found: true,
+    },
     org: {
       name: 'DeepPsy AG',
       industry: 'medical practice',
@@ -150,8 +211,14 @@ const ROWS: Row[] = [
   {
     email: 'maxi@lideraconia.com',
     domain: 'lideraconia.com',
-    knownName: 'Maxi',
     diagnosticIndustry: 'Consultoría en inteligencia artificial para PYMEs',
+    person: {
+      name: 'Maxi',
+      title: null,
+      seniority: null,
+      linkedin: null,
+      found: false,
+    },
     org: {
       name: 'Lidera con IA',
       industry: 'management consulting',
@@ -165,8 +232,14 @@ const ROWS: Row[] = [
   {
     email: 'Rodrigo.baluk@nitropay.ar',
     domain: 'nitropay.ar',
-    knownName: 'Rodrigo Baluk',
     diagnosticIndustry: 'Servicios financieros para pequeños comercios',
+    person: {
+      name: 'Rodrigo Baluk',
+      title: 'Socio fundador',
+      seniority: null,
+      linkedin: li('linkedin.com/in/rodrigobaluk'),
+      found: true,
+    },
     org: {
       name: 'NITRO+',
       industry: 'financial services',
@@ -203,7 +276,7 @@ function industryLabel(raw: string | null) {
 
 export default function EnrichmentContactPage() {
   const withSize = ROWS.filter((r) => r.org.employees > 0).length;
-  const totalEmp = ROWS.reduce((a, r) => a + (r.org.employees > 0 ? r.org.employees : 0), 0);
+  const withTitle = ROWS.filter((r) => r.person.title).length;
   const sorted = [...ROWS].sort((a, b) => b.org.employees - a.org.employees);
 
   return (
@@ -217,8 +290,8 @@ export default function EnrichmentContactPage() {
             enrichment-contact
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
-            10 contactos que completaron un diagnóstico en Cleexs (email corporativo). Enriquecemos
-            tamaño de empresa, industria y sede a partir del dominio.
+            10 contactos que completaron un diagnóstico (email corporativo). Empresa + persona
+            (nombre, cargo, LinkedIn).
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -235,11 +308,12 @@ export default function EnrichmentContactPage() {
               <p className="mt-1 text-sm text-slate-600">empleados estimados</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-[#E9EDF2] px-4 py-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Suma empleados
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Con cargo</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums">
+                {withTitle}
+                <span className="text-lg font-semibold text-slate-500">/10</span>
               </p>
-              <p className="mt-1 text-3xl font-bold tabular-nums">{totalEmp.toLocaleString('es-AR')}</p>
-              <p className="mt-1 text-sm text-slate-600">aprox. del set</p>
+              <p className="mt-1 text-sm text-slate-600">persona enriquecida</p>
             </div>
           </div>
         </div>
@@ -308,12 +382,29 @@ export default function EnrichmentContactPage() {
               </ul>
 
               <div className="mt-4 border-t border-slate-100 pt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  Quién hizo el diagnóstico
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Contacto
+                  </p>
+                  <span
+                    className={
+                      row.person.found
+                        ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800'
+                        : 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500'
+                    }
+                  >
+                    {row.person.found ? 'Perfil OK' : 'Sin perfil'}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-sm font-semibold text-slate-800">{row.person.name}</p>
+                <p className="text-sm text-slate-700">
+                  {row.person.title || 'Cargo no encontrado'}
                 </p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-800">{row.knownName}</p>
+                {row.person.seniority && (
+                  <p className="text-xs capitalize text-slate-500">Seniority: {row.person.seniority}</p>
+                )}
                 {row.diagnosticIndustry && (
-                  <p className="text-sm text-slate-600">{row.diagnosticIndustry}</p>
+                  <p className="mt-1 text-xs text-slate-400">Diag: {row.diagnosticIndustry}</p>
                 )}
                 <p className="mt-0.5 truncate text-xs text-slate-400">{row.email}</p>
               </div>
@@ -336,7 +427,17 @@ export default function EnrichmentContactPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-slate-700 underline-offset-2 hover:underline"
                   >
-                    LinkedIn <ExternalLink className="h-3.5 w-3.5" />
+                    LinkedIn empresa <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {row.person.linkedin && (
+                  <a
+                    href={row.person.linkedin}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-slate-700 underline-offset-2 hover:underline"
+                  >
+                    LinkedIn persona <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
               </div>
