@@ -1,0 +1,206 @@
+{
+  "ranAt": "2026-08-11T17:55:32.573Z",
+  "note": "Apollo Free: organizations/enrich OK; people/match requiere plan pago. PDL pendiente de API key.",
+  "rows": [
+    {
+      "email": "aaron.chandler@bairesdev.com",
+      "domain": "bairesdev.com",
+      "knownName": "Aaron Chandler",
+      "knownRole": "Vice President of Client Solutions",
+      "apolloOrg": {
+        "ok": true,
+        "name": "BairesDev",
+        "industry": "information technology & services",
+        "employees": 4000,
+        "founded": 2009,
+        "location": "San Francisco, California, United States",
+        "linkedin": "http://www.linkedin.com/company/bairesdev",
+        "website": "http://www.bairesdev.com"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "aayush.panikkar@engati.com",
+      "domain": "engati.com",
+      "knownName": "Aayush Panikkar",
+      "knownRole": "Director of Partnerships",
+      "apolloOrg": {
+        "ok": true,
+        "name": "Engati",
+        "industry": "information technology & services",
+        "employees": 130,
+        "founded": 2021,
+        "location": "Wilmington, Delaware, United States",
+        "linkedin": "http://www.linkedin.com/company/engati",
+        "website": "http://www.engati.ai"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "abongioanni@diarco.com.ar",
+      "domain": "diarco.com.ar",
+      "knownName": "Andrea Bongioanni",
+      "knownRole": "HR Manager",
+      "apolloOrg": {
+        "ok": true,
+        "name": "Diarco",
+        "industry": "wholesale",
+        "employees": 3000,
+        "founded": 1980,
+        "location": "Tapiales, Buenos Aires Province, Argentina",
+        "linkedin": "http://www.linkedin.com/company/diarcomayorista",
+        "website": "http://www.diarco.com.ar"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "a.borda@icmarkets.com",
+      "domain": "icmarkets.com",
+      "knownName": "Adrian Borda",
+      "knownRole": "Customer Support Specialist",
+      "apolloOrg": {
+        "ok": true,
+        "name": "International Capital Markets Pty. Ltd.",
+        "industry": null,
+        "employees": 0,
+        "founded": 2007,
+        "location": "Sydney, New South Wales, Australia",
+        "linkedin": null,
+        "website": "http://www.icmarkets.com"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "acasabona@inti.gob.ar",
+      "domain": "inti.gob.ar",
+      "knownName": "Ángel Casabona",
+      "knownRole": "Technical Director",
+      "apolloOrg": {
+        "ok": true,
+        "name": "INTI",
+        "industry": "government administration",
+        "employees": 2400,
+        "founded": 1957,
+        "location": "Villa Libertad, Buenos Aires, Argentina",
+        "linkedin": "http://www.linkedin.com/company/inti",
+        "website": "http://www.inti.gob.ar"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "accel@kambista.com",
+      "domain": "kambista.com",
+      "knownName": "Accel Maeshiro",
+      "knownRole": "Backend Developer",
+      "apolloOrg": {
+        "ok": true,
+        "name": "Kambista",
+        "industry": "financial services",
+        "employees": 45,
+        "founded": 2016,
+        "location": "Miraflores, Lima, Peru",
+        "linkedin": "http://www.linkedin.com/company/kambista",
+        "website": "http://www.kambista.com"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "achakraborty@duckduckgo.com",
+      "domain": "duckduckgo.com",
+      "knownName": "Anirvan Chakraborty",
+      "knownRole": "Vice President of Engineering",
+      "apolloOrg": {
+        "ok": true,
+        "name": "DuckDuckGo",
+        "industry": "information technology & services",
+        "employees": 490,
+        "founded": 2008,
+        "location": "Paoli, Pennsylvania, United States",
+        "linkedin": "http://www.linkedin.com/company/duck-duck-go",
+        "website": "http://www.duckduckgo.com"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "acostantino@baufest.com",
+      "domain": "baufest.com",
+      "knownName": "Alejandro Costantino",
+      "knownRole": "Head of Software Development",
+      "apolloOrg": {
+        "ok": true,
+        "name": "Baufest",
+        "industry": "information technology & services",
+        "employees": 950,
+        "founded": 1991,
+        "location": "Buenos Aires, Argentina",
+        "linkedin": "http://www.linkedin.com/company/baufest",
+        "website": "http://www.baufest.com"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "adam.byrnes@freelancer.com",
+      "domain": "freelancer.com",
+      "knownName": "Adam Byrnes",
+      "knownRole": "Vice President of Product and Growth",
+      "apolloOrg": {
+        "ok": true,
+        "name": "Freelancer.com",
+        "industry": "information technology & services",
+        "employees": 1200,
+        "founded": 2009,
+        "location": "Sydney, New South Wales, Australia",
+        "linkedin": "http://www.linkedin.com/company/freelancer-com",
+        "website": "http://www.freelancer.com"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    },
+    {
+      "email": "aacuna@mimo.com.ar",
+      "domain": "mimo.com.ar",
+      "knownName": "Ariel Acuña",
+      "knownRole": "Electromechanical Technician",
+      "apolloOrg": {
+        "ok": true,
+        "name": "Mimo & Co",
+        "industry": "apparel & fashion",
+        "employees": 1000,
+        "founded": 1965,
+        "location": "Munro, Buenos Aires Province, Argentina",
+        "linkedin": "http://www.linkedin.com/company/mimoandco",
+        "website": "http://www.mimo.com.ar"
+      },
+      "apolloPeople": {
+        "ok": false,
+        "error": "people/match no incluido en Free plan"
+      }
+    }
+  ]
+}
