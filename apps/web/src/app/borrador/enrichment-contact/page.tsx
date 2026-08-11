@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Building2, MapPin, Users, Briefcase, ExternalLink, Calendar } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Borrador · Enrichment contact (10 empresas) | Cleexs',
+  title: 'Borrador · enrichment-contact | Cleexs',
   robots: { index: false, follow: false },
 };
 
@@ -212,7 +212,7 @@ export default function EnrichmentContactPage() {
             Cleexs · borrador interno
           </p>
           <h1 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-            Enrichment contact
+            enrichment-contact
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
             Prueba con 10 dominios corporativos: tamaño de empresa, industria, sede y cargo del
