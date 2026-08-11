@@ -20,159 +20,161 @@ type Row = {
   email: string;
   domain: string;
   knownName: string;
-  knownRole: string;
+  /** Rubro del diagnóstico (no cargo laboral). */
+  diagnosticIndustry: string | null;
   org: Org;
 };
 
+/** 10 contactos con diagnóstico completed + email corporativo (prod). */
 const ROWS: Row[] = [
   {
-    email: 'aaron.chandler@bairesdev.com',
-    domain: 'bairesdev.com',
-    knownName: 'Aaron Chandler',
-    knownRole: 'Vice President of Client Solutions',
+    email: 'gbergese@coppel.com.ar',
+    domain: 'coppel.com.ar',
+    knownName: 'G. Bergese',
+    diagnosticIndustry: 'Retail de electrodomésticos y moda',
     org: {
-      name: 'BairesDev',
+      name: 'Coppel Arg',
+      industry: 'retail',
+      employees: 2000,
+      founded: 2010,
+      location: 'Buenos Aires, Autonomous City of Buenos Aires, Argentina',
+      linkedin: 'http://www.linkedin.com/company/coppel-arg',
+      website: 'http://www.coppel.com.ar',
+    },
+  },
+  {
+    email: 'paolo.mendez@producteca.com',
+    domain: 'producteca.com',
+    knownName: 'Paolo Méndez',
+    diagnosticIndustry: 'Tecnología para e-commerce',
+    org: {
+      name: 'Producteca',
       industry: 'information technology & services',
-      employees: 4000,
-      founded: 2009,
-      location: 'San Francisco, California, United States',
-      linkedin: 'http://www.linkedin.com/company/bairesdev',
-      website: 'http://www.bairesdev.com',
-    },
-  },
-  {
-    email: 'aayush.panikkar@engati.com',
-    domain: 'engati.com',
-    knownName: 'Aayush Panikkar',
-    knownRole: 'Director of Partnerships',
-    org: {
-      name: 'Engati',
-      industry: 'information technology & services',
-      employees: 130,
-      founded: 2021,
-      location: 'Wilmington, Delaware, United States',
-      linkedin: 'http://www.linkedin.com/company/engati',
-      website: 'http://www.engati.ai',
-    },
-  },
-  {
-    email: 'abongioanni@diarco.com.ar',
-    domain: 'diarco.com.ar',
-    knownName: 'Andrea Bongioanni',
-    knownRole: 'HR Manager',
-    org: {
-      name: 'Diarco',
-      industry: 'wholesale',
-      employees: 3000,
-      founded: 1980,
-      location: 'Tapiales, Buenos Aires Province, Argentina',
-      linkedin: 'http://www.linkedin.com/company/diarcomayorista',
-      website: 'http://www.diarco.com.ar',
-    },
-  },
-  {
-    email: 'a.borda@icmarkets.com',
-    domain: 'icmarkets.com',
-    knownName: 'Adrian Borda',
-    knownRole: 'Customer Support Specialist',
-    org: {
-      name: 'International Capital Markets Pty. Ltd.',
-      industry: null,
-      employees: 0,
-      founded: 2007,
-      location: 'Sydney, New South Wales, Australia',
-      linkedin: null,
-      website: 'http://www.icmarkets.com',
-    },
-  },
-  {
-    email: 'acasabona@inti.gob.ar',
-    domain: 'inti.gob.ar',
-    knownName: 'Ángel Casabona',
-    knownRole: 'Technical Director',
-    org: {
-      name: 'INTI',
-      industry: 'government administration',
-      employees: 2400,
-      founded: 1957,
-      location: 'Villa Libertad, Buenos Aires, Argentina',
-      linkedin: 'http://www.linkedin.com/company/inti',
-      website: 'http://www.inti.gob.ar',
-    },
-  },
-  {
-    email: 'accel@kambista.com',
-    domain: 'kambista.com',
-    knownName: 'Accel Maeshiro',
-    knownRole: 'Backend Developer',
-    org: {
-      name: 'Kambista',
-      industry: 'financial services',
-      employees: 45,
+      employees: 87,
       founded: 2016,
-      location: 'Miraflores, Lima, Peru',
-      linkedin: 'http://www.linkedin.com/company/kambista',
-      website: 'http://www.kambista.com',
+      location: 'Buenos Aires, Autonomous City of Buenos Aires, Argentina',
+      linkedin: 'http://www.linkedin.com/company/producteca',
+      website: 'http://www.producteca.com',
     },
   },
   {
-    email: 'achakraborty@duckduckgo.com',
-    domain: 'duckduckgo.com',
-    knownName: 'Anirvan Chakraborty',
-    knownRole: 'Vice President of Engineering',
+    email: 'santiago@leadaki.com',
+    domain: 'leadaki.com',
+    knownName: 'Santiago Verardi',
+    diagnosticIndustry: 'Marketing digital',
     org: {
-      name: 'DuckDuckGo',
-      industry: 'information technology & services',
-      employees: 490,
-      founded: 2008,
-      location: 'Paoli, Pennsylvania, United States',
-      linkedin: 'http://www.linkedin.com/company/duck-duck-go',
-      website: 'http://www.duckduckgo.com',
+      name: 'Leadaki',
+      industry: 'marketing & advertising',
+      employees: 35,
+      founded: 2012,
+      location: 'Buenos Aires, Buenos Aires, Argentina',
+      linkedin: 'http://www.linkedin.com/company/leadaki-com',
+      website: 'http://www.leadaki.com',
     },
   },
   {
-    email: 'acostantino@baufest.com',
-    domain: 'baufest.com',
-    knownName: 'Alejandro Costantino',
-    knownRole: 'Head of Software Development',
+    email: 'maria@rumazapatos.com.ar',
+    domain: 'rumazapatos.com.ar',
+    knownName: 'María',
+    diagnosticIndustry: 'Calzado y accesorios de moda B2C',
     org: {
-      name: 'Baufest',
-      industry: 'information technology & services',
-      employees: 950,
-      founded: 1991,
-      location: 'Buenos Aires, Argentina',
-      linkedin: 'http://www.linkedin.com/company/baufest',
-      website: 'http://www.baufest.com',
-    },
-  },
-  {
-    email: 'adam.byrnes@freelancer.com',
-    domain: 'freelancer.com',
-    knownName: 'Adam Byrnes',
-    knownRole: 'Vice President of Product and Growth',
-    org: {
-      name: 'Freelancer.com',
-      industry: 'information technology & services',
-      employees: 1200,
-      founded: 2009,
-      location: 'Sydney, New South Wales, Australia',
-      linkedin: 'http://www.linkedin.com/company/freelancer-com',
-      website: 'http://www.freelancer.com',
-    },
-  },
-  {
-    email: 'aacuna@mimo.com.ar',
-    domain: 'mimo.com.ar',
-    knownName: 'Ariel Acuña',
-    knownRole: 'Electromechanical Technician',
-    org: {
-      name: 'Mimo & Co',
+      name: 'RUMA Zapatos & Carteras',
       industry: 'apparel & fashion',
-      employees: 1000,
-      founded: 1965,
-      location: 'Munro, Buenos Aires Province, Argentina',
-      linkedin: 'http://www.linkedin.com/company/mimoandco',
-      website: 'http://www.mimo.com.ar',
+      employees: 23,
+      founded: 2000,
+      location: 'Buenos Aires, Autonomous City of Buenos Aires, Argentina',
+      linkedin: 'http://www.linkedin.com/company/ruma-zapatos',
+      website: 'http://www.rumazapatos.com.ar',
+    },
+  },
+  {
+    email: 'pberttoni@pigal.com',
+    domain: 'pigal.com',
+    knownName: 'P. Berttoni',
+    diagnosticIndustry: 'Moda y confección de ropa',
+    org: {
+      name: 'Pigal Boutique',
+      industry: 'apparel & fashion',
+      employees: 3,
+      founded: null,
+      location: null,
+      linkedin: 'http://www.linkedin.com/company/pigal-boutique',
+      website: 'http://www.pigal.com',
+    },
+  },
+  {
+    email: 'czegada@hormipret.com',
+    domain: 'hormipret.com',
+    knownName: 'Carlos Zegada',
+    diagnosticIndustry: 'Prefabricados para la construcción',
+    org: {
+      name: 'HORMIPRET Chile',
+      industry: 'construction',
+      employees: 13,
+      founded: null,
+      location: 'Providencia, Santiago Metropolitan Region, Chile',
+      linkedin: 'http://www.linkedin.com/company/hormipretchile',
+      website: 'http://www.hormipret.cl',
+    },
+  },
+  {
+    email: 'pablo@nowmarketingdigital.com',
+    domain: 'nowmarketingdigital.com',
+    knownName: 'Pablo Calderón',
+    diagnosticIndustry: 'Marketing digital en Argentina',
+    org: {
+      name: 'NOW! Marketing Digital',
+      industry: 'marketing & advertising',
+      employees: 12,
+      founded: 2007,
+      location: 'Palma, Balearic Islands, Spain',
+      linkedin: 'http://www.linkedin.com/company/now-marketing-digital',
+      website: 'http://www.nowmarketingdigital.com',
+    },
+  },
+  {
+    email: 'mateo.debardeci@deeppsy.io',
+    domain: 'deeppsy.io',
+    knownName: 'Mateo de Bardeci',
+    diagnosticIndustry: 'Tecnología de salud mental',
+    org: {
+      name: 'DeepPsy AG',
+      industry: 'medical practice',
+      employees: 5,
+      founded: 2021,
+      location: 'Zuerich, Zurich, Switzerland',
+      linkedin: 'http://www.linkedin.com/company/deeppsy',
+      website: 'http://www.deeppsy.io',
+    },
+  },
+  {
+    email: 'maxi@lideraconia.com',
+    domain: 'lideraconia.com',
+    knownName: 'Maxi',
+    diagnosticIndustry: 'Consultoría en inteligencia artificial para PYMEs',
+    org: {
+      name: 'Lidera con IA',
+      industry: 'management consulting',
+      employees: 4,
+      founded: null,
+      location: 'Buenos Aires, Argentina',
+      linkedin: 'http://www.linkedin.com/company/lideraconia',
+      website: 'http://www.lideraconia.com',
+    },
+  },
+  {
+    email: 'Rodrigo.baluk@nitropay.ar',
+    domain: 'nitropay.ar',
+    knownName: 'Rodrigo Baluk',
+    diagnosticIndustry: 'Servicios financieros para pequeños comercios',
+    org: {
+      name: 'NITRO+',
+      industry: 'financial services',
+      employees: 3,
+      founded: 2021,
+      location: 'Buenos Aires, Autonomous City of Buenos Aires, Argentina',
+      linkedin: 'http://www.linkedin.com/company/nitro-pay',
+      website: 'http://www.nitropay.ar',
     },
   },
 ];
@@ -215,15 +217,15 @@ export default function EnrichmentContactPage() {
             enrichment-contact
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
-            Prueba con 10 dominios corporativos: tamaño de empresa, industria, sede y cargo del
-            contacto a partir del email.
+            10 contactos que completaron un diagnóstico en Cleexs (email corporativo). Enriquecemos
+            tamaño de empresa, industria y sede a partir del dominio.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-[#E9EDF2] px-4 py-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Empresas</p>
               <p className="mt-1 text-3xl font-bold tabular-nums">10</p>
-              <p className="mt-1 text-sm text-slate-600">match org 10/10</p>
+              <p className="mt-1 text-sm text-slate-600">diagnósticos completed</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-[#E9EDF2] px-4 py-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -307,10 +309,12 @@ export default function EnrichmentContactPage() {
 
               <div className="mt-4 border-t border-slate-100 pt-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  Contacto
+                  Quién hizo el diagnóstico
                 </p>
                 <p className="mt-0.5 text-sm font-semibold text-slate-800">{row.knownName}</p>
-                <p className="text-sm text-slate-600">{row.knownRole}</p>
+                {row.diagnosticIndustry && (
+                  <p className="text-sm text-slate-600">{row.diagnosticIndustry}</p>
+                )}
                 <p className="mt-0.5 truncate text-xs text-slate-400">{row.email}</p>
               </div>
 
