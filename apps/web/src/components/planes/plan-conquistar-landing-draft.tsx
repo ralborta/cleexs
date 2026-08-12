@@ -11,7 +11,6 @@ import {
   Users,
   ListChecks,
   CalendarCheck,
-  GraduationCap,
   ClipboardCheck,
   RefreshCw,
   Gift,
@@ -57,11 +56,6 @@ const INCLUYE: Array<{ icon: typeof Check; title: string; desc: string }> = [
     icon: CalendarCheck,
     title: 'Plan de acción personalizado de 90 días',
     desc: 'Un plan concreto, paso a paso, priorizado por impacto y facilidad de implementación, para mejorar tu presencia en los motores de IA.',
-  },
-  {
-    icon: GraduationCap,
-    title: 'Curso Express de Visibilidad IA',
-    desc: 'Aprendé cómo funciona el nuevo SEO para ChatGPT y cómo ganar en este nuevo mundo. Videos cortos y concretos.',
   },
   {
     icon: ClipboardCheck,
@@ -392,7 +386,7 @@ function DraftLandingBody({
 }) {
   return (
     <main
-      className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-violet-50/60 via-white to-white pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-0"
+      className="min-h-[calc(100vh-72px)] bg-gradient-to-b from-violet-50/60 via-white to-white"
       style={production ? undefined : { zoom: 1.12 }}
     >
       {!production && (
@@ -526,7 +520,7 @@ function DraftLandingBody({
         </div>
       </section>
 
-      <section className="px-4 pb-8 pt-4 sm:px-6 sm:pb-20 sm:pt-8">
+      <section className="px-4 pb-16 pt-4 sm:px-6 sm:pb-20 sm:pt-8">
         <div className="mx-auto max-w-2xl rounded-3xl border border-violet-200 bg-white p-6 text-center shadow-xl sm:p-9">
           <p className="text-sm font-medium uppercase tracking-wide text-violet-600">Pago único</p>
           <div className="mt-3 flex justify-center">
@@ -551,13 +545,6 @@ function DraftLandingBody({
           </p>
         </div>
       </section>
-
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-200/80 bg-white/95 px-3 pt-2.5 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:hidden pb-[max(0.65rem,env(safe-area-inset-bottom))]">
-        <PlanConquistarPageCheckout className="w-full min-h-[48px]" />
-        <p className="mt-1.5 text-center text-[11px] font-medium text-slate-500">
-          <PlanConquistarPromoPrice size="sm" className="justify-center" />
-        </p>
-      </div>
     </main>
   );
 }
