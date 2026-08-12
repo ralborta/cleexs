@@ -67,16 +67,18 @@ export function PlanAtaqueSectionView({
     courseModules,
   } = doc;
 
-  const hub = (
-    <PlanAtaqueHubSections
-      doc={doc}
-      sectionId={sectionId}
-      accent={accent}
-      unlocked={unlocked}
-      onNavigate={onNavigate}
-    />
-  );
-  if (hub) return hub;
+  const HUB_SECTIONS = new Set(['panel', 'esta-semana', 'satelite', 'crawlers', 'kit']);
+  if (HUB_SECTIONS.has(sectionId)) {
+    return (
+      <PlanAtaqueHubSections
+        doc={doc}
+        sectionId={sectionId}
+        accent={accent}
+        unlocked={unlocked}
+        onNavigate={onNavigate}
+      />
+    );
+  }
 
   const enginesText =
     ctx.engines.length === 0
