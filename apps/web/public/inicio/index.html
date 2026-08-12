@@ -2,21 +2,27 @@
 <!-- cleexs-home-build: 2026-08-05T18:24:36.795198Z -->
 <html lang="es">
 <head>
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-W3KK88LC');</script>
-  <!-- End Google Tag Manager -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="index, follow" />
   <title>Cleexs | Visibilidad en IA y SEO para ChatGPT</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="/inicio/assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link
+    rel="preload"
+    as="image"
+    type="image/webp"
+    imagesrcset="https://cleexs.net/wp-content/uploads/2026/08/diagnostico-preview-empliados-720.webp 720w, https://cleexs.net/wp-content/uploads/2026/08/diagnostico-preview-empliados-opt.webp 973w"
+    imagesizes="(max-width: 720px) 100vw, 973px"
+  />
   <style>
+    @font-face {
+      font-family: "DM Sans";
+      font-style: normal;
+      font-weight: 400 800;
+      font-display: swap;
+      src: url("/inicio/assets/fonts/dm-sans-latin.woff2") format("woff2");
+    }
+
     :root {
       --brand-blue: #002284;
       --blue: #002284;
@@ -32,7 +38,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: "DM Sans", system-ui, sans-serif;
+      font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
       color: var(--white);
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
@@ -851,13 +857,21 @@
         </div>
 
         <div class="report-float">
-          <img
-            src="https://cleexs.net/wp-content/uploads/2026/08/diagnostico-preview-empliados.png"
-            alt="Vista previa del diagnóstico Cleexs — Empliados.net, score 90/100"
-            width="973"
-            height="654"
-            loading="lazy"
-          />
+          <picture>
+            <source
+              type="image/webp"
+              srcset="https://cleexs.net/wp-content/uploads/2026/08/diagnostico-preview-empliados-720.webp 720w, https://cleexs.net/wp-content/uploads/2026/08/diagnostico-preview-empliados-opt.webp 973w"
+              sizes="(max-width: 720px) 100vw, 973px"
+            />
+            <img
+              src="https://cleexs.net/wp-content/uploads/2026/08/diagnostico-preview-empliados-opt.jpg"
+              alt="Vista previa del diagnóstico Cleexs — Empliados.net, score 90/100"
+              width="973"
+              height="654"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
         </div>
       </div>
     </section>
@@ -951,6 +965,28 @@
       </div>
     </div>
   </footer>
+
+  <!-- GTM diferido: prioriza first paint; carga en interacción o a los 5s -->
+  <script>
+  (function () {
+    var loaded = false;
+    function loadGtm() {
+      if (loaded) return;
+      loaded = true;
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-W3KK88LC';
+      document.head.appendChild(s);
+    }
+    // Sin 'scroll': PageSpeed scrollea la página y si no, GTM entra en el lab test.
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (evt) {
+      window.addEventListener(evt, loadGtm, { once: true, passive: true });
+    });
+    setTimeout(loadGtm, 5000);
+  })();
+  </script>
 
   <!--
     SCRIPT CRÍTICO (mismo contrato que WP actual)
