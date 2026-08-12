@@ -1984,9 +1984,24 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           where: { ...where, refCode: { not: null } },
           select: { refCode: true, sourceChannel: true, email: true, utmMedium: true },
         }),
-        prisma.subscription.findMany({
-          where: { ...where, status: 'authorized' },
-          select: { utmSource: true, refCode: true, sourceChannel: true, amountUsd: true },
+        // "Compraron" = pagos aprobados en MP (Plan Conquistar one-shot + cargos Premium),
+        // no suscripciones pendientes/createdAt. Antes solo contaba Subscription authorized
+        // por createdAt → quedaba en 0 con pagos aprobados visibles en /pagos.
+        prisma.payment.findMany({
+          where: {
+            status: 'approved',
+            OR: [
+              { paidAt: { gte: from, lte: to } },
+              { paidAt: null, createdAt: { gte: from, lte: to } },
+            ],
+          },
+          select: {
+            amountUsd: true,
+            rawPayload: true,
+            subscription: {
+              select: { utmSource: true, refCode: true, sourceChannel: true },
+            },
+          },
         }),
         prisma.payment.count({
           where: {
@@ -2050,10 +2065,17 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       // Compras por source (utm_source || ref_code || source_channel || 'directo')
       const purchaseMap = new Map<string, { count: number; usd: number }>();
       for (const p of purchases) {
+        const raw = (p.rawPayload && typeof p.rawPayload === 'object'
+          ? (p.rawPayload as Record<string, unknown>)
+          : {}) as Record<string, unknown>;
+        const attr = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
         const key =
-          (p.utmSource || '').trim() ||
-          (p.refCode || '').trim() ||
-          (p.sourceChannel || '').trim() ||
+          attr(p.subscription?.utmSource) ||
+          attr(raw.utmSource) ||
+          attr(p.subscription?.refCode) ||
+          attr(raw.refCode) ||
+          attr(p.subscription?.sourceChannel) ||
+          attr(raw.sourceChannel) ||
           'directo';
         const prev = purchaseMap.get(key) || { count: 0, usd: 0 };
         prev.count += 1;
