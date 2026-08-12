@@ -92,12 +92,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
               'No encontramos el email de tu diagnóstico. Completá el reporte con tu correo antes de contratar Premium.',
           });
         }
-        if (
-          parsed.data.customerEmail &&
-          parsed.data.customerEmail.trim().toLowerCase() !== ensured.email.toLowerCase()
-        ) {
-          return reply.code(400).send({ error: 'El email del checkout no coincide con el del diagnóstico.' });
-        }
+        // El email del diagnóstico define la cuenta Cleexs; el pagador de MP puede ser otro.
         portalUser = {
           userId: ensured.userId,
           tenantId: ensured.tenantId,
@@ -252,12 +247,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
                 'No encontramos el email de tu diagnóstico. En la web el reporte solo se genera después de registrar tu correo.',
             });
           }
-          if (
-            parsed.data.customerEmail &&
-            parsed.data.customerEmail.trim().toLowerCase() !== ensured.email.toLowerCase()
-          ) {
-            return reply.code(400).send({ error: 'El email del checkout no coincide con el del diagnóstico.' });
-          }
+          // Cuenta Cleexs = email del diagnóstico. El pago en MP puede hacerse con otra cuenta/mail.
           portalUser = {
             userId: ensured.userId,
             tenantId: ensured.tenantId,
@@ -324,14 +314,14 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
                 failure: `${publicUrl}/plan-conquistar?payment=failed`,
               },
               auto_return: 'approved',
-              payer: {
-                email: portalUser.email,
-              },
+              // No fijamos payer.email: si coincide con el diagnóstico fuerza login MP
+              // con ese mail y rechaza por "seguridad" cuando paga otra cuenta.
               metadata: {
                 product: 'plan_conquistar_90d',
                 payment_id: localPayment.id,
                 tenant_id: portalUser.tenantId,
                 user_id: portalUser.userId,
+                account_email: portalUser.email,
               },
               items: [
                 {
