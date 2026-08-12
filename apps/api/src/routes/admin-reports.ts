@@ -1255,7 +1255,9 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
     const [items, total, byStatusRaw, allTime, approvedThisMonth] = await Promise.all([
       prisma.payment.findMany({
         where,
-        orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+        // paidAt DESC con NULLs first (default PG) enterraba aprobadas detrás de
+        // decenas de checkouts pending sin paidAt. Ordenamos por actividad reciente.
+        orderBy: [{ createdAt: 'desc' }, { paidAt: { sort: 'desc', nulls: 'last' } }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         select: {
