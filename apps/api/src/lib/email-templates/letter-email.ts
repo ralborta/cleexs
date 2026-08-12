@@ -99,7 +99,7 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     planClosingLine: 'Plan de acción concreto para empezar mañana con tu equipo.',
     planCtaLabel: 'Ver cómo es',
     founderTitle: 'Fundador',
-  unsubscribeLabel: 'Gestionar lo que recibo',
+  unsubscribeLabel: 'Dejar de recibir emails',
   };
 }
 
@@ -338,7 +338,7 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
           <tr>
             <td style="padding:24px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;font-family:${uiFont};">
               <a href="${escapeHtml(input.links.unsubscribeUrl)}" style="color:#94a3b8;text-decoration:underline;">${escapeHtml(content.unsubscribeLabel)}</a><br/>
-              Cleexs · visibilidad en IA
+              Cleexs - Conseguí clientes desde ChatGPT
             </td>
           </tr>
         </table>

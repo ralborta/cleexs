@@ -183,7 +183,7 @@ function buildMarketingHtml(input: MarketingEmailSendInput): string {
         </td></tr>
         <tr><td style="padding:16px 26px;border-top:1px solid #f1f5f9;font-size:11px;line-height:1.5;color:#94a3b8;">
           Recibís este email porque dejaste tus datos en Cleexs.
-          <a href="${escapeHtml(unsubscribeUrl)}" style="color:#64748b;text-decoration:underline;">Gestionar lo que recibo</a>
+          <a href="${escapeHtml(unsubscribeUrl)}" style="color:#64748b;text-decoration:underline;">Dejar de recibir emails</a>
           <br/>Ref: ${escapeHtml(input.campaignSlug)}
         </td></tr>
       </table>
