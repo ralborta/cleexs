@@ -309,7 +309,7 @@ export function PlanAtaqueHubSections({
         </p>
         {satelliteModule && satelliteModule.status !== 'pending' ? (
           <div className="-mx-1">
-            <SatelliteModuleCard module={satelliteModule} siteUrl={siteUrl} inlineExpanded />
+            <SatelliteModuleCard module={satelliteModule} siteUrl={siteUrl} />
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
