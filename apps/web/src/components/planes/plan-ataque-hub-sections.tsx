@@ -29,15 +29,15 @@ function HubPage({
   children: React.ReactNode;
 }) {
   return (
-    <article className="min-h-[420px] space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <article className="min-h-[280px] space-y-3 rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm sm:min-h-[420px] sm:space-y-4 sm:p-7">
       {eyebrow ? (
         <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: accent.primary }}>
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">{title}</h2>
+      <h2 className="text-lg font-bold text-slate-900 sm:text-2xl">{title}</h2>
       <div className="h-1.5 w-14 rounded-full" style={{ backgroundColor: accent.primary }} />
-      <div className="space-y-4 text-sm leading-relaxed text-slate-700">{children}</div>
+      <div className="space-y-3 text-sm leading-relaxed text-slate-700 sm:space-y-4">{children}</div>
     </article>
   );
 }

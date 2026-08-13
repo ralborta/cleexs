@@ -13,6 +13,8 @@ import {
   FileText,
   Users,
   Zap,
+  Menu,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -53,19 +55,19 @@ function MetricCard({
 }) {
   const iconColor = iconTone === 'brand' ? accent.primary : '#0f172a';
   return (
-    <div className="flex min-w-[9.5rem] flex-1 items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm sm:min-w-[10.5rem] sm:gap-3 sm:px-3.5 sm:py-3">
-      <Icon className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={1.75} style={{ color: iconColor }} />
-      <div className="min-w-0 text-left leading-tight">
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl border border-slate-200/80 bg-white px-2 py-2.5 text-center shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:px-3.5 sm:py-3 sm:text-left">
+      <Icon className="h-6 w-6 shrink-0 sm:h-8 sm:w-8" strokeWidth={1.75} style={{ color: iconColor }} />
+      <div className="min-w-0 leading-tight">
         <p
           className={cn(
-            'truncate text-base font-bold sm:text-lg',
+            'truncate text-sm font-bold sm:text-lg',
             emphasizePrimary ? '' : 'text-slate-900'
           )}
           style={emphasizePrimary ? { color: accent.primary } : undefined}
         >
           {primary}
         </p>
-        <p className="truncate text-[11px] text-slate-600 sm:text-xs">{secondary}</p>
+        <p className="truncate text-[10px] text-slate-600 sm:text-xs">{secondary}</p>
       </div>
     </div>
   );
@@ -89,6 +91,24 @@ function PlanAtaqueShell({
     unlocked ? 'panel' : 'portada'
   );
   const [openStatKey, setOpenStatKey] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const currentSectionLabel =
+    doc.nav.find((n) => n.id === sectionId)?.label || (unlocked ? 'Panel' : 'Portada');
+
+  const goToSection = (id: PlanAtaqueSectionId) => {
+    setSectionId(id);
+    setMobileNavOpen(false);
+  };
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileNavOpen]);
 
   const today = new Date().toLocaleDateString('es-AR', {
     day: 'numeric',
@@ -187,47 +207,55 @@ function PlanAtaqueShell({
     >
       {!unlocked ? (
         <div className="border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-center text-[11px] font-medium text-amber-900">
-          Borrador · documento completo navegable · acento {accent.primary} ({accent.source}
-          {logoUrl ? '' : ', sin logo'})
+          <span className="sm:hidden">Borrador · Plan de Ataque</span>
+          <span className="hidden sm:inline">
+            Borrador · documento completo navegable · acento {accent.primary} ({accent.source}
+            {logoUrl ? '' : ', sin logo'})
+          </span>
         </div>
       ) : (
         <div className="border-b border-emerald-200 bg-emerald-50 px-3 py-1.5 text-center text-[11px] font-medium text-emerald-900">
-          Plan Conquistar activo · Hub de gestión del Plan de Ataque para {ctx.domain}
+          <span className="sm:hidden">Plan Conquistar · {ctx.domain}</span>
+          <span className="hidden sm:inline">
+            Plan Conquistar activo · Hub de gestión del Plan de Ataque para {ctx.domain}
+          </span>
         </div>
       )}
 
       <div style={{ backgroundColor: accent.primary }}>
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white sm:px-5 sm:text-[11px]">
-          <span className="shrink-0">Confidencial</span>
-          <span className="min-w-0 truncate text-center font-medium normal-case tracking-normal opacity-95">
-            Preparado exclusivamente para{' '}
-            <span className="font-bold">{ctx.domain}</span>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white sm:px-5 sm:text-[11px]">
+          <span className="hidden shrink-0 sm:inline">Confidencial</span>
+          <span className="min-w-0 flex-1 truncate text-center font-medium normal-case tracking-normal opacity-95">
+            <span className="sm:hidden">{ctx.domain}</span>
+            <span className="hidden sm:inline">
+              Preparado exclusivamente para <span className="font-bold">{ctx.domain}</span>
+            </span>
           </span>
           <span className="shrink-0 tracking-normal opacity-95">cleexs</span>
         </div>
       </div>
 
-      <section className="px-4 pb-5 pt-7 text-center sm:px-6 sm:pb-6 sm:pt-9">
-        <h1 className="mx-auto max-w-3xl text-xl font-bold tracking-tight text-slate-900 sm:text-2xl md:text-[1.75rem]">
+      <section className="px-3 pb-3 pt-4 text-center sm:px-6 sm:pb-6 sm:pt-9">
+        <h1 className="mx-auto max-w-3xl text-lg font-bold tracking-tight text-slate-900 sm:text-2xl md:text-[1.75rem]">
           Ya terminé el plan para{' '}
           <span style={{ color: accent.primary }}>{ctx.domain}</span>
           {ctx.countryFlag ? ` ${ctx.countryFlag}` : ''}
         </h1>
 
-        <div className="mx-auto mt-5 flex max-w-4xl flex-wrap items-stretch justify-center gap-2.5 sm:gap-3">
+        <div className="mx-auto mt-3 grid max-w-4xl grid-cols-3 gap-1.5 sm:mt-5 sm:flex sm:flex-wrap sm:items-stretch sm:justify-center sm:gap-3">
           <MetricCard
             icon={Target}
             accent={accent}
             iconTone="brand"
             primary={actions != null ? String(actions) : '—'}
-            secondary="acciones priorizadas"
+            secondary="acciones"
           />
           <MetricCard
             icon={TrendingUp}
             accent={accent}
             iconTone="brand"
             primary={impact}
-            secondary="Impacto esperado"
+            secondary="impacto"
             emphasizePrimary
           />
           <MetricCard
@@ -235,16 +263,127 @@ function PlanAtaqueShell({
             accent={accent}
             iconTone="ink"
             primary="90"
-            secondary="días de plan"
+            secondary="días"
           />
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-3 pb-10 sm:px-5">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-lg shadow-slate-200/70">
+      {/* Barra mobile: menú + sección actual */}
+      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-3 py-2 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-6xl items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+            aria-label="Abrir menú del plan"
+            aria-expanded={mobileNavOpen}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-sm font-semibold text-slate-900">{currentSectionLabel}</p>
+            <p className="text-[11px] text-slate-500">
+              {sectionIndex} / {doc.nav.filter((n, i, arr) => arr.findIndex((x) => x.id === n.id) === i).length}
+            </p>
+          </div>
+          <BrandLogo
+            name={ctx.brandName}
+            domain={ctx.domain}
+            size={36}
+            variant="icon"
+            hideIfMissing
+            className="shrink-0 rounded-lg"
+          />
+        </div>
+      </div>
+
+      {mobileNavOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-slate-900/45 lg:hidden"
+            aria-label="Cerrar menú"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú del Plan de Ataque"
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(100%,19rem)] flex-col overflow-y-auto shadow-2xl lg:hidden"
+            style={{ backgroundColor: '#E9EDF2' }}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{ctx.brandName}</p>
+                <p className="truncate text-[11px] text-slate-500">{ctx.domain}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+                aria-label="Cerrar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex-1 px-2 py-3" aria-label="Índice del plan">
+              {(
+                [
+                  { key: 'gestionar' as const, title: 'Gestionar el plan' },
+                  { key: 'documento' as const, title: 'Documento' },
+                  { key: 'portal' as const, title: 'Más info' },
+                ] as const
+              ).map((group) => {
+                const items = doc.nav.filter((n) => n.group === group.key);
+                if (!items.length) return null;
+                return (
+                  <div
+                    key={group.key}
+                    className={group.key === 'gestionar' ? '' : 'mt-3 border-t border-slate-200/80 pt-2'}
+                  >
+                    <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      {group.title}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {items.map((item) => {
+                        const active = item.id === sectionId;
+                        return (
+                          <li key={`m-${group.key}-${item.id}-${item.label}`}>
+                            <button
+                              type="button"
+                              onClick={() => goToSection(item.id)}
+                              className={cn(
+                                'w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] transition-colors',
+                                active ? 'font-semibold text-slate-900' : 'text-slate-700'
+                              )}
+                              style={
+                                active
+                                  ? {
+                                      backgroundColor: '#ffffff',
+                                      boxShadow: `inset 3px 0 0 ${accent.primary}`,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {item.label}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })}
+            </nav>
+          </div>
+        </>
+      ) : null}
+
+      <div className="mx-auto max-w-6xl px-2 pb-8 sm:px-5 sm:pb-10">
+        <div className="overflow-hidden rounded-xl border border-slate-200 shadow-lg shadow-slate-200/70 sm:rounded-2xl">
           <div className="grid lg:grid-cols-[200px_1fr] lg:items-start">
             <aside
-              className="flex flex-col text-slate-800 lg:self-start"
+              className="hidden flex-col text-slate-800 lg:flex lg:self-start"
               style={{ backgroundColor: '#E9EDF2' }}
             >
               <div className="flex flex-col items-center gap-2 border-b border-slate-200 px-3 py-4 text-center">
@@ -290,7 +429,7 @@ function PlanAtaqueShell({
                             <li key={`${group.key}-${item.id}-${item.label}`}>
                               <button
                                 type="button"
-                                onClick={() => setSectionId(item.id)}
+                                onClick={() => goToSection(item.id)}
                                 className={cn(
                                   'w-full rounded-md px-2.5 py-1.5 text-left text-[12px] transition-colors',
                                   active
@@ -321,15 +460,15 @@ function PlanAtaqueShell({
               </p>
             </aside>
 
-            <div className="relative bg-slate-100">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500">
+            <div className="relative min-w-0 bg-slate-100">
+              <div className="hidden items-center justify-between border-b border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500 lg:flex">
                 <span>{unlocked ? 'Plan completo' : 'Vista previa'}</span>
                 <span>
-                  {sectionIndex} / {doc.nav.length} · 100%
+                  {sectionIndex} / {doc.nav.length}
                 </span>
               </div>
 
-              <div className="p-3 sm:p-4">
+              <div className="p-2 sm:p-4">
                 <PlanAtaqueSectionView
                   doc={doc}
                   sectionId={sectionId}
@@ -337,24 +476,15 @@ function PlanAtaqueShell({
                   logoUrl={logoUrl}
                   unlocked={unlocked}
                   today={today}
-                  onNavigate={(id) => setSectionId(id as PlanAtaqueSectionId)}
+                  onNavigate={(id) => goToSection(id as PlanAtaqueSectionId)}
                 />
               </div>
 
               <div
-                className="border-t border-slate-200 px-3 py-3 sm:px-4"
+                className="border-t border-slate-200 px-2 py-2.5 sm:px-4 sm:py-3"
                 style={{ backgroundColor: '#E1E6EC' }}
               >
-                <div
-                  className={cn(
-                    'grid gap-2 sm:gap-2.5',
-                    footerStats.length >= 6
-                      ? 'grid-cols-3 sm:grid-cols-6'
-                      : footerStats.length === 5
-                        ? 'grid-cols-3 sm:grid-cols-5'
-                        : 'grid-cols-2 sm:grid-cols-4'
-                  )}
-                >
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2.5">
                   {footerStats.map(({ key, icon: Icon, label, items, sectionId: targetSection }) => {
                     const active = openStatKey === key;
                     return (
@@ -363,10 +493,10 @@ function PlanAtaqueShell({
                         type="button"
                         onClick={() => {
                           setOpenStatKey((prev) => (prev === key ? null : key));
-                          setSectionId(targetSection);
+                          goToSection(targetSection);
                         }}
                         className={cn(
-                          'flex flex-col items-center rounded-xl border px-2 py-2.5 text-center shadow-sm transition',
+                          'flex flex-col items-center rounded-lg border px-1 py-2 text-center shadow-sm transition sm:rounded-xl sm:px-2 sm:py-2.5',
                           active
                             ? 'border-slate-300 bg-white'
                             : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50'
@@ -380,14 +510,14 @@ function PlanAtaqueShell({
                         aria-controls="plan-ataque-stat-list"
                       >
                         <Icon
-                          className="h-5 w-5"
+                          className="h-4 w-4 sm:h-5 sm:w-5"
                           strokeWidth={1.75}
                           style={{ color: accent.primary }}
                         />
-                        <p className="mt-1 text-lg font-bold leading-none text-slate-900">
+                        <p className="mt-0.5 text-base font-bold leading-none text-slate-900 sm:mt-1 sm:text-lg">
                           {items.length}
                         </p>
-                        <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="mt-0.5 text-[8px] font-semibold uppercase leading-tight tracking-wide text-slate-500 sm:mt-1 sm:text-[9px]">
                           {label}
                         </p>
                       </button>
@@ -398,7 +528,7 @@ function PlanAtaqueShell({
                 {openStat ? (
                   <div
                     id="plan-ataque-stat-list"
-                    className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                    className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm sm:mt-3 sm:max-h-64 sm:p-3"
                   >
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">

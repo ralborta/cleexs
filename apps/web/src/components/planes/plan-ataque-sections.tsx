@@ -19,7 +19,7 @@ function DocPage({
   children: React.ReactNode;
 }) {
   return (
-    <article className="min-h-[420px] rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <article className="min-h-[280px] rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm sm:min-h-[420px] sm:p-7">
       {eyebrow ? (
         <p
           className="text-[11px] font-bold uppercase tracking-wide"
@@ -28,9 +28,11 @@ function DocPage({
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{title}</h2>
+      <h2 className="mt-1 text-lg font-bold text-slate-900 sm:text-2xl">{title}</h2>
       <div className="mt-2 h-1.5 w-14 rounded-full" style={{ backgroundColor: accent.primary }} />
-      <div className="mt-5 space-y-4 text-sm leading-relaxed text-slate-700">{children}</div>
+      <div className="mt-4 space-y-3 text-sm leading-relaxed text-slate-700 sm:mt-5 sm:space-y-4">
+        {children}
+      </div>
     </article>
   );
 }
@@ -92,8 +94,8 @@ export function PlanAtaqueSectionView({
 
   if (sectionId === 'portada') {
     return (
-      <div className="grid gap-3 md:grid-cols-[1.75fr_0.7fr_0.75fr]">
-        <article className="relative flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm">
+      <div className="grid gap-2 sm:gap-3 md:grid-cols-[1.75fr_0.7fr_0.75fr]">
+        <article className="relative flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-3.5 text-left shadow-sm sm:p-5">
           <IndustryCoverWatermark
             industry={ctx.industry}
             domain={ctx.domain}
@@ -153,7 +155,7 @@ export function PlanAtaqueSectionView({
           </div>
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <article className="hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:block">
           <h2
             className="text-center text-sm font-bold uppercase tracking-wide"
             style={{ color: accent.primary }}
@@ -164,7 +166,7 @@ export function PlanAtaqueSectionView({
             {doc.nav
               .filter((n) => n.id !== 'portada' && n.id !== 'indice')
               .map((item, i) => (
-                <li key={item.id}>
+                <li key={`${item.group}-${item.id}-${item.label}`}>
                   <button
                     type="button"
                     onClick={() => onNavigate(item.id)}
@@ -180,7 +182,7 @@ export function PlanAtaqueSectionView({
           </ol>
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4">
           <p
             className="text-[11px] font-bold uppercase tracking-wide"
             style={{ color: accent.primary }}
