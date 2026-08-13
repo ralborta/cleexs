@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   Bot,
   CheckSquare,
@@ -126,7 +125,6 @@ export function PlanAtaqueHubSections({
     crawlerAccess,
     satelliteActions,
     siteUrl,
-    runId,
     teaser,
     improveNow,
     lostQuestions,
@@ -218,43 +216,40 @@ export function PlanAtaqueHubSections({
           </ul>
         </div>
 
-        {(runId || toolkitUrl) && (
-          <div className="flex flex-wrap gap-2">
-            {runId ? (
-              <>
-                <Link
-                  href={`/portal-crecimiento/reporte/${runId}/premium`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-                >
-                  Ver informe premium <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-                <Link
-                  href={`/portal-crecimiento/reporte/${runId}/premium/herramientas`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-                >
-                  Herramientas AEO <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-                <Link
-                  href={`/portal-crecimiento/reporte/${runId}/premium/prompts`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-                >
-                  Prompts semanales <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              </>
-            ) : null}
-            {toolkitUrl ? (
-              <a
-                href={toolkitUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white"
-                style={{ backgroundColor: accent.primary }}
-              >
-                Abrir AEO ToolKit <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            ) : null}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigate('comparacion')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Comparación
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('competidores')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Competidores
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('kit')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Prompts
+          </button>
+          {toolkitUrl ? (
+            <a
+              href={toolkitUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white"
+              style={{ backgroundColor: accent.primary }}
+            >
+              Abrir AEO ToolKit <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+        </div>
 
         {!unlocked ? (
           <p className="text-xs text-amber-800">
@@ -417,15 +412,6 @@ export function PlanAtaqueHubSections({
             ))}
           </ul>
         )}
-        {runId ? (
-          <Link
-            href={`/portal-crecimiento/reporte/${runId}/premium/prompts`}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold underline"
-            style={{ color: accent.primary }}
-          >
-            Ir a prompts semanales del portal <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        ) : null}
       </HubPage>
     );
   }

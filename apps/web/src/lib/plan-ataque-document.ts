@@ -17,6 +17,7 @@ export type PlanAtaqueSectionId =
   | 'satelite'
   | 'crawlers'
   | 'kit'
+  | 'comparacion'
   | 'portada'
   | 'indice'
   | 'prioridad'
@@ -210,14 +211,16 @@ export function buildPlanAtaqueDocument(diagnostic: PublicDiagnostic): PlanAtaqu
     { id: 'satelite', label: 'Satélite AEO', group: 'gestionar' },
     { id: 'crawlers', label: 'Crawlers & robots', group: 'gestionar' },
     { id: 'kit', label: 'Kit IA (prompts)', group: 'gestionar' },
-    { id: 'portada', label: 'Portada del plan', group: 'documento' },
-    { id: 'indice', label: 'Índice', group: 'documento' },
-    { id: 'prioridad', label: 'Prioridad #1', group: 'documento' },
+    { id: 'comparacion', label: 'Comparación', group: 'portal' },
     {
       id: 'competidores',
       label: ctx.competitors.length ? `Competidores (${ctx.competitors.length})` : 'Competidores',
-      group: 'documento',
+      group: 'portal',
     },
+    { id: 'kit', label: 'Prompts', group: 'portal' },
+    { id: 'portada', label: 'Portada del plan', group: 'documento' },
+    { id: 'indice', label: 'Índice', group: 'documento' },
+    { id: 'prioridad', label: 'Prioridad #1', group: 'documento' },
     { id: 'preguntas', label: 'Preguntas perdidas', group: 'documento' },
     { id: 'victorias', label: 'Victorias rápidas', group: 'documento' },
     { id: 'contenido', label: 'Contenido sugerido', group: 'documento' },

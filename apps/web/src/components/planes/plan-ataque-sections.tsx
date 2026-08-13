@@ -241,9 +241,9 @@ export function PlanAtaqueSectionView({
         </p>
         <ol className="space-y-3">
           {doc.nav
-            .filter((n) => n.id !== 'indice')
+            .filter((n) => n.id !== 'indice' && n.group !== 'portal')
             .map((item, i) => (
-              <li key={item.id}>
+              <li key={`${item.group}-${item.id}-${item.label}`}>
                 <button
                   type="button"
                   onClick={() => onNavigate(item.id)}
@@ -320,6 +320,105 @@ export function PlanAtaqueSectionView({
             ) : null}
           </div>
         ) : null}
+      </DocPage>
+    );
+  }
+
+  if (sectionId === 'comparacion') {
+    const rivals = ctx.competitors.slice(0, 6);
+    return (
+      <DocPage
+        accent={accent}
+        eyebrow="Comparación"
+        title={`${ctx.brandName} vs el mercado en IA`}
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              Cleexs Score
+            </p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">
+              {ctx.cleexsScore != null ? `${ctx.cleexsScore}/100` : '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              Motores
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {ctx.engines.length ? ctx.engines.join(' · ') : 'ChatGPT'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              Rival principal
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {rivals[0]?.name || '—'}
+            </p>
+          </div>
+        </div>
+
+        {rivals.length === 0 ? (
+          <p>Cuando el diagnóstico tenga competidores, acá ves la comparación directa.</p>
+        ) : (
+          <ul className="space-y-2">
+            <li className="flex items-center justify-between gap-3 rounded-xl border-2 px-4 py-3"
+              style={{ borderColor: accent.primary }}
+            >
+              <div>
+                <p className="font-semibold text-slate-900">{ctx.brandName}</p>
+                <p className="text-xs text-slate-500">{ctx.domain}</p>
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: accent.primary }}>
+                Tu marca
+              </span>
+            </li>
+            {rivals.map((c, i) => (
+              <li
+                key={`${c.name}-${c.domain || i}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3"
+              >
+                <div>
+                  <p className="font-semibold text-slate-900">
+                    {i + 1}. {c.name}
+                  </p>
+                  {c.domain ? <p className="text-xs text-slate-500">{c.domain}</p> : null}
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Rival
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {improveNow.length > 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Donde más conviene ganar terreno
+            </p>
+            <ul className="mt-2 space-y-2">
+              {improveNow.slice(0, 5).map((item) => (
+                <li key={item.label} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-slate-800">{item.label}</span>
+                  <span className="shrink-0 font-bold" style={{ color: accent.primary }}>
+                    {item.score}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => onNavigate('competidores')}
+          className="text-sm font-semibold underline"
+          style={{ color: accent.primary }}
+        >
+          Ver detalle de competidores →
+        </button>
       </DocPage>
     );
   }

@@ -14,11 +14,6 @@ import {
   FileText,
   Users,
   Zap,
-  Sparkles,
-  Scale,
-  MessageSquare,
-  History,
-  Globe,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -37,19 +32,6 @@ import {
 } from '@/lib/plan-ataque-document';
 import type { PlanConquistarLandingContext } from '@/lib/plan-conquistar-landing-context';
 import { cn } from '@/lib/utils';
-
-function portalLinksForRun(runId: string) {
-  const base = `/portal-crecimiento/reporte/${runId}/premium`;
-  return [
-    { href: base, label: 'Informe / Interpretación', Icon: Sparkles },
-    { href: `${base}/comparacion`, label: 'Comparación', Icon: Scale },
-    { href: `${base}/competidores`, label: 'Competidores', Icon: Target },
-    { href: `${base}/prompts`, label: 'Prompts', Icon: MessageSquare },
-    { href: `${base}/historial`, label: 'Historial', Icon: History },
-    { href: `${base}/visibilidad-global`, label: 'Visibilidad global', Icon: Globe },
-    { href: `${base}/reportes`, label: 'Reportes', Icon: FileText },
-  ] as const;
-}
 
 function impactLabel(ctx: PlanConquistarLandingContext): string {
   const ops = ctx.opportunityCount ?? 0;
@@ -256,12 +238,18 @@ function PlanAtaqueShell({
                   [
                     { key: 'gestionar' as const, title: 'Gestionar el plan' },
                     { key: 'documento' as const, title: 'Documento' },
+                    { key: 'portal' as const, title: 'Más info' },
                   ] as const
                 ).map((group) => {
                   const items = doc.nav.filter((n) => n.group === group.key);
                   if (!items.length) return null;
                   return (
-                    <div key={group.key} className={group.key === 'documento' ? 'mt-3 border-t border-slate-200/80 pt-2' : ''}>
+                    <div
+                      key={group.key}
+                      className={
+                        group.key === 'gestionar' ? '' : 'mt-3 border-t border-slate-200/80 pt-2'
+                      }
+                    >
                       <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
                         {group.title}
                       </p>
@@ -269,7 +257,7 @@ function PlanAtaqueShell({
                         {items.map((item) => {
                           const active = item.id === sectionId;
                           return (
-                            <li key={item.id}>
+                            <li key={`${group.key}-${item.id}-${item.label}`}>
                               <button
                                 type="button"
                                 onClick={() => setSectionId(item.id)}
@@ -297,27 +285,6 @@ function PlanAtaqueShell({
                     </div>
                   );
                 })}
-
-                {doc.runId ? (
-                  <div className="mt-3 border-t border-slate-200/80 pt-2">
-                    <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                      Más info en el portal
-                    </p>
-                    <ul className="space-y-0.5">
-                      {portalLinksForRun(doc.runId).map(({ href, label, Icon }) => (
-                        <li key={href}>
-                          <Link
-                            href={href}
-                            className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[12px] text-slate-700 transition-colors hover:bg-white/70"
-                          >
-                            <Icon className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
-                            <span className="truncate">{label}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
               </nav>
               <p className="mt-auto border-t border-slate-200 px-3 py-2.5 text-center text-[11px] font-semibold tracking-wide text-slate-500">
                 cleexs
