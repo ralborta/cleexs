@@ -212,6 +212,12 @@ async function enrichPdlCompany(domain: string): Promise<EnrichedOrg> {
 function parseSizeHint(size: string | number | null): number | null {
   if (typeof size === 'number' && Number.isFinite(size)) return size;
   if (typeof size === 'string') {
+    // Rangos PDL tipo "51-200" / "1001-5000": usar el techo, no concatenar dígitos.
+    const range = size.match(/(\d+)\s*[-–]\s*(\d+)/);
+    if (range) {
+      const hi = Number(range[2]);
+      return Number.isFinite(hi) && hi > 0 ? hi : null;
+    }
     const n = Number(size.replace(/[^\d]/g, ''));
     return Number.isFinite(n) && n > 0 ? n : null;
   }
@@ -227,7 +233,17 @@ export async function enrichContactOnDemand(input: {
   const email = input.email.trim().toLowerCase();
   const cacheKey = email;
   const cached = enrichCache.get(cacheKey);
-  if (cached) return { ...cached, cached: true };
+  if (cached) {
+    const brandName = input.brandName?.trim() || null;
+    return {
+      ...cached,
+      cached: true,
+      org: {
+        ...cached.org,
+        name: cached.org.name || brandName,
+      },
+    };
+  }
 
   const mailDomain = emailDomainOf(email);
   const domain =
@@ -311,9 +327,11 @@ export async function enrichContactOnDemand(input: {
     person: personRes.person,
     org: mergedOrg,
     provider: 'pdl',
-    // "Not Found" de PDL = sin perfil de persona; la ficha de empresa igual sirve.
+    // PDL sin match de persona no es fallo de la ficha (empresa/brand igual se muestra).
     error:
-      personRes.error && !personRes.person.found && !/not\s*found/i.test(personRes.error)
+      personRes.error &&
+      !personRes.person.found &&
+      !/not\s*found|no records were found|not found matching/i.test(personRes.error)
         ? personRes.error
         : undefined,
   };
