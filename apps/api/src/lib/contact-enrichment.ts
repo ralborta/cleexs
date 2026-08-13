@@ -131,7 +131,13 @@ async function enrichPdlPerson(email: string): Promise<{
       companyHint: {
         name: typeof d.job_company_name === 'string' ? d.job_company_name : null,
         website: typeof d.job_company_website === 'string' ? d.job_company_website : null,
-        size: (d.job_company_size as string | number | null) ?? d.job_company_employee_count ?? null,
+        size:
+          typeof d.job_company_size === 'string' || typeof d.job_company_size === 'number'
+            ? d.job_company_size
+            : typeof d.job_company_employee_count === 'string' ||
+                typeof d.job_company_employee_count === 'number'
+              ? d.job_company_employee_count
+              : null,
       },
     };
   }
@@ -305,7 +311,11 @@ export async function enrichContactOnDemand(input: {
     person: personRes.person,
     org: mergedOrg,
     provider: 'pdl',
-    error: personRes.error && !personRes.person.found ? personRes.error : undefined,
+    // "Not Found" de PDL = sin perfil de persona; la ficha de empresa igual sirve.
+    error:
+      personRes.error && !personRes.person.found && !/not\s*found/i.test(personRes.error)
+        ? personRes.error
+        : undefined,
   };
 
   enrichCache.set(cacheKey, result);

@@ -566,7 +566,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         diagnosticIndustry: parsed.data.diagnosticIndustry,
         brandName: parsed.data.brandName,
       });
-      return { ok: true as const, ...result };
+      // PDL "Not Found" en persona no es error de ruta: devolvemos ficha igual.
+      return result;
     } catch (error) {
       return reply.code(502).send({
         ok: false,
