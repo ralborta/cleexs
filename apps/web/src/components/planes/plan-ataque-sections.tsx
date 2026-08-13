@@ -5,7 +5,7 @@ import type { PlanAtaqueDocument } from '@/lib/plan-ataque-document';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { IndustryCoverWatermark } from '@/components/planes/industry-cover-watermark';
 import { PlanAtaqueHubSections } from '@/components/planes/plan-ataque-hub-sections';
-import { Calendar, Clock, Target, TrendingUp } from 'lucide-react';
+import { Calendar, Target, TrendingUp } from 'lucide-react';
 
 function DocPage({
   accent,
@@ -88,10 +88,6 @@ export function PlanAtaqueSectionView({
         : `${ctx.engines.slice(0, -1).join(', ')} y ${ctx.engines[ctx.engines.length - 1]}`;
 
   const actions = ctx.opportunityCount;
-  const hours =
-    ctx.opportunityCount != null && ctx.opportunityCount > 0
-      ? Math.max(6, Math.round(ctx.opportunityCount * 0.75))
-      : null;
   const impact =
     (ctx.opportunityCount ?? 0) >= 20 || (ctx.cleexsScore != null && ctx.cleexsScore < 40)
       ? 'ALTO'
@@ -142,10 +138,6 @@ export function PlanAtaqueSectionView({
                 {
                   Icon: Target,
                   t: actions != null ? `${actions} acciones priorizadas` : 'Acciones a confirmar',
-                },
-                {
-                  Icon: Clock,
-                  t: hours != null ? `${hours} horas estimadas` : 'Horas a estimar',
                 },
                 { Icon: TrendingUp, t: `Impacto esperado: ${impact}` },
               ].map(({ Icon, t }) => (
