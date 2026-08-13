@@ -713,10 +713,7 @@ export function PlanAtaqueSectionView({
           },
           {
             q: '¿Cuánto tarda?',
-            a:
-              hours != null
-                ? `Estimamos alrededor de ${hours} horas de trabajo priorizado, repartidas en 90 días.`
-                : 'Depende de cuántas oportunidades abiertas tenga tu diagnóstico.',
+            a: 'El plan está pensado para 90 días: arrancás por Prioridad #1 y las victorias rápidas, y avanzás por fases según tu ritmo.',
           },
           {
             q: '¿Cómo mido avance?',
