@@ -150,54 +150,7 @@ async function enrichPdlPerson(email: string): Promise<{
   };
 }
 
-async function enrichPdlCompany(domain: string): Promise<EnrichedOrg> {
-  const key = pdlKey();
-  if (!key) {
-    return {
-      name: null,
-      industry: null,
-      employees: null,
-      founded: null,
-      location: null,
-      linkedin: null,
-      website: null,
-    };
-  }
-
-  const url = new URL('https://api.peopledatalabs.com/v5/company/enrich');
-  url.searchParams.set('website', domain);
-  url.searchParams.set('pretty', 'true');
-  const res = await fetch(url, { headers: { 'X-Api-Key': key } });
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-
-  if (res.status === 200 && body.data && typeof body.data === 'object') {
-    const d = body.data as Record<string, unknown>;
-    const loc = d.location as Record<string, unknown> | undefined;
-    const location =
-      [loc?.locality, loc?.region, loc?.country].filter((x) => typeof x === 'string').join(', ') ||
-      (typeof loc?.name === 'string' ? loc.name : null);
-    const industryV2 = d.industry_v2 as { primary?: string } | undefined;
-    const employeesRaw = d.employee_count ?? d.size;
-    let employees: number | null = null;
-    if (typeof employeesRaw === 'number') employees = employeesRaw;
-    else if (typeof employeesRaw === 'string') {
-      const n = Number(employeesRaw.replace(/[^\d]/g, ''));
-      employees = Number.isFinite(n) && n > 0 ? n : null;
-    }
-    return {
-      name: typeof d.name === 'string' ? d.name : null,
-      industry:
-        (typeof d.industry === 'string' && d.industry) || industryV2?.primary || null,
-      employees,
-      founded: typeof d.founded === 'number' ? d.founded : null,
-      location,
-      linkedin: normalizeLinkedIn(typeof d.linkedin_url === 'string' ? d.linkedin_url : null),
-      website:
-        (typeof d.website === 'string' && d.website) ||
-        (domain.startsWith('http') ? domain : `https://${domain}`),
-    };
-  }
-
+function emptyOrg(domain?: string | null): EnrichedOrg {
   return {
     name: null,
     industry: null,
@@ -205,8 +158,76 @@ async function enrichPdlCompany(domain: string): Promise<EnrichedOrg> {
     founded: null,
     location: null,
     linkedin: null,
-    website: domain ? `https://${domain}` : null,
+    website: domain ? (domain.startsWith('http') ? domain : `https://${domain}`) : null,
   };
+}
+
+function parseEmployees(raw: unknown): number | null {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) return raw;
+  if (typeof raw === 'string') return parseSizeHint(raw);
+  return null;
+}
+
+function mapPdlCompanyPayload(d: Record<string, unknown>, domain: string): EnrichedOrg | null {
+  // Company Enrichment responde en la raíz (status/name/…), no en `data` como Person.
+  const status = d.status;
+  if (status !== undefined && status !== 200) return null;
+  const name =
+    (typeof d.display_name === 'string' && d.display_name) ||
+    (typeof d.name === 'string' && d.name) ||
+    null;
+  if (!name && d.employee_count == null && !d.industry && !d.website) return null;
+
+  const loc = d.location as Record<string, unknown> | undefined;
+  const location =
+    [loc?.locality, loc?.region, loc?.country].filter((x) => typeof x === 'string').join(', ') ||
+    (typeof loc?.name === 'string' ? loc.name : null);
+  const industryV2 = d.industry_v2 as { primary?: string } | undefined;
+  const websiteRaw = typeof d.website === 'string' ? d.website : null;
+
+  return {
+    name,
+    industry: (typeof d.industry === 'string' && d.industry) || industryV2?.primary || null,
+    employees: parseEmployees(d.employee_count) ?? parseEmployees(d.size),
+    founded: typeof d.founded === 'number' ? d.founded : null,
+    location,
+    linkedin: normalizeLinkedIn(typeof d.linkedin_url === 'string' ? d.linkedin_url : null),
+    website: websiteRaw
+      ? websiteRaw.startsWith('http')
+        ? websiteRaw
+        : `https://${websiteRaw}`
+      : domain
+        ? `https://${domain}`
+        : null,
+  };
+}
+
+async function enrichPdlCompany(domain: string, brandName?: string | null): Promise<EnrichedOrg> {
+  const key = pdlKey();
+  if (!key || !domain) return emptyOrg(domain);
+
+  const attempts: Array<Record<string, string>> = [{ website: domain }];
+  const brand = brandName?.trim();
+  if (brand) attempts.push({ name: brand });
+
+  for (const params of attempts) {
+    const url = new URL('https://api.peopledatalabs.com/v5/company/enrich');
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    url.searchParams.set('pretty', 'true');
+    const res = await fetch(url, { headers: { 'X-Api-Key': key } });
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (res.status !== 200) continue;
+
+    // Compat: algunos wrappers anidan en `data`; la API real usa la raíz.
+    const nested =
+      body.data && typeof body.data === 'object' && !Array.isArray(body.data)
+        ? (body.data as Record<string, unknown>)
+        : null;
+    const mapped = mapPdlCompanyPayload(nested ?? body, domain);
+    if (mapped?.name || mapped?.employees != null || mapped?.industry) return mapped!;
+  }
+
+  return emptyOrg(domain);
 }
 
 function parseSizeHint(size: string | number | null): number | null {
@@ -298,14 +319,26 @@ export async function enrichContactOnDemand(input: {
     };
   }
 
-  const [personRes, org] = await Promise.all([
+  const emailDomain = mailDomain;
+  // Preferir dominio del diagnóstico; si difiere del mail (typo), probar ambos.
+  const companyDomains = Array.from(
+    new Set([domain, emailDomain].filter((d): d is string => Boolean(d)))
+  );
+
+  const [personRes, ...orgAttempts] = await Promise.all([
     enrichPdlPerson(email),
-    domain ? enrichPdlCompany(domain) : Promise.resolve(null),
+    ...companyDomains.map((d) => enrichPdlCompany(d, input.brandName)),
   ]);
 
+  const org =
+    orgAttempts.find((o) => o.name || o.employees != null || o.industry || o.location) ||
+    orgAttempts[0] ||
+    null;
+
   const mergedOrg: EnrichedOrg = {
-    name: org?.name || personRes.companyHint.name || input.brandName || null,
-    industry: org?.industry || null,
+    // Marca del diagnóstico primero (mejor UX); PDL aporta tamaño/industria/ubicación.
+    name: input.brandName || org?.name || personRes.companyHint.name || null,
+    industry: org?.industry || input.diagnosticIndustry || null,
     employees: org?.employees ?? parseSizeHint(personRes.companyHint.size),
     founded: org?.founded ?? null,
     location: org?.location ?? null,
@@ -313,7 +346,9 @@ export async function enrichContactOnDemand(input: {
     website:
       org?.website ||
       (personRes.companyHint.website
-        ? normalizeLinkedIn(personRes.companyHint.website)
+        ? personRes.companyHint.website.startsWith('http')
+          ? personRes.companyHint.website
+          : `https://${personRes.companyHint.website}`
         : domain
           ? `https://${domain}`
           : null),

@@ -810,7 +810,8 @@ export default function OnboardingProfileReportPage() {
                     >
                       {enrichData.email}
                     </a>
-                    {enrichData.error ? (
+                    {enrichData.error &&
+                    !/not\s*found|no records were found/i.test(enrichData.error) ? (
                       <p className="mt-2 text-[11px] text-amber-700">{enrichData.error}</p>
                     ) : null}
                   </div>
