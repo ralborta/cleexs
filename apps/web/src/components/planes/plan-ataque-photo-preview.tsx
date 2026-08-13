@@ -30,13 +30,8 @@ const BAR_BG = '#E1E6EC';
 const DESIGN_W = 920;
 const DESIGN_H = 720;
 
-function impactLabel(ctx: PlanConquistarLandingContext): string {
-  const ops = ctx.opportunityCount ?? 0;
-  const score = ctx.cleexsScore;
-  if (ops >= 20 || (score != null && score < 40)) return 'ALTO';
-  if (ops >= 10 || (score != null && score < 60)) return 'MEDIO';
-  if (ops > 0 || score != null) return 'MODERADO';
-  return '—';
+function impactLabel(_ctx: PlanConquistarLandingContext): string {
+  return 'ALTO';
 }
 
 function estimatedHours(ctx: PlanConquistarLandingContext): number | null {

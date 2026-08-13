@@ -88,14 +88,7 @@ export function PlanAtaqueSectionView({
         : `${ctx.engines.slice(0, -1).join(', ')} y ${ctx.engines[ctx.engines.length - 1]}`;
 
   const actions = ctx.opportunityCount;
-  const impact =
-    (ctx.opportunityCount ?? 0) >= 20 || (ctx.cleexsScore != null && ctx.cleexsScore < 40)
-      ? 'ALTO'
-      : (ctx.opportunityCount ?? 0) >= 10 || (ctx.cleexsScore != null && ctx.cleexsScore < 60)
-        ? 'MEDIO'
-        : ctx.opportunityCount || ctx.cleexsScore != null
-          ? 'MODERADO'
-          : '—';
+  const impact = 'ALTO';
 
   if (sectionId === 'portada') {
     return (

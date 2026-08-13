@@ -32,13 +32,8 @@ import {
 import type { PlanConquistarLandingContext } from '@/lib/plan-conquistar-landing-context';
 import { cn } from '@/lib/utils';
 
-function impactLabel(ctx: PlanConquistarLandingContext): string {
-  const ops = ctx.opportunityCount ?? 0;
-  const score = ctx.cleexsScore;
-  if (ops >= 20 || (score != null && score < 40)) return 'ALTO';
-  if (ops >= 10 || (score != null && score < 60)) return 'MEDIO';
-  if (ops > 0 || score != null) return 'MODERADO';
-  return '—';
+function impactLabel(_ctx: PlanConquistarLandingContext): string {
+  return 'ALTO';
 }
 
 function MetricCard({
