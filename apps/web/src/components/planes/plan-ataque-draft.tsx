@@ -118,13 +118,13 @@ function PlanAtaqueShell({
   }, [doc.nav, sectionId]);
 
   const footerStats = useMemo(() => {
-    const promptItems = [
-      ...(doc.teaser?.implementationPrompts ?? [])
-        .filter((p) => p.prompt)
-        .map((p) => p.title || 'Prompt'),
-      ...doc.suggestedContent.map((c) => c.title),
-    ].filter(Boolean);
-    const uniquePrompts = Array.from(new Set(promptItems));
+    // Misma fuente que Kit IA: solo implementationPrompts; si no hay, suggestedContent.
+    const implPrompts = (doc.teaser?.implementationPrompts ?? []).filter((p) => p.prompt);
+    const uniquePrompts = (
+      implPrompts.length > 0
+        ? implPrompts.map((p) => p.title || 'Prompt')
+        : doc.suggestedContent.map((c) => c.title)
+    ).filter(Boolean);
 
     const pageItems = doc.nav
       .filter((n) => n.group === 'documento' || n.group === 'gestionar')
