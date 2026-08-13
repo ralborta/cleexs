@@ -9,13 +9,13 @@ export async function api<T>(endpoint: string, options?: RequestInit): Promise<T
   let response: Response;
   try {
     response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
+    ...options,
       signal: options?.signal ?? controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('La API tardó demasiado en responder. Refrescá o probá de nuevo.');
@@ -493,6 +493,32 @@ export interface AcquisitionDiagnosticSearchResult {
   rows: AcquisitionDiagnosticRow[];
 }
 
+export type ContactEnrichmentResponse = {
+  ok: boolean;
+  email: string;
+  domain: string;
+  diagnosticIndustry: string | null;
+  person: {
+    name: string | null;
+    title: string | null;
+    seniority: string | null;
+    linkedin: string | null;
+    found: boolean;
+  };
+  org: {
+    name: string | null;
+    industry: string | null;
+    employees: number | null;
+    founded: number | null;
+    location: string | null;
+    linkedin: string | null;
+    website: string | null;
+  };
+  provider: 'pdl' | 'none';
+  error?: string;
+  cached?: boolean;
+};
+
 export interface OnboardingProfileReport {
   windowDays: number;
   asOf: string;
@@ -828,6 +854,16 @@ export const internalReportsApi = {
     if (country?.trim()) qs.set('country', country.trim());
     return api<OnboardingProfileReport>(`/api/reports/internal/onboarding-profile?${qs.toString()}`);
   },
+  enrichContact: (body: {
+    email: string;
+    domain?: string | null;
+    diagnosticIndustry?: string | null;
+    brandName?: string | null;
+  }) =>
+    api<ContactEnrichmentResponse>('/api/reports/internal/enrich-contact', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   cleexsScore: (windowDays: ReportWindowDays = 30) =>
     api<CleexsScoreReport>(`/api/reports/internal/cleexs-score?windowDays=${windowDays}`),
   emailOutreach: (windowDays: ReportWindowDays = 30) =>
@@ -1053,12 +1089,12 @@ export interface PlatformDashboard {
     totalTrackedDiagnostics: number;
     topReferrers: Array<
       ReferrerReportRow & {
-        visits: number;
-        completedDiagnostics: number;
-        capturedEmails: number;
-        completionRate: number;
-        latestAt: string;
-        topSource: string;
+      visits: number;
+      completedDiagnostics: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
+      topSource: string;
       }
     >;
     topSources: Array<{
@@ -1071,11 +1107,11 @@ export interface PlatformDashboard {
     totalDiagnostics: number;
     topReferrers: Array<
       ReferrerReportRow & {
-        visits: number;
-        completedDiagnostics: number;
-        capturedEmails: number;
-        completionRate: number;
-        latestAt: string;
+      visits: number;
+      completedDiagnostics: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
       }
     >;
   };
@@ -1292,16 +1328,16 @@ export interface PublicDiagnosticShareResponse {
 export const publicDiagnosticApi = {
   create: (
     input: {
-      url: string;
-      brandName?: string;
-      tier?: 'gold' | 'freemium';
-      useSerp?: boolean;
-      tracking?: {
-        refCode?: string;
-        utmSource?: string;
-        utmMedium?: string;
-        utmCampaign?: string;
-      };
+    url: string;
+    brandName?: string;
+    tier?: 'gold' | 'freemium';
+    useSerp?: boolean;
+    tracking?: {
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
     },
     opts?: { visitorId?: string }
   ) =>

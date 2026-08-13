@@ -21,6 +21,7 @@ import {
   loadReferrerCampaignMap,
   resolveReferrerDisplayName,
 } from '../lib/referrer-display';
+import { enrichContactOnDemand, isCorporateEmail } from '../lib/contact-enrichment';
 import { primaryRunWhere } from '../lib/run-type-filters';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
@@ -534,6 +535,44 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       howFoundBreakdown,
       rows,
     };
+  });
+
+  // Enrichment on-demand (admin): solo al click, no batch.
+  // ----------------------------------------------------------------
+  fastify.post('/internal/enrich-contact', async (request, reply) => {
+    const bodySchema = z.object({
+      email: z.string().email(),
+      domain: z.string().trim().max(255).optional().nullable(),
+      diagnosticIndustry: z.string().trim().max(255).optional().nullable(),
+      brandName: z.string().trim().max(255).optional().nullable(),
+    });
+    const parsed = bodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ ok: false, error: 'Email inválido o body incompleto.' });
+    }
+
+    const email = parsed.data.email.trim().toLowerCase();
+    if (!isCorporateEmail(email, parsed.data.domain)) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'Solo enriquecemos emails corporativos (no Gmail/Hotmail/etc.).',
+      });
+    }
+
+    try {
+      const result = await enrichContactOnDemand({
+        email,
+        domain: parsed.data.domain,
+        diagnosticIndustry: parsed.data.diagnosticIndustry,
+        brandName: parsed.data.brandName,
+      });
+      return { ok: true as const, ...result };
+    } catch (error) {
+      return reply.code(502).send({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Error al enriquecer contacto.',
+      });
+    }
   });
 
   // 2) Reporte de Cleexs Score y posicionamiento

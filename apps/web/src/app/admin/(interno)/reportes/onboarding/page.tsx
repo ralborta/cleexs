@@ -2,18 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Briefcase,
+  Building2,
+  Calendar,
   ChevronDown,
   Download,
+  ExternalLink,
   Eye,
   Globe2,
   Loader2,
   Mail,
+  MapPin,
   MessageCircle,
   UserRound,
   Users,
   X,
 } from 'lucide-react';
-import { internalReportsApi, type OnboardingProfileReport, type ReportWindowDays } from '@/lib/api';
+import {
+  internalReportsApi,
+  type ContactEnrichmentResponse,
+  type OnboardingProfileReport,
+  type ReportWindowDays,
+} from '@/lib/api';
 import {
   DiagnosticReportLink,
   ReportErrorBanner,
@@ -37,6 +47,48 @@ const STATUS_BADGES: Record<string, string> = {
 };
 
 const ONBOARDING_PAGE_SIZE = 25;
+
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'hotmail.com',
+  'outlook.com',
+  'live.com',
+  'msn.com',
+  'yahoo.com',
+  'yahoo.com.ar',
+  'ymail.com',
+  'icloud.com',
+  'me.com',
+  'mac.com',
+  'aol.com',
+  'proton.me',
+  'protonmail.com',
+  'gmx.com',
+  'mail.com',
+  'zoho.com',
+]);
+
+function isCorporateEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const domain = email.trim().toLowerCase().split('@')[1];
+  if (!domain?.includes('.')) return false;
+  return !FREE_EMAIL_DOMAINS.has(domain);
+}
+
+function formatEmployees(n: number | null | undefined) {
+  if (n == null || n <= 0) return 'Sin dato';
+  return n.toLocaleString('es-AR');
+}
+
+function sizeBand(n: number | null | undefined) {
+  if (n == null || n <= 0) return '—';
+  if (n < 50) return 'Micro / PyME';
+  if (n < 200) return 'PyME';
+  if (n < 1000) return 'Media';
+  if (n < 5000) return 'Grande';
+  return 'Enterprise';
+}
 
 type SendLogRow = {
   id: string;
@@ -124,6 +176,40 @@ export default function OnboardingProfileReportPage() {
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [preview, setPreview] = useState<ResendContentPayload | null>(null);
+
+  const [enrichOpen, setEnrichOpen] = useState(false);
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
+  const [enrichData, setEnrichData] = useState<ContactEnrichmentResponse | null>(null);
+  const [enrichContext, setEnrichContext] = useState<{
+    email: string;
+    brandName: string;
+    domain: string;
+  } | null>(null);
+
+  const openEnrichment = useCallback(
+    async (row: OnboardingProfileReport['rows'][number]) => {
+      if (!row.email || !isCorporateEmail(row.email)) return;
+      setEnrichOpen(true);
+      setEnrichLoading(true);
+      setEnrichError(null);
+      setEnrichData(null);
+      setEnrichContext({ email: row.email, brandName: row.brandName, domain: row.domain });
+      try {
+        const res = await internalReportsApi.enrichContact({
+          email: row.email,
+          domain: row.domain,
+          brandName: row.brandName,
+        });
+        setEnrichData(res);
+      } catch (e) {
+        setEnrichError(e instanceof Error ? e.message : 'No se pudo enriquecer el contacto.');
+      } finally {
+        setEnrichLoading(false);
+      }
+    },
+    []
+  );
 
   const load = useCallback(async () => {
     setError(null);
@@ -370,7 +456,32 @@ export default function OnboardingProfileReportPage() {
                           <div className="font-medium text-slate-900">{row.brandName}</div>
                           <div className="text-xs text-slate-500">{row.domain}</div>
                         </td>
-                        <td className="py-2 text-xs text-slate-700">{row.email || '—'}</td>
+                        <td className="py-2 text-xs text-slate-700">
+                          {row.email ? (
+                            isCorporateEmail(row.email) ? (
+                              <button
+                                type="button"
+                                onClick={() => void openEnrichment(row)}
+                                className="group inline-flex max-w-[16rem] flex-col items-start gap-0.5 text-left"
+                                title="Click para enriquecer (PDL) y ver ficha"
+                              >
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200">
+                                    Corp
+                                  </span>
+                                  <span className="truncate font-medium text-violet-700 underline-offset-2 group-hover:underline">
+                                    {row.email}
+                                  </span>
+                                </span>
+                                <span className="text-[10px] text-slate-400">Click → quién es</span>
+                              </button>
+                            ) : (
+                              <span className="break-all">{row.email}</span>
+                            )
+                          ) : (
+                            '—'
+                          )}
+                        </td>
                         <td className="py-2 text-xs text-slate-700">{row.country || '—'}</td>
                         <td className="py-2 text-xs text-slate-700">{row.displayName || '—'}</td>
                         <td className="py-2 text-xs text-slate-700">
@@ -570,6 +681,174 @@ export default function OnboardingProfileReportPage() {
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {enrichOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ficha de contacto enriquecida"
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Ficha de contacto</p>
+                <p className="text-xs text-slate-500">
+                  Enrichment al click · {enrichContext?.email}
+                  {enrichData?.cached ? ' · cache' : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEnrichOpen(false);
+                  setEnrichError(null);
+                }}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[80vh] overflow-y-auto p-4">
+              {enrichLoading ? (
+                <div className="flex flex-col items-center gap-2 py-12 text-sm text-slate-500">
+                  <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
+                  Buscando quién es… (PDL)
+                </div>
+              ) : enrichError ? (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {enrichError}
+                </p>
+              ) : enrichData ? (
+                <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+                          <Building2 className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-bold text-slate-900">
+                            {enrichData.org.name || enrichContext?.brandName || 'Empresa'}
+                          </h3>
+                          <p className="truncate text-sm text-slate-500">
+                            {enrichData.domain || enrichContext?.domain}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+                      {sizeBand(enrichData.org.employees)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        <Users className="h-3 w-3" /> Empleados
+                      </p>
+                      <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900">
+                        {formatEmployees(enrichData.org.employees)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        <Calendar className="h-3 w-3" /> Fundada
+                      </p>
+                      <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900">
+                        {enrichData.org.founded ?? '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
+                    <li className="flex gap-2">
+                      <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>{enrichData.org.industry || 'Sin industria'}</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>{enrichData.org.location || 'Sin ubicación'}</span>
+                    </li>
+                  </ul>
+
+                  <div className="mt-4 border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        Contacto
+                      </p>
+                      <span
+                        className={
+                          enrichData.person.found
+                            ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800'
+                            : 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500'
+                        }
+                      >
+                        {enrichData.person.found ? 'Perfil OK' : 'Sin perfil'}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {enrichData.person.name || 'Nombre no encontrado'}
+                    </p>
+                    <p className="text-sm text-slate-700">
+                      {enrichData.person.title || 'Cargo no encontrado'}
+                    </p>
+                    {enrichData.person.seniority ? (
+                      <p className="text-xs capitalize text-slate-500">
+                        Seniority: {enrichData.person.seniority}
+                      </p>
+                    ) : null}
+                    <a
+                      href={`mailto:${enrichData.email}`}
+                      className="mt-1 block truncate text-xs font-medium text-violet-700 hover:underline"
+                    >
+                      {enrichData.email}
+                    </a>
+                    {enrichData.error ? (
+                      <p className="mt-2 text-[11px] text-amber-700">{enrichData.error}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap gap-3 pt-4 text-sm font-medium">
+                    {enrichData.org.website ? (
+                      <a
+                        href={enrichData.org.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-slate-700 underline-offset-2 hover:underline"
+                      >
+                        Sitio <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
+                    {enrichData.org.linkedin ? (
+                      <a
+                        href={enrichData.org.linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-slate-700 underline-offset-2 hover:underline"
+                      >
+                        LinkedIn empresa <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
+                    {enrichData.person.linkedin ? (
+                      <a
+                        href={enrichData.person.linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-slate-700 underline-offset-2 hover:underline"
+                      >
+                        LinkedIn persona <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
+                  </div>
+                </article>
+              ) : null}
             </div>
           </div>
         </div>
