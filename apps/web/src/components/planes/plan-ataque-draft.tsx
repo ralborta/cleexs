@@ -100,6 +100,7 @@ function PlanAtaqueShell({
   const [sectionId, setSectionId] = useState<PlanAtaqueSectionId>(
     unlocked ? 'panel' : 'portada'
   );
+  const [openStatKey, setOpenStatKey] = useState<string | null>(null);
 
   const today = new Date().toLocaleDateString('es-AR', {
     day: 'numeric',
@@ -117,25 +118,74 @@ function PlanAtaqueShell({
   }, [doc.nav, sectionId]);
 
   const footerStats = useMemo(() => {
-    const nAcciones = Math.max(doc.taskList.length, actions ?? ctx.topActions.length, 6);
-    const nPrompts = Math.max(
-      doc.suggestedContent.length,
-      ctx.engines.length * 2,
-      ctx.topActions.length,
-      4
+    const promptItems = [
+      ...(doc.teaser?.implementationPrompts ?? [])
+        .filter((p) => p.prompt)
+        .map((p) => p.title || 'Prompt'),
+      ...doc.suggestedContent.map((c) => c.title),
+    ].filter(Boolean);
+    const uniquePrompts = Array.from(new Set(promptItems));
+
+    const pageItems = doc.nav
+      .filter((n) => n.group === 'documento' || n.group === 'gestionar')
+      .map((n) => n.label)
+      .filter((label, i, arr) => arr.indexOf(label) === i);
+
+    const mejoraItems = doc.immediatePlan.flatMap((phase) =>
+      phase.tasks.map((t) => `${phase.range}: ${t}`)
     );
-    const nPaginas = doc.nav.length;
-    const nComparativas = Math.max(ctx.competitors.length, 1);
-    const nMejoras = Math.max(2, doc.immediatePlan.reduce((n, p) => n + p.tasks.length, 0));
+
+    const planItems = doc.roadmap.length
+      ? doc.roadmap.map((tab) => `${tab.label}: ${tab.items.slice(0, 2).join(' · ') || tab.title || 'Fase del plan'}`)
+      : ['Plan de acción a 90 días'];
+
     return [
-      { icon: ClipboardList, value: String(nAcciones), label: 'Acciones' },
-      { icon: Lightbulb, value: String(nPrompts), label: 'Prompts' },
-      { icon: FileText, value: String(nPaginas), label: 'Páginas' },
-      { icon: Users, value: String(nComparativas), label: 'Comparativas' },
-      { icon: Zap, value: String(nMejoras), label: 'Mejoras' },
-      { icon: Target, value: '1', label: 'Plan de acción' },
-    ] as Array<{ icon: LucideIcon; value: string; label: string }>;
-  }, [doc, actions, ctx.topActions.length, ctx.engines.length, ctx.competitors.length]);
+      {
+        key: 'acciones',
+        icon: ClipboardList,
+        label: 'Acciones',
+        items: doc.taskList.length ? doc.taskList : ctx.topActions,
+        sectionId: 'tareas' as PlanAtaqueSectionId,
+      },
+      {
+        key: 'prompts',
+        icon: Lightbulb,
+        label: 'Prompts',
+        items: uniquePrompts.length ? uniquePrompts : ctx.topActions.slice(0, 6),
+        sectionId: 'kit' as PlanAtaqueSectionId,
+      },
+      {
+        key: 'paginas',
+        icon: FileText,
+        label: 'Páginas',
+        items: pageItems,
+        sectionId: 'indice' as PlanAtaqueSectionId,
+      },
+      {
+        key: 'comparativas',
+        icon: Users,
+        label: 'Comparativas',
+        items: ctx.competitors.map((c) => (c.domain ? `${c.name} · ${c.domain}` : c.name)),
+        sectionId: 'comparacion' as PlanAtaqueSectionId,
+      },
+      {
+        key: 'mejoras',
+        icon: Zap,
+        label: 'Mejoras',
+        items: mejoraItems.length ? mejoraItems : doc.improveNow.map((i) => i.label),
+        sectionId: 'esta-semana' as PlanAtaqueSectionId,
+      },
+      {
+        key: 'plan',
+        icon: Target,
+        label: 'Plan de acción',
+        items: planItems,
+        sectionId: 'plan90' as PlanAtaqueSectionId,
+      },
+    ].filter((stat) => stat.items.length > 0);
+  }, [doc, ctx.topActions, ctx.competitors]);
+
+  const openStat = footerStats.find((s) => s.key === openStatKey) ?? null;
 
   return (
     <div
@@ -315,24 +365,96 @@ function PlanAtaqueShell({
                 className="border-t border-slate-200 px-3 py-3 sm:px-4"
                 style={{ backgroundColor: '#E1E6EC' }}
               >
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-2.5">
-                  {footerStats.map(({ icon: Icon, value, label }) => (
-                    <div
-                      key={label}
-                      className="flex flex-col items-center rounded-xl border border-slate-200/80 bg-white px-2 py-2.5 text-center shadow-sm"
-                    >
-                      <Icon
-                        className="h-5 w-5"
-                        strokeWidth={1.75}
-                        style={{ color: accent.primary }}
-                      />
-                      <p className="mt-1 text-lg font-bold leading-none text-slate-900">{value}</p>
-                      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
-                        {label}
-                      </p>
-                    </div>
-                  ))}
+                <div
+                  className={cn(
+                    'grid gap-2 sm:gap-2.5',
+                    footerStats.length >= 6
+                      ? 'grid-cols-3 sm:grid-cols-6'
+                      : footerStats.length === 5
+                        ? 'grid-cols-3 sm:grid-cols-5'
+                        : 'grid-cols-2 sm:grid-cols-4'
+                  )}
+                >
+                  {footerStats.map(({ key, icon: Icon, label, items, sectionId: targetSection }) => {
+                    const active = openStatKey === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setOpenStatKey((prev) => (prev === key ? null : key));
+                          setSectionId(targetSection);
+                        }}
+                        className={cn(
+                          'flex flex-col items-center rounded-xl border px-2 py-2.5 text-center shadow-sm transition',
+                          active
+                            ? 'border-slate-300 bg-white'
+                            : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50'
+                        )}
+                        style={
+                          active
+                            ? { boxShadow: `0 0 0 2px ${accent.primary}` }
+                            : undefined
+                        }
+                        aria-expanded={active}
+                        aria-controls="plan-ataque-stat-list"
+                      >
+                        <Icon
+                          className="h-5 w-5"
+                          strokeWidth={1.75}
+                          style={{ color: accent.primary }}
+                        />
+                        <p className="mt-1 text-lg font-bold leading-none text-slate-900">
+                          {items.length}
+                        </p>
+                        <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                          {label}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {openStat ? (
+                  <div
+                    id="plan-ataque-stat-list"
+                    className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        {openStat.label} · {openStat.items.length}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setOpenStatKey(null)}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                    <ol className="space-y-1.5">
+                      {openStat.items.map((item, i) => (
+                        <li
+                          key={`${openStat.key}-${i}-${item.slice(0, 32)}`}
+                          className="flex gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-left text-[12px] leading-snug text-slate-800"
+                        >
+                          <span
+                            className="shrink-0 font-bold tabular-nums"
+                            style={{ color: accent.primary }}
+                          >
+                            {i + 1}.
+                          </span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-center text-[11px] text-slate-500">
+                    Tocá un ícono para ver el listado
+                  </p>
+                )}
+
                 {!unlocked && (
                   <div className="mt-3 flex justify-center">
                     <Link
