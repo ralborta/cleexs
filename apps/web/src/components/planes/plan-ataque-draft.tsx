@@ -7,7 +7,6 @@ import {
   Loader2,
   Calendar,
   Target,
-  Clock,
   TrendingUp,
   ClipboardList,
   Lightbulb,
@@ -40,12 +39,6 @@ function impactLabel(ctx: PlanConquistarLandingContext): string {
   if (ops >= 10 || (score != null && score < 60)) return 'MEDIO';
   if (ops > 0 || score != null) return 'MODERADO';
   return '—';
-}
-
-function estimatedHours(ctx: PlanConquistarLandingContext): number | null {
-  const ops = ctx.opportunityCount;
-  if (ops == null || ops <= 0) return null;
-  return Math.max(6, Math.round(ops * 0.75));
 }
 
 function MetricCard({
@@ -109,7 +102,6 @@ function PlanAtaqueShell({
   });
 
   const actions = ctx.opportunityCount;
-  const hours = estimatedHours(ctx);
   const impact = impactLabel(ctx);
 
   const sectionIndex = useMemo(() => {
@@ -234,13 +226,6 @@ function PlanAtaqueShell({
             iconTone="brand"
             primary={actions != null ? String(actions) : '—'}
             secondary="acciones priorizadas"
-          />
-          <MetricCard
-            icon={Clock}
-            accent={accent}
-            iconTone="ink"
-            primary={hours != null ? String(hours) : '—'}
-            secondary="horas estimadas"
           />
           <MetricCard
             icon={TrendingUp}
