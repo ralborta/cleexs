@@ -160,7 +160,7 @@ export function PlanAtaqueHubSections({
             {
               id: 'satelite',
               Icon: Gauge,
-              title: 'Satélite AEO',
+              title: 'Análisis AEO',
               desc:
                 satelliteModule && satelliteModule.status !== 'pending'
                   ? `Score técnico ${Math.round(satelliteModule.overallScore)}/100 · ${satelliteActions.length} acciones`
@@ -271,7 +271,7 @@ export function PlanAtaqueHubSections({
         {satelliteActions.length > 0 ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-              Fixes técnicos sugeridos (satélite)
+              Fixes técnicos sugeridos (Análisis AEO)
             </p>
             <ul className="mt-2 space-y-2">
               {satelliteActions.slice(0, 4).map((a, i) => (
@@ -287,7 +287,7 @@ export function PlanAtaqueHubSections({
               className="mt-3 text-xs font-semibold underline"
               style={{ color: accent.primary }}
             >
-              Ver satélite completo →
+              Ver Análisis AEO completo →
             </button>
           </div>
         ) : null}
@@ -297,9 +297,9 @@ export function PlanAtaqueHubSections({
 
   if (sectionId === 'satelite') {
     return (
-      <HubPage accent={accent} eyebrow="Técnico" title="Satélite AEO · auditoría del sitio">
+      <HubPage accent={accent} eyebrow="Técnico" title="Análisis AEO · auditoría del sitio">
         <p>
-          Resultado del módulo satélite sobre <strong>{siteUrl}</strong>: crawlability, schema,
+          Resultado del Análisis AEO sobre <strong>{siteUrl}</strong>: crawlability, schema,
           presencia en IA, freshness y más. Usalo para entender qué bloquea o potencia tu plan.
         </p>
         {satelliteModule && satelliteModule.status !== 'pending' ? (
@@ -308,7 +308,7 @@ export function PlanAtaqueHubSections({
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-            Todavía no hay resultado de satélite en este diagnóstico. Cuando exista, aparece acá con
+            Todavía no hay resultado de Análisis AEO en este diagnóstico. Cuando exista, aparece acá con
             score por herramienta y acciones concretas.
           </div>
         )}
@@ -356,7 +356,7 @@ export function PlanAtaqueHubSections({
           <CrawlerAccessPlanSection report={crawlerAccess} siteUrl={siteUrl} />
         ) : (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-            No hay informe de crawlers en este diagnóstico. Suele venir del módulo satélite
+            No hay informe de crawlers en este diagnóstico. Suele venir del Análisis AEO
             (robots & sitemap).
           </div>
         )}

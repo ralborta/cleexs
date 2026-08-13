@@ -208,7 +208,7 @@ export function buildPlanAtaqueDocument(diagnostic: PublicDiagnostic): PlanAtaqu
   const nav: PlanAtaqueNavItem[] = [
     { id: 'panel', label: 'Panel de gestión', group: 'gestionar' },
     { id: 'esta-semana', label: 'Esta semana', group: 'gestionar' },
-    { id: 'satelite', label: 'Satélite AEO', group: 'gestionar' },
+    { id: 'satelite', label: 'Análisis AEO', group: 'gestionar' },
     { id: 'crawlers', label: 'Crawlers & robots', group: 'gestionar' },
     { id: 'kit', label: 'Kit IA (prompts)', group: 'gestionar' },
     { id: 'comparacion', label: 'Comparación', group: 'portal' },
