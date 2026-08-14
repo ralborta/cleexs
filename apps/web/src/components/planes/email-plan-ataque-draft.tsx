@@ -41,11 +41,12 @@ function EmailPlanAtaqueInner() {
         const domain = built.ctx.domain || diagnostic.domain || 'cleexs.net';
         let nextAccent = accentFromDomain(domain);
         try {
-          const assets = await brandAssetsApi.byDomain(domain);
-          const logoUrl = assets.logoUrl || assets.iconUrl;
-          if (logoUrl) {
-            const fromLogo = await extractAccentFromLogoUrl(logoUrl);
-            if (fromLogo) nextAccent = fromLogo;
+          const asset = await brandAssetsApi.resolve({
+            domain,
+            brandName: built.ctx.brandName,
+          });
+          if (asset.status === 'ok' && asset.logoUrl && !asset.logoUrl.includes('brandfetch.io')) {
+            nextAccent = await extractAccentFromLogoUrl(asset.logoUrl, domain);
           }
         } catch {
           /* fallback por dominio */
