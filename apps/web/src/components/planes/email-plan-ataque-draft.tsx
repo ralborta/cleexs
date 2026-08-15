@@ -15,8 +15,8 @@ import {
 } from '@/lib/brand-accent-from-logo';
 import { buildPlanAtaqueDocument } from '@/lib/plan-ataque-document';
 
-/** Ejemplo real (Grimoldi) para mostrar a Gon sin pegar ID. */
-const DEMO_DIAGNOSTIC_ID = 'edf9d12b-9093-4a5e-b683-414de5b0f6f2';
+/** Demo con color fuerte en el logo (Nintendo). Override: ?diagnosticId=… */
+const DEMO_DIAGNOSTIC_ID = '47e21617-917d-4e00-b7ee-62585b0d5461';
 
 function EmailPlanAtaqueInner() {
   const searchParams = useSearchParams();
@@ -76,14 +76,9 @@ function EmailPlanAtaqueInner() {
           : `${ctx.engines.slice(0, -1).join(', ')} y ${ctx.engines[ctx.engines.length - 1]}`;
     const priorityTheme = immediatePlan[0]?.theme || 'Primeras acciones del plan';
     const priorityTasks = (immediatePlan[0]?.tasks ?? ctx.topActions).slice(0, 3);
-    const today = new Date().toLocaleDateString('es-AR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
     const planUrl = `/plan-conquistar?diagnosticId=${encodeURIComponent(diagnosticId)}`;
     const reportUrl = `/ver-resultado?id=${encodeURIComponent(diagnosticId)}`;
-    return { ctx, enginesText, priorityTheme, priorityTasks, today, planUrl, reportUrl };
+    return { ctx, enginesText, priorityTheme, priorityTasks, planUrl, reportUrl };
   }, [doc, diagnosticId]);
 
   if (loading) {
@@ -107,7 +102,7 @@ function EmailPlanAtaqueInner() {
     );
   }
 
-  const { ctx, enginesText, priorityTheme, priorityTasks, today, planUrl, reportUrl } = preview;
+  const { ctx, enginesText, priorityTheme, priorityTasks, planUrl, reportUrl } = preview;
   const score = ctx.cleexsScore != null ? Math.round(ctx.cleexsScore) : null;
   const rivals = ctx.competitors.slice(0, 3).map((c) => c.name).join(', ') || 'rivales del rubro';
 
@@ -226,21 +221,50 @@ function EmailPlanAtaqueInner() {
                 <p className="text-base font-bold" style={{ color: accent.primary }}>
                   {ctx.domain}
                 </p>
-                <div className="mt-3 space-y-1.5">
+
+                {/* Tarjetitas del Plan de Ataque (mismas del hub) */}
+                <div className="mt-4 grid grid-cols-3 gap-1.5 sm:gap-2.5">
                   {[
-                    { Icon: Calendar, t: `Generado el: ${today}` },
                     {
                       Icon: Target,
-                      t:
-                        ctx.opportunityCount != null
-                          ? `${ctx.opportunityCount} acciones priorizadas`
-                          : 'Acciones priorizadas',
+                      primary:
+                        ctx.opportunityCount != null ? String(ctx.opportunityCount) : '—',
+                      secondary: 'acciones',
+                      emphasize: false,
                     },
-                    { Icon: TrendingUp, t: 'Impacto esperado: ALTO' },
-                  ].map(({ Icon, t }) => (
-                    <div key={t} className="flex items-center gap-2 text-xs text-slate-600">
-                      <Icon className="h-3.5 w-3.5" style={{ color: accent.primary }} />
-                      <span>{t}</span>
+                    {
+                      Icon: TrendingUp,
+                      primary: 'ALTO',
+                      secondary: 'impacto',
+                      emphasize: true,
+                    },
+                    {
+                      Icon: Calendar,
+                      primary: '90',
+                      secondary: 'días',
+                      emphasize: false,
+                    },
+                  ].map(({ Icon, primary, secondary, emphasize }) => (
+                    <div
+                      key={secondary}
+                      className="flex flex-col items-center gap-1 rounded-xl border border-slate-200/80 bg-white px-1.5 py-2.5 text-center shadow-sm sm:flex-row sm:gap-2.5 sm:px-3 sm:py-3 sm:text-left"
+                    >
+                      <Icon
+                        className="h-5 w-5 shrink-0 sm:h-6 sm:w-6"
+                        strokeWidth={1.75}
+                        style={{ color: accent.primary }}
+                      />
+                      <div className="min-w-0 leading-tight">
+                        <p
+                          className="truncate text-sm font-bold sm:text-base"
+                          style={emphasize ? { color: accent.primary } : undefined}
+                        >
+                          {primary}
+                        </p>
+                        <p className="truncate text-[10px] text-slate-600 sm:text-xs">
+                          {secondary}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
