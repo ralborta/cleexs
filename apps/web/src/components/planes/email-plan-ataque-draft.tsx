@@ -113,7 +113,10 @@ function EmailPlanAtaqueInner() {
           del Plan Conquistar).
         </p>
         <p className="mt-2 text-xs text-amber-800/70">
-          Demo: <span className="font-medium">{ctx.brandName}</span> · {ctx.domain}
+          Demo: <span className="font-medium">{ctx.brandName}</span> · {ctx.domain} ·{' '}
+          <Link href="/borrador/email-dia0-opcion-b" className="underline">
+            ver Opción B (tarjeta arriba)
+          </Link>
         </p>
       </div>
 
