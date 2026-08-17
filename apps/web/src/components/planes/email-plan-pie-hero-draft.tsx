@@ -28,6 +28,7 @@ type ClientPreview = {
   score: number | null;
   planUrl: string;
   generatedAt: Date;
+  industry: string | null;
 };
 
 function EmailPlanPieHeroInner() {
@@ -68,6 +69,7 @@ function EmailPlanPieHeroInner() {
             score: doc.ctx.cleexsScore != null ? Math.round(doc.ctx.cleexsScore) : null,
             planUrl: `/plan-conquistar?diagnosticId=${encodeURIComponent(c.id)}`,
             generatedAt: new Date(),
+            industry: doc.ctx.industry ?? null,
           });
         }
         if (!cancelled) setClients(loaded);
@@ -106,11 +108,10 @@ function EmailPlanPieHeroInner() {
   return (
     <div className="min-h-screen bg-slate-200/80 px-3 py-8 sm:px-6">
       <div className="mx-auto mb-5 max-w-[720px] rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
-        <p className="font-semibold">Borrador · pie del mail con diseño “Plan listo” · v3</p>
+        <p className="font-semibold">Borrador · pie del mail “Plan listo” · v4</p>
         <p className="mt-1 text-violet-900/80">
-          Si no ves el libro 3D grande y el título con “personalizado” en color, hacé hard refresh
-          (Cmd+Shift+R). URL correcta:{' '}
-          <code className="rounded bg-white/80 px-1 text-[11px]">/borrador/email-plan-pie-hero</code>
+          Hard refresh (Cmd+Shift+R). Tiene que decir <strong>v4</strong> acá arriba. Libro más 3D,
+          watermark de rubro y tipografía alineada al mock.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {clients.map((c, i) => (
@@ -190,6 +191,7 @@ function EmailPlanPieHeroInner() {
             actionsCount={current.actionsCount}
             planUrl={current.planUrl}
             generatedAt={current.generatedAt}
+            industry={current.industry}
           />
 
           <div className="mt-8 border-t border-slate-200 pt-5 text-center text-xs text-slate-400">
@@ -216,6 +218,7 @@ function EmailPlanPieHeroInner() {
               actionsCount={c.actionsCount}
               planUrl={c.planUrl}
               generatedAt={c.generatedAt}
+              industry={c.industry}
             />
           ))}
         </div>
