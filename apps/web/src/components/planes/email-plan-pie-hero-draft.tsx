@@ -106,10 +106,11 @@ function EmailPlanPieHeroInner() {
   return (
     <div className="min-h-screen bg-slate-200/80 px-3 py-8 sm:px-6">
       <div className="mx-auto mb-5 max-w-[720px] rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
-        <p className="font-semibold">Borrador · pie del mail con diseño “Plan listo”</p>
+        <p className="font-semibold">Borrador · pie del mail con diseño “Plan listo” · v3</p>
         <p className="mt-1 text-violet-900/80">
-          Misma pieza del mock, con datos reales. En producción sería imagen generada + botón
-          linkeable. Acá es maqueta HTML para mostrarle a Gon.
+          Si no ves el libro 3D grande y el título con “personalizado” en color, hacé hard refresh
+          (Cmd+Shift+R). URL correcta:{' '}
+          <code className="rounded bg-white/80 px-1 text-[11px]">/borrador/email-plan-pie-hero</code>
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {clients.map((c, i) => (

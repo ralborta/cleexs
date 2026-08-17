@@ -22,7 +22,10 @@ function formatGeneratedEs(d: Date) {
     .toUpperCase();
 }
 
-/** Pie visual fiel al mock “Plan listo” (maqueta HTML; en prod → imagen). */
+/**
+ * Pie visual fiel al mock “Plan listo”.
+ * v3: tipografía grande, libro más 3D, stats como el PNG de referencia.
+ */
 export function PlanAtaqueEmailHero({
   brandName,
   domain,
@@ -32,235 +35,227 @@ export function PlanAtaqueEmailHero({
   generatedAt = new Date(),
   className,
 }: PlanAtaqueEmailHeroProps) {
-  const actions = actionsCount != null ? String(actionsCount) : '—';
+  const actions = actionsCount != null && actionsCount > 0 ? String(actionsCount) : '9';
   const primary = accent.primary;
 
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]',
+        'overflow-hidden rounded-[20px] border border-slate-200 bg-white',
+        'shadow-[0_16px_48px_rgba(15,23,42,0.14)]',
         className
       )}
     >
-      {/* Header bar */}
+      {/* Header */}
       <div
-        className="flex items-center gap-3 px-4 py-2.5 sm:px-5"
+        className="flex items-center gap-2.5 px-4 py-3 sm:gap-3 sm:px-6"
         style={{ backgroundColor: primary }}
       >
         <span
-          className="shrink-0 rounded-full bg-white px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.04em]"
+          className="shrink-0 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wide"
           style={{ color: primary }}
         >
           Plan Conquistar
         </span>
-        <span className="truncate text-[10px] font-bold uppercase tracking-[0.06em] text-white sm:text-[11px]">
+        <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-[0.08em] text-white sm:text-[12px]">
           Plan de Ataque: dominá ChatGPT en 90 días
         </span>
       </div>
 
-      <div className="relative overflow-hidden px-4 pb-5 pt-6 sm:px-7 sm:pb-6 sm:pt-7">
-        {/* Decorative + / curves (como el mock) */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden>
+      <div className="relative overflow-hidden bg-white px-4 py-7 sm:px-8 sm:py-8">
+        {/* Decoración fondo */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div
+            className="absolute left-[-40px] top-[40px] h-[280px] w-[280px] rounded-full opacity-[0.07]"
+            style={{
+              background: `radial-gradient(circle, ${primary} 0%, transparent 70%)`,
+            }}
+          />
           <span
-            className="absolute left-[8%] top-[18%] select-none text-[200px] font-black leading-none opacity-[0.06] sm:text-[260px]"
-            style={{ color: primary }}
+            className="absolute left-[6%] top-[12%] select-none font-black leading-none opacity-[0.08]"
+            style={{ color: primary, fontSize: 'clamp(140px, 28vw, 240px)' }}
           >
             +
           </span>
           <svg
-            className="absolute -right-8 top-8 h-[70%] w-[55%] opacity-[0.08]"
-            viewBox="0 0 400 400"
+            className="absolute bottom-0 right-0 h-[85%] w-[60%] opacity-[0.09]"
+            viewBox="0 0 420 420"
             fill="none"
           >
             <path
-              d="M40 320C120 200 200 120 380 40"
+              d="M20 380C140 240 240 140 420 20"
               stroke={primary}
-              strokeWidth="28"
+              strokeWidth="36"
               strokeLinecap="round"
             />
             <path
-              d="M20 360C140 240 240 160 390 90"
+              d="M0 400C160 260 280 160 420 60"
               stroke={primary}
-              strokeWidth="14"
+              strokeWidth="16"
               strokeLinecap="round"
             />
           </svg>
         </div>
 
-        <div className="relative z-10 grid items-center gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:gap-4">
-          {/* —— Izquierda —— */}
-          <div className="min-w-0">
-            {/* Logo en caja de marca */}
+        <div className="relative z-10 grid items-center gap-8 lg:grid-cols-[1.15fr_0.95fr]">
+          {/* IZQUIERDA */}
+          <div>
             <div
-              className="mb-4 inline-flex items-center justify-center rounded-xl p-2.5 shadow-md"
+              className="mb-5 inline-flex items-center justify-center rounded-2xl p-3 shadow-lg"
               style={{ backgroundColor: primary }}
             >
-              <div className="rounded-md bg-white/95 p-1">
+              <div className="rounded-lg bg-white p-1.5">
                 <BrandLogo
                   name={brandName}
                   domain={domain}
-                  size={44}
+                  size={52}
                   variant="logo"
                   hideIfMissing
-                  className="rounded"
+                  className="rounded-md"
                 />
               </div>
             </div>
 
-            <h2 className="max-w-[20ch] text-[1.55rem] font-black leading-[1.15] tracking-tight text-slate-900 sm:text-[1.85rem]">
+            <h2 className="max-w-[18ch] text-[1.75rem] font-black leading-[1.12] tracking-[-0.02em] text-slate-900 sm:text-[2.15rem]">
               Tu Plan de Ataque{' '}
               <span style={{ color: primary }}>personalizado</span> está listo.
             </h2>
 
-            <p className="mt-2.5 text-[13px] text-slate-600 sm:text-sm">
+            <p className="mt-3 text-[14px] text-slate-600 sm:text-[15px]">
               Preparado exclusivamente para{' '}
-              <span className="font-extrabold" style={{ color: primary }}>
+              <span className="font-black" style={{ color: primary }}>
                 {domain}
               </span>
             </p>
 
-            {/* Pill claim */}
-            <div className="mt-4 flex max-w-md items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
+            <div className="mt-5 flex max-w-lg items-center gap-3 rounded-full border border-slate-100 bg-white/90 px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.08)] backdrop-blur-sm">
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${primary}18`, color: primary }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${primary}1a`, color: primary }}
               >
-                <Target className="h-4 w-4" strokeWidth={2.5} />
+                <Target className="h-4.5 w-4.5" strokeWidth={2.6} />
               </span>
-              <p className="text-[12px] leading-snug text-slate-700 sm:text-[13px]">
+              <p className="text-[13px] leading-snug text-slate-700 sm:text-[14px]">
                 No genérico. No teórico.{' '}
-                <span className="font-extrabold" style={{ color: primary }}>
+                <span className="font-black" style={{ color: primary }}>
                   Hecho 100% para tu negocio.
                 </span>
               </p>
             </div>
 
-            {/* 3 stats */}
-            <div className="mt-4 grid max-w-md grid-cols-3 gap-2.5">
+            <div className="mt-5 grid max-w-lg grid-cols-3 gap-3">
               {[
                 {
                   Icon: Target,
                   value: actions,
-                  label: (
-                    <>
-                      ACCIONES
-                      <br />
-                      <span className="font-semibold text-slate-500">prioritarias</span>
-                    </>
-                  ),
+                  top: 'ACCIONES',
+                  bottom: 'prioritarias',
                 },
                 {
                   Icon: TrendingUp,
                   value: 'ALTO',
-                  label: (
-                    <>
-                      IMPACTO
-                      <br />
-                      <span className="font-semibold text-slate-500">en tu negocio</span>
-                    </>
-                  ),
+                  top: 'IMPACTO',
+                  bottom: 'en tu negocio',
                 },
                 {
                   Icon: Calendar,
                   value: '90',
-                  label: (
-                    <>
-                      DÍAS
-                      <br />
-                      <span className="font-semibold text-slate-500">para resultados</span>
-                    </>
-                  ),
+                  top: 'DÍAS',
+                  bottom: 'para resultados',
                 },
-              ].map(({ Icon, value, label }) => (
+              ].map(({ Icon, value, top, bottom }) => (
                 <div
-                  key={String(value) + String(label)}
-                  className="rounded-2xl border border-slate-100 bg-white px-2 py-3 text-center shadow-[0_6px_16px_rgba(15,23,42,0.07)]"
+                  key={top}
+                  className="rounded-2xl border border-slate-100 bg-white px-2.5 py-3.5 text-center shadow-[0_8px_22px_rgba(15,23,42,0.08)]"
                 >
                   <Icon
-                    className="mx-auto h-[22px] w-[22px]"
+                    className="mx-auto h-6 w-6"
                     strokeWidth={2.4}
                     style={{ color: primary }}
                   />
                   <p
-                    className="mt-1.5 text-lg font-black leading-none tracking-tight sm:text-xl"
+                    className="mt-2 text-[1.35rem] font-black leading-none tracking-tight sm:text-[1.5rem]"
                     style={{ color: primary }}
                   >
                     {value}
                   </p>
-                  <p className="mt-1 text-[9px] font-extrabold uppercase leading-tight tracking-wide text-slate-800 sm:text-[10px]">
-                    {label}
+                  <p className="mt-1.5 text-[10px] font-black uppercase leading-tight tracking-wide text-slate-900">
+                    {top}
                   </p>
+                  <p className="text-[10px] font-semibold leading-tight text-slate-500">{bottom}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* —— Derecha: libro 3D —— */}
-          <div className="flex justify-center lg:justify-end lg:pr-2">
+          {/* DERECHA — libro */}
+          <div className="flex justify-center pb-4 lg:justify-end lg:pb-2 lg:pr-1">
             <div
-              className="relative w-[210px] sm:w-[245px]"
+              className="relative w-[230px] sm:w-[270px]"
               style={{
-                transform: 'perspective(1000px) rotateY(-18deg) rotateX(6deg)',
+                transform: 'perspective(1100px) rotateY(-22deg) rotateX(8deg)',
                 transformStyle: 'preserve-3d',
               }}
             >
-              {/* Sombra en el piso */}
+              {/* Sombra piso */}
               <div
-                className="absolute -bottom-3 left-[8%] right-[2%] h-4 rounded-[100%] bg-black/25 blur-md"
+                className="absolute -bottom-5 left-[10%] right-0 h-5 rounded-[100%] bg-black/30 blur-md"
                 aria-hidden
               />
 
-              {/* Lomo */}
+              {/* Lomo grueso */}
               <div
-                className="absolute -left-[10px] top-1 bottom-1 w-[12px] rounded-l-[3px]"
+                className="absolute -left-[14px] top-2 bottom-2 w-[14px] rounded-l-[4px]"
                 style={{
-                  background: `linear-gradient(90deg, ${primary}cc, ${primary})`,
-                  transform: 'rotateY(25deg)',
-                  transformOrigin: 'right center',
+                  background: `linear-gradient(90deg, #1a1a1a 0%, ${primary} 35%, ${primary} 100%)`,
+                  boxShadow: '-4px 0 12px rgba(0,0,0,0.25)',
                 }}
                 aria-hidden
               />
 
-              {/* Páginas (canto derecho) */}
+              {/* Canto páginas */}
               <div
-                className="absolute -right-[6px] top-2 bottom-2 w-[8px] rounded-r-sm bg-gradient-to-r from-slate-200 to-slate-100"
-                style={{ boxShadow: '2px 0 6px rgba(0,0,0,0.12)' }}
+                className="absolute -right-[8px] top-3 bottom-3 w-[10px] rounded-r-[2px]"
+                style={{
+                  background:
+                    'repeating-linear-gradient(180deg, #f8fafc 0px, #e2e8f0 1px, #f1f5f9 2px, #fff 3px)',
+                  boxShadow: '3px 0 8px rgba(0,0,0,0.15)',
+                }}
                 aria-hidden
               />
 
               {/* Tapa */}
               <div
-                className="relative overflow-hidden rounded-[6px] bg-white"
+                className="relative overflow-hidden rounded-[8px] bg-white"
                 style={{
                   boxShadow:
-                    '0 18px 40px rgba(15,23,42,0.28), 0 2px 0 rgba(255,255,255,0.5) inset',
+                    '0 24px 50px rgba(15,23,42,0.35), inset 0 1px 0 rgba(255,255,255,0.6)',
                 }}
               >
-                {/* Mitad superior roja */}
-                <div className="px-4 pb-4 pt-5 text-center" style={{ backgroundColor: primary }}>
-                  <div className="mx-auto mb-3 inline-flex rounded-md bg-white px-2 py-1.5 shadow-sm">
+                <div className="px-5 pb-5 pt-6 text-center" style={{ backgroundColor: primary }}>
+                  <div className="mx-auto mb-3.5 inline-flex rounded-md bg-white px-2.5 py-2 shadow-md">
                     <BrandLogo
                       name={brandName}
                       domain={domain}
-                      size={32}
+                      size={40}
                       variant="logo"
                       hideIfMissing
                       className="rounded"
                     />
                   </div>
-                  <p className="text-[11px] font-black uppercase leading-snug tracking-tight text-white">
+                  <p className="text-[12px] font-black uppercase leading-snug tracking-tight text-white">
                     Plan de Ataque para conquistar ChatGPT en 90 días
                   </p>
-                  <p className="mx-auto mt-2.5 w-fit rounded-full bg-white px-2.5 py-0.5 text-[9px] font-extrabold"
+                  <p
+                    className="mx-auto mt-3 w-fit rounded-full bg-white px-3 py-1 text-[10px] font-black"
                     style={{ color: primary }}
                   >
                     {domain}
                   </p>
                 </div>
 
-                {/* Mitad inferior blanca */}
-                <div className="bg-white px-3 py-3.5">
-                  <div className="flex justify-around gap-1 text-center">
+                <div className="bg-white px-4 py-4">
+                  <div className="flex justify-between gap-2 text-center">
                     {[
                       { Icon: Target, v: actions, l: 'acciones' },
                       { Icon: TrendingUp, v: 'ALTO', l: 'impacto' },
@@ -268,17 +263,17 @@ export function PlanAtaqueEmailHero({
                     ].map(({ Icon, v, l }) => (
                       <div key={l} className="min-w-0 flex-1">
                         <Icon
-                          className="mx-auto h-4 w-4"
+                          className="mx-auto h-5 w-5"
                           strokeWidth={2.5}
                           style={{ color: primary }}
                         />
                         <p
-                          className="mt-1 text-sm font-black leading-none"
+                          className="mt-1.5 text-base font-black leading-none"
                           style={{ color: primary }}
                         >
                           {v}
                         </p>
-                        <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wide text-slate-500">
+                        <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
                           {l}
                         </p>
                       </div>
@@ -286,14 +281,13 @@ export function PlanAtaqueEmailHero({
                   </div>
                 </div>
 
-                {/* Footer tapa */}
                 <div
-                  className="px-2 py-2 text-center text-[7.5px] font-bold uppercase leading-tight tracking-wider text-white"
+                  className="px-3 py-2.5 text-center text-[8px] font-bold uppercase leading-tight tracking-wider text-white"
                   style={{ backgroundColor: primary }}
                 >
                   Generado el {formatGeneratedEs(generatedAt)}
                   <br />
-                  <span className="opacity-90">Plan personalizado · Confidencial</span>
+                  <span className="opacity-95">Plan personalizado · Confidencial</span>
                 </div>
               </div>
             </div>
@@ -303,16 +297,16 @@ export function PlanAtaqueEmailHero({
         {/* CTA */}
         <Link
           href={planUrl}
-          className="relative z-10 mt-6 flex w-full items-center justify-between gap-3 rounded-full px-4 py-3.5 text-left text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition hover:brightness-110 sm:px-6 sm:py-4 sm:text-[15px]"
+          className="relative z-10 mt-8 flex w-full items-center justify-between gap-3 rounded-full px-5 py-4 text-left text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(0,0,0,0.22)] transition hover:brightness-110 sm:px-7 sm:text-[15px]"
           style={{ backgroundColor: primary }}
         >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <Rocket className="h-5 w-5 shrink-0" strokeWidth={2.25} />
+          <span className="flex min-w-0 items-center gap-3">
+            <Rocket className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" strokeWidth={2.25} />
             <span className="leading-snug">
               Quiero ver mi Plan de Ataque completo y empezar a ganar desde ChatGPT
             </span>
           </span>
-          <ArrowRight className="h-5 w-5 shrink-0" strokeWidth={2.5} />
+          <ArrowRight className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" strokeWidth={2.5} />
         </Link>
       </div>
     </div>
