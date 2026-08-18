@@ -228,5 +228,6 @@ export function sampleCleexsPersonalization(overrides?: Partial<CleexsEmailPerso
       { name: 'PeopleFirst', score: 65 },
     ],
     improvementTip: overrides?.improvementTip,
+    actionsCount: overrides?.actionsCount ?? 9,
   };
 }

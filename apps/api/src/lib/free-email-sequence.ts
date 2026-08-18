@@ -20,7 +20,7 @@ import {
   type CleexsEmailLinks,
 } from './email-templates/shared';
 import { withEmailAttribution } from './email-link-attribution';
-import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { buildTransactionalFromAddress, buildTransactionalReplyTo, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 import {
   FREE_EMAIL_INSIGHT_CATALOG,
@@ -594,6 +594,7 @@ export async function sendFreeEmailSequenceStepTest(input: {
       subject: built.subject,
       html: built.html,
       text: built.text,
+      replyTo: buildTransactionalReplyTo(),
       headers: { 'X-Cleexs-Campaign': campaignSlug },
     });
     if (error) throw new Error(formatResendError(error));

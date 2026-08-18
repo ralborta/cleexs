@@ -1,7 +1,7 @@
 import { CleexsEmailSendStatus, type Prisma } from '@prisma/client';
 import { Resend } from 'resend';
 import { getAppBaseUrlForPublicLinks } from './app-public-url';
-import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
+import { buildTransactionalFromAddress, buildTransactionalReplyTo, isEmailConfigured, isEmailDisabled, sendSmtpMail } from './email';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 import { withEmailAttribution } from './email-link-attribution';
 import { prisma } from './prisma';
@@ -237,6 +237,7 @@ export async function sendMarketingEmail(input: MarketingEmailSendInput): Promis
         subject,
         html,
         text,
+        replyTo: buildTransactionalReplyTo(),
         headers: {
           'X-Cleexs-Campaign': input.campaignSlug,
         },

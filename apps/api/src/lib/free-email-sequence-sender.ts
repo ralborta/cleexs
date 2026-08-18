@@ -7,6 +7,7 @@ import { mergeCleexsText } from './email-templates/shared';
 import { withEmailAttribution } from './email-link-attribution';
 import {
   buildTransactionalFromAddress,
+  buildTransactionalReplyTo,
   isEmailConfigured,
   isEmailDisabled,
   isOutboundEmailAvailable,
@@ -488,6 +489,7 @@ export async function sendFreeOnboardingStep(input: {
         subject,
         html: built.html,
         text: built.text,
+        replyTo: buildTransactionalReplyTo(),
         headers: { 'X-Cleexs-Campaign': campaignSlug },
       });
       if (error) throw new Error(formatResendError(error));

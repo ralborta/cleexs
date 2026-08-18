@@ -11,6 +11,7 @@ import {
 import type { CleexsEmailCompetitor } from './email-templates/shared';
 import {
   buildTransactionalFromAddress,
+  buildTransactionalReplyTo,
   isEmailConfigured,
   isEmailDisabled,
   isOutboundEmailAvailable,
@@ -278,6 +279,7 @@ export async function sendMonthlyScoreEmailToRecipient(input: {
         subject,
         html: built.html,
         text: built.text,
+        replyTo: buildTransactionalReplyTo(),
         headers: { 'X-Cleexs-Campaign': input.campaignSlug },
       });
       if (error) throw new Error(formatResendError(error));

@@ -20,7 +20,7 @@ import {
 } from '../lib/monthly-score-email';
 import { resolveMarketingRecipients, sendMarketingEmail } from '../lib/marketing-email';
 import { getAppBaseUrlForPublicLinks } from '../lib/app-public-url';
-import { buildTransactionalFromAddress, isEmailConfigured, isEmailDisabled, sendSmtpMail } from '../lib/email';
+import { buildTransactionalFromAddress, buildTransactionalReplyTo, isEmailConfigured, isEmailDisabled, sendSmtpMail } from '../lib/email';
 import { Resend } from 'resend';
 import { buildResendWebhookStats } from '../lib/resend-webhook-stats';
 import { getEmailBatchDetail, listEmailBatches } from '../lib/email-batch-status';
@@ -717,6 +717,7 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
             subject: built.subject,
             html: built.html,
             text: built.text,
+            replyTo: buildTransactionalReplyTo(),
             headers: { 'X-Cleexs-Campaign': `template-${parsed.data.variant}-test` },
           });
           if (error) throw new Error(typeof error === 'object' && error && 'message' in error ? String((error as { message: string }).message) : String(error));
@@ -792,6 +793,7 @@ const adminEmailRoutes: FastifyPluginAsync = async (fastify) => {
             subject: built.subject,
             html: built.html,
             text: built.text,
+            replyTo: buildTransactionalReplyTo(),
             headers: { 'X-Cleexs-Campaign': 'monthly-score-preview-test' },
           });
           if (error) throw new Error(typeof error === 'object' && error && 'message' in error ? String((error as { message: string }).message) : String(error));

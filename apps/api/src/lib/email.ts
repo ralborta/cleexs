@@ -50,6 +50,7 @@ async function sendTransactionalMessage(opts: {
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = buildTransactionalFromAddress();
+  const replyTo = buildTransactionalReplyTo();
   if (apiKey) {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
@@ -58,6 +59,7 @@ async function sendTransactionalMessage(opts: {
       subject: opts.subject,
       html: opts.html,
       text: opts.text,
+      replyTo,
       headers: opts.headers,
     });
     if (error) throw new Error(formatResendSendError(error));
@@ -70,6 +72,7 @@ async function sendTransactionalMessage(opts: {
     subject: opts.subject,
     text: opts.text,
     html: opts.html,
+    replyTo,
     headers: opts.headers,
   });
 }
@@ -77,6 +80,8 @@ async function sendTransactionalMessage(opts: {
 /** Remitente canónico Cleexs (nunca @nivel41.com). */
 export const DEFAULT_CLEEXS_FROM_EMAIL = 'hola@cleexs.net';
 export const DEFAULT_CLEEXS_FROM_NAME = 'Cleexs';
+/** Reply-To por defecto: respuestas no van a la casilla de origen. */
+export const DEFAULT_CLEEXS_REPLY_TO = 'info@cleexs.net';
 
 const NIVEL41_EMAIL_DOMAIN = '@nivel41.com';
 
@@ -115,6 +120,22 @@ export function buildTransactionalFromAddress(): string {
   return buildCleexsFromAddress();
 }
 
+/**
+ * Reply-To transaccional. Por defecto info@cleexs.net (distinto del From).
+ * Override: CLEEXS_REPLY_TO o TRANSACTIONAL_REPLY_TO.
+ */
+export function buildTransactionalReplyTo(): string {
+  const raw =
+    process.env.CLEEXS_REPLY_TO?.trim() ||
+    process.env.TRANSACTIONAL_REPLY_TO?.trim() ||
+    DEFAULT_CLEEXS_REPLY_TO;
+  const email = extractBareEmailAddress(raw).toLowerCase();
+  if (!email.includes('@') || email.endsWith(NIVEL41_EMAIL_DOMAIN)) {
+    return DEFAULT_CLEEXS_REPLY_TO;
+  }
+  return email;
+}
+
 /** Envío SMTP genérico (misma config que diagnóstico). */
 export async function sendSmtpMail(opts: {
   to: string;
@@ -136,7 +157,7 @@ export async function sendSmtpMail(opts: {
     subject: opts.subject,
     text: opts.text,
     html: opts.html,
-    replyTo: opts.replyTo,
+    replyTo: opts.replyTo ?? buildTransactionalReplyTo(),
     headers: opts.headers,
   });
   return { messageId: info.messageId };
