@@ -180,6 +180,10 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
   const accent = brandAccentFromDomain(domain);
   const soft = softBrandBg(accent);
   const softBorder = `${accent}33`;
+  const actionsCount =
+    ctx.actionsCount != null && Number.isFinite(ctx.actionsCount) && ctx.actionsCount > 0
+      ? String(Math.round(ctx.actionsCount))
+      : null;
 
   const hasScore = normalizedScore(ctx.score) != null;
   const scoreNum = hasScore ? String(normalizedScore(ctx.score)) : content.scoreMissingLine;
@@ -258,7 +262,7 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
                   <td width="33%" valign="top" style="padding:8px 4px;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
                       <tr><td align="center" style="padding:14px 8px;">
-                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">✓</div>
+                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">${escapeHtml(actionsCount || '—')}</div>
                         <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Acciones</div>
                         <div style="font-size:11px;color:#64748b;font-family:${uiFont};">prioritarias</div>
                       </td></tr>
@@ -376,6 +380,9 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
     '',
     content.planTitle,
     content.planClosingLine,
+    ctx.actionsCount != null && ctx.actionsCount > 0
+      ? `• ${Math.round(ctx.actionsCount)} acciones prioritarias`
+      : null,
     ...content.planBullets.map((b) => `• ${b}`),
     `${content.planCtaLabel}: ${input.links.plansUrl}`,
     '',

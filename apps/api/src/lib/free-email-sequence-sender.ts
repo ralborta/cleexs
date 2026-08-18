@@ -36,6 +36,8 @@ export type FreeOnboardingCandidate = {
   score: number | null;
   competitors: CleexsEmailCompetitor[];
   improvementTip: string | null;
+  /** Oportunidades/acciones del Plan (= promptResults del run). */
+  actionsCount: number | null;
   analysisJson?: unknown;
   shareUrl?: string;
   userId?: string;
@@ -192,6 +194,37 @@ function improvementTipFromAnalysis(value: unknown): string | null {
   return null;
 }
 
+/** Misma fuente que el Plan de Ataque web: cantidad de promptResults del run. */
+async function actionsCountFromRunId(runId: string | null | undefined): Promise<number | null> {
+  if (!runId) return null;
+  const n = await prisma.promptResult.count({ where: { runId } });
+  return n > 0 ? n : null;
+}
+
+async function resolveActionsCountForDiagnostic(input: {
+  diagnosticId: string;
+  runId?: string | null;
+  analysisJson?: unknown;
+}): Promise<number | null> {
+  const fromRun = await actionsCountFromRunId(input.runId);
+  if (fromRun != null) return fromRun;
+
+  const row = await prisma.publicDiagnostic.findUnique({
+    where: { id: input.diagnosticId },
+    select: { runId: true },
+  });
+  const fromLookup = await actionsCountFromRunId(row?.runId);
+  if (fromLookup != null) return fromLookup;
+
+  // Fallback raro: arrays en analysisJson
+  const a = input.analysisJson;
+  if (a && typeof a === 'object' && !Array.isArray(a)) {
+    const opps = (a as { oportunidades?: unknown }).oportunidades;
+    if (Array.isArray(opps) && opps.length > 0) return opps.length;
+  }
+  return null;
+}
+
 export function evaluateFreeOnboardingSend(input: {
   enabled: boolean;
   sendHourLocal: number;
@@ -278,6 +311,19 @@ export async function resolveFreeOnboardingCandidates(input: {
   const results: FreeOnboardingCandidate[] = [];
   const seenEmails = new Set<string>();
 
+  const runIds = [...new Set(rows.map((r) => r.runId).filter((id): id is string => Boolean(id)))];
+  const actionsByRunId = new Map<string, number>();
+  if (runIds.length) {
+    const grouped = await prisma.promptResult.groupBy({
+      by: ['runId'],
+      where: { runId: { in: runIds } },
+      _count: { _all: true },
+    });
+    for (const g of grouped) {
+      if (g._count._all > 0) actionsByRunId.set(g.runId, g._count._all);
+    }
+  }
+
   for (const row of rows) {
     const email = row.email?.trim().toLowerCase();
     if (!email || isPlaceholderEmail(email) || seenEmails.has(email)) continue;
@@ -286,6 +332,13 @@ export async function resolveFreeOnboardingCandidates(input: {
     if (await isPremiumEmail(email)) continue;
 
     seenEmails.add(email);
+    const actionsCount =
+      (row.runId ? actionsByRunId.get(row.runId) ?? null : null) ??
+      (await resolveActionsCountForDiagnostic({
+        diagnosticId: row.id,
+        runId: row.runId,
+        analysisJson: row.analysisJson,
+      }));
     results.push({
       diagnosticId: row.id,
       email,
@@ -299,6 +352,7 @@ export async function resolveFreeOnboardingCandidates(input: {
       }),
       competitors: competitorsFromAnalysis(row.analysisJson),
       improvementTip: improvementTipFromAnalysis(row.analysisJson),
+      actionsCount,
       analysisJson: row.analysisJson,
       shareUrl: row.shareSlug ? `${base}/score/${row.shareSlug}` : undefined,
     });
@@ -395,6 +449,7 @@ export async function sendFreeOnboardingStep(input: {
     domain: input.candidate.domain,
     competitors: input.candidate.competitors,
     improvementTip: input.candidate.improvementTip,
+    actionsCount: input.candidate.actionsCount,
   };
 
   const links = buildLinksForCandidate({
@@ -514,6 +569,11 @@ export async function buildFreeOnboardingCandidateFromDiagnostic(input: {
     }),
     competitors: competitorsFromAnalysis(input.analysisJson),
     improvementTip: improvementTipFromAnalysis(input.analysisJson),
+    actionsCount: await resolveActionsCountForDiagnostic({
+      diagnosticId: input.diagnosticId,
+      runId: input.runId,
+      analysisJson: input.analysisJson,
+    }),
     analysisJson: input.analysisJson,
     shareUrl: slug ? `${base}/score/${slug}` : undefined,
   };

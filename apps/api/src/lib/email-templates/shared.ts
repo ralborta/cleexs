@@ -21,6 +21,8 @@ export type CleexsEmailPersonalization = {
   competitors?: Array<CleexsEmailCompetitor | string>;
   /** Si no viene, se arma desde `improvementTipTemplate` en la plantilla. */
   improvementTip?: string | null;
+  /** Cantidad real de acciones/oportunidades del diagnóstico (Plan de Ataque). */
+  actionsCount?: number | null;
 };
 
 export type CleexsEmailLinks = {
