@@ -7,6 +7,13 @@ import { IndustryCoverWatermark } from '@/components/planes/industry-cover-water
 import type { BrandAccent } from '@/lib/brand-accent-from-logo';
 import { cn } from '@/lib/utils';
 
+export type PlanAtaqueScoreSummary = {
+  score: number | null;
+  rivals: string;
+  topCompetitor: string;
+  reportUrl: string;
+};
+
 export type PlanAtaqueEmailHeroProps = {
   brandName: string;
   domain: string;
@@ -15,6 +22,8 @@ export type PlanAtaqueEmailHeroProps = {
   planUrl: string;
   generatedAt?: Date;
   industry?: string | null;
+  /** Cajita score/rivales encima del gráfico, misma pieza y colores de marca. */
+  scoreSummary?: PlanAtaqueScoreSummary | null;
   className?: string;
 };
 
@@ -38,10 +47,13 @@ export function PlanAtaqueEmailHero({
   planUrl,
   generatedAt = new Date(),
   industry,
+  scoreSummary,
   className,
 }: PlanAtaqueEmailHeroProps) {
   const actions = actionsCount != null && actionsCount > 0 ? String(actionsCount) : '9';
   const primary = accent.primary;
+  const soft = `${primary}14`;
+  const softBorder = `${primary}33`;
 
   return (
     <div
@@ -51,6 +63,56 @@ export function PlanAtaqueEmailHero({
         className
       )}
     >
+      {/* Score / rivales — misma pieza, colores de marca; el Plan reemplaza al donut */}
+      {scoreSummary ? (
+        <div
+          className="border-b px-4 py-4 sm:px-6 sm:py-5"
+          style={{ backgroundColor: soft, borderColor: softBorder }}
+        >
+          <div className="grid gap-4 sm:grid-cols-[120px_1fr] sm:items-center sm:gap-5">
+            <div className="text-center sm:text-left">
+              <span
+                className="inline-block rounded-full px-2.5 py-1 text-[10px] font-bold"
+                style={{ backgroundColor: `${primary}22`, color: primary }}
+              >
+                Benchmark del rubro
+              </span>
+              <p className="mt-2 text-xs text-slate-500">Cleexs Score</p>
+              <p
+                className="mt-0.5 text-[2.75rem] font-black leading-none tracking-tight"
+                style={{ color: primary }}
+              >
+                {scoreSummary.score ?? '—'}
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-slate-500">de 100</p>
+            </div>
+            <div className="space-y-2 text-[13px] leading-snug text-slate-600">
+              <p>
+                <span className="font-semibold text-slate-800">Rivales detectados:</span>{' '}
+                {scoreSummary.rivals}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-800">Señal:</span> Hoy{' '}
+                {scoreSummary.topCompetitor} aparece más que {brandName} en consultas del rubro.
+              </p>
+              <p>
+                <span className="font-semibold text-slate-800">Acción sugerida:</span> Reforzar
+                señales en {domain} para subir recomendaciones.
+              </p>
+              <div className="pt-1.5 text-right">
+                <Link
+                  href={scoreSummary.reportUrl}
+                  className="inline-block rounded-[10px] px-4 py-2.5 text-sm font-bold text-white shadow-sm"
+                  style={{ backgroundColor: primary }}
+                >
+                  Ver reporte →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Barra beneficio (sin nombre interno) */}
       <div
         className="px-5 py-3 text-center sm:px-7 sm:text-left"

@@ -5,14 +5,13 @@
  * cuerpo + pie Plan listo. Sin ejemplos secundarios.
  */
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { PlanAtaqueEmailHero } from '@/components/planes/plan-ataque-email-hero';
 import { brandAssetsApi, publicDiagnosticApi } from '@/lib/api';
 import {
-  CLEEXS_FALLBACK,
   accentFromDomain,
   extractAccentFromLogoUrl,
   type BrandAccent,
@@ -92,11 +91,6 @@ function OfficialInner() {
     };
   }, [diagnosticId]);
 
-  const scorePct = useMemo(() => {
-    if (preview?.score == null) return 0;
-    return Math.min(100, Math.max(0, preview.score));
-  }, [preview?.score]);
-
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center gap-2 text-sm text-slate-500">
@@ -119,7 +113,7 @@ function OfficialInner() {
       <div className="mx-auto mb-4 max-w-[680px] rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
         <p className="font-semibold">Versión oficial · mail día 0 post-diagnóstico</p>
         <p className="mt-1 text-emerald-900/80">
-          Correo completo (cuerpo + pie). Sin ejemplos secundarios. Listo para producción.
+          Una sola pieza: score/rivales (colores de marca) encima del gráfico Plan. El donut sale.
         </p>
         <p className="mt-2 text-xs text-emerald-800/70">
           Demo:{' '}
@@ -181,52 +175,26 @@ function OfficialInner() {
             </div>
           </div>
 
-          {/* Score / rivales (cuerpo actual del letter) */}
-          <div className="mt-6 overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-sm">
-            <div className="grid sm:grid-cols-[34%_66%]">
-              <div className="border-b border-slate-100 p-4 text-center sm:border-b-0 sm:border-r">
-                <span className="inline-block rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-600">
-                  Benchmark del rubro
-                </span>
-                <p className="mt-3 text-xs text-slate-500">Cleexs Score</p>
-                <div
-                  className="mx-auto mt-2 flex h-[118px] w-[118px] items-center justify-center rounded-full"
-                  style={{
-                    background: `conic-gradient(#2563eb 0 ${scorePct}%, #dbeafe ${scorePct}% 100%)`,
-                  }}
-                >
-                  <div className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-white shadow-sm">
-                    <span className="text-4xl font-black tracking-tight text-blue-600">
-                      {preview.score ?? '—'}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-500">de 100</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2.5 p-4 text-[13px] leading-snug text-slate-600">
-                <p>
-                  <span className="font-semibold text-slate-700">Rivales detectados:</span>{' '}
-                  {preview.rivals}
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-700">Señal:</span> Hoy{' '}
-                  {preview.topCompetitor} aparece más que {preview.brandName} en consultas del
-                  rubro.
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-700">Acción sugerida:</span> Reforzar
-                  señales en {preview.domain} para subir recomendaciones.
-                </p>
-                <div className="pt-2 text-right">
-                  <Link
-                    href={preview.reportUrl}
-                    className="inline-block rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-bold text-white"
-                  >
-                    Ver reporte →
-                  </Link>
-                </div>
-              </div>
-            </div>
+          <p className="mt-6 text-[17px] italic leading-relaxed text-slate-500">
+            PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?
+          </p>
+
+          {/* Una sola pieza: score/rivales (colores marca) + gráfico Plan (reemplaza donut) */}
+          <div className="mt-8">
+            <PlanAtaqueEmailHero
+              brandName={preview.brandName}
+              domain={preview.domain}
+              accent={preview.accent}
+              actionsCount={preview.actionsCount}
+              planUrl={preview.planUrl}
+              industry={preview.industry}
+              scoreSummary={{
+                score: preview.score,
+                rivals: preview.rivals,
+                topCompetitor: preview.topCompetitor,
+                reportUrl: preview.reportUrl,
+              }}
+            />
           </div>
 
           <p className="mt-4 text-center text-sm text-slate-500">
@@ -241,22 +209,6 @@ function OfficialInner() {
           <p className="mt-1 text-center text-xs text-slate-400">
             Gratis · tarda unos minutos · solo si vos lo pedís
           </p>
-
-          <p className="mt-6 text-[17px] italic leading-relaxed text-slate-500">
-            PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?
-          </p>
-
-          {/* PIE oficial */}
-          <div className="mt-8">
-            <PlanAtaqueEmailHero
-              brandName={preview.brandName}
-              domain={preview.domain}
-              accent={preview.accent}
-              actionsCount={preview.actionsCount}
-              planUrl={preview.planUrl}
-              industry={preview.industry}
-            />
-          </div>
 
           <div className="mt-8 border-t border-slate-200 pt-5 text-center text-xs leading-relaxed text-slate-400">
             <p>
