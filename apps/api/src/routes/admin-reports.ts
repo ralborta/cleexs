@@ -2064,27 +2064,30 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const emailLeft = emailLeadRows.length;
 
-      // Preferir visitas de la home marketing (path "/"). Fallback al total
-      // histórico cuando todavía no había tracking en cleexs.net.
-      const HOME_PATHS = new Set(['/', '/home', '/inicio']);
+      // Preferir visitas de la home marketing (path "/") solo cuando el rango
+      // ya está cubierto por el beacon (desde 2026-08-18 AR). Si el rango
+      // incluye días previos, usamos el total legacy para no romper % (ej. 3400%).
+      const HOME_PATHS = ['/', '/home', '/inicio'] as const;
+      const HOME_TRACKING_START = '2026-08-18';
+      const rangeOnHomeTracking = fromDay >= HOME_TRACKING_START;
       const homePathGroups = await prisma.pageView.groupBy({
         by: ['visitorId'],
         where: {
           ...where,
           visitorId: { not: null },
-          path: { in: Array.from(HOME_PATHS) },
+          path: { in: [...HOME_PATHS] },
         },
       });
       const homePathViews = await prisma.pageView.count({
-        where: { ...where, path: { in: Array.from(HOME_PATHS) } },
+        where: { ...where, path: { in: [...HOME_PATHS] } },
       });
+      const legacyVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
       const homeVisitors =
-        homePathGroups.length > 0
+        rangeOnHomeTracking && homePathGroups.length > 0
           ? homePathGroups.length
-          : visitorGroups.length > 0
-            ? visitorGroups.length
-            : pageViewsTotal;
-      const homePageViews = homePathViews > 0 ? homePathViews : pageViewsTotal;
+          : legacyVisitors;
+      const homePageViews =
+        rangeOnHomeTracking && homePathViews > 0 ? homePathViews : pageViewsTotal;
 
       // Share por canal
       const shareByChannel = shareGroups
@@ -2199,7 +2202,8 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           homeVisitors: {
             count: homeVisitors,
             pageViews: homePageViews,
-            source: homePathGroups.length > 0 ? 'home' : 'legacy_all_paths',
+            source:
+              rangeOnHomeTracking && homePathGroups.length > 0 ? 'home' : 'legacy_all_paths',
           },
           urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
           emailLeft: {
