@@ -993,6 +993,8 @@ model FreeEmailSequenceStep {
   insightKey             String?                   @map("insight_key")
   /// Texto editable del insight en la tarjeta (independiente del cuerpo del mail).
   insightText            String?                   @map("insight_text") @db.Text
+  /// Postdata (P.D.) al pie de la carta. Null = default de la plantilla.
+  postscript             String?                   @db.Text
   templateVariant        CleexsEmailTemplateVariant @default(letter) @map("template_variant")
   active                 Boolean                   @default(true)
   createdAt              DateTime                  @default(now()) @map("created_at")

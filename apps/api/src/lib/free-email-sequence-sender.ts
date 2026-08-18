@@ -409,7 +409,7 @@ export async function sendFreeOnboardingStep(input: {
   candidate: FreeOnboardingCandidate;
   step: Pick<
     FreeEmailSequenceStep,
-    'sortOrder' | 'subject' | 'preheader' | 'body' | 'templateVariant' | 'insightKey' | 'insightText'
+    'sortOrder' | 'subject' | 'preheader' | 'body' | 'postscript' | 'templateVariant' | 'insightKey' | 'insightText'
   >;
 }): Promise<{ sent: boolean; reason?: string; logId?: string; subject?: string }> {
   if (isEmailDisabled()) return { sent: false, reason: 'emails_disabled' };
@@ -441,6 +441,7 @@ export async function sendFreeOnboardingStep(input: {
     subject: input.step.subject,
     preheader: input.step.preheader,
     body: input.step.body,
+    postscript: input.step.postscript,
   };
 
   const personalization = {

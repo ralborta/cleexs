@@ -41,6 +41,7 @@ export type FreeSequenceStepDto = {
   body: string | null;
   insightKey: string | null;
   insightText: string | null;
+  postscript: string | null;
   templateVariant: CleexsEmailTemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -187,6 +188,7 @@ function toStepDto(step: FreeEmailSequenceStep, allSteps: FreeEmailSequenceStep[
     body: step.body,
     insightKey: step.insightKey,
     insightText: step.insightText,
+    postscript: step.postscript,
     templateVariant: step.templateVariant,
     active: step.active,
     cumulativeDaysLabel: cumulativeDaysLabel(sorted, index),
@@ -447,6 +449,7 @@ export async function updateFreeEmailSequenceStep(
     body: string | null;
     insightKey: string | null;
     insightText: string | null;
+    postscript: string | null;
     templateVariant: CleexsEmailTemplateVariant;
     active: boolean;
   }>
@@ -471,6 +474,7 @@ export async function updateFreeEmailSequenceStep(
       ...(input.body !== undefined ? { body: input.body } : {}),
       ...(insightKey !== undefined ? { insightKey } : {}),
       ...(input.insightText !== undefined ? { insightText: input.insightText } : {}),
+      ...(input.postscript !== undefined ? { postscript: input.postscript } : {}),
       ...(input.templateVariant !== undefined
         ? { templateVariant: insightKey ? CleexsEmailTemplateVariant.letter : input.templateVariant }
         : insightKey

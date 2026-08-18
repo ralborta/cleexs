@@ -47,6 +47,7 @@ type StepRow = {
   body: string | null;
   insightKey: string | null;
   insightText: string | null;
+  postscript: string | null;
   templateVariant: TemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -91,6 +92,7 @@ export function FreeEmailSequenceEditor() {
   const [subject, setSubject] = useState('');
   const [preheader, setPreheader] = useState('');
   const [body, setBody] = useState('');
+  const [postscript, setPostscript] = useState('');
   const [insightKey, setInsightKey] = useState<string>('');
   const [insightText, setInsightText] = useState('');
   const [active, setActive] = useState(true);
@@ -188,6 +190,10 @@ export function FreeEmailSequenceEditor() {
       setInsightText(savedInsight || catalogSample || '');
       setBody(savedBody);
     }
+    setPostscript(
+      (selected.postscript ?? '').trim() ||
+        'PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?'
+    );
   }, [selected?.id, insightCatalog, suggestedBySortOrder]);
 
   const refreshPreview = useCallback(async () => {
@@ -203,6 +209,7 @@ export function FreeEmailSequenceEditor() {
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          postscript: postscript.trim() || null,
           insightKey: insightKey || null,
           insightText: insightKey ? insightText.trim() || null : null,
           sortOrder: selected.sortOrder,
@@ -220,13 +227,13 @@ export function FreeEmailSequenceEditor() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [selected, variant, subject, preheader, body, insightKey, insightText, score, domain, brandName]);
+  }, [selected, variant, subject, preheader, body, postscript, insightKey, insightText, score, domain, brandName]);
 
   useEffect(() => {
     if (!selected) return undefined;
     const t = window.setTimeout(() => void refreshPreview(), 400);
     return () => window.clearTimeout(t);
-  }, [selected, variant, subject, preheader, body, insightKey, insightText, score, domain, brandName, refreshPreview]);
+  }, [selected, variant, subject, preheader, body, postscript, insightKey, insightText, score, domain, brandName, refreshPreview]);
 
   async function saveStep() {
     if (!selected) return;
@@ -245,6 +252,7 @@ export function FreeEmailSequenceEditor() {
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          postscript: postscript.trim() || null,
           insightKey: insightKey || null,
           insightText: insightKey ? insightText.trim() || null : null,
           active,
@@ -332,6 +340,7 @@ export function FreeEmailSequenceEditor() {
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          postscript: postscript.trim() || null,
           insightKey: insightKey || null,
           insightText: insightKey ? insightText.trim() || null : null,
           sortOrder: selected.sortOrder,
@@ -660,6 +669,19 @@ export function FreeEmailSequenceEditor() {
                   <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
+                </p>
+              </label>
+
+              <label className="block">
+                <span className={labelCls}>P.D. (postdata al pie)</span>
+                <input
+                  value={postscript}
+                  onChange={(e) => setPostscript(e.target.value)}
+                  className={field}
+                  placeholder="PD: ¿Alguna vez le preguntaste a ChatGPT…?"
+                />
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Línea en itálica al final de la carta (antes de la firma). Se ve en el preview a la derecha.
                 </p>
               </label>
 

@@ -11,6 +11,8 @@ export type EditableEmailStepContent = {
   subject?: string | null;
   preheader?: string | null;
   body?: string | null;
+  /** P.D. al pie de la carta. Null/vacío = default de plantilla. */
+  postscript?: string | null;
 };
 
 export function bodyTextToParagraphs(body: string): string[] {
@@ -46,6 +48,9 @@ export function buildCleexsEmailFromEditableContent(input: {
         ...(input.content.preheader?.trim() ? { preheader: input.content.preheader.trim() } : {}),
         // Cuerpo del mail e insight de tarjeta son independientes.
         ...(paragraphs.length > 0 ? { bodyParagraphs: paragraphs } : {}),
+        ...(input.content.postscript?.trim()
+          ? { postscript: input.content.postscript.trim() }
+          : {}),
         ...(featured?.text
           ? {
               signalLabel: featured.label.endsWith(':') ? featured.label : `${featured.label}:`,

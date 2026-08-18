@@ -40,6 +40,7 @@ const stepContentSchema = z.object({
   subject: z.string().trim().max(300).nullable().optional(),
   preheader: z.string().trim().max(500).nullable().optional(),
   body: z.string().trim().max(20000).nullable().optional(),
+  postscript: z.string().trim().max(1000).nullable().optional(),
   insightKey: z.string().trim().max(80).nullable().optional(),
   insightText: z.string().trim().max(4000).nullable().optional(),
   sortOrder: z.number().int().min(1).max(99).optional(),
@@ -59,6 +60,7 @@ const patchStepSchema = z.object({
   subject: z.string().trim().max(300).nullable().optional(),
   preheader: z.string().trim().max(500).nullable().optional(),
   body: z.string().trim().max(20000).nullable().optional(),
+  postscript: z.string().trim().max(1000).nullable().optional(),
   insightKey: z.string().trim().max(80).nullable().optional(),
   insightText: z.string().trim().max(4000).nullable().optional(),
   templateVariant: z.nativeEnum(CleexsEmailTemplateVariant).optional(),
@@ -107,10 +109,10 @@ const adminEmailFreeSequencePreviewRoutes: FastifyPluginAsync = async (fastify) 
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
     }
-    const { variant, subject, preheader, body, sortOrder, score, domain, brandName, insightKey, insightText } =
+    const { variant, subject, preheader, body, postscript, sortOrder, score, domain, brandName, insightKey, insightText } =
       parsed.data;
     return await buildFreeSequencePreview({
-      content: { variant, subject, preheader, body },
+      content: { variant, subject, preheader, body, postscript },
       sortOrder,
       score,
       domain,
@@ -127,12 +129,12 @@ const adminEmailFreeSequencePreviewRoutes: FastifyPluginAsync = async (fastify) 
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
     }
-    const { to, variant, subject, preheader, body, sortOrder, score, domain, brandName, insightKey, insightText } =
+    const { to, variant, subject, preheader, body, postscript, sortOrder, score, domain, brandName, insightKey, insightText } =
       parsed.data;
     try {
       return await sendFreeEmailSequenceStepTest({
         to,
-        content: { variant, subject, preheader, body },
+        content: { variant, subject, preheader, body, postscript },
         sortOrder,
         score,
         domain,
