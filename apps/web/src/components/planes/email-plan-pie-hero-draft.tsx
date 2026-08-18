@@ -108,11 +108,13 @@ function EmailPlanPieHeroInner() {
   return (
     <div className="min-h-screen bg-slate-200/80 px-3 py-8 sm:px-6">
       <div className="mx-auto mb-5 max-w-[720px] rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
-        <p className="font-semibold">Borrador · pie del mail “Plan listo” · v4</p>
+        <p className="font-semibold">Borrador · pie principal del mail día 0 · v5 (feedback cliente)</p>
         <p className="mt-1 text-violet-900/80">
-          Hard refresh (Cmd+Shift+R). Tiene que decir <strong>v4</strong> acá arriba. Libro más 3D,
-          watermark de rubro y tipografía alineada al mock.
+          Esto es el bloque <strong>principal de arriba</strong> (no los ejemplos de abajo). Título
+          full-width → después la caja/gráfico. Sin “Plan Conquistar”. CTA: conseguir clientes.
+          Cuando lo apruebe, va al primer mail post-diagnóstico.
         </p>
+        <p className="mt-1 text-xs text-violet-800/70">Hard refresh · tiene que decir v5</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {clients.map((c, i) => (
             <button
@@ -203,10 +205,10 @@ function EmailPlanPieHeroInner() {
         </div>
       </div>
 
-      {/* Vista lado a lado en desktop */}
+      {/* Vista lado a lado en desktop — SOLO ejemplos secundarios */}
       <div className="mx-auto mt-10 hidden max-w-[1100px] lg:block">
         <p className="mb-3 text-center text-xs font-bold uppercase tracking-wide text-slate-500">
-          Los 2 clientes juntos
+          Ejemplos secundarios (abajo) · el que importa para el mail es el de arriba
         </p>
         <div className="grid grid-cols-2 gap-4">
           {clients.map((c) => (
