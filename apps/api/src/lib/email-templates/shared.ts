@@ -65,6 +65,42 @@ export function scoreAccent(score: number | null): string {
   return '#d97706';
 }
 
+/** Color de marca estable por dominio (misma idea que el borrador web). */
+export function brandAccentFromDomain(domain?: string | null): string {
+  const d = (domain || '').trim().toLowerCase();
+  if (!d) return '#2563eb';
+  // Overrides conocidos (alineados con logos fuertes)
+  if (d.includes('nintendo')) return '#E60012';
+  if (d.includes('coppel')) return '#0033A0';
+  let h = 0;
+  for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  const s = 0.62;
+  const l = 0.42;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hue < 60) [r, g, b] = [c, x, 0];
+  else if (hue < 120) [r, g, b] = [x, c, 0];
+  else if (hue < 180) [r, g, b] = [0, c, x];
+  else if (hue < 240) [r, g, b] = [0, x, c];
+  else if (hue < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const toHex = (n: number) =>
+    Math.min(255, Math.max(0, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex((r + m) * 255)}${toHex((g + m) * 255)}${toHex((b + m) * 255)}`;
+}
+
+export function softBrandBg(primary: string): string {
+  // Aproxima un fondo suave (~12% tint) sin parsear hex complejo en todos los clientes.
+  return `${primary}14`;
+}
+
 export type MergeContext = {
   score: number | null;
   brandName?: string | null;

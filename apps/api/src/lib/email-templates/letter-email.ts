@@ -1,12 +1,13 @@
 import {
   CLEEXS_EMAIL_FONT,
+  brandAccentFromDomain,
   escapeHtml,
   founderSignatureHtml,
   mergeCleexsText,
   normalizeEmailCompetitors,
   normalizedScore,
   resolveCleexsEmailAssets,
-  scoreAccent,
+  softBrandBg,
 } from './shared';
 import { getAppBaseUrlForPublicLinks } from '../app-public-url';
 import type {
@@ -82,24 +83,22 @@ export function defaultCleexsLetterContent(): CleexsLetterContent {
     newDiagnosticCtaLabel: 'Generar nuevo diagnóstico',
     newDiagnosticHint: 'Gratis · tarda unos minutos · solo si vos lo pedís',
     postscript: 'PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?',
-    planTitle: 'Plan de Ataque: domina ChatGPT en 90 días',
-    planBadgeLabel: 'PLAN CONQUISTAR',
+    planTitle: 'Plan de ataque para dominar ChatGPT en 90 días',
+    planBadgeLabel: '',
     /** @deprecated Ya no se muestra en la caja (pitch sin precio). */
     planPriceIntro: '',
     planPriceStrikethrough: '',
     planPriceCurrent: '',
     planPriceSuffix: '',
     planBullets: [
-      'Las 20 acciones con mayor impacto para tu empresa.',
-      'Priorizadas por facilidad e impacto.',
-      'En el orden exacto de implementación.',
-      'Adaptadas a tu industria y competidores.',
-      'Hoja de ruta semana por semana.',
+      'Acciones prioritarias para tu empresa',
+      'Impacto alto en recomendaciones de IA',
+      'Hoja de ruta de 90 días',
     ],
-    planClosingLine: 'Plan de acción concreto para empezar mañana con tu equipo.',
-    planCtaLabel: 'Ver cómo es',
+    planClosingLine: 'Tu Plan de Ataque personalizado está listo.',
+    planCtaLabel: 'Empezar a conseguir clientes desde ChatGPT',
     founderTitle: 'Fundador',
-  unsubscribeLabel: 'Dejar de recibir emails',
+    unsubscribeLabel: 'Dejar de recibir emails',
   };
 }
 
@@ -129,101 +128,35 @@ function resolveActionLine(content: CleexsLetterContent, ctx: CleexsEmailPersona
   return mergeCleexsText(content.actionTemplate, ctx);
 }
 
-function scoreRingHtml(score: number | null, scoreValue: string, accent: string): string {
-  const pct = normalizedScore(score) ?? 0;
-  const ringBg = `conic-gradient(${accent} 0 ${pct}%, #dbeafe ${pct}% 100%)`;
-
-  return `
-    <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:8px auto 0;">
-      <tr>
-        <td width="118" height="118" align="center" valign="middle" style="width:118px;height:118px;border-radius:50%;background:${ringBg};">
-          <table role="presentation" cellspacing="0" cellpadding="0" width="92" height="92" style="width:92px;height:92px;border-radius:50%;background:#ffffff;box-shadow:0 6px 14px rgba(37,99,235,.1);">
-            <tr>
-              <td align="center" valign="middle" style="text-align:center;font-family:${uiFont};">
-                <div style="font-size:36px;line-height:1;font-weight:900;color:${accent};letter-spacing:-1.5px;">${escapeHtml(scoreValue)}</div>
-                <div style="font-size:11px;color:#64748b;font-weight:700;margin-top:2px;">de 100</div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>`;
+function insightLineHtml(label: string, text: string): string {
+  return `<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#475569;font-family:${uiFont};">
+    <strong style="color:#1e293b;">${escapeHtml(label)}</strong> ${escapeHtml(text)}
+  </p>`;
 }
 
-function insightBulletHtml(label: string, text: string): string {
-  return `<tr>
-    <td valign="top" width="14" style="padding:0 8px 10px 0;font-size:14px;line-height:1.5;color:#2563eb;font-family:${uiFont};">&#8226;</td>
-    <td valign="top" style="padding:0 0 10px;font-size:13px;line-height:1.55;color:#475569;font-family:${uiFont};">
-      <strong style="color:#334155;">${escapeHtml(label)}</strong> ${escapeHtml(text)}
-    </td>
-  </tr>`;
-}
-
-function primaryButtonHtml(href: string, label: string): string {
+function primaryButtonHtml(href: string, label: string, accent: string): string {
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" align="right">
       <tr>
-        <td style="border-radius:10px;background:#2563eb;text-align:center;">
+        <td style="border-radius:10px;background:${accent};text-align:center;">
           <a href="${escapeHtml(href)}" style="display:inline-block;padding:11px 16px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${uiFont};white-space:nowrap;">${escapeHtml(label)} &#8594;</a>
         </td>
       </tr>
     </table>`;
 }
 
-/** Tarjeta con gauge circular, insight y CTA reporte. */
-function reportInsightBoxHtml(
-  input: CleexsLetterEmailInput,
-  content: CleexsLetterContent,
-  ctx: CleexsEmailPersonalization
-): string {
-  if (input.showScoreBlock === false) return '';
-
-  const hasScore = normalizedScore(ctx.score) != null;
-  const scoreNum = hasScore ? String(normalizedScore(ctx.score)) : content.scoreMissingLine;
-  const accent = scoreAccent(ctx.score);
-  const competitors = normalizeEmailCompetitors(ctx.competitors);
-  const rivalNames =
-    competitors.length > 0 ? competitors.map((c) => c.name).join(', ') : 'ver en tu reporte';
-  const signal = resolveSignalLine(content, ctx);
-  const action = resolveActionLine(content, ctx);
-
-  const reportCta =
-    input.links.reportUrl && input.showReportLinks !== false
-      ? primaryButtonHtml(input.links.reportUrl, content.reportCtaLabel)
-      : '';
-
-  return `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0 0;border:1px solid #e2e8f0;border-radius:14px;background:#ffffff;box-shadow:0 4px 18px rgba(15,23,42,.04);">
-      <tr>
-        <td width="34%" valign="top" style="padding:18px 16px;border-right:1px solid #f1f5f9;text-align:center;">
-          <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#2563eb;font-size:10px;font-weight:700;letter-spacing:.02em;font-family:${uiFont};">${escapeHtml(content.scoreBenchmarkBadge)}</span>
-          <p style="margin:12px 0 0;font-size:12px;color:#64748b;font-family:${uiFont};">${escapeHtml(content.scoreLabelText)}</p>
-          ${scoreRingHtml(ctx.score, scoreNum, hasScore ? accent : '#94a3b8')}
-        </td>
-        <td width="66%" valign="top" style="padding:18px 16px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
-            ${insightBulletHtml(content.rivalsLabel, rivalNames)}
-            ${insightBulletHtml(content.signalLabel, signal)}
-            ${insightBulletHtml(content.actionLabel, action)}
-          </table>
-          ${reportCta ? `<div style="margin-top:14px;text-align:right;">${reportCta}</div>` : ''}
-        </td>
-      </tr>
-    </table>`;
-}
-
-function secondaryLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetterContent): string {
+function secondaryLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetterContent, accent: string): string {
   if (input.showReportLinks === false) return '';
 
   const links: string[] = [];
   if (input.links.shareUrl) {
     links.push(
-      `<a href="${escapeHtml(input.links.shareUrl)}" style="color:#2563eb;text-decoration:none;font-weight:600;font-family:${uiFont};">${escapeHtml(content.shareCtaLabel)}</a>`
+      `<a href="${escapeHtml(input.links.shareUrl)}" style="color:${accent};text-decoration:none;font-weight:600;font-family:${uiFont};">${escapeHtml(content.shareCtaLabel)}</a>`
     );
   }
   if (input.showScoreBlock !== false && input.links.newDiagnosticUrl) {
     links.push(
-      `<a href="${escapeHtml(input.links.newDiagnosticUrl)}" style="color:#2563eb;text-decoration:none;font-weight:600;font-family:${uiFont};">${escapeHtml(content.newDiagnosticCtaLabel)}</a>`
+      `<a href="${escapeHtml(input.links.newDiagnosticUrl)}" style="color:${accent};text-decoration:none;font-weight:600;font-family:${uiFont};">${escapeHtml(content.newDiagnosticCtaLabel)}</a>`
     );
   }
 
@@ -233,61 +166,135 @@ function secondaryLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetter
       ? `<span style="display:block;margin-top:6px;font-size:11px;color:#94a3b8;font-family:${uiFont};">${escapeHtml(content.newDiagnosticHint)}</span>`
       : '';
 
-  return `<p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:#2563eb;font-family:${uiFont};">${links.join(' · ')}${hint}</p>`;
+  return `<p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:${accent};font-family:${uiFont};">${links.join(' · ')}${hint}</p>`;
 }
 
-function planCheckIconHtml(): string {
-  return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>
-    <td width="18" height="18" align="center" valign="middle" style="width:18px;height:18px;border-radius:50%;background:#2563eb;color:#ffffff;font-size:11px;line-height:18px;font-weight:700;font-family:${uiFont};">&#10003;</td>
-  </tr></table>`;
-}
+/**
+ * Una sola pieza: score/rivales (colores marca) encima + Plan listo debajo.
+ * Sin donut: el gráfico del plan reemplaza al gauge.
+ */
+function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetterContent): string {
+  const ctx = input.personalization;
+  const domain = (ctx.domain || ctx.brandName || 'tu marca').trim();
+  const brand = (ctx.brandName || domain).trim();
+  const accent = brandAccentFromDomain(domain);
+  const soft = softBrandBg(accent);
+  const softBorder = `${accent}33`;
 
-function planShieldIconHtml(): string {
-  return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>
-    <td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.18);color:#ffffff;font-size:16px;line-height:34px;">&#9819;</td>
-  </tr></table>`;
-}
+  const hasScore = normalizedScore(ctx.score) != null;
+  const scoreNum = hasScore ? String(normalizedScore(ctx.score)) : content.scoreMissingLine;
+  const competitors = normalizeEmailCompetitors(ctx.competitors);
+  const rivalNames =
+    competitors.length > 0 ? competitors.map((c) => c.name).join(', ') : 'ver en tu reporte';
+  const signal = resolveSignalLine(content, ctx);
+  const action = resolveActionLine(content, ctx);
 
-function planSalesBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetterContent): string {
-  const bulletRows = content.planBullets
-    .map(
-      (b) =>
-        `<tr>
-          <td width="26" valign="top" style="padding:0 10px 10px 0;">${planCheckIconHtml()}</td>
-          <td valign="top" style="padding:0 0 10px;font-size:14px;line-height:1.55;color:#334155;font-family:${uiFont};">${escapeHtml(b)}</td>
-        </tr>`
-    )
-    .join('');
+  const scoreStrip =
+    input.showScoreBlock === false
+      ? ''
+      : `
+          <tr>
+            <td style="padding:16px 18px;background:${soft};border-bottom:1px solid ${softBorder};">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td width="110" valign="top" style="padding-right:14px;">
+                    <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:${accent}22;color:${accent};font-size:10px;font-weight:700;font-family:${uiFont};">${escapeHtml(content.scoreBenchmarkBadge)}</span>
+                    <p style="margin:10px 0 0;font-size:12px;color:#64748b;font-family:${uiFont};">${escapeHtml(content.scoreLabelText)}</p>
+                    <p style="margin:4px 0 0;font-size:40px;line-height:1;font-weight:900;color:${accent};font-family:${uiFont};letter-spacing:-1.5px;">${escapeHtml(scoreNum)}</p>
+                    <p style="margin:4px 0 0;font-size:11px;font-weight:700;color:#64748b;font-family:${uiFont};">de 100</p>
+                  </td>
+                  <td valign="top">
+                    ${insightLineHtml(content.rivalsLabel, rivalNames)}
+                    ${insightLineHtml(content.signalLabel, signal)}
+                    ${insightLineHtml(content.actionLabel, action)}
+                    ${
+                      input.links.reportUrl && input.showReportLinks !== false
+                        ? `<div style="margin-top:10px;text-align:right;">${primaryButtonHtml(input.links.reportUrl, content.reportCtaLabel, accent)}</div>`
+                        : ''
+                    }
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
 
   return `
     <tr>
-      <td style="padding:32px 0 0;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:14px;overflow:hidden;border:1px solid #bfdbfe;box-shadow:0 10px 28px rgba(37,99,235,.12);">
+      <td style="padding:28px 0 0;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 28px rgba(15,23,42,.08);">
+          ${scoreStrip}
           <tr>
-            <td style="padding:14px 18px;background:#2563eb;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <td style="padding:12px 18px;background:${accent};text-align:center;">
+              <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ffffff;font-family:${uiFont};">${escapeHtml(content.planTitle)}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 18px 8px;background:#ffffff;">
+              <p style="margin:0 0 6px;font-size:12px;line-height:1.4;color:#64748b;font-family:${uiFont};">Exclusivo para <strong style="color:${accent};">${escapeHtml(domain)}</strong></p>
+              <p style="margin:0;font-size:24px;line-height:1.2;font-weight:800;color:#0f172a;font-family:${uiFont};">
+                Tu Plan de Ataque personalizado <span style="color:${accent};">está listo.</span>
+              </p>
+              <p style="margin:10px 0 0;font-size:14px;line-height:1.5;color:#64748b;font-family:${uiFont};">
+                Preparado exclusivamente para <strong style="color:${accent};">${escapeHtml(domain)}</strong>
+                ${brand && brand !== domain ? ` · ${escapeHtml(brand)}` : ''}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 18px 6px;background:#ffffff;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#f8fafc;">
                 <tr>
-                  <td width="1" valign="middle" style="white-space:nowrap;padding-right:10px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0"><tr>
-                      <td valign="middle" style="padding-right:8px;">${planShieldIconHtml()}</td>
-                      <td valign="middle" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#dbeafe;font-family:${uiFont};">${escapeHtml(content.planBadgeLabel)}</td>
-                    </tr></table>
+                  <td style="padding:12px 14px;font-size:13px;line-height:1.5;color:#334155;font-family:${uiFont};">
+                    No genérico. No teórico. <strong style="color:${accent};">Hecho 100% para tu negocio.</strong>
                   </td>
-                  <td width="1" valign="middle" style="padding:0 14px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0"><tr>
-                      <td width="1" style="width:1px;height:34px;background:rgba(255,255,255,.35);font-size:0;line-height:0;">&nbsp;</td>
-                    </tr></table>
-                  </td>
-                  <td valign="middle" style="font-size:18px;font-weight:700;line-height:1.3;color:#ffffff;font-family:${uiFont};">${escapeHtml(content.planTitle)}</td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 18px 18px;background:#f8fbff;">
-              <p style="margin:0 0 14px;font-size:16px;line-height:1.65;color:#334155;font-style:italic;font-family:${letterFont};">${escapeHtml(content.planClosingLine)}</p>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:14px;">${bulletRows}</table>
-              <div style="text-align:right;">${primaryButtonHtml(input.links.plansUrl, content.planCtaLabel)}</div>
+            <td style="padding:12px 18px 8px;background:#ffffff;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td width="33%" valign="top" style="padding:8px 4px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
+                      <tr><td align="center" style="padding:14px 8px;">
+                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">✓</div>
+                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Acciones</div>
+                        <div style="font-size:11px;color:#64748b;font-family:${uiFont};">prioritarias</div>
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td width="33%" valign="top" style="padding:8px 4px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
+                      <tr><td align="center" style="padding:14px 8px;">
+                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">ALTO</div>
+                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Impacto</div>
+                        <div style="font-size:11px;color:#64748b;font-family:${uiFont};">en tu negocio</div>
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td width="33%" valign="top" style="padding:8px 4px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
+                      <tr><td align="center" style="padding:14px 8px;">
+                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">90</div>
+                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Días</div>
+                        <div style="font-size:11px;color:#64748b;font-family:${uiFont};">para resultados</div>
+                      </td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 18px 20px;background:#ffffff;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="border-radius:999px;background:${accent};">
+                    <a href="${escapeHtml(input.links.plansUrl)}" style="display:inline-block;padding:14px 22px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${uiFont};">${escapeHtml(content.planCtaLabel)} →</a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
@@ -306,6 +313,7 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
   const competitors = normalizeEmailCompetitors(ctx.competitors);
   const signal = resolveSignalLine(content, ctx);
   const action = resolveActionLine(content, ctx);
+  const accent = brandAccentFromDomain(ctx.domain || ctx.brandName);
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -329,12 +337,15 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
             <td style="padding:0 0 8px;">
               ${bodyParagraphsHtml(content.bodyParagraphs, ctx)}
               ${showFounder ? founderSignatureHtml(assets, content.founderTitle) : ''}
-              ${reportInsightBoxHtml(input, content, ctx)}
-              ${secondaryLinksHtml(input, content)}
               <p style="margin:24px 0 0;font-size:17px;line-height:1.7;color:#475569;font-style:italic;font-family:${letterFont};">${escapeHtml(postscript)}</p>
             </td>
           </tr>
-          ${planSalesBlockHtml(input, content)}
+          ${planAndScoreBlockHtml(input, content)}
+          <tr>
+            <td style="padding:14px 0 0;">
+              ${secondaryLinksHtml(input, content, accent)}
+            </td>
+          </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;font-family:${uiFont};">
               <a href="${escapeHtml(input.links.unsubscribeUrl)}" style="color:#94a3b8;text-decoration:underline;">${escapeHtml(content.unsubscribeLabel)}</a><br/>
@@ -355,20 +366,21 @@ export function buildLetterEmail(input: CleexsLetterEmailInput): CleexsEmailBuil
     '',
     ...content.bodyParagraphs.map((p) => mergeCleexsText(p, ctx)),
     '',
+    postscript,
+    '',
     `${content.scoreLabelText}: ${scoreLine}`,
     `${content.rivalsLabel} ${competitors.map((c) => c.name).join(', ')}`,
     `Señal: ${signal}`,
     `Acción sugerida: ${action}`,
     input.links.reportUrl ? `${content.reportCtaLabel}: ${input.links.reportUrl}` : '',
-    input.links.shareUrl ? `${content.shareCtaLabel}: ${input.links.shareUrl}` : '',
-    input.links.newDiagnosticUrl ? `${content.newDiagnosticCtaLabel}: ${input.links.newDiagnosticUrl}` : '',
-    '',
-    postscript,
     '',
     content.planTitle,
     content.planClosingLine,
     ...content.planBullets.map((b) => `• ${b}`),
     `${content.planCtaLabel}: ${input.links.plansUrl}`,
+    '',
+    input.links.shareUrl ? `${content.shareCtaLabel}: ${input.links.shareUrl}` : '',
+    input.links.newDiagnosticUrl ? `${content.newDiagnosticCtaLabel}: ${input.links.newDiagnosticUrl}` : '',
     '',
     content.unsubscribeLabel,
   ]
