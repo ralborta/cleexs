@@ -10,6 +10,7 @@ import {
   softBrandBg,
 } from './shared';
 import { getAppBaseUrlForPublicLinks } from '../app-public-url';
+import { buildLogoDevUrl, normalizeBrandAssetDomain } from '../brand-assets';
 import type {
   CleexsEmailAssets,
   CleexsEmailBuilt,
@@ -170,8 +171,8 @@ function secondaryLinksHtml(input: CleexsLetterEmailInput, content: CleexsLetter
 }
 
 /**
- * Una sola pieza: score/rivales (colores marca) encima + Plan listo debajo.
- * Sin donut: el gráfico del plan reemplaza al gauge.
+ * Una sola pieza: score/rivales (colores marca) + Plan listo con stats y carátula.
+ * Replica el mock aprobado (email-safe con tablas; sin CSS 3D real).
  */
 function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLetterContent): string {
   const ctx = input.personalization;
@@ -180,10 +181,10 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
   const accent = brandAccentFromDomain(domain);
   const soft = softBrandBg(accent);
   const softBorder = `${accent}33`;
-  const actionsCount =
+  const actionsLabel =
     ctx.actionsCount != null && Number.isFinite(ctx.actionsCount) && ctx.actionsCount > 0
       ? String(Math.round(ctx.actionsCount))
-      : null;
+      : '—';
 
   const hasScore = normalizedScore(ctx.score) != null;
   const scoreNum = hasScore ? String(normalizedScore(ctx.score)) : content.scoreMissingLine;
@@ -192,6 +193,15 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
     competitors.length > 0 ? competitors.map((c) => c.name).join(', ') : 'ver en tu reporte';
   const signal = resolveSignalLine(content, ctx);
   const action = resolveActionLine(content, ctx);
+
+  const base = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
+  const normalizedDomain = normalizeBrandAssetDomain(domain) || domain;
+  const brandLogo =
+    buildLogoDevUrl(normalizedDomain, 128) ||
+    (normalizedDomain === 'nintendo.com' ? `${base}/brand-logos/nintendo.png` : null);
+  const generatedAt = new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+    .toUpperCase();
 
   const scoreStrip =
     input.showScoreBlock === false
@@ -222,10 +232,88 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
             </td>
           </tr>`;
 
+  const logoBlock = brandLogo
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;">
+        <tr>
+          <td style="padding:10px;border-radius:16px;background:${accent};">
+            <table role="presentation" cellspacing="0" cellpadding="0" style="background:#ffffff;border-radius:12px;">
+              <tr>
+                <td style="padding:8px;">
+                  <img src="${escapeHtml(brandLogo)}" alt="${escapeHtml(brand)}" width="48" height="48" style="display:block;width:48px;height:48px;object-fit:contain;border:0;border-radius:8px;" />
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>`
+    : '';
+
+  const statCard = (value: string, top: string, bottom: string, icon: string) => `
+    <td width="33%" valign="top" style="padding:6px 4px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:14px;background:#ffffff;">
+        <tr>
+          <td align="center" style="padding:14px 8px;">
+            <div style="font-size:18px;line-height:1;color:${accent};">${icon}</div>
+            <div style="margin-top:8px;font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">${escapeHtml(value)}</div>
+            <div style="margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">${escapeHtml(top)}</div>
+            <div style="font-size:11px;color:#64748b;font-family:${uiFont};">${escapeHtml(bottom)}</div>
+          </td>
+        </tr>
+      </table>
+    </td>`;
+
+  const bookCover = `
+    <table role="presentation" width="220" cellspacing="0" cellpadding="0" align="center" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 18px 40px rgba(15,23,42,.22);">
+      <tr>
+        <td style="padding:18px 14px 16px;background:${accent};text-align:center;">
+          ${
+            brandLogo
+              ? `<table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:0 auto 12px;background:#ffffff;border-radius:8px;">
+                  <tr><td style="padding:6px 10px;">
+                    <img src="${escapeHtml(brandLogo)}" alt="${escapeHtml(brand)}" width="36" height="36" style="display:block;width:36px;height:36px;object-fit:contain;border:0;" />
+                  </td></tr>
+                </table>`
+              : ''
+          }
+          <p style="margin:0;font-size:11px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#ffffff;line-height:1.35;font-family:${uiFont};">${escapeHtml(content.planTitle)}</p>
+          <p style="margin:12px 0 0;">
+            <span style="display:inline-block;padding:5px 10px;border-radius:999px;background:#ffffff;color:${accent};font-size:10px;font-weight:900;font-family:${uiFont};">${escapeHtml(domain)}</span>
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 12px 12px;background:#ffffff;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <td width="33%" align="center" style="font-family:${uiFont};">
+                <div style="font-size:12px;color:${accent};">◎</div>
+                <div style="margin-top:4px;font-size:15px;font-weight:900;color:${accent};">${escapeHtml(actionsLabel)}</div>
+                <div style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">acciones</div>
+              </td>
+              <td width="33%" align="center" style="font-family:${uiFont};">
+                <div style="font-size:12px;color:${accent};">↗</div>
+                <div style="margin-top:4px;font-size:15px;font-weight:900;color:${accent};">ALTO</div>
+                <div style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">impacto</div>
+              </td>
+              <td width="33%" align="center" style="font-family:${uiFont};">
+                <div style="font-size:12px;color:${accent};">▦</div>
+                <div style="margin-top:4px;font-size:15px;font-weight:900;color:${accent};">90</div>
+                <div style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">días</div>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top:12px;border-top:2px solid ${accent};padding-top:10px;text-align:center;">
+            <p style="margin:0;font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Generado el ${escapeHtml(generatedAt)}</p>
+            <p style="margin:4px 0 0;font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b;font-family:${uiFont};">Plan personalizado · Confidencial</p>
+          </div>
+        </td>
+      </tr>
+    </table>`;
+
   return `
     <tr>
       <td style="padding:28px 0 0;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 28px rgba(15,23,42,.08);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 12px 36px rgba(15,23,42,.1);">
           ${scoreStrip}
           <tr>
             <td style="padding:12px 18px;background:${accent};text-align:center;">
@@ -234,7 +322,7 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
           </tr>
           <tr>
             <td style="padding:22px 18px 8px;background:#ffffff;">
-              <p style="margin:0 0 6px;font-size:12px;line-height:1.4;color:#64748b;font-family:${uiFont};">Exclusivo para <strong style="color:${accent};">${escapeHtml(domain)}</strong></p>
+              ${logoBlock}
               <p style="margin:0;font-size:24px;line-height:1.2;font-weight:800;color:#0f172a;font-family:${uiFont};">
                 Tu Plan de Ataque personalizado <span style="color:${accent};">está listo.</span>
               </p>
@@ -246,56 +334,38 @@ function planAndScoreBlockHtml(input: CleexsLetterEmailInput, content: CleexsLet
           </tr>
           <tr>
             <td style="padding:14px 18px 6px;background:#ffffff;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#f8fafc;">
-                <tr>
-                  <td style="padding:12px 14px;font-size:13px;line-height:1.5;color:#334155;font-family:${uiFont};">
-                    No genérico. No teórico. <strong style="color:${accent};">Hecho 100% para tu negocio.</strong>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:12px 18px 8px;background:#ffffff;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td width="33%" valign="top" style="padding:8px 4px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
-                      <tr><td align="center" style="padding:14px 8px;">
-                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">${escapeHtml(actionsCount || '—')}</div>
-                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Acciones</div>
-                        <div style="font-size:11px;color:#64748b;font-family:${uiFont};">prioritarias</div>
-                      </td></tr>
+                  <td width="56%" valign="top" style="padding-right:10px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:14px;background:#ffffff;margin-bottom:10px;">
+                      <tr>
+                        <td style="padding:12px 14px;font-size:13px;line-height:1.5;color:#334155;font-family:${uiFont};">
+                          <span style="color:${accent};font-weight:700;">◎</span>
+                          No genérico. No teórico. <strong style="color:${accent};">Hecho 100% para tu negocio.</strong>
+                        </td>
+                      </tr>
+                    </table>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        ${statCard(actionsLabel, 'ACCIONES', 'prioritarias', '◎')}
+                        ${statCard('ALTO', 'IMPACTO', 'en tu negocio', '↗')}
+                        ${statCard('90', 'DÍAS', 'para resultados', '▦')}
+                      </tr>
                     </table>
                   </td>
-                  <td width="33%" valign="top" style="padding:8px 4px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
-                      <tr><td align="center" style="padding:14px 8px;">
-                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">ALTO</div>
-                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Impacto</div>
-                        <div style="font-size:11px;color:#64748b;font-family:${uiFont};">en tu negocio</div>
-                      </td></tr>
-                    </table>
-                  </td>
-                  <td width="33%" valign="top" style="padding:8px 4px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #f1f5f9;border-radius:12px;background:#ffffff;">
-                      <tr><td align="center" style="padding:14px 8px;">
-                        <div style="font-size:22px;font-weight:900;color:${accent};font-family:${uiFont};line-height:1;">90</div>
-                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;font-family:${uiFont};">Días</div>
-                        <div style="font-size:11px;color:#64748b;font-family:${uiFont};">para resultados</div>
-                      </td></tr>
-                    </table>
+                  <td width="44%" valign="middle" align="center" style="padding-left:6px;">
+                    ${bookCover}
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:14px 18px 20px;background:#ffffff;">
+            <td style="padding:16px 18px 22px;background:#ffffff;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="center" style="border-radius:999px;background:${accent};">
-                    <a href="${escapeHtml(input.links.plansUrl)}" style="display:inline-block;padding:14px 22px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${uiFont};">${escapeHtml(content.planCtaLabel)} →</a>
+                    <a href="${escapeHtml(input.links.plansUrl)}" style="display:inline-block;padding:15px 22px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${uiFont};">${escapeHtml(content.planCtaLabel)} →</a>
                   </td>
                 </tr>
               </table>
