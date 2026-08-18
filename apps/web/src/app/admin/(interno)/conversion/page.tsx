@@ -29,7 +29,7 @@ type EmailLeftStep = FunnelStep & { pctOfVisitors: number | null };
 type Metrics = {
   range: { from: string; to: string };
   funnel: {
-    homeVisitors: { count: number; pageViews: number };
+    homeVisitors: { count: number; pageViews: number; source?: string };
     urlSubmitted: FunnelStep;
     emailLeft: EmailLeftStep;
     shared: FunnelStep & { byChannel: { channel: string; count: number }[] };
@@ -414,7 +414,7 @@ export default function AdminConversionPage() {
           icon={<Eye className="h-4 w-4 text-slate-600" />}
           label="Visitantes"
           value={fmt(f?.homeVisitors.count ?? 0)}
-          hint={`${fmt(f?.homeVisitors.pageViews ?? 0)} vistas`}
+          hint={`${fmt(f?.homeVisitors.pageViews ?? 0)} vistas · cleexs.net`}
           pct="100%"
         />
         <FunnelCard

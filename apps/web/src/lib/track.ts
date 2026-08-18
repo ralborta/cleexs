@@ -12,18 +12,42 @@ function apiBase(): string {
 }
 
 const VISITOR_KEY = 'cleexs_vid';
+const VISITOR_COOKIE = 'cleexs_vid';
+
+function readVisitorCookie(): string {
+  if (typeof document === 'undefined') return '';
+  try {
+    const m = document.cookie.match(
+      new RegExp(`(?:^|; )${VISITOR_COOKIE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`)
+    );
+    return m ? decodeURIComponent(m[1]) : '';
+  } catch {
+    return '';
+  }
+}
+
+function writeVisitorCookie(id: string): void {
+  if (typeof document === 'undefined' || !id) return;
+  try {
+    // Compartido entre cleexs.net (home) y app.cleexs.net (diagnóstico).
+    document.cookie = `${VISITOR_COOKIE}=${encodeURIComponent(id)}; Domain=.cleexs.net; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
+  } catch {
+    // ignore
+  }
+}
 
 export function getVisitorId(): string {
   if (typeof window === 'undefined') return '';
   try {
-    let id = window.localStorage.getItem(VISITOR_KEY);
+    let id = readVisitorCookie() || window.localStorage.getItem(VISITOR_KEY) || '';
     if (!id) {
       id =
         typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
           : `v_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      window.localStorage.setItem(VISITOR_KEY, id);
     }
+    window.localStorage.setItem(VISITOR_KEY, id);
+    writeVisitorCookie(id);
     return id;
   } catch {
     return '';

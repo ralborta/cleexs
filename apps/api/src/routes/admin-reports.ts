@@ -2064,7 +2064,27 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const emailLeft = emailLeadRows.length;
 
-      const homeVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
+      // Preferir visitas de la home marketing (path "/"). Fallback al total
+      // histórico cuando todavía no había tracking en cleexs.net.
+      const HOME_PATHS = new Set(['/', '/home', '/inicio']);
+      const homePathGroups = await prisma.pageView.groupBy({
+        by: ['visitorId'],
+        where: {
+          ...where,
+          visitorId: { not: null },
+          path: { in: Array.from(HOME_PATHS) },
+        },
+      });
+      const homePathViews = await prisma.pageView.count({
+        where: { ...where, path: { in: Array.from(HOME_PATHS) } },
+      });
+      const homeVisitors =
+        homePathGroups.length > 0
+          ? homePathGroups.length
+          : visitorGroups.length > 0
+            ? visitorGroups.length
+            : pageViewsTotal;
+      const homePageViews = homePathViews > 0 ? homePathViews : pageViewsTotal;
 
       // Share por canal
       const shareByChannel = shareGroups
@@ -2176,7 +2196,11 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         ok: true,
         range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
         funnel: {
-          homeVisitors: { count: homeVisitors, pageViews: pageViewsTotal },
+          homeVisitors: {
+            count: homeVisitors,
+            pageViews: homePageViews,
+            source: homePathGroups.length > 0 ? 'home' : 'legacy_all_paths',
+          },
           urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
           emailLeft: {
             count: emailLeft,
@@ -2528,7 +2552,20 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         loadReferrerCampaignMap(),
       ]);
 
-      const visitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
+      const visitorsFromHome = await prisma.pageView.groupBy({
+        by: ['visitorId'],
+        where: {
+          ...where,
+          visitorId: { not: null },
+          path: { in: ['/', '/home', '/inicio'] },
+        },
+      });
+      const visitors =
+        visitorsFromHome.length > 0
+          ? visitorsFromHome.length
+          : visitorGroups.length > 0
+            ? visitorGroups.length
+            : pageViewsTotal;
 
       const emailRows = emailDiagRows.filter((r) => !isPlaceholderDiagnosticEmail(r.email));
       const emailsCaptured = emailRows.length;
