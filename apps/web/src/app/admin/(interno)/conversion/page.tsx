@@ -332,7 +332,7 @@ export default function AdminConversionPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Métricas de Conversión</h1>
             <p className="text-sm text-slate-600">
-              Embudo de adquisición de Cleexs. Elegí el rango de fechas para ver cómo venimos. Los días cierran a
+              Embudo de adquisición de Cleexs. Visitantes = home cleexs.net. Los días cierran a
               medianoche hora Argentina.
             </p>
           </div>
