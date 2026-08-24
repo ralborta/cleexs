@@ -2,14 +2,14 @@
 /**
  * ONE-SHOT: publicar landing LinkedIn (clon home) en cleexs.net/linkedin/
  *
- * SiteGround (NO Hostinger):
- * 1) Site Tools → Site → File Manager → carpeta pública del sitio (junto a wp-config.php / index.html).
+ * SiteGround:
+ * 1) Site Tools → File Manager → raíz del sitio (junto a index.html / wp-config.php).
  * 2) Subí este archivo ahí.
  * 3) Abrí: https://cleexs.net/cleexs-deploy-linkedin.php?key=cleexs-linkedin-20260824
- * 4) Si ves OK: borrá este script. NO borres linkedin/index.html.
- * 5) SiteGround → Speed → Caching → Purge / Flush Cache (+ Cloudflare si aplica).
+ * 4) OK → borrá este script. NO borres linkedin/index.html.
+ * 5) SiteGround → Speed → Caching → Purge.
  *
- * Identificador de medición: path=/linkedin landingKey=li-v1
+ * Identificador: path=/linkedin landingKey=li-v1
  */
 if (!isset($_GET['key']) || $_GET['key'] !== 'cleexs-linkedin-20260824') {
   http_response_code(403);
@@ -26,7 +26,7 @@ if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
 
 $html = <<<'CLEEXS_LANDING'
 <!DOCTYPE html>
-<!-- cleexs-landing-build: 2026-08-24T14:46:03Z landing=li-v1 path=/linkedin clone-of=home -->
+<!-- cleexs-landing-build: 2026-08-24T17:56:16Z landing=li-v1 path=/linkedin clone-of=home no-header engines-sm -->
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -194,9 +194,9 @@ $html = <<<'CLEEXS_LANDING'
       .nav-toggle { display: inline-flex; }
     }
 
-    /* Hero */
+    /* Hero — sin menú superior: más aire arriba */
     .hero {
-      padding: 28px 0 64px;
+      padding: 48px 0 64px;
       text-align: center;
     }
 
@@ -232,29 +232,33 @@ $html = <<<'CLEEXS_LANDING'
 
     .engines {
       display: inline-flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       justify-content: center;
       align-items: center;
-      gap: 16px 32px;
-      margin-bottom: 26px;
-      font-size: 1rem;
+      gap: 10px 14px;
+      margin-bottom: 22px;
+      max-width: 100%;
+      font-size: 0.72rem;
       font-weight: 500;
-      color: rgba(255,255,255,.92);
+      letter-spacing: -0.01em;
+      color: rgba(255,255,255,.62);
     }
     .engines span {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 5px;
       padding: 0;
       line-height: 1;
+      white-space: nowrap;
     }
     .engines img {
       display: block;
-      width: 24px;
-      height: 24px;
+      width: 14px;
+      height: 14px;
       flex-shrink: 0;
       object-fit: contain;
       object-position: center;
+      opacity: 0.85;
     }
 
     .hero-lead {
@@ -387,9 +391,16 @@ $html = <<<'CLEEXS_LANDING'
         margin-bottom: 18px;
       }
       .engines {
-        gap: 10px 18px;
-        margin-bottom: 18px;
-        font-size: 0.92rem;
+        gap: 6px 8px;
+        margin-bottom: 16px;
+        font-size: 0.62rem;
+      }
+      .engines img {
+        width: 12px;
+        height: 12px;
+      }
+      .engines span {
+        gap: 4px;
       }
       .hero-lead {
         font-size: 1.02rem;
@@ -694,34 +705,11 @@ $html = <<<'CLEEXS_LANDING'
     }
   </style>
 </head>
-<body><a href="https://cleexs.net/cdn-cgi/content?id=jeSY35MoRSbxMrKAFl7y_O3_DaP1N26dN8jN0PNt7IQ-1787582691.7498522-1.2.1.1-e214OOYtAcjY9kIh_AZQuHYs6TGQf4NAQEeWnN3qgmyJJXJBazCM6VjS3hsuZjzm" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<body>
   <!-- Google Tag Manager (noscript) -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W3KK88LC"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
-  <header class="site-header">
-    <div class="wrap header">
-      <a class="brand" href="https://cleexs.net/">
-        <img src="/inicio/assets/CleexsMark.svg" alt="" width="28" height="28" />
-        <span>Cleexs</span>
-      </a>
-      <nav class="nav" aria-label="Principal">
-        <a href="#faq">Preguntas frecuentes</a>
-        <a href="https://app.cleexs.net/planes">Precios</a>
-        <a href="https://app.cleexs.net/contacto">Contáctenos</a>
-      </nav>
-      <div class="header-actions">
-        <a class="btn-ghost" href="https://app.cleexs.net/portal-cliente">Iniciar sesión</a>
-        <a class="btn-pill" href="#cta">Empezar gratis</a>
-        <button type="button" class="nav-toggle" aria-label="Menú">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 7h16M4 12h16M4 17h16"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </header>
-
   <main>
     <section class="hero" id="cta">
       <div class="wrap">
@@ -748,10 +736,10 @@ $html = <<<'CLEEXS_LANDING'
         </h1>
 
         <div class="engines" aria-label="Motores de IA">
-          <span><img src="/inicio/assets/chatgpt.svg" alt="" width="24" height="24" /> ChatGPT</span>
-          <span><img src="/inicio/assets/gemini.svg" alt="" width="24" height="24" /> Gemini</span>
-          <span><img src="/inicio/assets/claude.svg" alt="" width="24" height="24" /> Claude</span>
-          <span><img src="/inicio/assets/perplexity.svg" alt="" width="24" height="24" /> Perplexity</span>
+          <span><img src="/inicio/assets/chatgpt.svg" alt="" width="14" height="14" /> ChatGPT</span>
+          <span><img src="/inicio/assets/gemini.svg" alt="" width="14" height="14" /> Gemini</span>
+          <span><img src="/inicio/assets/claude.svg" alt="" width="14" height="14" /> Claude</span>
+          <span><img src="/inicio/assets/perplexity.svg" alt="" width="14" height="14" /> Perplexity</span>
         </div>
 
         <p class="hero-lead">
@@ -1172,4 +1160,4 @@ echo "OK: landing LinkedIn publicada ($bytes bytes).\n";
 echo "URL: https://cleexs.net/linkedin\n";
 echo "landingKey=li-v1 path=/linkedin\n";
 echo "1) Borrá este archivo (cleexs-deploy-linkedin.php)\n";
-echo "2) SiteGround → Speed → Caching → Purge (+ Cloudflare si aplica)\n";
+echo "2) SiteGround → Speed → Caching → Purge\n";

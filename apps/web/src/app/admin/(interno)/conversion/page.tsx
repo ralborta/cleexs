@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -333,7 +334,13 @@ export default function AdminConversionPage() {
             <h1 className="text-2xl font-semibold text-slate-900">Métricas de Conversión</h1>
             <p className="text-sm text-slate-600">
               Embudo de adquisición de Cleexs. Visitantes = home cleexs.net. Los días cierran a
-              medianoche hora Argentina.
+              medianoche hora Argentina.{' '}
+              <Link
+                href="/admin/conversion/ejemplo-landings"
+                className="font-medium text-emerald-700 underline decoration-emerald-300 underline-offset-2 hover:text-emerald-800"
+              >
+                Ver ejemplo por landing
+              </Link>
             </p>
           </div>
         </div>
