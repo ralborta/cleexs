@@ -1,7 +1,10 @@
 /**
- * Tracking de visitantes de la home marketing (cleexs.net).
+ * Tracking de visitantes de landings marketing (cleexs.net).
  * Dispara pageview a la API Cleexs para el embudo de conversión interno.
- * Path canónico: "/"
+ *
+ * Path:
+ * - window.__CLEEXS_LANDING_PATH__ si la landing lo define (ej. "/linkedin")
+ * - "/" por defecto (home)
  */
 (function () {
   try {
@@ -9,6 +12,18 @@
     var COOKIE = 'cleexs_vid';
     var STORAGE = 'cleexs_vid';
     var ATTR_KEY = 'cleexs_diagnostic_attribution';
+
+    function landingPath() {
+      try {
+        var override = window.__CLEEXS_LANDING_PATH__;
+        if (typeof override === 'string' && override.trim()) {
+          var p = override.trim();
+          if (p.charAt(0) !== '/') p = '/' + p;
+          return p.replace(/\/+$/, '') || '/';
+        }
+      } catch (e) {}
+      return '/';
+    }
 
     function readCookie(name) {
       var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
@@ -78,7 +93,7 @@
     function fire() {
       var body = Object.assign(
         {
-          path: '/',
+          path: landingPath(),
           visitorId: getVisitorId(),
         },
         attribution()
