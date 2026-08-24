@@ -2,9 +2,12 @@
 /**
  * ONE-SHOT: publicar landing LinkedIn (clon home) en cleexs.net/linkedin/
  *
- * 1) Subí este archivo a public_html.
- * 2) Abrí: https://cleexs.net/cleexs-deploy-linkedin.php?key=cleexs-linkedin-20260824
- * 3) Si ves OK: borrá este script. NO borres linkedin/index.html.
+ * SiteGround (NO Hostinger):
+ * 1) Site Tools → Site → File Manager → carpeta pública del sitio (junto a wp-config.php / index.html).
+ * 2) Subí este archivo ahí.
+ * 3) Abrí: https://cleexs.net/cleexs-deploy-linkedin.php?key=cleexs-linkedin-20260824
+ * 4) Si ves OK: borrá este script. NO borres linkedin/index.html.
+ * 5) SiteGround → Speed → Caching → Purge / Flush Cache (+ Cloudflare si aplica).
  *
  * Identificador de medición: path=/linkedin landingKey=li-v1
  */
@@ -1168,5 +1171,5 @@ if ($bytes === false) {
 echo "OK: landing LinkedIn publicada ($bytes bytes).\n";
 echo "URL: https://cleexs.net/linkedin\n";
 echo "landingKey=li-v1 path=/linkedin\n";
-echo "1) Borra este archivo (cleexs-deploy-linkedin.php)\n";
-echo "2) Hostinger/Cloudflare → purge cache\n";
+echo "1) Borrá este archivo (cleexs-deploy-linkedin.php)\n";
+echo "2) SiteGround → Speed → Caching → Purge (+ Cloudflare si aplica)\n";
