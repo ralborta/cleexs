@@ -1,30 +1,13 @@
-<?php
-/**
- * ONE-SHOT: publicar landing en cleexs.net/linkedin/
- * SiteGround — subir a la RAÍZ (public_html)
- * https://cleexs.net/cleexs-deploy-linkedin.php?key=cleexs-linkedin-20260824
- */
-if (!isset($_GET['key']) || $_GET['key'] !== 'cleexs-linkedin-20260824') {
-  http_response_code(403);
-  exit('Forbidden');
-}
-header('Content-Type: text/plain; charset=utf-8');
-$dir = __DIR__ . '/linkedin';
-if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
-  http_response_code(500);
-  exit("ERROR: no se pudo crear linkedin/\n");
-}
-$html = <<<'CLEEXS_LANDING'
 <!DOCTYPE html>
-<!-- cleexs-landing-build: 2026-08-25T18:38:45Z landing=li-v1 path=/linkedin brand-only no-faq score-preview-v2 -->
+<!-- cleexs-landing-build: 2026-08-25T18:38:45Z landing=meta-v1 path=/meta brand-only no-faq score-preview-v2 -->
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, follow" />
   <title>Cleexs | Conseguí clientes desde ChatGPT</title>
-  <link rel="canonical" href="https://cleexs.net/linkedin" />
-  <meta name="cleexs:landing" content="li-v1" />
+  <link rel="canonical" href="https://cleexs.net/meta" />
+  <meta name="cleexs:landing" content="meta-v1" />
   <link rel="preload" href="/inicio/assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link
     rel="preload"
@@ -907,9 +890,9 @@ $html = <<<'CLEEXS_LANDING'
         }
       }
       /* Defaults de esta landing (no pisan UTM/ref de la URL ni referrer YT) */
-      if (!utm_source) utm_source = 'linkedin';
+      if (!utm_source) utm_source = 'meta';
       if (!utm_medium) utm_medium = 'landing';
-      if (!utm_campaign) utm_campaign = 'li-v1';
+      if (!utm_campaign) utm_campaign = 'meta-v1';
       if (ref || utm_source || utm_medium || utm_campaign) {
         try {
           sessionStorage.setItem(
@@ -997,21 +980,9 @@ $html = <<<'CLEEXS_LANDING'
 </script>
 
 <script>
-  window.__CLEEXS_LANDING_PATH__ = '/linkedin';
-  window.__CLEEXS_LANDING_KEY__ = 'li-v1';
+  window.__CLEEXS_LANDING_PATH__ = '/meta';
+  window.__CLEEXS_LANDING_KEY__ = 'meta-v1';
 </script>
 <script src="https://app.cleexs.net/track-home.js" defer></script>
 </body>
 </html>
-
-CLEEXS_LANDING;
-$target = $dir . '/index.html';
-$bytes = file_put_contents($target, $html);
-if ($bytes === false) {
-  http_response_code(500);
-  exit("ERROR: write failed\n");
-}
-echo "OK: landing publicada ($bytes bytes).\n";
-echo "URL: https://cleexs.net/linkedin\n";
-echo "1) Borrá este PHP\n";
-echo "2) SiteGround → Speed → Caching → Purge\n";
