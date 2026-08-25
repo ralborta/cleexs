@@ -1,30 +1,13 @@
-<?php
-/**
- * ONE-SHOT: republicar /meta (CTA destacado + caption informe)
- * Subí a public_html y abrí:
- * https://cleexs.net/cleexs-deploy-meta.php?key=cleexs-meta-20260825
- */
-if (!isset($_GET['key']) || $_GET['key'] !== 'cleexs-meta-20260825') {
-  http_response_code(403);
-  exit('Forbidden');
-}
-header('Content-Type: text/plain; charset=utf-8');
-$dir = __DIR__ . '/meta';
-if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
-  http_response_code(500);
-  exit("ERROR mkdir\n");
-}
-$html = <<<'CLEEXS_LANDING'
 <!DOCTYPE html>
-<!-- cleexs-landing-build: 2026-08-25T21:05:00Z landing=meta-v1 path=/meta cta-prompt + score-caption -->
+<!-- cleexs-landing-build: PREVIEW meta-copy — titulares a/b/c + CTA -->
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex, follow" />
-  <title>Cleexs | Conseguí clientes desde ChatGPT</title>
-  <link rel="canonical" href="https://cleexs.net/meta" />
-  <meta name="cleexs:landing" content="meta-v1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>PREVIEW · Landing Meta copy</title>
+  <link rel="canonical" href="https://app.cleexs.net/borrador/meta-copy/" />
+  <meta name="cleexs:landing" content="meta-copy-preview" />
   <link rel="preload" href="/inicio/assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link
     rel="preload"
@@ -198,6 +181,11 @@ $html = <<<'CLEEXS_LANDING'
       max-width: 14ch;
       margin: 0 auto 28px;
       color: #fff;
+    }
+    .hero h1.is-wide {
+      max-width: 18ch;
+      font-size: clamp(2.35rem, 6.2vw, 4.1rem);
+      line-height: 1.08;
     }
     .hero h1 .line {
       display: block;
@@ -652,9 +640,59 @@ $html = <<<'CLEEXS_LANDING'
       padding: 1px 5px;
       border-radius: 4px;
     }
+
+    /* Preview controls */
+    .preview-bar {
+      position: sticky;
+      top: 0;
+      z-index: 80;
+      background: #0b1224;
+      border-bottom: 1px solid rgba(255,255,255,.18);
+      padding: 12px 16px;
+      text-align: left;
+    }
+    .preview-bar strong {
+      display: block;
+      font-size: 12px;
+      color: #fbbf24;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .preview-bar .opts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .preview-bar button {
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      text-align: left;
+      max-width: 280px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .preview-bar button.active {
+      background: #2157FF;
+      border-color: #6ea0ff;
+    }
+    .preview-bar button small {
+      display: block;
+      opacity: 0.7;
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
   </style>
 </head>
 <body>
+  <div class="preview-bar" role="region" aria-label="Selector de titular">
+    <strong>Preview · elegí titular (no es live)</strong>
+    <div class="opts" id="headline-opts"></div>
+  </div>
   <!-- Google Tag Manager (noscript) -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W3KK88LC"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -670,7 +708,7 @@ $html = <<<'CLEEXS_LANDING'
   <main>
     <section class="hero" id="cta">
       <div class="wrap">
-        <h1>
+        <h1 id="hero-title">
           <span class="line">Conseguí <span class="mark">clientes
               <svg class="swoosh" viewBox="0 0 220 18" fill="none" aria-hidden="true">
                 <defs>
@@ -1005,6 +1043,84 @@ $html = <<<'CLEEXS_LANDING'
   })();
   </script>
 
+<script>
+(function () {
+  var SWOOSH =
+    '<svg class="swoosh" viewBox="0 0 220 18" fill="none" aria-hidden="true">' +
+    '<defs><linearGradient id="swooshGrad" x1="0" y1="0" x2="220" y2="0" gradientUnits="userSpaceOnUse">' +
+    '<stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#a855f7"/>' +
+    '</linearGradient></defs>' +
+    '<path d="M4 12 C 48 4, 95 3, 140 7 C 175 10, 200 12, 216 9" stroke="url(#swooshGrad)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
+  var OPTIONS = [
+    {
+      id: 'actual',
+      label: 'Actual',
+      text: 'Conseguí clientes desde ChatGPT',
+      wide: false,
+      html:
+        '<span class="line">Conseguí <span class="mark">clientes' + SWOOSH + '</span></span>' +
+        '<span class="line">desde <span class="accent">ChatGPT</span>.</span>',
+    },
+    {
+      id: 'a',
+      label: 'Opción A',
+      text: 'Descubrí si ChatGPT te recomienda a vos o a tu competencia',
+      wide: true,
+      html:
+        '<span class="line">Descubrí si <span class="accent">ChatGPT</span></span>' +
+        '<span class="line">te recomienda a vos</span>' +
+        '<span class="line">o a tu competencia</span>',
+    },
+    {
+      id: 'b',
+      label: 'Opción B',
+      text: '¿ChatGPT recomienda tu empresa? Descubrilo gratis con tu web',
+      wide: true,
+      html:
+        '<span class="line">¿<span class="accent">ChatGPT</span> recomienda</span>' +
+        '<span class="line">tu empresa?</span>' +
+        '<span class="line">Descubrilo gratis con tu web</span>',
+    },
+    {
+      id: 'c',
+      label: 'Opción C',
+      text: 'Analizá tu web y descubrí si aparecés en ChatGPT',
+      wide: true,
+      html:
+        '<span class="line">Analizá tu web y</span>' +
+        '<span class="line">descubrí si aparecés</span>' +
+        '<span class="line">en <span class="accent">ChatGPT</span></span>',
+    },
+  ];
+
+  function apply(opt) {
+    var h1 = document.getElementById('hero-title');
+    if (!h1) return;
+    h1.innerHTML = opt.html;
+    h1.classList.toggle('is-wide', !!opt.wide);
+    document.querySelectorAll('#headline-opts button').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-id') === opt.id);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var wrap = document.getElementById('headline-opts');
+    if (!wrap) return;
+    OPTIONS.forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('data-id', opt.id);
+      btn.innerHTML = '<small>' + opt.label + '</small>' + opt.text;
+      btn.addEventListener('click', function () { apply(opt); });
+      wrap.appendChild(btn);
+    });
+    apply(OPTIONS[0]);
+  });
+})();
+</script>
+
 <script id="cleexs-attr-bridge-static">
 (function(){
   try{
@@ -1034,16 +1150,3 @@ $html = <<<'CLEEXS_LANDING'
 <script src="https://app.cleexs.net/track-home.js" defer></script>
 </body>
 </html>
-
-CLEEXS_LANDING;
-$path = $dir . '/index.html';
-$n = file_put_contents($path, $html);
-if ($n === false) {
-  http_response_code(500);
-  exit("ERROR write\n");
-}
-@chmod($path, 0644);
-echo "OK wrote $n bytes to $path\n";
-echo "URL: https://cleexs.net/meta\n";
-echo "Imagen: https://app.cleexs.net/inicio/assets/diagnostico-preview-cleexs-score.jpg\n";
-@unlink(__FILE__);
