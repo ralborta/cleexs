@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -25,10 +24,19 @@ import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDay
 
 export const dynamic = 'force-dynamic';
 
+type LandingKey = 'all' | 'home' | 'meta-v1';
+
+const LANDING_OPTIONS: Array<{ key: LandingKey; label: string; sub: string }> = [
+  { key: 'all', label: 'Todas', sub: 'Home + landings' },
+  { key: 'home', label: 'Home', sub: 'cleexs.net/' },
+  { key: 'meta-v1', label: 'Meta', sub: '/meta · meta-v1' },
+];
+
 type FunnelStep = { count: number; pct: number | null };
 type EmailLeftStep = FunnelStep & { pctOfVisitors: number | null };
 type Metrics = {
   range: { from: string; to: string };
+  landing?: { key: LandingKey; label: string; sub: string };
   funnel: {
     homeVisitors: { count: number; pageViews: number; source?: string };
     urlSubmitted: FunnelStep;
@@ -201,7 +209,8 @@ function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: str
 const CHANNEL_LABEL: Record<string, string> = {
   whatsapp: 'WhatsApp',
   email: 'Email',
-  linkedin: 'LinkedIn',
+  meta: 'Meta',
+  linkedin: 'LinkedIn', // share social (distinto de ads Meta / utm_source=meta)
   x: 'X',
   copy: 'Copiar link',
   other: 'Otro',
@@ -212,6 +221,8 @@ export default function AdminConversionPage() {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [activePreset, setActivePreset] = useState<string | null>('15');
+  /** Default "Todas" = embudo histórico sin alterar números. */
+  const [landing, setLanding] = useState<LandingKey>('all');
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,7 +242,7 @@ export default function AdminConversionPage() {
     setEmailLeadsLoading(true);
     setEmailLeadsError(null);
     try {
-      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&landing=${encodeURIComponent(landing)}`;
       const res = await adminUiFetch(`/api/admin-ui/conversion/emails${qs}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
@@ -263,14 +274,14 @@ export default function AdminConversionPage() {
     } finally {
       setEmailLeadsLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, landing]);
 
   const openUnlockDetail = useCallback(async () => {
     setUnlockModalOpen(true);
     setUnlockLoading(true);
     setUnlockError(null);
     try {
-      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&landing=${encodeURIComponent(landing)}`;
       const res = await adminUiFetch(`/api/admin-ui/conversion/unlock-clicks${qs}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
@@ -280,12 +291,12 @@ export default function AdminConversionPage() {
     } finally {
       setUnlockLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, landing]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&landing=${encodeURIComponent(landing)}`;
       const [res, pendingMp] = await Promise.all([
         adminUiFetch(`/api/admin-ui/conversion${qs}`),
         countPendingMpInRange(from, to),
@@ -304,7 +315,7 @@ export default function AdminConversionPage() {
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, landing]);
 
   useEffect(() => {
     void load();
@@ -322,6 +333,14 @@ export default function AdminConversionPage() {
   }
 
   const f = data?.funnel;
+  const activeLanding =
+    LANDING_OPTIONS.find((o) => o.key === landing) ?? LANDING_OPTIONS[0];
+  const visitorsHint =
+    landing === 'meta-v1'
+      ? 'vistas · /meta'
+      : landing === 'home'
+        ? 'vistas · home'
+        : 'vistas · cleexs.net';
 
   return (
     <div className="space-y-6">
@@ -333,14 +352,8 @@ export default function AdminConversionPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Métricas de Conversión</h1>
             <p className="text-sm text-slate-600">
-              Embudo de adquisición de Cleexs. Visitantes = home cleexs.net. Los días cierran a
-              medianoche hora Argentina.{' '}
-              <Link
-                href="/admin/conversion/ejemplo-landings"
-                className="font-medium text-emerald-700 underline decoration-emerald-300 underline-offset-2 hover:text-emerald-800"
-              >
-                Ver ejemplo por landing
-              </Link>
+              Embudo de adquisición de Cleexs. Por defecto ves Todas (mismo embudo de siempre).
+              Filtrá por Home o Meta cuando quieras. Los días cierran a medianoche hora Argentina.
             </p>
           </div>
         </div>
@@ -354,6 +367,44 @@ export default function AdminConversionPage() {
           Actualizar
         </button>
       </header>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+          Landing
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {LANDING_OPTIONS.map((l) => (
+            <button
+              key={l.key}
+              type="button"
+              onClick={() => setLanding(l.key)}
+              className={`rounded-xl px-3.5 py-2 text-left transition ${
+                landing === l.key
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span className="block text-sm font-semibold">{l.label}</span>
+              <span
+                className={`block text-[11px] ${
+                  landing === l.key ? 'text-emerald-100' : 'text-slate-500'
+                }`}
+              >
+                {l.sub}
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Activo:{' '}
+          <span className="font-medium text-slate-800">{activeLanding.label}</span>
+          {landing === 'all'
+            ? ' — embudo global (números históricos)'
+            : landing === 'meta-v1'
+              ? ' — visitantes /meta · diagnósticos utm_campaign=meta-v1'
+              : ' — visitantes home · sin landings de ads'}
+        </p>
+      </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-wrap gap-2">
@@ -421,7 +472,7 @@ export default function AdminConversionPage() {
           icon={<Eye className="h-4 w-4 text-slate-600" />}
           label="Visitantes"
           value={fmt(f?.homeVisitors.count ?? 0)}
-          hint={`${fmt(f?.homeVisitors.pageViews ?? 0)} vistas · cleexs.net`}
+          hint={`${fmt(f?.homeVisitors.pageViews ?? 0)} ${visitorsHint}`}
           pct="100%"
         />
         <FunnelCard

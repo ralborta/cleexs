@@ -23,6 +23,15 @@ import {
 } from '../lib/referrer-display';
 import { enrichContactOnDemand, isCorporateEmail } from '../lib/contact-enrichment';
 import { primaryRunWhere } from '../lib/run-type-filters';
+import {
+  diagnosticWhereForLanding,
+  extractPaymentUtmCampaign,
+  landingMeta,
+  parseConversionLanding,
+  pathsForLanding,
+  paymentMatchesLanding,
+  type ConversionLandingKey,
+} from '../lib/conversion-landing';
 
 type PlanConquistarEngineKey = 'gemini' | 'perplexity' | 'claude';
 
@@ -1985,10 +1994,15 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================
   // Métricas de Conversión (funnel interno del team)
   // ============================================
-  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+  fastify.get<{ Querystring: { from?: string; to?: string; landing?: string } }>(
     '/internal/conversion-metrics',
     async (request) => {
       const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      // Default "all" = mismo embudo histórico (no altera números actuales).
+      const landing: ConversionLandingKey = parseConversionLanding(request.query.landing);
+      const landingInfo = landingMeta(landing);
+      const landingDiagWhere = diagnosticWhereForLanding(landing);
+      const diagWhere = { createdAt: { gte: from, lte: to }, ...landingDiagWhere };
 
       const where = { createdAt: { gte: from, lte: to } };
       const pct = (num: number, den: number): number | null =>
@@ -2011,19 +2025,19 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           by: ['visitorId'],
           where: { ...where, visitorId: { not: null } },
         }),
-        prisma.publicDiagnostic.count({ where }),
+        prisma.publicDiagnostic.count({ where: diagWhere }),
         // Misma fuente que /conversion-metrics/emails (tarjeta = detalle).
         prisma.publicDiagnostic.findMany({
           where: {
-            ...where,
+            ...diagWhere,
             email: { not: null },
             NOT: { email: '' },
           },
-          select: { id: true },
+          select: { id: true, email: true, refCode: true },
         }),
         prisma.shareEvent.groupBy({ by: ['channel'], where, _count: { _all: true } }),
         prisma.publicDiagnostic.findMany({
-          where: { ...where, refCode: { not: null } },
+          where: { ...diagWhere, refCode: { not: null } },
           select: { refCode: true, sourceChannel: true, email: true, utmMedium: true },
         }),
         // "Compraron" = pagos aprobados en MP (Plan Conquistar one-shot + cargos Premium),
@@ -2041,7 +2055,12 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
             amountUsd: true,
             rawPayload: true,
             subscription: {
-              select: { utmSource: true, refCode: true, sourceChannel: true },
+              select: {
+                utmSource: true,
+                utmCampaign: true,
+                refCode: true,
+                sourceChannel: true,
+              },
             },
           },
         }),
@@ -2067,36 +2086,134 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       // Preferir visitas de la home marketing (path "/") solo cuando el rango
       // ya está cubierto por el beacon (desde 2026-08-18 AR). Si el rango
       // incluye días previos, usamos el total legacy para no romper % (ej. 3400%).
+      // Con landing distinta de "all", visitantes = paths de esa landing (sin legacy).
       const HOME_PATHS = ['/', '/home', '/inicio'] as const;
       const HOME_TRACKING_START = '2026-08-18';
       const rangeOnHomeTracking = fromDay >= HOME_TRACKING_START;
+      const landingPaths = pathsForLanding(landing);
+      const visitorPathList: string[] = landingPaths
+        ? [...landingPaths]
+        : [...HOME_PATHS];
       const homePathGroups = await prisma.pageView.groupBy({
         by: ['visitorId'],
         where: {
           ...where,
           visitorId: { not: null },
-          path: { in: [...HOME_PATHS] },
+          path: { in: visitorPathList },
         },
       });
       const homePathViews = await prisma.pageView.count({
-        where: { ...where, path: { in: [...HOME_PATHS] } },
+        where: { ...where, path: { in: visitorPathList } },
       });
       const legacyVisitors = visitorGroups.length > 0 ? visitorGroups.length : pageViewsTotal;
-      const homeVisitors =
-        rangeOnHomeTracking && homePathGroups.length > 0
-          ? homePathGroups.length
-          : legacyVisitors;
-      const homePageViews =
-        rangeOnHomeTracking && homePathViews > 0 ? homePathViews : pageViewsTotal;
+      let homeVisitors: number;
+      let homePageViews: number;
+      let visitorsSource: string;
+      if (landing === 'all') {
+        homeVisitors =
+          rangeOnHomeTracking && homePathGroups.length > 0
+            ? homePathGroups.length
+            : legacyVisitors;
+        homePageViews =
+          rangeOnHomeTracking && homePathViews > 0 ? homePathViews : pageViewsTotal;
+        visitorsSource =
+          rangeOnHomeTracking && homePathGroups.length > 0 ? 'home' : 'legacy_all_paths';
+      } else {
+        homeVisitors = homePathGroups.length;
+        homePageViews = homePathViews;
+        visitorsSource = landing;
+      }
 
-      // Share por canal
-      const shareByChannel = shareGroups
-        .map((g) => ({ channel: g.channel, count: g._count._all }))
-        .sort((a, b) => b.count - a.count);
-      const sharedTotal = shareByChannel.reduce((acc, r) => acc + r.count, 0);
+      // Share / unlock: en "all" usamos groupBy global; con filtro, solo eventos
+      // cuyo diagnosticId pertenece a la landing (utm_campaign).
+      let shareByChannel: Array<{ channel: string; count: number }>;
+      let sharedTotal: number;
+      let unlockClickTotal: number;
+      if (landing === 'all') {
+        shareByChannel = shareGroups
+          .map((g) => ({ channel: g.channel, count: g._count._all }))
+          .sort((a, b) => b.count - a.count);
+        sharedTotal = shareByChannel.reduce((acc, r) => acc + r.count, 0);
+        unlockClickTotal = unlockClickGroups
+          .filter((g) => isPlanConquistarUnlockKey(g.unlockKey))
+          .reduce((acc, g) => acc + g._count._all, 0);
+      } else {
+        const [shareRows, unlockRows] = await Promise.all([
+          prisma.shareEvent.findMany({
+            where,
+            select: { channel: true, diagnosticId: true },
+          }),
+          prisma.unlockClickEvent.findMany({
+            where,
+            select: { unlockKey: true, diagnosticId: true },
+          }),
+        ]);
+        const relatedIds = [
+          ...new Set(
+            [...shareRows, ...unlockRows]
+              .map((r) => r.diagnosticId)
+              .filter((id): id is string => Boolean(id))
+          ),
+        ];
+        const allowedIds = new Set(
+          relatedIds.length === 0
+            ? []
+            : (
+                await prisma.publicDiagnostic.findMany({
+                  where: { id: { in: relatedIds }, ...landingDiagWhere },
+                  select: { id: true },
+                })
+              ).map((d) => d.id)
+        );
+        const shareMap = new Map<string, number>();
+        for (const s of shareRows) {
+          if (!s.diagnosticId || !allowedIds.has(s.diagnosticId)) continue;
+          shareMap.set(s.channel, (shareMap.get(s.channel) || 0) + 1);
+        }
+        shareByChannel = Array.from(shareMap.entries())
+          .map(([channel, count]) => ({ channel, count }))
+          .sort((a, b) => b.count - a.count);
+        sharedTotal = shareByChannel.reduce((acc, r) => acc + r.count, 0);
+        unlockClickTotal = unlockRows.filter(
+          (u) =>
+            isPlanConquistarUnlockKey(u.unlockKey) &&
+            u.diagnosticId &&
+            allowedIds.has(u.diagnosticId)
+        ).length;
+      }
 
       const [emailAggRows, campaignMap] = await Promise.all([
-        aggregateDiagnosticsByRefCode({ from, to }),
+        landing === 'all'
+          ? aggregateDiagnosticsByRefCode({ from, to })
+          : Promise.resolve(
+              (() => {
+                // Ranking desde los mismos leads filtrados (tarjeta = detalle).
+                const byRef = new Map<
+                  string,
+                  { emails: Set<string>; withEmail: number }
+                >();
+                for (const row of emailLeadRows) {
+                  const ref = normalizeReferralRefCode(row.refCode);
+                  const email = (row.email || '').trim().toLowerCase();
+                  if (!email || isPlaceholderDiagnosticEmail(email)) continue;
+                  const bucket = byRef.get(ref) || {
+                    emails: new Set<string>(),
+                    withEmail: 0,
+                  };
+                  bucket.emails.add(email);
+                  bucket.withEmail += 1;
+                  byRef.set(ref, bucket);
+                }
+                return Array.from(byRef.entries()).map(([ref_code, v]) => ({
+                  ref_code: ref_code === SIN_REFERIDOR_SLUG ? null : ref_code,
+                  diagnostics: v.withEmail,
+                  with_email: v.withEmail,
+                  unique_emails: v.emails.size,
+                  completed: 0,
+                  latest_at: null as Date | null,
+                }));
+              })()
+            ),
         loadReferrerCampaignMap(),
       ]);
       const referrerNameByRef = new Map(
@@ -2127,9 +2244,22 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       const referredTotal = referredRows.length;
       const sponsorBreakdown = buildSponsorChannelBreakdown(referredRows);
 
+      const purchasesFiltered =
+        landing === 'all'
+          ? purchases
+          : purchases.filter((p) =>
+              paymentMatchesLanding(
+                landing,
+                extractPaymentUtmCampaign({
+                  subscriptionCampaign: p.subscription?.utmCampaign,
+                  rawPayload: p.rawPayload,
+                })
+              )
+            );
+
       // Compras por source (utm_source || ref_code || source_channel || 'directo')
       const purchaseMap = new Map<string, { count: number; usd: number }>();
-      for (const p of purchases) {
+      for (const p of purchasesFiltered) {
         const raw = (p.rawPayload && typeof p.rawPayload === 'object'
           ? (p.rawPayload as Record<string, unknown>)
           : {}) as Record<string, unknown>;
@@ -2150,11 +2280,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       const purchasesBySource = Array.from(purchaseMap.entries())
         .map(([source, v]) => ({ source, count: v.count, usd: Math.round(v.usd) }))
         .sort((a, b) => b.count - a.count);
-      const purchasedTotal = purchases.length;
-
-      const unlockClickTotal = unlockClickGroups
-        .filter((g) => isPlanConquistarUnlockKey(g.unlockKey))
-        .reduce((acc, g) => acc + g._count._all, 0);
+      const purchasedTotal = purchasesFiltered.length;
 
       const emailsByReferrer = emailAggRows
         .filter((row) => row.unique_emails > 0)
@@ -2179,6 +2305,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
       // Cold outreach: dominios contactados (email enviado) que luego entraron al diagnóstico.
+      // Se mantiene global (no es atribución por landing de ads).
       const contactedDomains = new Set<string>();
       for (const e of sentEmails) {
         const dom = (e.leadSource?.competitorDomain || '').trim().toLowerCase();
@@ -2198,12 +2325,16 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       return {
         ok: true,
         range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+        landing: {
+          key: landing,
+          label: landingInfo.label,
+          sub: landingInfo.sub,
+        },
         funnel: {
           homeVisitors: {
             count: homeVisitors,
             pageViews: homePageViews,
-            source:
-              rangeOnHomeTracking && homePathGroups.length > 0 ? 'home' : 'legacy_all_paths',
+            source: visitorsSource,
           },
           urlSubmitted: { count: urlSubmitted, pct: pct(urlSubmitted, homeVisitors) },
           emailLeft: {
@@ -2245,10 +2376,12 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Detalle Plan Conquistar: clics por CTA, únicos y dominios interesados.
-  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+  fastify.get<{ Querystring: { from?: string; to?: string; landing?: string } }>(
     '/internal/conversion-metrics/unlock-clicks',
     async (request) => {
       const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      const landing = parseConversionLanding(request.query.landing);
+      const landingDiagWhere = diagnosticWhereForLanding(landing);
 
       const rows = await prisma.unlockClickEvent.findMany({
         where: { createdAt: { gte: from, lte: to } },
@@ -2262,12 +2395,36 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { createdAt: 'desc' },
       });
 
-      const planRows = rows.filter((r) => {
+      let planRows = rows.filter((r) => {
         if (!isPlanConquistarUnlockKey(r.unlockKey)) return false;
         const did = (r.diagnosticId || '').trim();
         if (did.startsWith('probe-')) return false;
         return true;
       });
+
+      if (landing !== 'all') {
+        const ids = [
+          ...new Set(
+            planRows
+              .map((r) => (r.diagnosticId || '').trim())
+              .filter((id) => Boolean(id))
+          ),
+        ];
+        const allowed = new Set(
+          ids.length === 0
+            ? []
+            : (
+                await prisma.publicDiagnostic.findMany({
+                  where: { id: { in: ids }, ...landingDiagWhere },
+                  select: { id: true },
+                })
+              ).map((d) => d.id)
+        );
+        planRows = planRows.filter((r) => {
+          const did = (r.diagnosticId || '').trim();
+          return did && allowed.has(did);
+        });
+      }
 
       const countByKey = new Map<string, number>();
       for (const row of planRows) {
@@ -2419,14 +2576,17 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Detalle de leads que dejaron email (para el drilldown de "Dejaron email").
-  fastify.get<{ Querystring: { from?: string; to?: string } }>(
+  fastify.get<{ Querystring: { from?: string; to?: string; landing?: string } }>(
     '/internal/conversion-metrics/emails',
     async (request) => {
       const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      const landing = parseConversionLanding(request.query.landing);
+      const landingDiagWhere = diagnosticWhereForLanding(landing);
 
       const rows = await prisma.publicDiagnostic.findMany({
         where: {
           createdAt: { gte: from, lte: to },
+          ...landingDiagWhere,
           email: { not: null },
           NOT: { email: '' },
         },
@@ -2453,6 +2613,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
       return {
         ok: true,
         range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+        landing: { key: landing },
         total: rows.length,
         items: rows,
       };
