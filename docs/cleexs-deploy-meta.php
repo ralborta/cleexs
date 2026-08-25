@@ -1,6 +1,6 @@
 <?php
 /**
- * ONE-SHOT: republicar /meta (CTA destacado + caption informe)
+ * ONE-SHOT: republicar /meta (sin Precios en header ni footer)
  * Subí a public_html y abrí:
  * https://cleexs.net/cleexs-deploy-meta.php?key=cleexs-meta-20260825
  */
@@ -838,7 +838,6 @@ $html = <<<'CLEEXS_LANDING'
     <div class="wrap footer-inner">
       <p class="footer-copy">© 2026 Cleexs.net Todos los derechos reservados</p>
       <nav class="footer-nav" aria-label="Pie de página">
-        <a href="https://app.cleexs.net/planes">Precios</a>
         <a href="https://app.cleexs.net/contacto">Contáctenos</a>
       </nav>
       <div class="footer-social" aria-label="Redes sociales">
@@ -1045,5 +1044,4 @@ if ($n === false) {
 @chmod($path, 0644);
 echo "OK wrote $n bytes to $path\n";
 echo "URL: https://cleexs.net/meta\n";
-echo "Imagen: https://app.cleexs.net/inicio/assets/diagnostico-preview-cleexs-score.jpg\n";
 @unlink(__FILE__);
