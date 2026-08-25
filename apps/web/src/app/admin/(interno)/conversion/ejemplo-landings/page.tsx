@@ -16,7 +16,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-type LandingKey = 'all' | 'home' | 'li-v1';
+type LandingKey = 'all' | 'home' | 'meta-v1';
 
 type FunnelMock = {
   visitors: number;
@@ -33,7 +33,7 @@ type FunnelMock = {
 const LANDINGS: Array<{ key: LandingKey; label: string; sub: string }> = [
   { key: 'all', label: 'Todas', sub: 'Home + landings' },
   { key: 'home', label: 'Home', sub: 'cleexs.net/' },
-  { key: 'li-v1', label: 'LinkedIn', sub: '/linkedin · li-v1' },
+  { key: 'meta-v1', label: 'Meta', sub: '/meta · meta-v1' },
 ];
 
 /** Datos ficticios solo para validar UI / concepto. */
@@ -60,7 +60,7 @@ const MOCK: Record<LandingKey, FunnelMock> = {
     purchased: 6,
     hint: 'path /, /home, /inicio',
   },
-  'li-v1': {
+  'meta-v1': {
     visitors: 160,
     views: 260,
     url: 50,
@@ -69,7 +69,7 @@ const MOCK: Record<LandingKey, FunnelMock> = {
     referred: 4,
     unlock: 7,
     purchased: 1,
-    hint: 'path /linkedin · utm_campaign=li-v1',
+    hint: 'path /meta · utm_campaign=meta-v1',
   },
 };
 
@@ -116,7 +116,7 @@ function Card({
 }
 
 export default function ConversionLandingsEjemploPage() {
-  const [landing, setLanding] = useState<LandingKey>('li-v1');
+  const [landing, setLanding] = useState<LandingKey>('meta-v1');
   const data = MOCK[landing];
   const active = useMemo(() => LANDINGS.find((l) => l.key === landing), [landing]);
 
@@ -241,7 +241,7 @@ export default function ConversionLandingsEjemploPage() {
           </li>
           <li>
             Diagnósticos / compras por <code className="text-xs">utm_campaign</code> (ej.{' '}
-            <code className="text-xs">li-v1</code>)
+            <code className="text-xs">meta-v1</code>)
           </li>
           <li>Nuevas landings = nueva fila en el catálogo</li>
         </ul>
