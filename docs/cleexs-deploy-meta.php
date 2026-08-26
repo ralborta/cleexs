@@ -1,6 +1,6 @@
 <?php
 /**
- * ONE-SHOT: republicar /meta (sin Precios en header ni footer)
+ * ONE-SHOT: republicar /meta con titular C
  * Subí a public_html y abrí:
  * https://cleexs.net/cleexs-deploy-meta.php?key=cleexs-meta-20260825
  */
@@ -16,13 +16,13 @@ if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
 }
 $html = <<<'CLEEXS_LANDING'
 <!DOCTYPE html>
-<!-- cleexs-landing-build: 2026-08-25T21:05:00Z landing=meta-v1 path=/meta cta-prompt + score-caption -->
+<!-- cleexs-landing-build: 2026-08-26T14:35:00Z landing=meta-v1 path=/meta headline-C -->
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, follow" />
-  <title>Cleexs | Conseguí clientes desde ChatGPT</title>
+  <title>Cleexs | Analizá tu web y descubrí si aparecés en ChatGPT</title>
   <link rel="canonical" href="https://cleexs.net/meta" />
   <meta name="cleexs:landing" content="meta-v1" />
   <link rel="preload" href="/inicio/assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -191,11 +191,11 @@ $html = <<<'CLEEXS_LANDING'
     }
 
     .hero h1 {
-      font-size: clamp(3.1rem, 8vw, 5.4rem);
+      font-size: clamp(2.35rem, 6.2vw, 4.1rem);
       font-weight: 800;
       letter-spacing: -0.045em;
-      line-height: 1.02;
-      max-width: 14ch;
+      line-height: 1.08;
+      max-width: 18ch;
       margin: 0 auto 28px;
       color: #fff;
     }
@@ -387,7 +387,8 @@ $html = <<<'CLEEXS_LANDING'
         padding-bottom: 48px;
       }
       .hero h1 {
-        font-size: clamp(2.35rem, 10.5vw, 3.25rem);
+        font-size: clamp(1.85rem, 8.5vw, 2.75rem);
+        max-width: 16ch;
         margin-bottom: 18px;
       }
       .engines {
@@ -671,25 +672,9 @@ $html = <<<'CLEEXS_LANDING'
     <section class="hero" id="cta">
       <div class="wrap">
         <h1>
-          <span class="line">Conseguí <span class="mark">clientes
-              <svg class="swoosh" viewBox="0 0 220 18" fill="none" aria-hidden="true">
-                <defs>
-                  <linearGradient id="swooshGrad" x1="0" y1="0" x2="220" y2="0" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="#ffffff"/>
-                    <stop offset="55%" stop-color="#c4b5fd"/>
-                    <stop offset="100%" stop-color="#a855f7"/>
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M4 12 C 48 4, 95 3, 140 7 C 175 10, 200 12, 216 9"
-                  stroke="url(#swooshGrad)"
-                  stroke-width="3.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </span></span>
-          <span class="line">desde <span class="accent">ChatGPT</span>.</span>
+          <span class="line">Analizá tu web y</span>
+          <span class="line">descubrí si aparecés</span>
+          <span class="line">en <span class="accent">ChatGPT</span></span>
         </h1>
 
         <div class="engines" aria-label="Motores de IA">
@@ -1044,4 +1029,5 @@ if ($n === false) {
 @chmod($path, 0644);
 echo "OK wrote $n bytes to $path\n";
 echo "URL: https://cleexs.net/meta\n";
+echo "Headline: C — Analizá tu web y descubrí si aparecés en ChatGPT\n";
 @unlink(__FILE__);

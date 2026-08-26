@@ -1115,7 +1115,7 @@
       btn.addEventListener('click', function () { apply(opt); });
       wrap.appendChild(btn);
     });
-    apply(OPTIONS[0]);
+    apply(OPTIONS.find(function (o) { return o.id === 'c'; }) || OPTIONS[0]);
   });
 })();
 </script>
