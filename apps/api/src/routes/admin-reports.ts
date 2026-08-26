@@ -25,8 +25,10 @@ import { enrichContactOnDemand, isCorporateEmail } from '../lib/contact-enrichme
 import { primaryRunWhere } from '../lib/run-type-filters';
 import {
   diagnosticWhereForLanding,
+  effectiveRangeForLanding,
   extractPaymentUtmCampaign,
   landingMeta,
+  META_V1_METRICS_SINCE,
   parseConversionLanding,
   pathsForLanding,
   paymentMatchesLanding,
@@ -1997,16 +1999,53 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { from?: string; to?: string; landing?: string } }>(
     '/internal/conversion-metrics',
     async (request) => {
-      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      const resolved = resolveConversionRange(request.query);
       // Default "all" = mismo embudo histórico (no altera números actuales).
       const landing: ConversionLandingKey = parseConversionLanding(request.query.landing);
       const landingInfo = landingMeta(landing);
+      const { fromDay, toDay } = resolved;
+      // Solo Meta: ignora histórico previo al corte → métricas en 0 hasta tráfico nuevo.
+      const { from, to, empty: metaRangeEmpty } = effectiveRangeForLanding(
+        landing,
+        resolved.from,
+        resolved.to
+      );
       const landingDiagWhere = diagnosticWhereForLanding(landing);
       const diagWhere = { createdAt: { gte: from, lte: to }, ...landingDiagWhere };
 
       const where = { createdAt: { gte: from, lte: to } };
       const pct = (num: number, den: number): number | null =>
         den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+
+      if (metaRangeEmpty) {
+        return {
+          ok: true,
+          range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+          landing: {
+            key: landing,
+            label: landingInfo.label,
+            sub: landingInfo.sub,
+            metricsSince: META_V1_METRICS_SINCE.toISOString(),
+          },
+          funnel: {
+            homeVisitors: { count: 0, pageViews: 0, source: landing },
+            urlSubmitted: { count: 0, pct: null },
+            emailLeft: { count: 0, pct: null, pctOfVisitors: null },
+            shared: { count: 0, pct: null, byChannel: [] },
+            referred: { count: 0, pct: null, byCode: [] },
+            unlockClicks: { count: 0, pct: null },
+            purchased: { count: 0, pct: null, checkoutAttempts: 0, bySource: [] },
+          },
+          outreach: {
+            emailsSent: 0,
+            domainsContacted: 0,
+            domainsReturned: 0,
+            returnPct: null,
+          },
+          emailsByReferrer: [],
+          sponsorBreakdown: [],
+        };
+      }
 
       const [
         pageViewsTotal,
@@ -2329,6 +2368,9 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
           key: landing,
           label: landingInfo.label,
           sub: landingInfo.sub,
+          ...(landing === 'meta-v1'
+            ? { metricsSince: META_V1_METRICS_SINCE.toISOString() }
+            : {}),
         },
         funnel: {
           homeVisitors: {
@@ -2379,9 +2421,30 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { from?: string; to?: string; landing?: string } }>(
     '/internal/conversion-metrics/unlock-clicks',
     async (request) => {
-      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      const resolved = resolveConversionRange(request.query);
       const landing = parseConversionLanding(request.query.landing);
       const landingDiagWhere = diagnosticWhereForLanding(landing);
+      const { from, to, empty: metaRangeEmpty } = effectiveRangeForLanding(
+        landing,
+        resolved.from,
+        resolved.to
+      );
+      const { fromDay, toDay } = resolved;
+
+      if (metaRangeEmpty) {
+        return {
+          ok: true,
+          range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+          total: 0,
+          totalClicks: 0,
+          uniqueVisitors: 0,
+          uniqueDomains: 0,
+          links: [],
+          domains: [],
+          clientClicks: [],
+          items: [],
+        };
+      }
 
       const rows = await prisma.unlockClickEvent.findMany({
         where: { createdAt: { gte: from, lte: to } },
@@ -2579,9 +2642,25 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { from?: string; to?: string; landing?: string } }>(
     '/internal/conversion-metrics/emails',
     async (request) => {
-      const { from, to, fromDay, toDay } = resolveConversionRange(request.query);
+      const resolved = resolveConversionRange(request.query);
       const landing = parseConversionLanding(request.query.landing);
       const landingDiagWhere = diagnosticWhereForLanding(landing);
+      const { from, to, empty: metaRangeEmpty } = effectiveRangeForLanding(
+        landing,
+        resolved.from,
+        resolved.to
+      );
+      const { fromDay, toDay } = resolved;
+
+      if (metaRangeEmpty) {
+        return {
+          ok: true,
+          range: { from: fromDay, to: toDay, timezone: 'America/Argentina/Buenos_Aires' },
+          landing: { key: landing },
+          total: 0,
+          items: [],
+        };
+      }
 
       const rows = await prisma.publicDiagnostic.findMany({
         where: {

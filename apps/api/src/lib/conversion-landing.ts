@@ -5,6 +5,12 @@ export type ConversionLandingKey = 'all' | 'home' | 'meta-v1';
 
 export const KNOWN_LANDING_CAMPAIGNS = ['meta-v1'] as const;
 
+/**
+ * Corte de métricas Meta: el filtro "Meta" solo cuenta eventos desde este instante.
+ * Home y Todas no se afectan. No borra filas en DB.
+ */
+export const META_V1_METRICS_SINCE = new Date('2026-08-26T16:20:00.000-03:00');
+
 export const CONVERSION_LANDING_OPTIONS = [
   {
     key: 'all' as const,
@@ -37,6 +43,22 @@ export function parseConversionLanding(raw: unknown): ConversionLandingKey {
 
 export function landingMeta(landing: ConversionLandingKey) {
   return CONVERSION_LANDING_OPTIONS.find((o) => o.key === landing) ?? CONVERSION_LANDING_OPTIONS[0];
+}
+
+/**
+ * Ajusta el rango efectivo por landing.
+ * Meta: ignora todo lo anterior a META_V1_METRICS_SINCE → queda en 0 hasta tráfico nuevo.
+ */
+export function effectiveRangeForLanding(
+  landing: ConversionLandingKey,
+  from: Date,
+  to: Date
+): { from: Date; to: Date; empty: boolean } {
+  if (landing !== 'meta-v1') return { from, to, empty: false };
+  const since = META_V1_METRICS_SINCE;
+  const effFrom = from.getTime() > since.getTime() ? from : since;
+  if (effFrom.getTime() > to.getTime()) return { from: effFrom, to, empty: true };
+  return { from: effFrom, to, empty: false };
 }
 
 /** Filtro Prisma sobre PublicDiagnostic. Vacío = sin filtro (comportamiento histórico). */
