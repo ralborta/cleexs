@@ -401,7 +401,7 @@ export default function AdminConversionPage() {
           {landing === 'all'
             ? ' — embudo global (números históricos)'
             : landing === 'meta-v1'
-              ? ' — visitantes /meta · diagnósticos utm_campaign=meta-v1'
+              ? ' — reiniciada: solo cuenta tráfico nuevo (histórico ignorado)'
               : ' — visitantes home · sin landings de ads'}
         </p>
       </section>
