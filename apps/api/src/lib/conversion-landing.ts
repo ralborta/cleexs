@@ -81,6 +81,16 @@ export function pathsForLanding(landing: ConversionLandingKey): readonly string[
   return landingMeta(landing).paths;
 }
 
+/** Paths de marketing conocidas (home + landings de ads). Usado por filtro "Todas". */
+export function allMarketingPaths(): string[] {
+  const paths = new Set<string>();
+  for (const opt of CONVERSION_LANDING_OPTIONS) {
+    if (!opt.paths) continue;
+    for (const p of opt.paths) paths.add(p);
+  }
+  return [...paths];
+}
+
 export function normalizeUtmCampaign(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }

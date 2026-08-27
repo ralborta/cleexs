@@ -340,7 +340,13 @@ export default function AdminConversionPage() {
       ? 'vistas · /meta'
       : landing === 'home'
         ? 'vistas · home'
-        : 'vistas · cleexs.net';
+        : 'vistas · home + landings';
+  const activeLandingHint =
+    landing === 'all'
+      ? ' — suma home + landings (visitantes únicos)'
+      : landing === 'meta-v1'
+        ? ' — reiniciada: solo cuenta tráfico nuevo (histórico ignorado)'
+        : ' — visitantes home · sin landings de ads';
 
   return (
     <div className="space-y-6">
@@ -398,11 +404,7 @@ export default function AdminConversionPage() {
         <p className="mt-3 text-xs text-slate-500">
           Activo:{' '}
           <span className="font-medium text-slate-800">{activeLanding.label}</span>
-          {landing === 'all'
-            ? ' — embudo global (números históricos)'
-            : landing === 'meta-v1'
-              ? ' — reiniciada: solo cuenta tráfico nuevo (histórico ignorado)'
-              : ' — visitantes home · sin landings de ads'}
+          {activeLandingHint}
         </p>
       </section>
 

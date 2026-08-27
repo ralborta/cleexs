@@ -31,6 +31,7 @@ import {
   META_V1_METRICS_SINCE,
   parseConversionLanding,
   pathsForLanding,
+  allMarketingPaths,
   paymentMatchesLanding,
   type ConversionLandingKey,
 } from '../lib/conversion-landing';
@@ -2122,17 +2123,16 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const emailLeft = emailLeadRows.length;
 
-      // Preferir visitas de la home marketing (path "/") solo cuando el rango
-      // ya está cubierto por el beacon (desde 2026-08-18 AR). Si el rango
-      // incluye días previos, usamos el total legacy para no romper % (ej. 3400%).
-      // Con landing distinta de "all", visitantes = paths de esa landing (sin legacy).
-      const HOME_PATHS = ['/', '/home', '/inicio'] as const;
+      // Visitantes:
+      // - all  → unión de paths home + landings conocidas (únicos)
+      // - home / meta-v1 → paths de esa landing
+      // Legacy (antes del beacon home): total de pageviews si el rango es viejo.
       const HOME_TRACKING_START = '2026-08-18';
       const rangeOnHomeTracking = fromDay >= HOME_TRACKING_START;
       const landingPaths = pathsForLanding(landing);
       const visitorPathList: string[] = landingPaths
         ? [...landingPaths]
-        : [...HOME_PATHS];
+        : allMarketingPaths();
       const homePathGroups = await prisma.pageView.groupBy({
         by: ['visitorId'],
         where: {
@@ -2156,7 +2156,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         homePageViews =
           rangeOnHomeTracking && homePathViews > 0 ? homePathViews : pageViewsTotal;
         visitorsSource =
-          rangeOnHomeTracking && homePathGroups.length > 0 ? 'home' : 'legacy_all_paths';
+          rangeOnHomeTracking && homePathGroups.length > 0 ? 'all_landings' : 'legacy_all_paths';
       } else {
         homeVisitors = homePathGroups.length;
         homePageViews = homePathViews;
