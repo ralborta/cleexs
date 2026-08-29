@@ -345,8 +345,8 @@ export default function AdminConversionPage() {
     landing === 'all'
       ? ' — suma home + landings (visitantes únicos)'
       : landing === 'meta-v1'
-        ? ' — reiniciada: solo cuenta tráfico nuevo (histórico ignorado)'
-        : ' — visitantes home · sin landings de ads';
+        ? ' — /meta + ads Meta/IG (facebook/ig + medium ads)'
+        : ' — visitantes home · sin landings/ads Meta';
 
   return (
     <div className="space-y-6">

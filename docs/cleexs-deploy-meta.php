@@ -1,6 +1,6 @@
 <?php
 /**
- * ONE-SHOT: republicar /meta con titular C
+ * ONE-SHOT: republicar /meta (sello meta-v1 + atribución ads)
  * Subí a public_html y abrí:
  * https://cleexs.net/cleexs-deploy-meta.php?key=cleexs-meta-20260825
  */
@@ -921,19 +921,35 @@ $html = <<<'CLEEXS_LANDING'
           utm_campaign = fromRef.utm_campaign || '';
         }
       }
-      /* Defaults de esta landing (no pisan UTM/ref de la URL ni referrer YT) */
+      /* Defaults de esta landing.
+       * Siempre sellamos utm_campaign=meta-v1 para el embudo Cleexs.
+       * Si Meta Ads trae su propia campaña (ej. cleexs_ventas_ar), la dejamos
+       * en utm_content para no perderla; el filtro Meta también cuenta ads facebook/ig. */
+      var adsCampaign = utm_campaign;
       if (!utm_source) utm_source = 'meta';
       if (!utm_medium) utm_medium = 'landing';
-      if (!utm_campaign) utm_campaign = 'meta-v1';
+      utm_campaign = 'meta-v1';
       if (ref || utm_source || utm_medium || utm_campaign) {
         try {
           sessionStorage.setItem(
             STORAGE_KEY,
-            JSON.stringify({ ref: ref, utm_source: utm_source, utm_medium: utm_medium, utm_campaign: utm_campaign })
+            JSON.stringify({
+              ref: ref,
+              utm_source: utm_source,
+              utm_medium: utm_medium,
+              utm_campaign: utm_campaign,
+              utm_content: adsCampaign || undefined,
+            })
           );
         } catch (e) {}
       }
-      return { ref: ref, utm_source: utm_source, utm_medium: utm_medium, utm_campaign: utm_campaign };
+      return {
+        ref: ref,
+        utm_source: utm_source,
+        utm_medium: utm_medium,
+        utm_campaign: utm_campaign,
+        utm_content: adsCampaign || '',
+      };
     }
 
     function appendAttribution(params) {
@@ -942,6 +958,7 @@ $html = <<<'CLEEXS_LANDING'
       if (a.utm_source) params.set('utm_source', a.utm_source);
       if (a.utm_medium) params.set('utm_medium', a.utm_medium);
       if (a.utm_campaign) params.set('utm_campaign', a.utm_campaign);
+      if (a.utm_content) params.set('utm_content', a.utm_content);
     }
 
     function isMobileInput() {
@@ -997,8 +1014,13 @@ $html = <<<'CLEEXS_LANDING'
     var us=sp.get('utm_source')||'';
     var um=sp.get('utm_medium')||'';
     var uc=sp.get('utm_campaign')||'';
-    if(!ref&&!us&&!um&&!uc) return;
-    var payload={ref:ref,utm_source:us,utm_medium:um,utm_campaign:uc};
+    var ucontent=sp.get('utm_content')||'';
+    /* En /meta siempre sellamos embudo Cleexs; preservamos campaña de Ads en utm_content */
+    if(!ucontent && uc && uc !== 'meta-v1') ucontent=uc;
+    if(!us) us='meta';
+    if(!um) um='landing';
+    uc='meta-v1';
+    var payload={ref:ref,utm_source:us,utm_medium:um,utm_campaign:uc,utm_content:ucontent||undefined};
     try{sessionStorage.setItem('cleexs_diagnostic_attribution',JSON.stringify(payload));}catch(e){}
     try{
       var base='; Domain=.cleexs.net; Path=/; Max-Age=7776000; SameSite=Lax; Secure';
@@ -1006,6 +1028,8 @@ $html = <<<'CLEEXS_LANDING'
       if(us) document.cookie='cleexs_utm_source='+encodeURIComponent(us)+base;
       if(um) document.cookie='cleexs_utm_medium='+encodeURIComponent(um)+base;
       if(uc) document.cookie='cleexs_utm_campaign='+encodeURIComponent(uc)+base;
+      var attr=encodeURIComponent(JSON.stringify({ref:ref,utm_source:us,utm_medium:um,utm_campaign:uc}));
+      document.cookie='cleexs_attr='+attr+base;
     }catch(e){}
   }catch(e){}
 })();
@@ -1029,5 +1053,4 @@ if ($n === false) {
 @chmod($path, 0644);
 echo "OK wrote $n bytes to $path\n";
 echo "URL: https://cleexs.net/meta\n";
-echo "Headline: C — Analizá tu web y descubrí si aparecés en ChatGPT\n";
 @unlink(__FILE__);

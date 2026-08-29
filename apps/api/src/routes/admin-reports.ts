@@ -24,14 +24,16 @@ import {
 import { enrichContactOnDemand, isCorporateEmail } from '../lib/contact-enrichment';
 import { primaryRunWhere } from '../lib/run-type-filters';
 import {
+  allMarketingPaths,
   diagnosticWhereForLanding,
   effectiveRangeForLanding,
   extractPaymentUtmCampaign,
+  extractPaymentUtmMedium,
+  extractPaymentUtmSource,
   landingMeta,
   META_V1_METRICS_SINCE,
   parseConversionLanding,
   pathsForLanding,
-  allMarketingPaths,
   paymentMatchesLanding,
   type ConversionLandingKey,
 } from '../lib/conversion-landing';
@@ -2097,6 +2099,7 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
             subscription: {
               select: {
                 utmSource: true,
+                utmMedium: true,
                 utmCampaign: true,
                 refCode: true,
                 sourceChannel: true,
@@ -2291,6 +2294,14 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
                 landing,
                 extractPaymentUtmCampaign({
                   subscriptionCampaign: p.subscription?.utmCampaign,
+                  rawPayload: p.rawPayload,
+                }),
+                extractPaymentUtmSource({
+                  subscriptionSource: p.subscription?.utmSource,
+                  rawPayload: p.rawPayload,
+                }),
+                extractPaymentUtmMedium({
+                  subscriptionMedium: p.subscription?.utmMedium,
                   rawPayload: p.rawPayload,
                 })
               )
