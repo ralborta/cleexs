@@ -2069,11 +2069,10 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
         }),
         prisma.publicDiagnostic.count({ where: diagWhere }),
         // Misma fuente que /conversion-metrics/emails (tarjeta = detalle).
+        // AND: no pisar el NOT del filtro Home (excluye Meta/ads).
         prisma.publicDiagnostic.findMany({
           where: {
-            ...diagWhere,
-            email: { not: null },
-            NOT: { email: '' },
+            AND: [diagWhere, { email: { not: null } }, { NOT: { email: '' } }],
           },
           select: { id: true, email: true, refCode: true },
         }),
@@ -2675,10 +2674,12 @@ const adminReportsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const rows = await prisma.publicDiagnostic.findMany({
         where: {
-          createdAt: { gte: from, lte: to },
-          ...landingDiagWhere,
-          email: { not: null },
-          NOT: { email: '' },
+          AND: [
+            { createdAt: { gte: from, lte: to } },
+            landingDiagWhere,
+            { email: { not: null } },
+            { NOT: { email: '' } },
+          ],
         },
         select: {
           id: true,
