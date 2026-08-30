@@ -3,7 +3,7 @@ import { BillingCurrency, BillingInterval, SubscriptionStatus, type PrismaClient
 /** Plan de DB vinculado a suscripciones Mercado Pago (Premium / crecimiento). */
 export const PREMIUM_PLAN_ID = '00000000-0000-0000-0000-000000000002';
 
-const DEFAULT_USD_TO_ARS_RATE = 1400;
+const DEFAULT_USD_TO_ARS_RATE = 1545;
 const PREMIUM_MONTHLY_USD = 99;
 const PREMIUM_ANNUAL_DISCOUNT = 0.8;
 const PLAN_CONQUISTAR_USD = 99;
