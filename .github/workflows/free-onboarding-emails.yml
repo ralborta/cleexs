@@ -1,7 +1,7 @@
 name: Free Onboarding Emails
 
 on:
-  # Pausado hasta reactivar "Secuencia activa (prod)" en admin y pasos 2+.
+  # Pausado 2026-09-03: solo paso 1 al completar diagnóstico (no cron de pasos 2+).
   # workflow_dispatch manual sigue disponible para pruebas.
   workflow_dispatch:
     inputs:

@@ -1,10 +1,8 @@
 name: Weekly Emails
 
 on:
-  schedule:
-    # Diario 14:00 UTC. La API deduplica por semana: envía una vez cuando ya pasó
-    # el slot configurado en /admin/email/weekly (martes 13:00 UTC por defecto).
-    - cron: '0 14 * * *'
+  # Pausado 2026-09-03: solo onboarding paso 1 (al completar diagnóstico).
+  # workflow_dispatch manual sigue disponible para reactivar/probar.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -45,10 +43,10 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
           API_URL: https://cleexsapi-production.up.railway.app
-          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
-          SEGMENT: ${{ github.event_name == 'schedule' && '' || inputs.segment }}
-          LIMIT: ${{ github.event_name == 'schedule' && '50' || inputs.limit }}
-          FORCE: ${{ github.event_name == 'schedule' && 'false' || inputs.force }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SEGMENT: ${{ inputs.segment }}
+          LIMIT: ${{ inputs.limit }}
+          FORCE: ${{ inputs.force }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "Missing CLEEXS_CRON_SECRET GitHub secret"
@@ -60,7 +58,7 @@ jobs:
             --argjson limit "$LIMIT" \
             --argjson dryRun "$DRY_RUN" \
             --argjson force "$FORCE" \
-            '{limit:$limit, dryRun:$dryRun, force:$force} + (if $segment == "" then {} else {segment:$segment} end)')
+            '{limit:$limit, dryRun:$dryRun, force:$force, segment:$segment}')
 
           curl --fail-with-body -sS \
             -X POST "$API_URL/api/cron/weekly-emails" \
