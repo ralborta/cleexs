@@ -286,23 +286,100 @@ export function buildWhatsAppTeaserLine(
   return '💡 Hay margen para mejorar tu presencia en ChatGPT.';
 }
 
+/** Keywords del flow BBC «Cleexs - Saludo». */
+const WA_GREETING_KEYWORDS = new Set([
+  'hola',
+  'holaa',
+  'hola!',
+  'buenas',
+  'buenas!',
+  'buenos dias',
+  'buenas tardes',
+  'buenas noches',
+  'hi',
+  'hello',
+  'buen dia',
+  'hey',
+  'que tal',
+  'como estas',
+  'como andas',
+]);
+
 /** Saludo simple (hola, buenas…). */
 export function isWaGreetingMessage(message: string): boolean {
-  const t = `${message || ''}`.trim().toLowerCase().replace(/[¡!?.]+$/g, '');
+  const t = `${message || ''}`.trim().toLowerCase();
   if (!t || t.length > 40) return false;
   if (extractUrlFromWhatsAppMessage(message)) return false;
-  return /^(hola|holaa|holaaa|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hey|hi|hello|que tal|como estas|como andas)$/.test(
-    t
+  const normalized = t.replace(/[¡!?.]+$/g, '').trim();
+  return WA_GREETING_KEYWORDS.has(t) || WA_GREETING_KEYWORDS.has(normalized);
+}
+
+/** Texto exacto del answer BBC «Cleexs - Saludo». */
+export function buildWhatsAppGreetingReply(): string {
+  return (
+    '¡Hola! 👋 Soy *Cleexs*. Te digo gratis qué tan probable es que ChatGPT recomiende tu marca.\n\n' +
+    '👉 Pasame la URL de tu sitio (ej. tuempresa.com).'
   );
 }
 
-export function buildWhatsAppGreetingReply(): string {
-  return (
-    '¡Hola! 👋 Soy tu asistente de *Cleexs*.\n\n' +
-    '¿En qué puedo ayudarte?\n\n' +
-    '📊 Para tu *Cleexs Score* gratis, pasame la URL de tu sitio\n' +
-    '_(ej. tuempresa.com)_'
-  );
+type WaChatTurn = { role: 'user' | 'assistant'; content: string };
+const waAssistantHistory = new Map<string, WaChatTurn[]>();
+const WA_ASSISTANT_HISTORY_MAX = 12;
+
+/**
+ * Responde como el flow BBC «Cleexs — Consultas IA» (mismo system prompt).
+ * Usado por Baileys / BBC Open cuando no hay URL.
+ */
+export async function replyWhatsAppAssistant(params: {
+  phone: string;
+  message: string;
+}): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const phone = normalizeWaPhone(params.phone) || `${params.phone || ''}`.replace(/\D/g, '');
+  const userText = `${params.message || ''}`.trim().slice(0, 2000);
+  if (!phone || !userText) return null;
+
+  const prior = waAssistantHistory.get(phone) ?? [];
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: BUILDERBOT_FAQ_ASSISTANT_PROMPT },
+    ...prior,
+    { role: 'user', content: userText },
+  ];
+
+  const model = process.env.DIAGNOSTIC_AI_OPENAI_MODEL?.trim() || 'gpt-4o-mini';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.4,
+        max_tokens: 400,
+        messages,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    const json = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      error?: { message?: string };
+    };
+    if (!res.ok) {
+      throw new Error(json?.error?.message || `OpenAI ${res.status}`);
+    }
+    const reply = `${json?.choices?.[0]?.message?.content || ''}`.trim();
+    if (!reply) return null;
+
+    const next: WaChatTurn[] = [...prior, { role: 'user', content: userText }, { role: 'assistant', content: reply }];
+    waAssistantHistory.set(phone, next.slice(-WA_ASSISTANT_HISTORY_MAX));
+    return reply;
+  } catch {
+    return null;
+  }
 }
 
 /** Ack inmediato: link primero, score llega después en otro mensaje. */

@@ -12,6 +12,9 @@ export interface PlanPaymentModalProps {
   billingMode: BillingMode;
   /** Tras confirmar (sin cobro real): lleva al flujo de diagnóstico */
   onConfirm: () => void;
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
+  sourceChannel?: string;
 }
 
 export function PlanPaymentModal({
@@ -20,6 +23,9 @@ export function PlanPaymentModal({
   planId,
   billingMode,
   onConfirm,
+  diagnosticId,
+  customerEmail,
+  sourceChannel,
 }: PlanPaymentModalProps) {
   const close = () => onOpenChange(false);
   useTrapBrowserBack(open, close);
@@ -76,6 +82,9 @@ export function PlanPaymentModal({
             billingMode={billingMode}
             onConfirm={handleConfirm}
             hideFooterSsl
+            diagnosticId={diagnosticId}
+            customerEmail={customerEmail}
+            sourceChannel={sourceChannel}
           />
           <p className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500">
             <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />

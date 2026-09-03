@@ -1,8 +1,8 @@
-import { CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+import { CLEEXS_FOUNDER_WHATSAPP_PHONE_E164 } from '@/lib/site';
 
 export function buildOnboardingWhatsAppHref(name: string, domain: string): string {
   const text = `Hola Gonzalo, soy ${name} de ${domain}. Te escribo porque quiero contarte por qué hice el análisis de Cleexs…`;
-  return `https://wa.me/${CLEEXS_WHATSAPP_PHONE_E164.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/${CLEEXS_FOUNDER_WHATSAPP_PHONE_E164.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
 }
 
 export function onboardingWhatsAppDisplayName(email: string, fallback = 'Usuario'): string {

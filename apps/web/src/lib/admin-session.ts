@@ -2,17 +2,24 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import {
   adminOpenAccessEnabled,
   adminRequireAuthEnabled,
+  ADMIN_SESSION_VERSION,
   ADMIN_UI_COOKIE_NAME,
 } from '@/lib/admin-auth-config';
+import type { AdminRole } from '@/lib/admin-roles';
 
 const COOKIE_NAME = ADMIN_UI_COOKIE_NAME;
 
 export { COOKIE_NAME, adminOpenAccessEnabled, adminRequireAuthEnabled };
 
+export type AdminSessionPayload = {
+  role: AdminRole;
+  username: string;
+};
+
 function sessionSecret(): string {
   const password = normalizeEnvSecret(process.env.ADMIN_UI_PASSWORD);
   const sessionSecretValue = normalizeEnvSecret(process.env.ADMIN_UI_SESSION_SECRET);
-  return sessionSecretValue || password || '';
+  return sessionSecretValue || password || 'cleexs-admin-session-fallback';
 }
 
 export function normalizeEnvSecret(value: string | undefined): string {
@@ -26,36 +33,43 @@ export function normalizeEnvSecret(value: string | undefined): string {
   return trimmed;
 }
 
-/** Token: `${expMs}.${hexSig}` */
-export function createAdminSessionToken(): string {
+/** Token: `${expMs}.${version}.${role}.${username}.${hexSig}` */
+export function createAdminSessionToken(session: AdminSessionPayload): string {
   const secret = sessionSecret();
-  if (!secret) throw new Error('ADMIN_UI_PASSWORD o ADMIN_UI_SESSION_SECRET no configurado');
-  const exp = Date.now() + 8 * 60 * 60 * 1000;
-  const payload = String(exp);
+  const exp = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const payload = `${exp}.${ADMIN_SESSION_VERSION}.${session.role}.${session.username}`;
   const sig = createHmac('sha256', secret).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
 
-export function verifyAdminSessionToken(token: string | undefined | null): boolean {
-  if (!token) return false;
+export function verifyAdminSessionToken(token: string | undefined | null): AdminSessionPayload | null {
+  if (!token) return null;
   const secret = sessionSecret();
-  if (!secret) return false;
   const parts = token.split('.');
-  if (parts.length !== 2) return false;
-  const [expStr, sig] = parts;
+  if (parts.length !== 5) return null;
+
+  const [expStr, versionStr, roleRaw, username, sig] = parts;
+  if (Number(versionStr) !== ADMIN_SESSION_VERSION) return null;
+  if (roleRaw !== 'admin' && roleRaw !== 'marketing') return null;
+  if (!username?.trim()) return null;
+
   const exp = Number(expStr);
-  if (!Number.isFinite(exp) || exp < Date.now()) return false;
-  const expected = createHmac('sha256', secret).update(expStr).digest('hex');
+  if (!Number.isFinite(exp) || exp < Date.now()) return null;
+
+  const payload = `${expStr}.${versionStr}.${roleRaw}.${username}`;
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
   try {
-    return timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
+    if (!timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) return null;
   } catch {
-    return false;
+    return null;
   }
+
+  return { role: roleRaw, username };
 }
 
 /** Path debe incluir `/api/admin-ui/*`: si fuera solo `/admin`, el navegador no envía la cookie en fetch al proxy API y todas las rutas admin-ui devuelven 401. */
 export function adminCookieOptions() {
-  const maxAge = 8 * 60 * 60;
+  const maxAge = 30 * 24 * 60 * 60;
   const secure = process.env.NODE_ENV === 'production';
   return {
     httpOnly: true as const,

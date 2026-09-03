@@ -3,7 +3,7 @@ import { BillingCurrency, BillingInterval, SubscriptionStatus, type PrismaClient
 /** Plan de DB vinculado a suscripciones Mercado Pago (Premium / crecimiento). */
 export const PREMIUM_PLAN_ID = '00000000-0000-0000-0000-000000000002';
 
-const DEFAULT_USD_TO_ARS_RATE = 1400;
+const DEFAULT_USD_TO_ARS_RATE = 1545;
 const PREMIUM_MONTHLY_USD = 99;
 const PREMIUM_ANNUAL_DISCOUNT = 0.8;
 const PLAN_CONQUISTAR_USD = 99;
@@ -40,6 +40,35 @@ export function getPlanConquistarAmountUsd(): number {
   const raw = process.env.PLAN_CONQUISTAR_USD;
   const parsed = raw ? Number(raw) : PLAN_CONQUISTAR_USD;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : PLAN_CONQUISTAR_USD;
+}
+
+/**
+ * Override temporal de monto ARS en checkouts Mercado Pago (pruebas).
+ * Lee `MP_CHECKOUT_ARS_OVERRIDE` o, por compat, `PLAN_CONQUISTAR_ARS`.
+ */
+export function getMpCheckoutArsOverride(): number | null {
+  const raw =
+    process.env.MP_CHECKOUT_ARS_OVERRIDE?.trim() || process.env.PLAN_CONQUISTAR_ARS?.trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+}
+
+/**
+ * Monto ARS cobrado en Mercado Pago para Plan Conquistar (preference unit_price).
+ * Con override de prueba → ese valor; si no, USD → ARS con FX.
+ */
+export function getPlanConquistarAmountArs(rate = getBillingUsdToArsRate()): number {
+  return getMpCheckoutArsOverride() ?? usdToArs(getPlanConquistarAmountUsd(), rate);
+}
+
+/** Monto ARS de suscripción Premium (preapproval). Respeta el mismo override de prueba. */
+export function getPremiumSubscriptionAmountArs(
+  amountUsd: number,
+  rate = getBillingUsdToArsRate()
+): number {
+  return getMpCheckoutArsOverride() ?? usdToArs(amountUsd, rate);
 }
 
 export function getBillingCurrency(): BillingCurrency {

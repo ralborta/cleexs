@@ -31,6 +31,10 @@ import { PortalFreeTierNav } from '@/components/portal/portal-free-tier-nav';
 import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento-tier-nav';
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PortalReferralUpsell } from '@/components/portal/portal-referral-upsell';
+import {
+  PortalReportExportActions,
+  type PortalReportExportPayload,
+} from '@/components/portal/portal-report-export-actions';
 import { capturePortalReferralFromLocation } from '@/lib/portal-referral-client';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -64,6 +68,12 @@ type PortalRunDetail = {
       category?: { name?: string } | null;
     };
   }>;
+  linkedPublicDiagnostic?: {
+    id: string;
+    status: string;
+    shareSlug?: string | null;
+    tier?: string | null;
+  } | null;
 };
 
 type ReportItem = {
@@ -151,7 +161,7 @@ function LockFooter({
 }) {
   return (
     <div
-      className={`mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-violet-100/90 bg-violet-50/80 px-4 py-2.5 text-[11px] leading-snug text-violet-950 ${className ?? 'rounded-b-2xl'}`}
+      className={`no-print mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-violet-100/90 bg-violet-50/80 px-4 py-2.5 text-[11px] leading-snug text-violet-950 ${className ?? 'rounded-b-2xl'}`}
     >
       <div className="flex min-w-0 flex-1 items-start gap-2">
         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" aria-hidden />
@@ -199,6 +209,7 @@ function PortalPlanFreeHeaderKpis({
   analysesLabel,
   suscripcionHref,
   belowKpis,
+  exportActions,
 }: {
   run: PortalRunDetail;
   latestReport: ReportItem | null;
@@ -211,6 +222,7 @@ function PortalPlanFreeHeaderKpis({
   analysesLabel: string;
   suscripcionHref: string;
   belowKpis?: ReactNode;
+  exportActions?: ReactNode;
 }) {
   const domainLine = run.brand.domain?.trim() || 'sin dominio';
   const lastRunDate = latestReport
@@ -239,8 +251,9 @@ function PortalPlanFreeHeaderKpis({
               {domainLine} · Plan Free · Estado{' '}
               <span className="font-semibold lowercase text-emerald-600">{run.status}</span>
             </p>
+            {exportActions ? <div className="mt-3">{exportActions}</div> : null}
           </div>
-          <div className="flex w-full min-w-0 flex-1 flex-col gap-2.5 rounded-xl border border-violet-200/70 bg-violet-50/95 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3.5">
+          <div className="no-print flex w-full min-w-0 flex-1 flex-col gap-2.5 rounded-xl border border-violet-200/70 bg-violet-50/95 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3.5">
             <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 ring-1 ring-violet-200/50">
                 <Sparkles className="h-4 w-4 text-violet-600" aria-hidden />
@@ -406,6 +419,17 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   useEffect(() => {
     if (shell === 'portal-cliente') capturePortalReferralFromLocation();
   }, [shell]);
+
+  useEffect(() => {
+    if (loading || typeof window === 'undefined') return;
+    const hash = window.location.hash.replace('#', '').trim();
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    window.requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [loading, runId]);
 
   useEffect(() => {
     if (!runId) return;
@@ -610,6 +634,32 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   );
   const showDrColumn = sortedPanel.some((r) => r.domainRating != null);
 
+  const reportExportPayload = useMemo((): PortalReportExportPayload | null => {
+    if (!run) return null;
+    return {
+      runId: run.id,
+      brandName: run.brand.name,
+      domain: run.brand.domain,
+      runStatus: run.status,
+      reportDate: latestReport?.createdAt ?? null,
+      cleexsScore: currentScore,
+      deltaVsPrevious,
+      intentionScores: intentionScores.map((row) => ({ label: row.label, score: row.score })),
+      compareRows: sortedPanel.map((row) => ({
+        rank: row.rank,
+        name: row.name,
+        tag: row.tag,
+        score: row.score,
+        domainRating: row.domainRating,
+      })),
+      linkedPublicDiagnostic: run.linkedPublicDiagnostic ?? null,
+    };
+  }, [run, latestReport, currentScore, deltaVsPrevious, intentionScores, sortedPanel]);
+
+  const reportExportActions = reportExportPayload ? (
+    <PortalReportExportActions payload={reportExportPayload} />
+  ) : null;
+
   const runNewDiagnostic = useCallback(async () => {
     if (!run?.brand?.id) {
       setHubActionError('No se pudo identificar la marca para ejecutar una nueva corrida.');
@@ -801,7 +851,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
   );
 
   const freeMainColumn = (
-    <div className="min-w-0 space-y-4">
+    <div className="portal-report-print-root min-w-0 space-y-4">
       <PortalPlanFreeHeaderKpis
         run={run}
         latestReport={latestReport}
@@ -813,6 +863,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
         analysesLimit={analysesLimitRaw ?? null}
         analysesLabel={analysesLabel}
         suscripcionHref={suscripcionHref}
+        exportActions={reportExportActions}
       />
 
           <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
@@ -941,7 +992,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
               <LockFooter>
                 Desbloqueá el ranking completo, detalle por prompt y brecha vs líder.{' '}
                 <Link href={suscripcionHref} className="font-semibold text-violet-700 hover:underline">
-                  Actualizar plan →
+                  Comprar Premium →
                 </Link>
               </LockFooter>
             </section>
@@ -1063,7 +1114,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
 
   const hubMainColumn = (
-    <div className="min-w-0 space-y-4">
+    <div className="portal-report-print-root min-w-0 space-y-4">
       <PortalPlanFreeHeaderKpis
         run={run}
         latestReport={latestReport}
@@ -1075,6 +1126,7 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
         analysesLimit={analysesLimitRaw ?? null}
         analysesLabel={analysesLabel}
         suscripcionHref={suscripcionHref}
+        exportActions={reportExportActions}
         belowKpis={
           <>
             <Link
@@ -1334,24 +1386,27 @@ export function ClienteRunReportView({ shell }: { shell: ClienteRunReportShell }
 
   const mainColumn = shell === 'portal-cliente' ? freeMainColumn : hubMainColumn;
 
-  const portalSidebar =
-    shell === 'portal-cliente' ? (
-      <PortalFreeTierNav
-        basePath={base}
-        analysesUsed={analysesUsed}
-        analysesLimit={analysesLimitForNav}
-        renewalLabel={nextRenewalLabel()}
-      />
-    ) : (
-      <PortalCrecimientoTierNav
-        basePath={base}
-        runId={runId}
-        planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
-        analysesUsed={analysesUsed}
-        analysesLimit={analysesLimitForNav}
-        renewalLabel={nextRenewalLabel()}
-      />
-    );
+  const portalSidebar = (
+    <div className="no-print">
+      {shell === 'portal-cliente' ? (
+        <PortalFreeTierNav
+          basePath={base}
+          analysesUsed={analysesUsed}
+          analysesLimit={analysesLimitForNav}
+          renewalLabel={nextRenewalLabel()}
+        />
+      ) : (
+        <PortalCrecimientoTierNav
+          basePath={base}
+          runId={runId}
+          planLabel={usage?.planDisplay || usage?.planKey || 'Free'}
+          analysesUsed={analysesUsed}
+          analysesLimit={analysesLimitForNav}
+          renewalLabel={nextRenewalLabel()}
+        />
+      )}
+    </div>
+  );
 
   return (
     <main className="min-h-screen scroll-smooth bg-slate-50 p-3 sm:p-5">

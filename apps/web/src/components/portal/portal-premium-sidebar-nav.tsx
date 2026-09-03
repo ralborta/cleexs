@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import {
   CreditCard,
+  Crosshair,
   FileBarChart2,
   Globe,
   Headphones,
@@ -22,6 +23,9 @@ import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
 import { PortalLegalLink } from '@/components/portal/portal-legal-link';
 
+const TOKEN_KEY = 'cleexs_portal_token';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export type PortalPremiumSidebarUsage = {
   planKey?: string;
   planDisplay?: string;
@@ -33,6 +37,8 @@ export type PortalPremiumSidebarNavProps = {
   runId: string;
   usage: PortalPremiumSidebarUsage | null;
   loadingPlan?: boolean;
+  /** Si ya lo tenés del reporte, evitamos otro fetch. */
+  diagnosticId?: string | null;
 };
 
 function nextRenewalLabel() {
@@ -50,6 +56,8 @@ function planBadgeLabel(display: string) {
 }
 
 function premiumNavActive(pathname: string, runId: string): string {
+  if (pathname.includes('/portal-crecimiento/plan-ataque')) return 'plan-ataque';
+
   const cliente = `/portal-crecimiento/reporte/${runId}/cliente`;
   const premium = `/portal-crecimiento/reporte/${runId}/premium`;
 
@@ -109,12 +117,51 @@ function DisponibleLink({
 }
 
 /** Menú lateral Premium alineado visualmente al portal Free (tarjetas, badges, iconos). */
-export function PortalPremiumSidebarNav({ runId, usage, loadingPlan }: PortalPremiumSidebarNavProps) {
+export function PortalPremiumSidebarNav({
+  runId,
+  usage,
+  loadingPlan,
+  diagnosticId: diagnosticIdProp = null,
+}: PortalPremiumSidebarNavProps) {
   const pathname = usePathname() ?? '';
   const active = premiumNavActive(pathname, runId);
+  const [diagnosticId, setDiagnosticId] = useState<string | null>(diagnosticIdProp);
+
+  useEffect(() => {
+    if (diagnosticIdProp) {
+      setDiagnosticId(diagnosticIdProp);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = sessionStorage.getItem(TOKEN_KEY);
+        if (!token) return;
+        const runRes = await fetch(
+          `${API_URL}/api/reports/app/reports/${encodeURIComponent(runId)}`,
+          {
+            cache: 'no-store',
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!runRes.ok || cancelled) return;
+        const runData = (await runRes.json()) as { publicDiagnosticId?: string | null };
+        const id = runData.publicDiagnosticId?.trim() || null;
+        if (!cancelled) setDiagnosticId(id);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, diagnosticIdProp]);
 
   const premiumBase = `/portal-crecimiento/reporte/${runId}/premium`;
   const clientePath = `/portal-crecimiento/reporte/${runId}/cliente`;
+  const planAtaqueHref = diagnosticId
+    ? `/portal-crecimiento/plan-ataque?diagnosticId=${encodeURIComponent(diagnosticId)}`
+    : null;
 
   const analysesUsed = usage?.usage?.scoreViews ?? 0;
   const analysesLimit = usage?.limits?.scoreViews ?? null;
@@ -126,6 +173,7 @@ export function PortalPremiumSidebarNav({ runId, usage, loadingPlan }: PortalPre
 
   const portalClienteActive = active === 'portal-cliente';
   const interpretacionActive = active === 'interpretacion';
+  const planAtaqueActive = active === 'plan-ataque';
 
   return (
     <aside className="flex h-fit flex-col rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:sticky lg:top-5">
@@ -183,6 +231,32 @@ export function PortalPremiumSidebarNav({ runId, usage, loadingPlan }: PortalPre
               Disponible
             </span>
           </Link>
+
+          {planAtaqueHref ? (
+            <Link
+              href={planAtaqueHref}
+              className={
+                planAtaqueActive
+                  ? 'group flex items-center justify-between gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 ring-1 ring-violet-200/60'
+                  : 'group flex items-center justify-between gap-1.5 rounded-xl px-2.5 py-1.5 text-slate-700 hover:bg-white/80'
+              }
+            >
+              <span
+                className={`flex min-w-0 flex-1 items-center gap-1.5 ${
+                  planAtaqueActive ? 'font-semibold text-violet-700' : 'group-hover:text-slate-900'
+                }`}
+              >
+                <Crosshair
+                  className={`h-3.5 w-3.5 shrink-0 ${planAtaqueActive ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-600'}`}
+                  aria-hidden
+                />
+                <span className="min-w-0 break-words leading-snug">Plan de Ataque</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 ring-1 ring-emerald-100">
+                Disponible
+              </span>
+            </Link>
+          ) : null}
         </div>
 
         <div className="space-y-1 rounded-xl border border-slate-200/90 bg-slate-50/70 p-1.5">

@@ -50,6 +50,7 @@ import {
   buildWhatsAppStartedReply,
   buildWhatsAppStillRunningReply,
   buildWhatsAppTeaserLine,
+  deliverWaChannelStart,
   deliverWaReplyToUser,
   extractUrlFromWhatsAppMessage,
   resolveWebsiteUrlFromWhatsAppMessage,
@@ -57,7 +58,10 @@ import {
   getWaCompetitorWaitMs,
   isPlaceholderPublicSuffixOnlyDomain,
   isWhatsAppSourceChannel,
+  buildWhatsAppGreetingReply,
+  isWaGreetingMessage,
   normalizeWaPhone,
+  replyWhatsAppAssistant,
   verifyWhatsAppChannelApiKey,
   waPlaceholderEmail,
   waRecipientFromFlowBody,
@@ -1260,6 +1264,18 @@ function parsePublicSetupDraft(json: unknown): {
   confirmedIndustry?: string;
   /** Motores de IA elegidos (free: todos disponibles; se registran para plan pago). */
   selectedEngines?: string[];
+  /** Idioma elegido en el wizard (es, pt, en, …). */
+  selectedLanguage?: string;
+  /** Perfil opcional del paso de email. */
+  firstName?: string;
+  lastName?: string;
+  howFoundUs?: string;
+  /** ISO: usuario marcó verificación humana. */
+  humanVerifiedAt?: string;
+  /** ISO: aceptó términos al iniciar el análisis. */
+  legalAcceptedAt?: string;
+  confirmedCompetitorUrls?: string[];
+  confirmedAt?: string;
 } | null {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
   const o = json as Record<string, unknown>;
@@ -1278,6 +1294,16 @@ function parsePublicSetupDraft(json: unknown): {
   const selectedEngines = Array.isArray(o.selectedEngines)
     ? o.selectedEngines.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
     : undefined;
+  const selectedLanguage = typeof o.selectedLanguage === 'string' ? o.selectedLanguage.trim() : undefined;
+  const firstName = typeof o.firstName === 'string' ? o.firstName.trim() : undefined;
+  const lastName = typeof o.lastName === 'string' ? o.lastName.trim() : undefined;
+  const howFoundUs = typeof o.howFoundUs === 'string' ? o.howFoundUs.trim() : undefined;
+  const humanVerifiedAt = typeof o.humanVerifiedAt === 'string' ? o.humanVerifiedAt : undefined;
+  const legalAcceptedAt = typeof o.legalAcceptedAt === 'string' ? o.legalAcceptedAt : undefined;
+  const confirmedCompetitorUrls = Array.isArray(o.confirmedCompetitorUrls)
+    ? o.confirmedCompetitorUrls.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : undefined;
+  const confirmedAt = typeof o.confirmedAt === 'string' ? o.confirmedAt : undefined;
   return {
     suggestedCompetitorUrls,
     marketCountry,
@@ -1288,6 +1314,14 @@ function parsePublicSetupDraft(json: unknown): {
     confirmedCountry,
     confirmedIndustry,
     selectedEngines,
+    selectedLanguage: selectedLanguage || undefined,
+    firstName: firstName || undefined,
+    lastName: lastName || undefined,
+    howFoundUs: howFoundUs || undefined,
+    humanVerifiedAt,
+    legalAcceptedAt,
+    confirmedCompetitorUrls,
+    confirmedAt,
   };
 }
 
@@ -2236,8 +2270,14 @@ async function processWhatsAppUrlHttpRequest(params: {
     };
   }
 
-  // El flow HTTP de BuilderBot envía el reply al cliente (avoidResponse: false).
-  // No llamamos deliverWaChannelStart acá para evitar mensaje duplicado.
+  const recipient = (waRecipient || phone).trim();
+  void deliverWaChannelStart(
+    log,
+    recipient,
+    started.domain,
+    started.resultUrl,
+    started.reused ?? false
+  );
 
   const reply = started.reused
     ? buildWhatsAppAlreadyStartedReply(started.domain, started.resultUrl)
@@ -2338,6 +2378,61 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
 
       const tier = requestedTier === 'gold' ? 'gold' : 'freemium';
 
+      // Un dominio = un diagnóstico activo. Mismo email con otro sitio sí puede crear otro.
+      const existingForDomain = await prisma.publicDiagnostic.findFirst({
+        where: {
+          domain,
+          status: { not: 'failed' },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          tier: true,
+          refCode: true,
+          utmSource: true,
+          utmMedium: true,
+          utmCampaign: true,
+        },
+      });
+      if (existingForDomain) {
+        // Si piden gold y el existente es freemium, dejamos crear uno nuevo (upgrade de corrida).
+        const wantsGoldUpgrade = tier === 'gold' && existingForDomain.tier !== 'gold';
+        if (!wantsGoldUpgrade) {
+          // Si esta visita trae atribución y el diagnóstico reusado no, sellarlo ahora.
+          // Evita perder Herederos/Eldo/etc. cuando el dominio ya existía.
+          const patch: {
+            refCode?: string;
+            utmSource?: string;
+            utmMedium?: string;
+            utmCampaign?: string;
+          } = {};
+          if (attribution.refCode && !existingForDomain.refCode?.trim()) {
+            patch.refCode = attribution.refCode;
+          }
+          if (attribution.utmSource && !existingForDomain.utmSource?.trim()) {
+            patch.utmSource = attribution.utmSource;
+          }
+          if (attribution.utmMedium && !existingForDomain.utmMedium?.trim()) {
+            patch.utmMedium = attribution.utmMedium;
+          }
+          if (attribution.utmCampaign && !existingForDomain.utmCampaign?.trim()) {
+            patch.utmCampaign = attribution.utmCampaign;
+          }
+          if (Object.keys(patch).length > 0) {
+            await prisma.publicDiagnostic.update({
+              where: { id: existingForDomain.id },
+              data: patch,
+            });
+          }
+          return reply.code(200).send({
+            diagnosticId: existingForDomain.id,
+            reused: true,
+            status: existingForDomain.status,
+          });
+        }
+      }
+
       const diagnostic = await prisma.publicDiagnostic.create({
         data: {
           brandName: brandForRun,
@@ -2391,6 +2486,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       country?: string;
       industry?: string;
       engines?: string[];
+      language?: string;
+      firstName?: string;
+      lastName?: string;
+      howFoundUs?: string;
+      humanVerifiedAt?: string;
+      legalAcceptedAt?: string;
     };
   }>('/diagnostic/:id/start', async (request, reply) => {
     try {
@@ -2405,6 +2506,12 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         country: z.string().trim().max(120).optional(),
         industry: z.string().trim().max(160).optional(),
         engines: z.array(z.string().trim().max(40)).max(10).optional(),
+        language: z.string().trim().max(12).optional(),
+        firstName: z.string().trim().max(80).optional(),
+        lastName: z.string().trim().max(80).optional(),
+        howFoundUs: z.string().trim().max(40).optional(),
+        humanVerifiedAt: z.string().max(40).optional(),
+        legalAcceptedAt: z.string().max(40).optional(),
       });
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
@@ -2414,6 +2521,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       }
       const { id } = request.params;
       const { email, competitorUrls, useSerp: useSerpBody, country, industry, engines } = parsed.data;
+      const {
+        language: languageBody,
+        firstName,
+        lastName,
+        howFoundUs,
+        humanVerifiedAt,
+        legalAcceptedAt,
+      } = parsed.data;
 
       const diagnostic = await prisma.publicDiagnostic.findUnique({ where: { id } });
       if (!diagnostic) {
@@ -2487,18 +2602,32 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const selectedEngines =
         (engines && engines.length ? engines : draft?.selectedEngines)?.filter(Boolean) ?? [];
 
+      const selectedLanguage = languageBody?.trim() || draft?.selectedLanguage?.trim() || '';
+      const profileFirstName = firstName?.trim() || draft?.firstName?.trim() || '';
+      const profileLastName = lastName?.trim() || draft?.lastName?.trim() || '';
+      const profileHowFound = howFoundUs?.trim() || draft?.howFoundUs?.trim() || '';
+      const verifiedAt = humanVerifiedAt || draft?.humanVerifiedAt;
+      const legalAt = legalAcceptedAt || new Date().toISOString();
+
       await prisma.publicDiagnostic.update({
         where: { id },
         data: {
           email,
           status: 'running',
+          ...(confirmedIndustry ? { industry: confirmedIndustry } : {}),
           setupDraftJson: {
-            ...(draft ?? {}),
+            ...setupDraftJsonRecord(diagnostic.setupDraftJson),
             confirmedCompetitorUrls: competitorUrls,
             confirmedAt: new Date().toISOString(),
             ...(confirmedCountry ? { confirmedCountry } : {}),
             ...(confirmedIndustry ? { confirmedIndustry } : {}),
             ...(selectedEngines.length ? { selectedEngines } : {}),
+            ...(selectedLanguage ? { selectedLanguage } : {}),
+            ...(profileFirstName ? { firstName: profileFirstName } : {}),
+            ...(profileLastName ? { lastName: profileLastName } : {}),
+            ...(profileHowFound ? { howFoundUs: profileHowFound } : {}),
+            ...(verifiedAt ? { humanVerifiedAt: verifiedAt } : {}),
+            legalAcceptedAt: legalAt,
           },
         },
       });
@@ -2547,13 +2676,14 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
   // Si cambió país o rubro respecto a lo sugerido, re-detecta competidores con el nuevo contexto.
   fastify.post<{
     Params: { id: string };
-    Body: { country?: string; industry?: string; engines?: string[] };
+    Body: { country?: string; industry?: string; engines?: string[]; language?: string };
   }>('/diagnostic/:id/confirm-context', async (request, reply) => {
     try {
       const schema = z.object({
         country: z.string().trim().max(120).optional(),
         industry: z.string().trim().max(160).optional(),
         engines: z.array(z.string().trim().max(40)).max(10).optional(),
+        language: z.string().trim().max(12).optional(),
       });
       const parsed = schema.safeParse(request.body ?? {});
       if (!parsed.success) {
@@ -2574,16 +2704,19 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
       const confirmedCountry = parsed.data.country?.trim() || draft?.suggestedCountry?.trim() || '';
       const confirmedIndustry = parsed.data.industry?.trim() || draft?.suggestedIndustry?.trim() || '';
       const selectedEngines = (parsed.data.engines ?? draft?.selectedEngines ?? []).filter(Boolean);
+      const selectedLanguage = parsed.data.language?.trim() || draft?.selectedLanguage?.trim() || '';
 
       await prisma.publicDiagnostic.update({
         where: { id },
         data: {
           status: 'detecting_competitors',
+          ...(confirmedIndustry ? { industry: confirmedIndustry } : {}),
           setupDraftJson: {
             ...setupDraftJsonRecord(diagnostic.setupDraftJson),
             ...(confirmedCountry ? { confirmedCountry } : {}),
             ...(confirmedIndustry ? { confirmedIndustry } : {}),
             ...(selectedEngines.length ? { selectedEngines } : {}),
+            ...(selectedLanguage ? { selectedLanguage } : {}),
           },
         },
       });
@@ -2629,6 +2762,7 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
               ...(confirmedCountry ? { confirmedCountry } : {}),
               ...(confirmedIndustry ? { confirmedIndustry } : {}),
               ...(selectedEngines.length ? { selectedEngines } : {}),
+              ...(selectedLanguage ? { selectedLanguage } : {}),
             },
           },
         });
@@ -2894,15 +3028,6 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (result.code !== 'started' && result.code !== 'already_started') {
       void deliverWaReplyToUser(fastify.log, recipient, result.reply);
-    } else if (result.reply) {
-      // El reply de 'started' / 'already_started' lo entrega el flow del bot,
-      // no pasa por sendWhatsAppMessage; lo logueamos manualmente.
-      void logOutgoingWhatsApp(fastify.log, {
-        chatId: recipient || phoneFromPathOrBody,
-        message: result.reply,
-        source: 'flow_reply',
-        status: 'sent',
-      });
     }
     return reply.send(result);
   }
@@ -3006,6 +3131,47 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         ready: false,
       });
     }
+  });
+
+  // POST /api/public/whatsapp/assistant — Baileys / BBC Open (mismo prompt que Consultas IA).
+  // Auth: x-cleexs-channel-key. Body: { from|phone, body|message }.
+  fastify.post<{ Body: Record<string, unknown> }>('/whatsapp/assistant', async (request, reply) => {
+    if (!verifyWaChannelRequest(request)) {
+      return reply.code(401).send({ error: 'No autorizado', code: 'unauthorized', message: '' });
+    }
+
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const phone = firstWaString(body.from, body.phone, body.recipient);
+    const message = firstWaString(body.body, body.message, body.text);
+    if (!phone || !message) {
+      return reply.code(400).send({ error: 'from y body requeridos', code: 'missing_fields', message: '' });
+    }
+
+    if (isWaGreetingMessage(message)) {
+      const greeting = buildWhatsAppGreetingReply();
+      return reply.send({ ok: true, flow: 'saludo', message: greeting });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return reply.code(503).send({
+        error: 'OPENAI_API_KEY no configurada',
+        code: 'openai_missing',
+        message: '',
+      });
+    }
+
+    const assistantReply = await replyWhatsAppAssistant({ phone, message });
+    if (!assistantReply) {
+      return reply.send({
+        ok: false,
+        flow: 'consultas_ia',
+        code: 'assistant_failed',
+        message:
+          '🙂 Solo puedo ayudarte con Cleexs y tu visibilidad en IA. Pasame la URL de tu empresa (ej. empresa.com) o preguntame qué es el *Cleexs Score*.',
+      });
+    }
+
+    return reply.send({ ok: true, flow: 'consultas_ia', message: assistantReply });
   });
 
   // POST /api/public/whatsapp/builderbot-inbound — Webhook del proyecto BuilderBot.
@@ -3703,7 +3869,10 @@ const publicDiagnosticRoutes: FastifyPluginAsync = async (fastify) => {
         ? await isFirstRunForDomain(diagnostic.id, diagnostic.domain)
         : true;
     const isWaChannel = isWhatsAppSourceChannel(row.sourceChannel);
-    const showFullReport = isWaChannel ? true : tier === 'gold' || isFirstRun;
+    // Cada diagnóstico completado muestra su propio informe (prompts, motores, análisis).
+    // isFirstRun queda solo para email/upsell; no recortar re-diagnósticos del mismo dominio.
+    const showFullReport =
+      isWaChannel || tier === 'gold' || row.status === 'completed';
 
     const diagnosticEmail =
       row.email?.trim() && !row.email.endsWith('@whatsapp.cleexs.net')

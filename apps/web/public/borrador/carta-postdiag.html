@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Borrador · Bloque post-diagnóstico en la carta — Cleexs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      margin: 0;
+      padding: 28px 16px 64px;
+      background: #f8fafc;
+      color: #1e293b;
+      font-family: Georgia, "Times New Roman", Times, serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    .ui {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .banner {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+    }
+    .banner strong { color: #0f172a; }
+    .banner .tag {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .email {
+      max-width: 680px;
+      margin: 0 auto;
+      background: transparent;
+    }
+
+    .logo {
+      display: block;
+      width: 110px;
+      height: auto;
+      margin-bottom: 18px;
+    }
+
+    .para {
+      margin: 0 0 20px;
+      font-size: 19px;
+      line-height: 1.85;
+      color: #1e293b;
+    }
+
+    .excl {
+      display: inline-block;
+      margin: 4px 0 18px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .founder {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .founder img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .founder .name { font-weight: 700; font-size: 15px; color: #0f172a; }
+    .founder .role { font-size: 13px; color: #64748b; }
+
+    /* Bloque post-diag — layout vertical, estilo carta */
+    .block-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
+      margin: 8px 0 0;
+    }
+
+    .viz-area {
+      padding: 18px 16px 16px;
+      text-align: center;
+      background: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .viz-area .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .viz-title {
+      margin: 12px 0 0;
+      font-size: 12px;
+      color: #64748b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .viz-svg-wrap {
+      margin: 10px auto 0;
+      max-width: 480px;
+    }
+    .viz-svg-wrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .comment-area {
+      padding: 18px 16px;
+      background: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .comment-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .comment-meta img {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .comment-meta span {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .comment-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #2563eb;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #334155;
+    }
+
+    .cta-row { margin-top: 14px; text-align: right; }
+    .cta {
+      display: inline-block;
+      padding: 11px 16px;
+      border-radius: 10px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      white-space: nowrap;
+    }
+
+    .link-new {
+      margin-top: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .link-new a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .hint {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .pd {
+      margin: 24px 0 0;
+      font-size: 17px;
+      line-height: 1.7;
+      color: #475569;
+      font-style: italic;
+    }
+
+    /* Plan Conquistar — idéntico a letter-email */
+    .plan {
+      margin-top: 32px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #bfdbfe;
+      box-shadow: 0 10px 28px rgba(37, 99, 235, 0.12);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .plan-head {
+      padding: 14px 18px;
+      background: #2563eb;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .plan-badge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      padding-right: 10px;
+    }
+    .plan-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .plan-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #dbeafe;
+    }
+    .plan-sep {
+      width: 1px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.35);
+      margin: 0 14px;
+      flex-shrink: 0;
+    }
+    .plan-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: #ffffff;
+    }
+
+    .plan-body {
+      padding: 20px 18px 18px;
+      background: #f8fbff;
+    }
+    .plan-intro {
+      margin: 0 0 14px;
+      font-size: 16px;
+      line-height: 1.65;
+      color: #334155;
+      font-style: italic;
+      font-family: Georgia, "Times New Roman", Times, serif;
+    }
+    .plan-list {
+      list-style: none;
+      margin: 0 0 14px;
+      padding: 0;
+    }
+    .plan-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #334155;
+    }
+    .plan-list .check {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      line-height: 1;
+    }
+    .plan-cta-row { text-align: right; }
+
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #94a3b8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .footer a {
+      color: #94a3b8;
+      text-decoration: underline;
+    }
+
+    .howto {
+      margin-top: 28px;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .howto h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .howto p {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.55;
+    }
+    .howto code {
+      font-size: 12px;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: #334155;
+    }
+
+    @media (max-width: 560px) {
+      .plan-head { flex-wrap: wrap; gap: 10px; }
+      .plan-sep { display: none; }
+      .plan-title { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="banner ui">
+      <span class="tag">Borrador · noindex</span><br />
+      <strong>Para aprobación de Gonzalo.</strong>
+      Misma carta que hoy; la caja insight pasa a <strong>gráfico arriba + comentario humano abajo</strong> (no IA).
+      Si se aprueba, el siguiente paso es poder editar ese comentario desde la plantilla.
+    </div>
+
+    <div class="email">
+      <img class="logo" src="/CleexsLogo.png" alt="Cleexs" width="110" />
+
+      <p class="para">Hola,</p>
+      <p class="para">
+        Esta semana repetimos la misma pregunta decenas de veces. Esperábamos respuestas muy distintas.
+        Pero los mismos nombres aparecían una y otra vez.
+      </p>
+      <p class="para">
+        Parece haber una especie de grupo favorito. Todavía estamos investigando por qué.
+        Pero si esto es así, entrar en ese grupo puede ser extremadamente valioso.
+      </p>
+
+      <span class="excl">Exclusivo para {{domain}}</span>
+
+      <div class="founder">
+        <img src="/gonzalo-founder.png" alt="Gonzalo" width="44" height="44" />
+        <div>
+          <div class="name">Gonzalo</div>
+          <div class="role">Fundador · Cleexs</div>
+        </div>
+      </div>
+
+      <!-- Bloque propuesto (reemplaza Cleexs Score lateral) -->
+      <div class="block-card">
+        <div class="viz-area">
+          <span class="pill">Benchmark del rubro</span>
+          <p class="viz-title">Mejor vs peor intención</p>
+          <div class="viz-svg-wrap">
+            <!-- Gráfico sobrio: solo azul/gris, sin fondos de color -->
+            <svg viewBox="0 0 480 168" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Barras de intención">
+              <rect width="480" height="168" fill="#ffffff"/>
+              <!-- track line -->
+              <line x1="36" y1="132" x2="444" y2="132" stroke="#e2e8f0" stroke-width="1"/>
+
+              <!-- Calidad 78 -->
+              <rect x="52" y="36" width="64" height="96" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+              <rect x="62" y="54" width="44" height="68" rx="6" fill="#2563eb"/>
+              <text x="84" y="28" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="800" fill="#2563eb">78</text>
+              <text x="84" y="152" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" fill="#64748b">Calidad</text>
+
+              <!-- Urgencia 54 -->
+              <rect x="148" y="36" width="64" height="96" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+              <rect x="158" y="76" width="44" height="46" rx="6" fill="#60a5fa"/>
+              <text x="180" y="68" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="800" fill="#3b82f6">54</text>
+              <text x="180" y="152" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" fill="#64748b">Urgencia</text>
+
+              <!-- Consider 41 -->
+              <rect x="244" y="36" width="64" height="96" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+              <rect x="254" y="90" width="44" height="32" rx="6" fill="#93c5fd"/>
+              <text x="276" y="82" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="800" fill="#60a5fa">41</text>
+              <text x="276" y="152" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" fill="#64748b">Consider.</text>
+
+              <!-- Precio 22 (peor) -->
+              <rect x="340" y="36" width="64" height="96" rx="10" fill="#f8fafc" stroke="#bfdbfe" stroke-width="1.5"/>
+              <rect x="350" y="110" width="44" height="12" rx="6" fill="#94a3b8"/>
+              <text x="372" y="102" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="800" fill="#64748b">22</text>
+              <text x="372" y="152" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="700" fill="#475569">Precio</text>
+
+              <!-- badge peor sobrio -->
+              <rect x="416" y="58" width="48" height="40" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+              <text x="440" y="74" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="8" font-weight="800" fill="#2563eb">PEOR</text>
+              <text x="440" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#2563eb">↓</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="comment-area">
+          <div class="comment-meta">
+            <img src="/gonzalo-founder.png" alt="" width="22" height="22" />
+            <span>Comentario de Gonzalo · plantilla</span>
+          </div>
+          <div class="comment-box">
+            Cuando una intención está tan lejos de las otras, ChatGPT te “encasilla”:
+            te recomienda en un ángulo y te olvida en el otro. El trabajo no es subir el score promedio
+            — es cerrar esa brecha. Acá lo peor es <strong>Precio</strong>: ahí es donde el rubro
+            te está eligiendo a otros.
+          </div>
+          <div class="cta-row">
+            <a class="cta" href="#">Ver reporte →</a>
+          </div>
+        </div>
+      </div>
+
+      <p class="link-new">
+        <a href="#">Generar nuevo diagnóstico</a>
+        <span class="hint">Gratis · tarda unos minutos · solo si vos lo pedís</span>
+      </p>
+
+      <p class="pd">PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?</p>
+
+      <!-- Plan Conquistar completo -->
+      <div class="plan">
+        <div class="plan-head">
+          <div class="plan-badge-wrap">
+            <div class="plan-icon" aria-hidden="true">♛</div>
+            <div class="plan-badge">PLAN CONQUISTAR</div>
+          </div>
+          <div class="plan-sep" aria-hidden="true"></div>
+          <div class="plan-title">Plan de Ataque: domina ChatGPT en 90 días</div>
+        </div>
+        <div class="plan-body">
+          <p class="plan-intro">Plan de acción concreto para empezar mañana con tu equipo.</p>
+          <ul class="plan-list">
+            <li><span class="check">✓</span><span>Las 20 acciones con mayor impacto para tu empresa.</span></li>
+            <li><span class="check">✓</span><span>Priorizadas por facilidad e impacto.</span></li>
+            <li><span class="check">✓</span><span>En el orden exacto de implementación.</span></li>
+            <li><span class="check">✓</span><span>Adaptadas a tu industria y competidores.</span></li>
+            <li><span class="check">✓</span><span>Hoja de ruta semana por semana.</span></li>
+          </ul>
+          <div class="plan-cta-row">
+            <a class="cta" href="#">Ver cómo es →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <a href="#">Dejar de recibir emails</a><br />
+        Cleexs - Conseguí clientes desde ChatGPT
+      </div>
+    </div>
+
+    <div class="howto">
+      <h2>Qué cambia vs hoy (solo el bloque del medio)</h2>
+      <p>
+        Antes: Cleexs Score a la izquierda + Rivales / Señal / Acción a la derecha.<br />
+        Propuesta: <code>gráfico del diagnóstico arriba</code> + <code>comentario escrito por Gonzalo abajo</code>.
+        Plan Conquistar y el resto de la carta quedan iguales.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

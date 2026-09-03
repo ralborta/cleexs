@@ -18,7 +18,7 @@ import {
   OnboardingPreviewNav,
   OnboardingPreviewTrustFooter,
 } from './onboarding-preview-frame';
-import { OnboardingCountryLanguageFields } from '@/components/diagnostico/onboarding-country-language-fields';
+import { OnboardingCountryLanguageFields, defaultLanguageForCountry } from '@/components/diagnostico/onboarding-country-language-fields';
 
 const ENGINES = [
   { id: 'chatgpt', label: 'ChatGPT', logo: '/engines/chatgpt.png' },
@@ -28,7 +28,7 @@ const ENGINES = [
 ] as const;
 
 const HOW_FOUND_OPTIONS = [
-  { value: '', label: 'Seleccioná una opción (opcional)' },
+  { value: '', label: 'Seleccioná una opción' },
   { value: 'google', label: 'Búsqueda en Google' },
   { value: 'redes', label: 'Redes sociales' },
   { value: 'recomendacion', label: 'Recomendación de alguien' },
@@ -70,6 +70,12 @@ export function OnboardingPreviewWizard({
   const [lastName, setLastName] = useState('');
   const [howFound, setHowFound] = useState('');
   const [previewCountry, setPreviewCountry] = useState(mock.country);
+  const [previewLanguage, setPreviewLanguage] = useState(() => defaultLanguageForCountry(mock.country));
+
+  const handlePreviewCountry = (v: string) => {
+    setPreviewCountry(v);
+    setPreviewLanguage(defaultLanguageForCountry(v));
+  };
 
   const toggleEngine = (id: string) => {
     setEngines((prev) =>
@@ -108,7 +114,7 @@ export function OnboardingPreviewWizard({
             ) : null}
             {idx === 4 ? (
               <p className="mt-1.5 text-sm text-slate-600">
-                Te enviamos el informe por correo cuando esté listo. Los campos opcionales podés dejarlos vacíos.
+                Te enviamos el informe por correo cuando esté listo.
               </p>
             ) : null}
           </div>
@@ -118,7 +124,9 @@ export function OnboardingPreviewWizard({
           {idx === 0 && (
             <OnboardingCountryLanguageFields
               country={previewCountry}
-              onCountry={setPreviewCountry}
+              onCountry={handlePreviewCountry}
+              language={previewLanguage}
+              onLanguage={setPreviewLanguage}
             />
           )}
 
@@ -244,7 +252,7 @@ export function OnboardingPreviewWizard({
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs font-semibold text-slate-500">¿Cómo nos encontraste?</span>
+                <span className="text-sm font-bold text-slate-800">¿Cómo nos encontraste? (opcional)</span>
                 <div className="relative mt-1.5">
                   <select
                     className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 shadow-sm"
@@ -265,20 +273,20 @@ export function OnboardingPreviewWizard({
           )}
         </div>
 
+        <OnboardingPreviewNav
+          onBack={onBack}
+          onNext={onNext}
+          nextLabel={idx === 4 ? 'Arrancar análisis' : 'Continuar'}
+        />
+
         {idx === 0 ? (
-          <div className="mt-5 flex gap-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-3.5">
+          <div className="mt-4 flex gap-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-3.5">
             <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
             <p className="text-xs leading-relaxed text-violet-900/80">
               Este dato nos ayuda a personalizar benchmarks y competidores para tu mercado.
             </p>
           </div>
         ) : null}
-
-        <OnboardingPreviewNav
-          onBack={onBack}
-          onNext={onNext}
-          nextLabel={idx === 4 ? 'Arrancar análisis' : 'Continuar'}
-        />
       </div>
     </OnboardingPreviewCard>
   );

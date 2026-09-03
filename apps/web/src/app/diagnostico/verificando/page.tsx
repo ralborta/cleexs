@@ -23,10 +23,12 @@ import {
 import { useSmoothProgress } from '@/lib/use-smooth-progress';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/diagnostico/onboarding-wizard';
+import { defaultLanguageForCountry } from '@/components/diagnostico/onboarding-country-language-fields';
 import type { SetupStep } from '@/components/diagnostico/onboarding-setup-wizard';
 import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
 import { OnboardingPreviewCafecito } from '@/components/diagnostico/onboarding-preview/onboarding-preview-cafecito';
+import { OnboardingMobileProgressHeader } from '@/components/diagnostico/onboarding-preview/onboarding-mobile-progress-header';
 import { ONBOARDING_STEP_LABELS } from './diagnostic-onboarding';
 import { lastStepForAbandon, trackOnboarding } from './onboarding-analytics';
 import { AnalysisStepsGrid, type AnalysisStepItem } from './analysis-steps-grid';
@@ -122,7 +124,12 @@ function VerificandoContent() {
   const [publicSetupStep, setPublicSetupStep] = useState<SetupStep>(1);
   const [setupCountry, setSetupCountry] = useState('');
   const [setupIndustry, setSetupIndustry] = useState('');
+  const [setupLanguage, setSetupLanguage] = useState('');
+  const [setupFirstName, setSetupFirstName] = useState('');
+  const [setupLastName, setSetupLastName] = useState('');
+  const [setupHowFound, setSetupHowFound] = useState('');
   const [setupEngines, setSetupEngines] = useState<string[]>([]);
+  const humanVerifiedAtRef = useRef<string | null>(null);
   const [introContinued, setIntroContinued] = useState(false);
   /** Timestamp cuando el backend entra en detecting_competitors (para timeout de UI). */
   const [competitorDetectSince, setCompetitorDetectSince] = useState<number | null>(null);
@@ -331,7 +338,12 @@ function VerificandoContent() {
     setLegacyPublicStep(1);
     setSetupCountry('');
     setSetupIndustry('');
+    setSetupLanguage('');
+    setSetupFirstName('');
+    setSetupLastName('');
+    setSetupHowFound('');
     setSetupEngines([]);
+    humanVerifiedAtRef.current = null;
     setIntroContinued(false);
     contextConfirmedRef.current = false;
     runningStartElapsedRef.current = null;
@@ -346,6 +358,13 @@ function VerificandoContent() {
       (prev) => prev || draft.confirmedCountry || draft.suggestedCountry || draft.marketCountry || ''
     );
     setSetupIndustry((prev) => prev || draft.confirmedIndustry || draft.suggestedIndustry || '');
+    setSetupLanguage((prev) => prev || draft.selectedLanguage || '');
+    setSetupFirstName((prev) => prev || draft.firstName || '');
+    setSetupLastName((prev) => prev || draft.lastName || '');
+    setSetupHowFound((prev) => prev || draft.howFoundUs || '');
+    if (draft.humanVerifiedAt && !humanVerifiedAtRef.current) {
+      humanVerifiedAtRef.current = draft.humanVerifiedAt;
+    }
   }, [diagnostic?.setupDraft]);
 
   useEffect(() => {
@@ -365,8 +384,20 @@ function VerificandoContent() {
     setSetupEmail(d.email?.trim() || prefilledEmailParam || '');
     setStartAnalysisError(null);
     const draft = d.setupDraft;
-    setSetupCountry((prev) => prev || draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '');
+    const hydratedCountry =
+      draft?.confirmedCountry || draft?.suggestedCountry || draft?.marketCountry || '';
+    setSetupCountry((prev) => prev || hydratedCountry);
     setSetupIndustry((prev) => prev || draft?.confirmedIndustry || draft?.suggestedIndustry || '');
+    setSetupLanguage(
+      (prev) =>
+        prev ||
+        draft?.selectedLanguage ||
+        (hydratedCountry ? defaultLanguageForCountry(hydratedCountry) : '')
+    );
+    setSetupFirstName((prev) => prev || draft?.firstName || '');
+    setSetupLastName((prev) => prev || draft?.lastName || '');
+    setSetupHowFound((prev) => prev || draft?.howFoundUs || '');
+    if (draft?.humanVerifiedAt) humanVerifiedAtRef.current = draft.humanVerifiedAt;
     if (draft?.selectedEngines?.length) {
       setSetupEngines(draft.selectedEngines.filter(Boolean));
     }
@@ -499,6 +530,11 @@ function VerificandoContent() {
     return () => clearTimeout(t);
   }, [activeStepForCards, visibleStepCards]);
 
+  const handleSetupCountry = useCallback((v: string) => {
+    setSetupCountry(v);
+    setSetupLanguage(defaultLanguageForCountry(v));
+  }, []);
+
   // Confirma país + rubro → arranca detección/progreso y avanza al paso de motores.
   const handleConfirmContext = useCallback(async () => {
     if (!diagnosticId) return;
@@ -517,6 +553,7 @@ function VerificandoContent() {
         country: c,
         industry: ind,
         engines: setupEngines,
+        ...(setupLanguage.trim() ? { language: setupLanguage.trim() } : {}),
       });
       trackOnboarding('onboarding_context_confirmed', { diagnosticId });
       setPublicSetupStep(4);
@@ -525,7 +562,7 @@ function VerificandoContent() {
     } finally {
       setContextLoading(false);
     }
-  }, [diagnosticId, setupCountry, setupIndustry, setupEngines]);
+  }, [diagnosticId, setupCountry, setupIndustry, setupEngines, setupLanguage]);
 
   const handleToggleEngine = useCallback((id: string) => {
     setSetupEngines((prev) =>
@@ -621,6 +658,8 @@ function VerificandoContent() {
             ? setupEngines
             : ['chatgpt', ...setupEngines]
           : ['chatgpt'];
+      const legalAcceptedAt = new Date().toISOString();
+      const humanVerifiedAt = humanVerifiedAtRef.current || legalAcceptedAt;
       await publicDiagnosticApi.start(
         diagnosticId,
         {
@@ -631,6 +670,12 @@ function VerificandoContent() {
             : {}),
           ...(setupCountry.trim() ? { country: setupCountry.trim() } : {}),
           ...(setupIndustry.trim() ? { industry: setupIndustry.trim() } : {}),
+          ...(setupLanguage.trim() ? { language: setupLanguage.trim() } : {}),
+          ...(setupFirstName.trim() ? { firstName: setupFirstName.trim() } : {}),
+          ...(setupLastName.trim() ? { lastName: setupLastName.trim() } : {}),
+          ...(setupHowFound.trim() ? { howFoundUs: setupHowFound.trim() } : {}),
+          humanVerifiedAt,
+          legalAcceptedAt,
           engines: enginesPayload,
         },
         { visitorId: vid }
@@ -685,6 +730,22 @@ function VerificandoContent() {
               ...(setupIndustry.trim() || draft?.confirmedIndustry
                 ? { industry: setupIndustry.trim() || draft?.confirmedIndustry }
                 : {}),
+              ...(setupLanguage.trim() || draft?.selectedLanguage
+                ? { language: setupLanguage.trim() || draft?.selectedLanguage }
+                : {}),
+              ...(setupFirstName.trim() || draft?.firstName
+                ? { firstName: setupFirstName.trim() || draft?.firstName }
+                : {}),
+              ...(setupLastName.trim() || draft?.lastName
+                ? { lastName: setupLastName.trim() || draft?.lastName }
+                : {}),
+              ...(setupHowFound.trim() || draft?.howFoundUs
+                ? { howFoundUs: setupHowFound.trim() || draft?.howFoundUs }
+                : {}),
+              ...(draft?.humanVerifiedAt || humanVerifiedAtRef.current
+                ? { humanVerifiedAt: humanVerifiedAtRef.current || draft?.humanVerifiedAt }
+                : {}),
+              ...(draft?.legalAcceptedAt ? { legalAcceptedAt: draft.legalAcceptedAt } : {}),
               ...(setupEngines.length
                 ? { engines: setupEngines }
                 : draft?.selectedEngines?.length
@@ -732,6 +793,10 @@ function VerificandoContent() {
     competitorUrls,
     setupCountry,
     setupIndustry,
+    setupLanguage,
+    setupFirstName,
+    setupLastName,
+    setupHowFound,
     setupEngines,
   ]);
 
@@ -740,6 +805,7 @@ function VerificandoContent() {
     switch (publicSetupStep) {
       case 1:
         if (!setupHumanOk) return;
+        if (!humanVerifiedAtRef.current) humanVerifiedAtRef.current = new Date().toISOString();
         if (diagnosticId) trackOnboarding('onboarding_captcha_completed', { diagnosticId });
         setPublicSetupStep(2);
         return;
@@ -799,7 +865,7 @@ function VerificandoContent() {
     setHandoff('leaving');
     trackOnboarding('onboarding_report_opened', { diagnosticId });
     const tierQ = diagnostic?.tier === 'gold' ? '&tier=gold' : '';
-    router.push(`/ver-resultado?diagnosticId=${diagnosticId}${tierQ}`);
+    router.push(`/ver-resultado/v2?diagnosticId=${diagnosticId}${tierQ}`);
   }, [diagnosticId, diagnostic?.tier, router]);
 
   const handleLegacySetupSave = async (e: React.FormEvent) => {
@@ -957,7 +1023,7 @@ function VerificandoContent() {
   const showCafecito = analysisRunningPhase;
   const waUserName = onboardingWhatsAppDisplayName(setupEmail || diagnosticEmailTrimmed);
   const whatsappHref = buildOnboardingWhatsAppHref(waUserName, domainShort);
-  const reportHref = `/ver-resultado?diagnosticId=${diagnosticId}${diagnostic.tier === 'gold' ? '&tier=gold' : ''}`;
+  const reportHref = `/ver-resultado/v2?diagnosticId=${diagnosticId}${diagnostic.tier === 'gold' ? '&tier=gold' : ''}`;
 
   if (handoff === 'leaving') {
     return (
@@ -970,10 +1036,104 @@ function VerificandoContent() {
     );
   }
 
+  const onboardingFlow = showCafecito ? (
+    <OnboardingPreviewCafecito
+      userName={waUserName}
+      domain={domainShort}
+      brandLabel={brandLabel ?? undefined}
+      founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
+      youtubeVideoId={CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID}
+      whatsappHref={whatsappHref}
+      reportReady={reportReady}
+      reportFinalizing={reportFinalizing}
+      reportProgress={cafecitoReportProgress}
+      reportHref={reportHref}
+      onReportClick={handleOpenReport}
+    />
+  ) : isPreRunBackdrop && !introContinued ? (
+    <OnboardingPreviewIntro
+      brandLabel={brandLabel ?? ''}
+      domain={domainShort}
+      founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
+      processing={setupShowProcessing}
+      ready={!setupShowProcessing && setupDataReady}
+      onContinue={handleIntroContinue}
+    />
+  ) : isPreRunBackdrop && publicSetupStep === 1 ? (
+    <OnboardingPreviewHuman
+      humanOk={setupHumanOk}
+      onHumanOk={setSetupHumanOk}
+      onBack={handleNewFlowBack}
+      onContinue={handleWizardNext}
+      onOpenLegal={setLegalModalSection}
+    />
+  ) : isPreRunBackdrop ? (
+    <OnboardingWizard
+      step={publicSetupStep - 1}
+      country={setupCountry}
+      onCountry={handleSetupCountry}
+      industry={setupIndustry}
+      onIndustry={setSetupIndustry}
+      language={setupLanguage}
+      onLanguage={setSetupLanguage}
+      firstName={setupFirstName}
+      onFirstName={setSetupFirstName}
+      lastName={setupLastName}
+      onLastName={setSetupLastName}
+      howFound={setupHowFound}
+      onHowFound={setSetupHowFound}
+      engines={setupEngines}
+      onToggleEngine={handleToggleEngine}
+      competitorUrls={competitorUrls}
+      onCompetitorChange={handleCompetitorChange}
+      onCompetitorRemove={handleCompetitorRemove}
+      onRestoreSuggested={handleRestoreSuggested}
+      competitorsLoading={competitorsDetecting}
+      competitorsDetectEmpty={competitorsDetectEmpty}
+      suggestedCompetitorCount={suggestedCompetitorCount}
+      filledCompetitorCount={filledSetupCompetitorCount}
+      email={setupEmail}
+      onEmail={setSetupEmail}
+      onBack={handleNewFlowBack}
+      onNext={handleWizardNext}
+      nextLoading={contextLoading || startAnalysisLoading}
+      error={startAnalysisError}
+      onOpenLegal={setLegalModalSection}
+      showEmailCountdown={showEmailCountdown}
+      diagnosticId={diagnosticId ?? undefined}
+      onEmailCountdownExpire={handleEmailCountdownExpire}
+    />
+  ) : null;
+
   return (
     <main className="relative flex min-h-[calc(100vh-72px)] flex-col bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0">
-        <div className="mb-4 shrink-0 sm:mb-5">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col min-h-0 lg:max-w-5xl">
+        {/* Chrome móvil */}
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-3 lg:hidden">
+          <a
+            href={CLEEXS_MARKETING_URL}
+            className="inline-flex shrink-0 rounded-lg transition hover:opacity-90"
+            aria-label="Cleexs"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/CleexsMark.svg" alt="" className="h-8 w-8" />
+          </a>
+          <p className="min-w-0 truncate text-right text-[11px] font-medium text-slate-500">
+            {brandLabel ? `Análisis · ${brandLabel}` : 'Análisis en curso'}
+          </p>
+        </div>
+
+        <div className="mb-4 shrink-0 lg:hidden">
+          <OnboardingMobileProgressHeader
+            analysisRunning={setupLeftProgress}
+            progressPct={setupLeftProgress ? displayBarPct : 0}
+            elapsedSeconds={elapsedSeconds}
+            brandLabel={brandLabel ?? ''}
+          />
+        </div>
+
+        {/* Chrome desktop */}
+        <div className="mb-4 hidden shrink-0 sm:mb-5 lg:block">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Análisis en curso</p>
@@ -995,10 +1155,10 @@ function VerificandoContent() {
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr,1.15fr] lg:gap-8">
           <div
             className={cn(
-              'flex min-h-0 min-w-0 flex-col',
+              'hidden min-h-0 min-w-0 flex-col lg:flex',
               !setupLeftProgress && isPreRunBackdrop && 'pointer-events-none select-none opacity-[0.72]'
             )}
           >
@@ -1092,75 +1252,20 @@ function VerificandoContent() {
           </div>
 
           <div className="relative flex min-h-0 min-w-0 flex-col">
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">
-              {showCafecito ? (
-                <OnboardingPreviewCafecito
-                  userName={waUserName}
-                  domain={domainShort}
-                  brandLabel={brandLabel ?? undefined}
-                  founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
-                  youtubeVideoId={CLEEXS_ONBOARDING_YOUTUBE_VIDEO_ID}
-                  whatsappHref={whatsappHref}
-                  reportReady={reportReady}
-                  reportFinalizing={reportFinalizing}
-                  reportProgress={cafecitoReportProgress}
-                  reportHref={reportHref}
-                  onReportClick={handleOpenReport}
-                />
-              ) : isPreRunBackdrop && !introContinued ? (
-                <OnboardingPreviewIntro
-                  brandLabel={brandLabel ?? ''}
-                  domain={domainShort}
-                  founderPhotoUrl={CLEEXS_FOUNDER_PHOTO_URL}
-                  processing={setupShowProcessing}
-                  ready={!setupShowProcessing && setupDataReady}
-                  onContinue={handleIntroContinue}
-                />
-              ) : isPreRunBackdrop && publicSetupStep === 1 ? (
-                <OnboardingPreviewHuman
-                  humanOk={setupHumanOk}
-                  onHumanOk={setSetupHumanOk}
-                  onBack={handleNewFlowBack}
-                  onContinue={handleWizardNext}
-                  onOpenLegal={setLegalModalSection}
-                />
-              ) : isPreRunBackdrop ? (
-                <OnboardingWizard
-                  step={publicSetupStep - 1}
-                  country={setupCountry}
-                  onCountry={setSetupCountry}
-                  industry={setupIndustry}
-                  onIndustry={setSetupIndustry}
-                  engines={setupEngines}
-                  onToggleEngine={handleToggleEngine}
-                  competitorUrls={competitorUrls}
-                  onCompetitorChange={handleCompetitorChange}
-                  onCompetitorRemove={handleCompetitorRemove}
-                  onRestoreSuggested={handleRestoreSuggested}
-                  competitorsLoading={competitorsDetecting}
-                  competitorsDetectEmpty={competitorsDetectEmpty}
-                  suggestedCompetitorCount={suggestedCompetitorCount}
-                  filledCompetitorCount={filledSetupCompetitorCount}
-                  email={setupEmail}
-                  onEmail={setSetupEmail}
-                  onBack={handleNewFlowBack}
-                  onNext={handleWizardNext}
-                  nextLoading={contextLoading || startAnalysisLoading}
-                  error={startAnalysisError}
-                  onOpenLegal={setLegalModalSection}
-                />
-              ) : null}
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:pb-0">
+              {onboardingFlow}
             </div>
           </div>
         </div>
 
-        <p className="mt-4 shrink-0 text-center text-xs text-slate-500">
+        <p className="mt-3 shrink-0 text-center text-[10px] leading-relaxed text-slate-400 lg:hidden">
+          El análisis suele tardar 30–90 s. Podés dejar esta pantalla abierta.
+        </p>
+        <p className="mt-4 hidden shrink-0 text-center text-xs text-slate-500 lg:block">
           El análisis suele tardar entre 30 y 90 segundos. Podés dejarlo abierto: el progreso sigue y te llevamos al
           informe.
         </p>
       </div>
-
-      <OnboardingEmailCountdown active={showEmailCountdown} onExpire={handleEmailCountdownExpire} />
 
       <LegalAcceptanceModal
         open={legalModalSection !== null}
@@ -1270,6 +1375,15 @@ function VerificandoContent() {
                   autoComplete="email"
                 />
               </div>
+              {showEmailCountdown ? (
+                <OnboardingEmailCountdown
+                  active
+                  variant="inline"
+                  diagnosticId={diagnosticId ?? undefined}
+                  onExpire={handleEmailCountdownExpire}
+                  className="mt-5"
+                />
+              ) : null}
               <div className="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-6">
                 <Button
                   type="button"

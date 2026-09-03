@@ -79,7 +79,7 @@ export function defaultMonthlyScoreEditorialContent(): CleexsEditorialContent {
     planPitch:
       'Comparás con competidores, ves más motores de IA y dejás de adivinar cómo te están recomendando.',
     planCtaLabel: 'Ver Plan Conquistar',
-  unsubscribeLabel: 'Gestionar lo que recibo',
+  unsubscribeLabel: 'Dejar de recibir emails',
   };
 }
 
@@ -106,7 +106,7 @@ export function defaultCleexsEditorialContent(): CleexsEditorialContent {
     planPitch:
       'Comparás con competidores, ves más motores de IA y dejás de adivinar cómo te están recomendando.',
     planCtaLabel: 'Ver Plan Conquistar',
-  unsubscribeLabel: 'Gestionar lo que recibo',
+  unsubscribeLabel: 'Dejar de recibir emails',
   };
 }
 
@@ -379,7 +379,7 @@ export function buildEditorialEmail(input: CleexsEditorialEmailInput): CleexsEma
           <tr>
             <td style="padding:24px 0 4px;text-align:center;color:#7f8da6;font-size:13px;line-height:1.6;font-family:Inter,Arial,Helvetica,sans-serif;">
               <a href="${escapeHtml(input.links.unsubscribeUrl)}" style="color:#7f8da6;text-decoration:underline;">${escapeHtml(content.unsubscribeLabel)}</a><br/>
-              Cleexs · visibilidad en IA
+              Cleexs - Conseguí clientes desde ChatGPT
             </td>
           </tr>
         </table>

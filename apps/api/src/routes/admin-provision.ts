@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { provisionAccount, randomPortalPassword } from '../lib/provision-account-core';
 import { randomPortalFromRecentRuns } from '../lib/random-portal-from-recent-runs';
 import { ensurePortalUserForBrand } from '../lib/ensure-portal-user-for-brand';
+import { sendPortalMagicLinkForUser } from '../lib/portal-magic-link';
 
 function requireAdminSecret(request: FastifyRequest): boolean {
   const secret = process.env.ADMIN_API_SECRET?.trim();
@@ -159,6 +160,54 @@ const adminProvisionRoutes: FastifyPluginAsync = async (fastify) => {
       role: u.role,
       hasPortalPassword: Boolean(u.passwordHash),
     }));
+  });
+
+  const magicLinkBody = z.object({
+    userId: z.string().uuid().optional(),
+    email: z.string().email().optional(),
+    portalTarget: z.enum(['auto', 'free', 'premium']).optional(),
+  });
+
+  fastify.post<{ Body: z.infer<typeof magicLinkBody> }>('/portal-magic-link', async (request, reply) => {
+    if (!requireAdminSecret(request)) {
+      return reply.code(process.env.ADMIN_API_SECRET ? 401 : 503).send({
+        error: process.env.ADMIN_API_SECRET ? 'No autorizado' : 'ADMIN_API_SECRET no configurado',
+      });
+    }
+
+    const parsed = magicLinkBody.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Payload inválido', details: parsed.error.flatten() });
+    }
+
+    if (!parsed.data.userId && !parsed.data.email) {
+      return reply.code(400).send({ error: 'Indicá userId o email.' });
+    }
+
+    const result = await sendPortalMagicLinkForUser({
+      userId: parsed.data.userId,
+      email: parsed.data.email,
+      createdBy: 'admin-magic-link',
+      portalTarget: parsed.data.portalTarget ?? 'auto',
+    });
+
+    if (!result.sent) {
+      return reply.code(result.reason === 'user_not_found' ? 404 : 503).send({
+        error:
+          result.reason === 'user_not_found'
+            ? 'Usuario no encontrado.'
+            : result.reason === 'email_not_configured'
+              ? 'Email no configurado en el servidor.'
+              : 'No se pudo enviar el correo.',
+        reason: result.reason,
+      });
+    }
+
+    return {
+      ok: true,
+      email: result.email,
+      magicLinkUrl: result.magicLinkUrl,
+    };
   });
 };
 

@@ -353,7 +353,24 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       if (!entitlement.allowed) return reply.code(403).send({ ok: false, ...entitlement });
     }
 
-    return run;
+    const linkedPublicDiagnostic = await prisma.publicDiagnostic.findFirst({
+      where: {
+        OR: [
+          { runId: run.id },
+          { runGeminiId: run.id },
+          { runPerplexityId: run.id },
+          { runClaudeId: run.id },
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true, shareSlug: true, status: true, tier: true },
+    });
+
+    return {
+      ...run,
+      linkedPublicDiagnostic,
+      publicDiagnosticId: linkedPublicDiagnostic?.id ?? null,
+    };
   });
 
   /**

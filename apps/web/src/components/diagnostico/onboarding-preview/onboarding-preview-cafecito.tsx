@@ -11,6 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { youtubeEmbedUrl } from '@/lib/youtube';
+import {
+  CLEEXS_FOUNDER_WHATSAPP_PHONE_E164,
+  formatCleexsWhatsAppPhoneDisplay,
+} from '@/lib/site';
 
 function CircularProgress({
   value,
@@ -102,22 +106,18 @@ export function OnboardingPreviewCafecito({
   return (
     <div className="mx-auto w-full">
       <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/40">
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-700 px-6 py-5 text-white sm:px-8">
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-700 px-5 py-4 text-white sm:px-8">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
               <Coffee className="h-5 w-5" />
             </span>
             <div>
-              <h1 className="text-lg font-bold sm:text-xl">Un cafecito mientras terminamos ☕</h1>
-              <p className="mt-0.5 text-sm text-violet-100/90">
-                Videíto de Gonzalo antes de ver tu diagnóstico
-                {brandLabel ? ` de ${brandLabel}` : ''}.
-              </p>
+              <h1 className="text-lg font-bold sm:text-xl">Un cafecito con Gonzalo mientras terminamos ☕</h1>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 p-5 sm:p-6">
+        <div className="grid grid-cols-1 gap-3 p-4 sm:p-5">
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-inner">
             {!showEmbed ? (
               <div className="relative flex aspect-video flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-6 text-center">
@@ -140,7 +140,7 @@ export function OnboardingPreviewCafecito({
           {/* Tarjeta diagnóstico */}
           <div
             className={cn(
-              'flex flex-col rounded-xl border p-4 transition-all duration-500 sm:p-5',
+              'flex flex-col rounded-xl border p-3.5 transition-all duration-500 sm:p-4',
               reportReady
                 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-violet-50/30 shadow-md shadow-emerald-100/50'
                 : reportFinalizing
@@ -149,13 +149,16 @@ export function OnboardingPreviewCafecito({
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <Sparkles
-                className={cn(
-                  'h-5 w-5 shrink-0',
-                  showCompletedUi ? 'text-violet-600' : 'text-slate-400'
-                )}
-                aria-hidden
-              />
+              <div className="flex min-w-0 items-center gap-1.5">
+                <Sparkles
+                  className={cn(
+                    'h-5 w-5 shrink-0',
+                    showCompletedUi ? 'text-violet-600' : 'text-slate-400'
+                  )}
+                  aria-hidden
+                />
+                <h2 className="text-base font-bold text-slate-900">Tu diagnóstico</h2>
+              </div>
               {showCompletedUi ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800 ring-1 ring-emerald-200/80">
                   <Check className="h-3 w-3" strokeWidth={3} />
@@ -172,8 +175,7 @@ export function OnboardingPreviewCafecito({
               )}
             </div>
 
-            <h2 className="mt-2 text-base font-bold text-slate-900">Tu diagnóstico</h2>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-600 sm:text-sm">
+            <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
               {showCompletedUi
                 ? '¡Listo! Ya podés ver tu informe completo.'
                 : reportFinalizing
@@ -183,7 +185,7 @@ export function OnboardingPreviewCafecito({
 
             <div
               className={cn(
-                'mt-4 flex items-center gap-3 rounded-xl border p-3',
+                'mt-3 flex items-center gap-3 rounded-xl border p-3',
                 showCompletedUi
                   ? 'border-emerald-200/80 bg-emerald-50/60'
                   : reportFinalizing
@@ -262,7 +264,10 @@ export function OnboardingPreviewCafecito({
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-tight text-slate-900">Seguimos por WhatsApp</p>
+                <p className="text-[13px] font-bold leading-tight text-slate-900">Gonzalo Arzuaga</p>
+                <p className="text-[11px] font-medium text-slate-600">
+                  {formatCleexsWhatsAppPhoneDisplay(CLEEXS_FOUNDER_WHATSAPP_PHONE_E164)}
+                </p>
                 <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
                   Contame qué te motivó a hacer el análisis
                 </p>

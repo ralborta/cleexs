@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Mail, Trophy, FileSpreadsheet } from 'lucide-react';
+import { BarChart3, ClipboardList, Mail, Trophy, FileSpreadsheet } from 'lucide-react';
 
 type SubLink = {
   href: string;
@@ -17,7 +17,7 @@ const SUB_LINKS: readonly SubLink[] = [
     href: '/admin/reportes',
     label: 'Inicio',
     icon: FileSpreadsheet,
-    description: '3 reportes consolidados',
+    description: '4 reportes consolidados',
     matchExact: true,
   },
   {
@@ -25,6 +25,12 @@ const SUB_LINKS: readonly SubLink[] = [
     label: 'Adquisicion y funnel',
     icon: BarChart3,
     description: 'Diagnosticos, embudo y referidores',
+  },
+  {
+    href: '/admin/reportes/onboarding',
+    label: 'Onboarding · perfil',
+    icon: ClipboardList,
+    description: 'Pais, nombre y como llego',
   },
   {
     href: '/admin/reportes/cleexs-score',

@@ -7,6 +7,7 @@ import { mergeCleexsText } from './email-templates/shared';
 import { withEmailAttribution } from './email-link-attribution';
 import {
   buildTransactionalFromAddress,
+  buildTransactionalReplyTo,
   isEmailConfigured,
   isEmailDisabled,
   isOutboundEmailAvailable,
@@ -17,8 +18,10 @@ import {
 import {
   buildFreeSequencePreviewLinks,
   ensureFreeEmailSequence,
+  FREE_SEQUENCE_KEY,
 } from './free-email-sequence';
 import { buildMonthlyScoreDiagnosticUrl, buildFreeOnboardingPlanConquistarUrl } from './email-templates/build-email';
+import { getInsightMeta, isFreeEmailInsightKey, resolveFreeEmailInsightLine } from './free-email-insights';
 import { prisma } from './prisma';
 import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 
@@ -34,6 +37,9 @@ export type FreeOnboardingCandidate = {
   score: number | null;
   competitors: CleexsEmailCompetitor[];
   improvementTip: string | null;
+  /** Oportunidades/acciones del Plan (= promptResults del run). */
+  actionsCount: number | null;
+  analysisJson?: unknown;
   shareUrl?: string;
   userId?: string;
   tenantId?: string;
@@ -113,16 +119,55 @@ export function cumulativeDaysForStep(steps: Array<Pick<FreeEmailSequenceStep, '
   return total;
 }
 
+function clampScore(n: number): number {
+  return Math.round(Math.max(0, Math.min(100, n)));
+}
+
+/** Score desde analysisJson: gold metrics, cleexsScore free, o promedio de intenciones. */
 function scoreFromAnalysisJson(value: unknown): number | null {
   if (!value || typeof value !== 'object') return null;
   const root = value as {
     metrics?: { cleexsScore?: unknown };
     cleexsScore?: unknown;
     score?: unknown;
+    comentariosPorIntencion?: Array<{ score?: unknown }>;
   };
   const raw = root.metrics?.cleexsScore ?? root.cleexsScore ?? root.score;
   const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
-  return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : null;
+  if (Number.isFinite(n)) return clampScore(n);
+
+  const byIntention = (root.comentariosPorIntencion || [])
+    .map((i) => i.score)
+    .filter((s): s is number => typeof s === 'number' && Number.isFinite(s));
+  if (!byIntention.length) return null;
+  return clampScore(byIntention.reduce((a, b) => a + b, 0) / byIntention.length);
+}
+
+/** Fuente de verdad del Cleexs Score: PRIA del run; fallback al analysisJson. */
+async function resolveCleexsScoreForDiagnostic(input: {
+  diagnosticId: string;
+  analysisJson: unknown;
+  runId?: string | null;
+}): Promise<number | null> {
+  let runId = input.runId ?? null;
+  if (!runId) {
+    const diag = await prisma.publicDiagnostic.findUnique({
+      where: { id: input.diagnosticId },
+      select: { runId: true },
+    });
+    runId = diag?.runId ?? null;
+  }
+  if (runId) {
+    const report = await prisma.pRIAReport.findFirst({
+      where: { runId },
+      orderBy: { createdAt: 'desc' },
+      select: { priaTotal: true },
+    });
+    if (report?.priaTotal != null && Number.isFinite(report.priaTotal)) {
+      return clampScore(report.priaTotal);
+    }
+  }
+  return scoreFromAnalysisJson(input.analysisJson);
 }
 
 function competitorsFromAnalysis(value: unknown): CleexsEmailCompetitor[] {
@@ -146,6 +191,37 @@ function improvementTipFromAnalysis(value: unknown): string | null {
   const sugerencias = (value as { sugerencias?: unknown }).sugerencias;
   if (Array.isArray(sugerencias) && typeof sugerencias[0] === 'string') {
     return sugerencias[0];
+  }
+  return null;
+}
+
+/** Misma fuente que el Plan de Ataque web: cantidad de promptResults del run. */
+async function actionsCountFromRunId(runId: string | null | undefined): Promise<number | null> {
+  if (!runId) return null;
+  const n = await prisma.promptResult.count({ where: { runId } });
+  return n > 0 ? n : null;
+}
+
+async function resolveActionsCountForDiagnostic(input: {
+  diagnosticId: string;
+  runId?: string | null;
+  analysisJson?: unknown;
+}): Promise<number | null> {
+  const fromRun = await actionsCountFromRunId(input.runId);
+  if (fromRun != null) return fromRun;
+
+  const row = await prisma.publicDiagnostic.findUnique({
+    where: { id: input.diagnosticId },
+    select: { runId: true },
+  });
+  const fromLookup = await actionsCountFromRunId(row?.runId);
+  if (fromLookup != null) return fromLookup;
+
+  // Fallback raro: arrays en analysisJson
+  const a = input.analysisJson;
+  if (a && typeof a === 'object' && !Array.isArray(a)) {
+    const opps = (a as { oportunidades?: unknown }).oportunidades;
+    if (Array.isArray(opps) && opps.length > 0) return opps.length;
   }
   return null;
 }
@@ -228,12 +304,26 @@ export async function resolveFreeOnboardingCandidates(input: {
       updatedAt: true,
       analysisJson: true,
       shareSlug: true,
+      runId: true,
     },
   });
 
   const base = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
   const results: FreeOnboardingCandidate[] = [];
   const seenEmails = new Set<string>();
+
+  const runIds = [...new Set(rows.map((r) => r.runId).filter((id): id is string => Boolean(id)))];
+  const actionsByRunId = new Map<string, number>();
+  if (runIds.length) {
+    const grouped = await prisma.promptResult.groupBy({
+      by: ['runId'],
+      where: { runId: { in: runIds } },
+      _count: { _all: true },
+    });
+    for (const g of grouped) {
+      if (g._count._all > 0) actionsByRunId.set(g.runId, g._count._all);
+    }
+  }
 
   for (const row of rows) {
     const email = row.email?.trim().toLowerCase();
@@ -243,15 +333,28 @@ export async function resolveFreeOnboardingCandidates(input: {
     if (await isPremiumEmail(email)) continue;
 
     seenEmails.add(email);
+    const actionsCount =
+      (row.runId ? actionsByRunId.get(row.runId) ?? null : null) ??
+      (await resolveActionsCountForDiagnostic({
+        diagnosticId: row.id,
+        runId: row.runId,
+        analysisJson: row.analysisJson,
+      }));
     results.push({
       diagnosticId: row.id,
       email,
       brandName: row.brandName,
       domain: row.domain,
       anchoredAt: row.updatedAt,
-      score: scoreFromAnalysisJson(row.analysisJson),
+      score: await resolveCleexsScoreForDiagnostic({
+        diagnosticId: row.id,
+        analysisJson: row.analysisJson,
+        runId: row.runId,
+      }),
       competitors: competitorsFromAnalysis(row.analysisJson),
       improvementTip: improvementTipFromAnalysis(row.analysisJson),
+      actionsCount,
+      analysisJson: row.analysisJson,
       shareUrl: row.shareSlug ? `${base}/score/${row.shareSlug}` : undefined,
     });
 
@@ -273,7 +376,7 @@ function buildLinksForCandidate(input: {
 
   return {
     ...baseLinks,
-    reportUrl: withEmailAttribution(`${origin}/ver-resultado?diagnosticId=${input.candidate.diagnosticId}`, {
+    reportUrl: withEmailAttribution(`${origin}/ver-resultado/v2?diagnosticId=${input.candidate.diagnosticId}`, {
       campaignSlug,
       variant: input.variant,
       linkRole: 'cta_report',
@@ -307,7 +410,7 @@ export async function sendFreeOnboardingStep(input: {
   candidate: FreeOnboardingCandidate;
   step: Pick<
     FreeEmailSequenceStep,
-    'sortOrder' | 'subject' | 'preheader' | 'body' | 'templateVariant'
+    'sortOrder' | 'subject' | 'preheader' | 'body' | 'postscript' | 'templateVariant' | 'insightKey' | 'insightText'
   >;
 }): Promise<{ sent: boolean; reason?: string; logId?: string; subject?: string }> {
   if (isEmailDisabled()) return { sent: false, reason: 'emails_disabled' };
@@ -317,12 +420,29 @@ export async function sendFreeOnboardingStep(input: {
   if (await isEmailUnsubscribedFromCategory(to, 'content')) return { sent: false, reason: 'unsubscribed' };
 
   const campaignSlug = freeOnboardingCampaignSlug(input.step.sortOrder);
-  const variant = input.step.templateVariant;
+  const insightKey = isFreeEmailInsightKey(input.step.insightKey) ? input.step.insightKey : null;
+  const variant = insightKey ? CleexsEmailTemplateVariant.letter : input.step.templateVariant;
+  const commentText = (input.step.insightText || '').trim();
+  // Envío: insightText en la tarjeta; body es el cuerpo del mail.
+  const insightLine = insightKey
+    ? commentText ||
+      resolveFreeEmailInsightLine(insightKey, input.candidate.analysisJson, {
+        brandName: input.candidate.brandName,
+        domain: input.candidate.domain,
+        score: input.candidate.score,
+        topCompetitor: input.candidate.competitors[0]?.name ?? null,
+      })
+    : null;
+  const featuredInsight =
+    insightKey && insightLine
+      ? { label: getInsightMeta(insightKey).title, text: insightLine }
+      : null;
   const content = {
     variant,
     subject: input.step.subject,
     preheader: input.step.preheader,
     body: input.step.body,
+    postscript: input.step.postscript,
   };
 
   const personalization = {
@@ -331,6 +451,7 @@ export async function sendFreeOnboardingStep(input: {
     domain: input.candidate.domain,
     competitors: input.candidate.competitors,
     improvementTip: input.candidate.improvementTip,
+    actionsCount: input.candidate.actionsCount,
   };
 
   const links = buildLinksForCandidate({
@@ -343,6 +464,7 @@ export async function sendFreeOnboardingStep(input: {
     content,
     personalization,
     links,
+    featuredInsight,
     showFounderSignature: true,
     showScoreBlock: variant === 'letter',
     showReportLinks: variant === 'letter',
@@ -367,6 +489,7 @@ export async function sendFreeOnboardingStep(input: {
         subject,
         html: built.html,
         text: built.text,
+        replyTo: buildTransactionalReplyTo(),
         headers: { 'X-Cleexs-Campaign': campaignSlug },
       });
       if (error) throw new Error(formatResendError(error));
@@ -423,7 +546,7 @@ export async function sendFreeOnboardingStep(input: {
   return { sent: true, logId: log.id, subject };
 }
 
-export function buildFreeOnboardingCandidateFromDiagnostic(input: {
+export async function buildFreeOnboardingCandidateFromDiagnostic(input: {
   diagnosticId: string;
   email: string;
   brandName: string;
@@ -431,7 +554,8 @@ export function buildFreeOnboardingCandidateFromDiagnostic(input: {
   analysisJson: unknown;
   shareSlug?: string | null;
   anchoredAt?: Date;
-}): FreeOnboardingCandidate {
+  runId?: string | null;
+}): Promise<FreeOnboardingCandidate> {
   const email = input.email.trim().toLowerCase();
   const base = getAppBaseUrlForPublicLinks().replace(/\/+$/, '');
   const slug = input.shareSlug?.trim();
@@ -441,9 +565,19 @@ export function buildFreeOnboardingCandidateFromDiagnostic(input: {
     brandName: input.brandName,
     domain: input.domain,
     anchoredAt: input.anchoredAt ?? new Date(),
-    score: scoreFromAnalysisJson(input.analysisJson),
+    score: await resolveCleexsScoreForDiagnostic({
+      diagnosticId: input.diagnosticId,
+      analysisJson: input.analysisJson,
+      runId: input.runId,
+    }),
     competitors: competitorsFromAnalysis(input.analysisJson),
     improvementTip: improvementTipFromAnalysis(input.analysisJson),
+    actionsCount: await resolveActionsCountForDiagnostic({
+      diagnosticId: input.diagnosticId,
+      runId: input.runId,
+      analysisJson: input.analysisJson,
+    }),
+    analysisJson: input.analysisJson,
     shareUrl: slug ? `${base}/score/${slug}` : undefined,
   };
 }
@@ -466,17 +600,23 @@ export async function sendFreeOnboardingStep1ForCompletedDiagnostic(input: {
   if (await isPremiumEmail(email)) return { sent: false, reason: 'premium_user' };
   if (await wasFreeOnboardingStepSent(email, 1)) return { sent: false, reason: 'already_sent' };
 
-  const sequence = await ensureFreeEmailSequence();
-  const step1 = sequence.steps.find((s) => s.sortOrder === 1 && s.active);
+  await ensureFreeEmailSequence();
+  // Siempre lee el paso 1 desde BD (contenido editado en admin UI).
+  const step1 = await prisma.freeEmailSequenceStep.findFirst({
+    where: { sequence: { key: FREE_SEQUENCE_KEY }, sortOrder: 1 },
+  });
   if (!step1) return { sent: false, reason: 'step_not_configured' };
 
-  const candidate = buildFreeOnboardingCandidateFromDiagnostic(input);
+  const candidate = await buildFreeOnboardingCandidateFromDiagnostic(input);
   return sendFreeOnboardingStep({ candidate, step: step1 });
 }
 
 export type PostDiagnosticCompletionEmailKind = 'free_onboarding_s1' | 'diagnostic_link' | 'none';
 
-/** Correo post-diagnóstico: secuencia free paso 1 (default) o link legacy para premium / fallback. */
+/**
+ * Correo post-diagnóstico free: solo secuencia paso 1 (carta + score).
+ * El mail legacy `sendDiagnosticLink` queda solo para usuarios premium.
+ */
 export async function sendPostDiagnosticCompletionEmail(input: {
   diagnosticId: string;
   email: string;
@@ -491,7 +631,8 @@ export async function sendPostDiagnosticCompletionEmail(input: {
   if (step1.sent) return { sent: true, kind: 'free_onboarding_s1' };
   if (step1.reason === 'already_sent') return { sent: false, kind: 'none', reason: 'already_sent' };
 
-  if (step1.reason === 'premium_user' || step1.reason === 'step_not_configured') {
+  // Solo premium recibe el mail viejo de link; free nunca cae a ese template.
+  if (step1.reason === 'premium_user') {
     const baseUrl = getAppBaseUrlForPublicLinks();
     await sendDiagnosticLink(input.email, input.diagnosticId, baseUrl, input.legacyAnalysis);
     return { sent: true, kind: 'diagnostic_link' };
@@ -537,7 +678,10 @@ export async function runFreeOnboardingEmailBatch(input: {
     };
   }
 
-  const activeSteps = sequence.steps.filter((s) => s.active).sort((a, b) => a.sortOrder - b.sortOrder);
+  // Paso 1 solo al completar diagnóstico; el cron nunca debe reenviarlo.
+  const activeSteps = sequence.steps
+    .filter((s) => s.active && s.sortOrder > 1)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   const stepSummaries: Array<Record<string, unknown>> = [];
   let sent = 0;
   let skipped = 0;

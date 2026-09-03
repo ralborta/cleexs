@@ -1,7 +1,9 @@
 /**
- * Tracking mínimo del funnel de diagnóstico público. En producción, enlazar a gtag / plataforma.
- * Eventos: ver lista en diagnostic-onboarding o docs internos.
+ * Tracking mínimo del funnel de diagnóstico público vía GTM (dataLayer).
+ * GA4 se configura solo en el contenedor GTM — sin gtag.js directo en la app.
  */
+import { pushGtmDataLayer } from '@/lib/gtm';
+
 export type OnboardingAnalyticName =
   | 'onboarding_started'
   | 'onboarding_intro_completed'
@@ -21,10 +23,9 @@ export type OnboardingAnalyticName =
   | 'onboarding_social_shown'
   | 'onboarding_insight_shown';
 
-
 export function trackOnboarding(
   name: OnboardingAnalyticName,
-  payload?: Record<string, string | number | boolean | null | undefined>
+  payload?: Record<string, string | number | boolean | null | undefined>,
 ) {
   if (typeof window === 'undefined') return;
   const detail = { name, ...payload, ts: Date.now() };
@@ -37,7 +38,7 @@ export function trackOnboarding(
   } catch {
     // ignore
   }
-  // Hook futuro: window.gtag?.('event', name, payload);
+  pushGtmDataLayer({ event: name, ...payload });
 }
 
 export function lastStepForAbandon(payload: { diagnosticId: string; phase: string; stepIndex: number }) {
@@ -45,7 +46,7 @@ export function lastStepForAbandon(payload: { diagnosticId: string; phase: strin
   try {
     window.sessionStorage.setItem(
       `cleexs_onboarding_${payload.diagnosticId}_last`,
-      JSON.stringify({ ...payload, t: Date.now() })
+      JSON.stringify({ ...payload, t: Date.now() }),
     );
   } catch {
     // ignore

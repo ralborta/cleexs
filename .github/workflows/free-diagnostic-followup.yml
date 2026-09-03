@@ -1,9 +1,8 @@
 name: Free Diagnostic Follow-up
 
 on:
-  schedule:
-    # Diario 14:00 UTC. Envía el correo con diagnóstico a free registrados en los últimos 20 días.
-    - cron: '0 14 * * *'
+  # Pausado 2026-09-03: solo onboarding paso 1 (al completar diagnóstico).
+  # workflow_dispatch manual sigue disponible para pruebas.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -31,9 +30,9 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
           API_URL: https://cleexsapi-production.up.railway.app
-          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
-          REGISTERED_WITHIN_DAYS: ${{ github.event_name == 'schedule' && '20' || inputs.registered_within_days }}
-          LIMIT: ${{ github.event_name == 'schedule' && '100' || inputs.limit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          REGISTERED_WITHIN_DAYS: ${{ inputs.registered_within_days }}
+          LIMIT: ${{ inputs.limit }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "Missing CLEEXS_CRON_SECRET GitHub secret"

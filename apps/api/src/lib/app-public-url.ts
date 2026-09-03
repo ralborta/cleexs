@@ -4,7 +4,7 @@
  * No usar solo FRONTEND_URL: en Railway suele ser preview/staging (CORS) y no coincide con
  * el dominio del producto (app.cleexs.net).
  *
- * Prioridad: CLEEXS_APP_URL → NEXT_PUBLIC_APP_URL → FRONTEND_URL solo si es localhost → https://app.cleexs.net
+ * Prioridad: CLEEXS_APP_URL → NEXT_PUBLIC_APP_URL (ignorando localhost) → https://app.cleexs.net
  */
 const DEFAULT_APP = 'https://app.cleexs.net';
 
@@ -23,10 +23,7 @@ function isLocalhostBase(url: string): boolean {
 
 export function getAppBaseUrlForPublicLinks(): string {
   const explicit = process.env.CLEEXS_APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return trimBase(explicit);
-
-  const fe = process.env.FRONTEND_URL?.trim();
-  if (fe && isLocalhostBase(fe)) return trimBase(fe);
+  if (explicit && !isLocalhostBase(explicit)) return trimBase(explicit);
 
   return trimBase(DEFAULT_APP);
 }

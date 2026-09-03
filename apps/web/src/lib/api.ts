@@ -9,13 +9,13 @@ export async function api<T>(endpoint: string, options?: RequestInit): Promise<T
   let response: Response;
   try {
     response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
+    ...options,
       signal: options?.signal ?? controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('La API tardó demasiado en responder. Refrescá o probá de nuevo.');
@@ -480,6 +480,87 @@ export interface AcquisitionReport {
   }>;
 }
 
+export type AcquisitionDiagnosticRow = AcquisitionReport['latestDiagnostics'][number];
+
+export interface AcquisitionDiagnosticSearchResult {
+  ok: true;
+  query: string;
+  completedOnly: boolean;
+  limit: number;
+  totalMatching: number;
+  returned: number;
+  truncated: boolean;
+  rows: AcquisitionDiagnosticRow[];
+}
+
+export type ContactEnrichmentResponse = {
+  ok: boolean;
+  email: string;
+  domain: string;
+  diagnosticIndustry: string | null;
+  person: {
+    name: string | null;
+    title: string | null;
+    seniority: string | null;
+    linkedin: string | null;
+    found: boolean;
+  };
+  org: {
+    name: string | null;
+    industry: string | null;
+    employees: number | null;
+    founded: number | null;
+    location: string | null;
+    linkedin: string | null;
+    website: string | null;
+  };
+  provider: 'pdl' | 'none';
+  error?: string;
+  cached?: boolean;
+};
+
+export interface OnboardingProfileReport {
+  windowDays: number;
+  asOf: string;
+  selectedCountry: string | null;
+  availableCountries: Array<{ country: string; count: number }>;
+  totals: {
+    diagnosticsInWindow: number;
+    withProfileData: number;
+    withCountry: number;
+    withName: number;
+    withHowFound: number;
+    duplicateDomainsSkipped: number;
+    profileRate: number;
+    countryRate: number;
+    nameRate: number;
+    howFoundRate: number;
+  };
+  howFoundBreakdown: Array<{
+    code: string;
+    label: string;
+    count: number;
+    share: number;
+  }>;
+  rows: Array<{
+    id: string;
+    createdAt: string;
+    brandName: string;
+    domain: string;
+    email: string | null;
+    status: string;
+    country: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string | null;
+    howFoundUs: string | null;
+    howFoundLabel: string | null;
+    hasCountry: boolean;
+    hasName: boolean;
+    hasHowFound: boolean;
+  }>;
+}
+
 export interface CleexsScoreReport {
   windowDays: number;
   asOf: string;
@@ -624,7 +705,7 @@ export interface SystemConfigReport {
     firecrawl: { configured: boolean };
     hunter: { configured: boolean };
     serper: { configured: boolean };
-    builderbot: { configured: boolean; baseUrl: string };
+    builderbot: { configured: boolean; baseUrl: string; baileysBotUrl?: string | null; baileysPublicUrl?: string | null };
     whatsapp: { apiKeyConfigured: boolean; dailyLimit: number };
     satellite: { enabled: boolean; baseUrl: string | null };
     database: { configured: boolean };
@@ -760,6 +841,29 @@ export interface AdminPaymentsReport {
 export const internalReportsApi = {
   acquisition: (windowDays: ReportWindowDays = 30) =>
     api<AcquisitionReport>(`/api/reports/internal/acquisition?windowDays=${windowDays}`),
+  searchDiagnostics: (params: { q: string; limit?: number; completedOnly?: boolean }) => {
+    const qs = new URLSearchParams({ q: params.q.trim() });
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.completedOnly) qs.set('completedOnly', 'true');
+    return api<AcquisitionDiagnosticSearchResult>(
+      `/api/reports/internal/acquisition/diagnostic-search?${qs.toString()}`
+    );
+  },
+  onboardingProfile: (windowDays: ReportWindowDays = 30, country?: string) => {
+    const qs = new URLSearchParams({ windowDays: String(windowDays) });
+    if (country?.trim()) qs.set('country', country.trim());
+    return api<OnboardingProfileReport>(`/api/reports/internal/onboarding-profile?${qs.toString()}`);
+  },
+  enrichContact: (body: {
+    email: string;
+    domain?: string | null;
+    diagnosticIndustry?: string | null;
+    brandName?: string | null;
+  }) =>
+    api<ContactEnrichmentResponse>('/api/reports/internal/enrich-contact', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   cleexsScore: (windowDays: ReportWindowDays = 30) =>
     api<CleexsScoreReport>(`/api/reports/internal/cleexs-score?windowDays=${windowDays}`),
   emailOutreach: (windowDays: ReportWindowDays = 30) =>
@@ -985,12 +1089,12 @@ export interface PlatformDashboard {
     totalTrackedDiagnostics: number;
     topReferrers: Array<
       ReferrerReportRow & {
-        visits: number;
-        completedDiagnostics: number;
-        capturedEmails: number;
-        completionRate: number;
-        latestAt: string;
-        topSource: string;
+      visits: number;
+      completedDiagnostics: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
+      topSource: string;
       }
     >;
     topSources: Array<{
@@ -1003,11 +1107,11 @@ export interface PlatformDashboard {
     totalDiagnostics: number;
     topReferrers: Array<
       ReferrerReportRow & {
-        visits: number;
-        completedDiagnostics: number;
-        capturedEmails: number;
-        completionRate: number;
-        latestAt: string;
+      visits: number;
+      completedDiagnostics: number;
+      capturedEmails: number;
+      completionRate: number;
+      latestAt: string;
       }
     >;
   };
@@ -1134,6 +1238,13 @@ export interface PublicDiagnosticSetupDraft {
   confirmedCompetitorUrls?: string[];
   /** ISO timestamp: la detección automática ya terminó (aunque sea sin resultados). */
   competitorRescueAttemptedAt?: string;
+  /** Idioma elegido en el wizard. */
+  selectedLanguage?: string;
+  firstName?: string;
+  lastName?: string;
+  howFoundUs?: string;
+  humanVerifiedAt?: string;
+  legalAcceptedAt?: string;
 }
 
 export interface PublicDiagnostic {
@@ -1217,16 +1328,16 @@ export interface PublicDiagnosticShareResponse {
 export const publicDiagnosticApi = {
   create: (
     input: {
-      url: string;
-      brandName?: string;
-      tier?: 'gold' | 'freemium';
-      useSerp?: boolean;
-      tracking?: {
-        refCode?: string;
-        utmSource?: string;
-        utmMedium?: string;
-        utmCampaign?: string;
-      };
+    url: string;
+    brandName?: string;
+    tier?: 'gold' | 'freemium';
+    useSerp?: boolean;
+    tracking?: {
+      refCode?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
     },
     opts?: { visitorId?: string }
   ) =>
@@ -1255,6 +1366,12 @@ export const publicDiagnosticApi = {
       country?: string;
       industry?: string;
       engines?: string[];
+      language?: string;
+      firstName?: string;
+      lastName?: string;
+      howFoundUs?: string;
+      humanVerifiedAt?: string;
+      legalAcceptedAt?: string;
     },
     opts?: { visitorId?: string }
   ) =>
@@ -1267,7 +1384,7 @@ export const publicDiagnosticApi = {
     }),
   confirmContext: (
     id: string,
-    body: { country?: string; industry?: string; engines?: string[] }
+    body: { country?: string; industry?: string; engines?: string[]; language?: string }
   ) =>
     api<{
       ok: boolean;
@@ -1291,6 +1408,28 @@ export const publicDiagnosticApi = {
       `/api/public/diagnostic/${id}?${tier ? `tier=${tier}&` : ''}_=${Date.now()}`,
       { cache: 'no-store' }
     ),
+};
+
+export type BrandAssetResolveResult = {
+  domain: string;
+  brandName: string | null;
+  logoUrl: string | null;
+  source: 'curated' | 'brandfetch' | 'logo.dev' | 'site' | 'none';
+  status: 'ok' | 'missing';
+  confidence: number | null;
+  cached: boolean;
+};
+
+/** Logos de marca (capa 1: cache + Brandfetch / Logo.dev). */
+export const brandAssetsApi = {
+  resolve: (input: { domain: string; brandName?: string; refresh?: boolean }) => {
+    const q = new URLSearchParams({ domain: input.domain });
+    if (input.brandName) q.set('brandName', input.brandName);
+    if (input.refresh) q.set('refresh', '1');
+    return api<BrandAssetResolveResult>(`/api/public/brand-assets/resolve?${q.toString()}`, {
+      cache: 'no-store',
+    });
+  },
 };
 
 /** Canal WhatsApp (BuilderBot). Requiere `WHATSAPP_CHANNEL_API_KEY` en la API. */

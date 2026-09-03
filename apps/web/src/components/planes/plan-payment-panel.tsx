@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { Check, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { APP_PLANS, getAnnualPrice, type BillingMode } from '@/lib/plans';
 
 const TOKEN_KEY = 'cleexs_portal_token';
@@ -24,11 +25,39 @@ export interface PlanPaymentPanelProps {
   /** Callback opcional tras iniciar el checkout. */
   onConfirm?: () => void;
   hideFooterSsl?: boolean;
+  /** Permite checkout sin sesión previa (mismo flujo que Plan Conquistar). */
+  diagnosticId?: string | null;
+  customerEmail?: string | null;
+  sourceChannel?: string;
 }
 
-export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl }: PlanPaymentPanelProps) {
+export function PlanPaymentPanel({
+  planId,
+  billingMode,
+  onConfirm,
+  hideFooterSsl,
+  diagnosticId,
+  customerEmail,
+  sourceChannel,
+}: PlanPaymentPanelProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState(customerEmail?.trim() || '');
+  const [hasPortalSession, setHasPortalSession] = useState(false);
+
+  useEffect(() => {
+    if (customerEmail?.trim()) setEmailInput(customerEmail.trim());
+  }, [customerEmail]);
+
+  useEffect(() => {
+    try {
+      setHasPortalSession(Boolean(sessionStorage.getItem(TOKEN_KEY)));
+    } catch {
+      setHasPortalSession(false);
+    }
+  }, []);
+
+  const needsEmailField = !hasPortalSession && !diagnosticId?.trim();
 
   const plan = useMemo(() => APP_PLANS.find((p) => p.id === planId) ?? APP_PLANS[1], [planId]);
 
@@ -47,8 +76,15 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
       setError(null);
 
       const token = typeof window !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null;
-      if (!token) {
-        setError('Para pagar necesitás iniciar sesión en el portal. Así podemos activar el plan en tu cuenta.');
+      const diagId = diagnosticId?.trim() || null;
+      const emailToSend = (customerEmail?.trim() || emailInput.trim() || '').toLowerCase();
+
+      if (!token && !diagId && !emailToSend) {
+        setError('Ingresá tu email para continuar al pago.');
+        return;
+      }
+      if (!token && !diagId && !emailToSend.includes('@')) {
+        setError('Ingresá un email válido.');
         return;
       }
 
@@ -76,23 +112,35 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
         /* ignore */
       }
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const res = await fetch(`${API_URL}/api/subscriptions/checkout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ planId, billingMode, ...attribution }),
+        headers,
+        body: JSON.stringify({
+          planId,
+          billingMode,
+          ...(sourceChannel ? { sourceChannel } : {}),
+          ...(diagId ? { diagnosticId: diagId } : {}),
+          ...(!token && emailToSend ? { customerEmail: emailToSend } : {}),
+          ...attribution,
+        }),
       });
 
       const json = (await res.json().catch(() => ({}))) as {
         checkoutUrl?: string;
         error?: string;
         message?: string;
+        portalToken?: string;
       };
 
       if (!res.ok || !json.checkoutUrl) {
         throw new Error(json.error || json.message || 'No se pudo iniciar el checkout de Mercado Pago.');
+      }
+
+      if (json.portalToken && typeof window !== 'undefined') {
+        sessionStorage.setItem(TOKEN_KEY, json.portalToken);
       }
 
       onConfirm?.();
@@ -123,6 +171,26 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
           ))}
         </ul>
 
+        {needsEmailField ? (
+          <div className="mt-6 border-t border-slate-100 pt-6">
+            <label htmlFor="checkout-email" className="text-sm font-medium text-slate-700">
+              Email para activar tu plan
+            </label>
+            <Input
+              id="checkout-email"
+              type="email"
+              autoComplete="email"
+              placeholder="tu@empresa.com"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="mt-2"
+            />
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              Usamos este email para vincular el pago a tu cuenta y activar Premium.
+            </p>
+          </div>
+        ) : null}
+
         {error ? (
           <p className="mt-6 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {error}
@@ -133,7 +201,11 @@ export function PlanPaymentPanel({ planId, billingMode, onConfirm, hideFooterSsl
           type="button"
           className="mt-6 w-full bg-primary-600 hover:bg-primary-700"
           onClick={() => void startCheckout()}
-          disabled={submitting || plan.id !== 'crecimiento'}
+          disabled={
+            submitting ||
+            plan.id !== 'crecimiento' ||
+            (needsEmailField && !emailInput.trim().includes('@'))
+          }
         >
           {submitting ? 'Redirigiendo a Mercado Pago…' : 'Pagar con Mercado Pago'}
         </Button>

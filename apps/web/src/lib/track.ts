@@ -12,18 +12,42 @@ function apiBase(): string {
 }
 
 const VISITOR_KEY = 'cleexs_vid';
+const VISITOR_COOKIE = 'cleexs_vid';
+
+function readVisitorCookie(): string {
+  if (typeof document === 'undefined') return '';
+  try {
+    const m = document.cookie.match(
+      new RegExp(`(?:^|; )${VISITOR_COOKIE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`)
+    );
+    return m ? decodeURIComponent(m[1]) : '';
+  } catch {
+    return '';
+  }
+}
+
+function writeVisitorCookie(id: string): void {
+  if (typeof document === 'undefined' || !id) return;
+  try {
+    // Compartido entre cleexs.net (home) y app.cleexs.net (diagnóstico).
+    document.cookie = `${VISITOR_COOKIE}=${encodeURIComponent(id)}; Domain=.cleexs.net; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
+  } catch {
+    // ignore
+  }
+}
 
 export function getVisitorId(): string {
   if (typeof window === 'undefined') return '';
   try {
-    let id = window.localStorage.getItem(VISITOR_KEY);
+    let id = readVisitorCookie() || window.localStorage.getItem(VISITOR_KEY) || '';
     if (!id) {
       id =
         typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
           : `v_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      window.localStorage.setItem(VISITOR_KEY, id);
     }
+    window.localStorage.setItem(VISITOR_KEY, id);
+    writeVisitorCookie(id);
     return id;
   } catch {
     return '';
@@ -59,13 +83,19 @@ export type PageViewAttribution = {
   sourceChannel?: string;
 };
 
-// Evita doble disparo por re-render dentro de la misma sesión/ruta.
-const firedPaths = new Set<string>();
+// Evita doble disparo por re-render. Si el 1er fire llegó sin UTM (hydration),
+// permitimos un 2º fire cuando sí haya atribución.
+const firedPaths = new Map<string, boolean>();
 
 export function trackPageview(path: string, attribution?: PageViewAttribution): void {
   if (typeof window === 'undefined') return;
-  if (firedPaths.has(path)) return;
-  firedPaths.add(path);
+  const hasAttr = Boolean(
+    attribution?.refCode || attribution?.utmSource || attribution?.utmMedium || attribution?.utmCampaign
+  );
+  const prior = firedPaths.get(path);
+  if (prior === true) return;
+  if (prior === false && !hasAttr) return;
+  firedPaths.set(path, hasAttr);
   post('/api/public/track/pageview', {
     path,
     visitorId: getVisitorId(),

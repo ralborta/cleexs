@@ -2,6 +2,7 @@ import { CleexsEmailSendStatus } from '@prisma/client';
 import { Resend } from 'resend';
 import {
   buildTransactionalFromAddress,
+  buildTransactionalReplyTo,
   isEmailConfigured,
   isEmailDisabled,
   sendSmtpMail,
@@ -58,6 +59,7 @@ export async function sendAdminTestEmail(toRaw: string): Promise<{
         subject,
         html,
         text,
+        replyTo: buildTransactionalReplyTo(),
       });
       if (error) throw new Error(formatResendError(error));
       externalId = data?.id ?? null;

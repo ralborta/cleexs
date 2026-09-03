@@ -29,6 +29,7 @@ import {
   ReportSection,
   formatDate,
 } from '@/components/admin/report-ui';
+import { WhatsAppMonitorPanel } from '@/components/admin/whatsapp-monitor-panel';
 
 function StatusBadge({ ok, labelOk = 'OK', labelKo = 'Faltante' }: { ok: boolean; labelOk?: string; labelKo?: string }) {
   return (
@@ -204,6 +205,14 @@ export default function AdminSettingsPage() {
       </header>
 
       {error ? <ReportErrorBanner message={error} /> : null}
+
+      <ReportSection
+        title="Estado WhatsApp"
+        description="Monitor en vivo de la API Cleexs, el bot Baileys y la sesión WhatsApp."
+      >
+        <WhatsAppMonitorPanel />
+      </ReportSection>
+
       {loading && !data ? <ReportLoading /> : null}
 
       {data ? (
@@ -303,12 +312,22 @@ export default function AdminSettingsPage() {
               />
               <IntegrationCard
                 Icon={MessageCircle}
-                name="BuilderBot"
-                status={data.integrations.builderbot.configured ? 'ok' : 'missing'}
-                description="Backend del bot conversacional."
+                name="WhatsApp / Baileys"
+                status={
+                  data.integrations.builderbot.baileysBotUrl || data.integrations.builderbot.configured
+                    ? 'ok'
+                    : 'missing'
+                }
+                description="Bot self-hosted (Baileys) o BuilderBot Cloud."
                 rows={[
-                  { label: 'Bot ID + API key', value: data.integrations.builderbot.configured ? 'configurado' : 'falta' },
-                  { label: 'Base URL', value: data.integrations.builderbot.baseUrl },
+                  {
+                    label: 'Baileys URL',
+                    value: data.integrations.builderbot.baileysBotUrl || 'no configurado',
+                  },
+                  {
+                    label: 'BBC (fallback)',
+                    value: data.integrations.builderbot.configured ? 'configurado' : 'no',
+                  },
                 ]}
               />
               <IntegrationCard

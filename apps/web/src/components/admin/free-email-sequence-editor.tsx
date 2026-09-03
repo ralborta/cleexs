@@ -29,6 +29,14 @@ type SuggestedDefault = {
   templateVariant: TemplateVariant;
 };
 
+type InsightCatalogItem = {
+  key: string;
+  sortOrder: number;
+  title: string;
+  description: string;
+  sampleLine: string;
+};
+
 type StepRow = {
   id: string;
   sortOrder: number;
@@ -37,6 +45,9 @@ type StepRow = {
   subject: string | null;
   preheader: string | null;
   body: string | null;
+  insightKey: string | null;
+  insightText: string | null;
+  postscript: string | null;
   templateVariant: TemplateVariant;
   active: boolean;
   cumulativeDaysLabel: string;
@@ -54,6 +65,8 @@ type PreviewPayload = {
   variant: TemplateVariant;
   subject: string;
   html: string;
+  insightPreviewLine?: string | null;
+  insightKey?: string | null;
 };
 
 const field =
@@ -70,6 +83,7 @@ export function FreeEmailSequenceEditor() {
   const [config, setConfig] = useState<ConfigRow | null>(null);
   const [steps, setSteps] = useState<StepRow[]>([]);
   const [suggestedBySortOrder, setSuggestedBySortOrder] = useState<Record<string, SuggestedDefault>>({});
+  const [insightCatalog, setInsightCatalog] = useState<InsightCatalogItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
@@ -78,6 +92,9 @@ export function FreeEmailSequenceEditor() {
   const [subject, setSubject] = useState('');
   const [preheader, setPreheader] = useState('');
   const [body, setBody] = useState('');
+  const [postscript, setPostscript] = useState('');
+  const [insightKey, setInsightKey] = useState<string>('');
+  const [insightText, setInsightText] = useState('');
   const [active, setActive] = useState(true);
 
   const [score, setScore] = useState(62);
@@ -99,6 +116,11 @@ export function FreeEmailSequenceEditor() {
     if (!selected) return null;
     return suggestedBySortOrder[String(selected.sortOrder)] ?? null;
   }, [selected, suggestedBySortOrder]);
+
+  const selectedInsight = useMemo(
+    () => insightCatalog.find((i) => i.key === insightKey) ?? null,
+    [insightCatalog, insightKey]
+  );
 
   function loadSuggestedContent() {
     if (!suggestedForSelected) return;
@@ -124,6 +146,7 @@ export function FreeEmailSequenceEditor() {
       const list = (json.steps as StepRow[]) ?? [];
       setSteps(list);
       setSuggestedBySortOrder((json.suggestedBySortOrder as Record<string, SuggestedDefault>) ?? {});
+      setInsightCatalog((json.insightCatalog as InsightCatalogItem[]) ?? []);
       if (!selectedId && list[0]) setSelectedId(list[0].id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -143,22 +166,52 @@ export function FreeEmailSequenceEditor() {
     setVariant(selected.templateVariant);
     setSubject(selected.subject ?? '');
     setPreheader(selected.preheader ?? '');
-    setBody(selected.body ?? '');
+    setInsightKey(selected.insightKey ?? '');
     setActive(selected.active);
-  }, [selected?.id]);
+
+    const catalogSample =
+      selected.insightKey != null
+        ? insightCatalog.find((i) => i.key === selected.insightKey)?.sampleLine ?? null
+        : null;
+    const savedInsight = (selected.insightText ?? '').trim();
+    const savedBody = selected.body ?? '';
+
+    // Recuperación: si el bug anterior guardó el demo del insight en el cuerpo.
+    if (
+      selected.insightKey &&
+      !savedInsight &&
+      catalogSample &&
+      savedBody.trim() === catalogSample.trim()
+    ) {
+      setInsightText(catalogSample);
+      const suggested = suggestedBySortOrder[String(selected.sortOrder)]?.body;
+      setBody(suggested ?? '');
+    } else {
+      setInsightText(savedInsight || catalogSample || '');
+      setBody(savedBody);
+    }
+    setPostscript(
+      (selected.postscript ?? '').trim() ||
+        'PD: ¿Alguna vez le preguntaste a ChatGPT por empresas de tu industria?'
+    );
+  }, [selected?.id, insightCatalog, suggestedBySortOrder]);
 
   const refreshPreview = useCallback(async () => {
     if (!selected) return;
     setPreviewLoading(true);
     try {
+      const effectiveVariant: TemplateVariant = insightKey ? 'letter' : variant;
       const res = await adminUiFetch('/api/admin-ui/email/free-sequence-preview/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          variant,
+          variant: effectiveVariant,
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          postscript: postscript.trim() || null,
+          insightKey: insightKey || null,
+          insightText: insightKey ? insightText.trim() || null : null,
           sortOrder: selected.sortOrder,
           score,
           domain,
@@ -174,13 +227,13 @@ export function FreeEmailSequenceEditor() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [selected, variant, subject, preheader, body, score, domain, brandName]);
+  }, [selected, variant, subject, preheader, body, postscript, insightKey, insightText, score, domain, brandName]);
 
   useEffect(() => {
     if (!selected) return undefined;
     const t = window.setTimeout(() => void refreshPreview(), 400);
     return () => window.clearTimeout(t);
-  }, [selected, variant, subject, preheader, body, score, domain, brandName, refreshPreview]);
+  }, [selected, variant, subject, preheader, body, postscript, insightKey, insightText, score, domain, brandName, refreshPreview]);
 
   async function saveStep() {
     if (!selected) return;
@@ -188,16 +241,20 @@ export function FreeEmailSequenceEditor() {
     setHint(null);
     setError(null);
     try {
+      const effectiveVariant: TemplateVariant = insightKey ? 'letter' : variant;
       const res = await adminUiFetch(`/api/admin-ui/email/free-sequence-preview/steps/${selected.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
           delayDaysAfterPrevious: delayDays,
-          templateVariant: variant,
+          templateVariant: effectiveVariant,
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          postscript: postscript.trim() || null,
+          insightKey: insightKey || null,
+          insightText: insightKey ? insightText.trim() || null : null,
           active,
         }),
       });
@@ -279,10 +336,13 @@ export function FreeEmailSequenceEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: testEmail.trim(),
-          variant,
+          variant: insightKey ? 'letter' : variant,
           subject: subject.trim() || null,
           preheader: preheader.trim() || null,
           body: body.trim() || null,
+          postscript: postscript.trim() || null,
+          insightKey: insightKey || null,
+          insightText: insightKey ? insightText.trim() || null : null,
           sortOrder: selected.sortOrder,
           score,
           domain,
@@ -393,7 +453,7 @@ export function FreeEmailSequenceEditor() {
                 void saveConfig({ enabled });
               }}
             />
-            Secuencia activa (prod)
+            Cron pasos 2+ activo (prod)
           </label>
         </section>
       ) : null}
@@ -401,7 +461,7 @@ export function FreeEmailSequenceEditor() {
       <section className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900">Probar corrida automática</h2>
         <p className="mt-1 text-xs text-slate-600">
-          Simulá quién recibiría mail hoy según días desde el diagnóstico. &quot;Enviar ahora&quot; usa force (ignora hora y el checkbox de arriba).
+          Simulá pasos 2+ (el paso 1 solo se envía al completar diagnóstico). &quot;Enviar ahora&quot; usa force e ignora hora y el checkbox de arriba.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={secondaryBtn} disabled={triggerBusy} onClick={() => void triggerBatch(true)}>
@@ -508,13 +568,17 @@ export function FreeEmailSequenceEditor() {
                 <label className="block">
                   <span className={labelCls}>Template</span>
                   <select
-                    value={variant}
+                    value={insightKey ? 'letter' : variant}
+                    disabled={Boolean(insightKey)}
                     onChange={(e) => setVariant(e.target.value as TemplateVariant)}
                     className={field}
                   >
                     <option value="letter">Carta (letter)</option>
                     <option value="editorial">Newsletter (editorial)</option>
                   </select>
+                  {insightKey ? (
+                    <p className="mt-1 text-[10px] text-slate-400">Con insight elegido, el diseño queda fijo en carta.</p>
+                  ) : null}
                 </label>
               </div>
 
@@ -522,6 +586,66 @@ export function FreeEmailSequenceEditor() {
                 <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
                 Paso activo
               </label>
+              {selected.sortOrder === 1 ? (
+                <p className="-mt-2 text-[10px] text-slate-500">
+                  El paso 1 se envía siempre al completar el diagnóstico free (carta + score). El checkbox no lo
+                  apaga; sirve de referencia. Los pasos 2+ sí respetan “activo” en el cron.
+                </p>
+              ) : null}
+
+              <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
+                <p className={labelCls}>Insight del reporte (de los 12)</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Solo afecta la tarjeta del mail. El cuerpo del mensaje se edita aparte y no se pisa.
+                </p>
+                <select
+                  value={insightKey}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setInsightKey(next);
+                    if (!next) {
+                      setInsightText('');
+                      return;
+                    }
+                    setVariant('letter');
+                    const item = insightCatalog.find((i) => i.key === next);
+                    if (item) setInsightText(item.sampleLine);
+                  }}
+                  className={field}
+                >
+                  <option value="">Sin insight (solo texto libre)</option>
+                  {insightCatalog.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.sortOrder}. {item.title}
+                    </option>
+                  ))}
+                </select>
+                {selectedInsight ? (
+                  <div className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-3 text-xs text-slate-700">
+                    <p className="font-semibold text-violet-800">{selectedInsight.title}</p>
+                    <p className="mt-1 text-slate-500">{selectedInsight.description}</p>
+                    <label className="mt-3 block">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">
+                        Texto en la tarjeta (editable)
+                      </span>
+                      <textarea
+                        value={insightText}
+                        onChange={(e) => setInsightText(e.target.value)}
+                        rows={4}
+                        className={`${field} mt-1.5 font-mono text-[13px] leading-relaxed`}
+                        placeholder="Editá este texto: es lo que se ve en la tarjeta del preview…"
+                      />
+                    </label>
+                    <p className="mt-1.5 text-[10px] text-slate-500">
+                      Al cambiar de insight se reemplaza solo este texto (no el cuerpo). Variables:{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
+                      <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
+                    </p>
+                  </div>
+                ) : null}
+              </div>
 
               <label className="block">
                 <span className={labelCls}>Asunto</span>
@@ -532,20 +656,32 @@ export function FreeEmailSequenceEditor() {
                 <input value={preheader} onChange={(e) => setPreheader(e.target.value)} className={field} />
               </label>
               <label className="block">
-                <span className={labelCls}>Cuerpo</span>
+                <span className={labelCls}>Cuerpo del mensaje</span>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  rows={12}
+                  rows={10}
                   className={`${field} font-mono text-[13px] leading-relaxed`}
                 />
                 <p className="mt-1 text-[10px] text-slate-500">
-                  Párrafos separados con línea en blanco. Variables:{' '}
+                  Texto principal del mail (independiente del insight). Párrafos con línea en blanco. Variables:{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{brandName}}'}</code>,{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{domain}}'}</code>,{' '}
                   <code className="rounded bg-slate-100 px-1">{'{{score}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>,{' '}
-                  <code className="rounded bg-slate-100 px-1">{'{{tip1}}'}</code>
+                  <code className="rounded bg-slate-100 px-1">{'{{topCompetitor}}'}</code>
+                </p>
+              </label>
+
+              <label className="block">
+                <span className={labelCls}>P.D. (postdata al pie)</span>
+                <input
+                  value={postscript}
+                  onChange={(e) => setPostscript(e.target.value)}
+                  className={field}
+                  placeholder="PD: ¿Alguna vez le preguntaste a ChatGPT…?"
+                />
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Línea en itálica al final de la carta (antes de la firma). Se ve en el preview a la derecha.
                 </p>
               </label>
 
@@ -588,12 +724,21 @@ export function FreeEmailSequenceEditor() {
             <section className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm text-slate-600">
                 <Eye className="h-4 w-4 text-violet-600" />
-                Preview · {variant === 'letter' ? 'carta' : 'editorial'} + contenido del editor
+                Preview · {(insightKey || variant === 'letter') ? 'carta' : 'editorial'}
+                {selectedInsight ? ` · ${selectedInsight.title}` : ''} + contenido del editor
               </div>
               {preview ? (
-                <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-600">
-                  <span className="font-semibold text-slate-800">Asunto:</span> {preview.subject}
-                </p>
+                <div className="space-y-1 border-b border-slate-100 px-4 py-2 text-xs text-slate-600">
+                  <p>
+                    <span className="font-semibold text-slate-800">Asunto:</span> {preview.subject}
+                  </p>
+                  {preview.insightPreviewLine ? (
+                    <p>
+                      <span className="font-semibold text-violet-800">Insight en tarjeta:</span>{' '}
+                      {preview.insightPreviewLine}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               {previewLoading && !preview ? (
                 <div className="flex items-center justify-center gap-2 py-24 text-slate-500">

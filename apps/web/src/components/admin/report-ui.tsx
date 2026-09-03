@@ -1,8 +1,53 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
 import type { ReportWindowDays } from '@/lib/api';
+
+/** Misma URL que ve el usuario al terminar el diagnóstico free. */
+export function buildDiagnosticReportPath(input: { diagnosticId: string; tier?: string | null }) {
+  const qs = new URLSearchParams({ diagnosticId: input.diagnosticId });
+  if (input.tier === 'gold') qs.set('tier', 'gold');
+  return `/ver-resultado?${qs.toString()}`;
+}
+
+export function DiagnosticReportLink({
+  diagnosticId,
+  tier,
+  status,
+  label = 'Ver',
+}: {
+  diagnosticId: string;
+  tier?: string | null;
+  status?: string;
+  label?: string;
+}) {
+  const ready = status === 'completed';
+  if (!ready) {
+    return (
+      <span
+        className="inline-flex cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-400"
+        title="Disponible cuando el diagnóstico está completed"
+      >
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={buildDiagnosticReportPath({ diagnosticId, tier })}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100"
+      title="Abrir el diagnóstico completo como lo vio el usuario"
+    >
+      <ExternalLink className="h-3 w-3" aria-hidden />
+      {label}
+    </Link>
+  );
+}
 
 const TONE_CLASSES: Record<string, string> = {
   slate: 'text-slate-600',

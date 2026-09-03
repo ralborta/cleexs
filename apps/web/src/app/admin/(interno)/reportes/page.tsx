@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, BarChart3, Mail, Rocket, Trophy } from 'lucide-react';
+import { ArrowRight, BarChart3, ClipboardList, Mail, Rocket, Trophy } from 'lucide-react';
 
 const REPORTS = [
   {
@@ -12,6 +12,15 @@ const REPORTS = [
     metrics: ['Diagnosticos por dia', 'Conversion completion', 'Top ref= y UTM source', 'Detalle ultimos 25'],
     icon: BarChart3,
     tone: 'bg-sky-100 text-sky-700',
+  },
+  {
+    href: '/admin/reportes/onboarding',
+    title: 'Onboarding · perfil de leads',
+    description:
+      'Diagnosticos que dejaron pais, nombre o como llegaron a Cleexs en el wizard. Solo quienes completaron algun dato.',
+    metrics: ['Con pais / nombre / canal', 'Desglose como nos encontraron', 'Tabla exportable CSV', 'Ventana 7-30-90 dias'],
+    icon: ClipboardList,
+    tone: 'bg-indigo-100 text-indigo-700',
   },
   {
     href: '/admin/reportes/cleexs-score',

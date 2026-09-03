@@ -17,6 +17,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 type UsageResponse = {
   planKey?: string;
   planDisplay?: string;
+  account?: { email?: string };
   usage?: { scoreViews?: number };
   limits?: { scoreViews?: number | null };
 };
@@ -49,6 +50,8 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
   const [pagoOpen, setPagoOpen] = useState(false);
   const [planForPago, setPlanForPago] = useState<PlanDefinition['id']>('crecimiento');
+  const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
+  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,8 +81,23 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
           return;
         }
         const data = res.ok ? ((await res.json()) as UsageResponse) : {};
+        let checkoutDiagnosticId: string | null = null;
+        try {
+          const runRes = await fetch(`${API_URL}/api/reports/app/reports/${encodeURIComponent(runId)}`, {
+            cache: 'no-store',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (runRes.ok) {
+            const runData = (await runRes.json()) as { publicDiagnosticId?: string | null };
+            checkoutDiagnosticId = runData.publicDiagnosticId?.trim() || null;
+          }
+        } catch {
+          checkoutDiagnosticId = null;
+        }
         if (!cancelled) {
           setUsage(data);
+          setDiagnosticId(checkoutDiagnosticId);
+          setCustomerEmail(data.account?.email?.trim() || null);
           if (shell !== 'premium' && isPremiumPlan(data.planKey)) {
             router.replace(`/portal-crecimiento/reporte/${runId}/premium/suscripcion`);
             return;
@@ -508,6 +526,9 @@ export function PortalSuscripcionPage({ shell }: { shell: PortalSuscripcionShell
         planId={planForPago}
         billingMode={billingMode}
         onConfirm={() => setPagoOpen(false)}
+        diagnosticId={diagnosticId}
+        customerEmail={customerEmail}
+        sourceChannel="portal_suscripcion"
       />
     </main>
   );

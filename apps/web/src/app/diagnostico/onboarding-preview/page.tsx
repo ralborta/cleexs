@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { OnboardingPreviewIntro } from '@/components/diagnostico/onboarding-preview/onboarding-preview-intro';
 import { OnboardingPreviewHuman } from '@/components/diagnostico/onboarding-preview/onboarding-preview-human';
@@ -161,6 +162,12 @@ function OnboardingPreviewContent() {
             <p className="text-sm text-amber-900/80">
               Layout producción: izquierda = progreso real (intacto) · derecha = onboarding nuevo
             </p>
+            <Link
+              href="/diagnostico/onboarding-preview/mobile"
+              className="mt-1 inline-block text-xs font-semibold text-violet-700 underline-offset-2 hover:underline"
+            >
+              Ver preview móvil (webapp) →
+            </Link>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(STAGE_LABELS) as Stage[]).map((s) => (

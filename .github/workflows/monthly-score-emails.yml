@@ -1,10 +1,8 @@
 name: Monthly Score Emails
 
 on:
-  schedule:
-    # Diario 15:00 UTC. La API envía una vez al mes (día 1, 14:00 UTC por defecto)
-    # usando plantilla carta/editorial con el último Cleexs Score en BD.
-    - cron: '0 15 * * *'
+  # Pausado 2026-09-03: solo onboarding paso 1 (al completar diagnóstico).
+  # workflow_dispatch manual sigue disponible para reactivar/probar.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -45,10 +43,10 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
           API_URL: https://cleexsapi-production.up.railway.app
-          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
-          SEGMENT: ${{ github.event_name == 'schedule' && 'all' || inputs.segment }}
-          LIMIT: ${{ github.event_name == 'schedule' && '50' || inputs.limit }}
-          FORCE: ${{ github.event_name == 'schedule' && 'false' || inputs.force }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SEGMENT: ${{ inputs.segment }}
+          LIMIT: ${{ inputs.limit }}
+          FORCE: ${{ inputs.force }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "Missing CLEEXS_CRON_SECRET GitHub secret"

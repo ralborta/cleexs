@@ -157,7 +157,7 @@ export function PortalFreeTierNav({
                 ? 'flex items-center justify-between gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-slate-700 ring-1 ring-slate-200/80'
                 : 'flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-slate-600 hover:bg-slate-50'
             }
-            title="Vista previa limitada. Plan Crecimiento desbloquea el análisis completo."
+            title="Vista previa limitada. Premium desbloquea el análisis completo."
           >
             <span className="flex min-w-0 items-center gap-1.5">
               <Scale className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />

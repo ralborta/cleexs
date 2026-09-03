@@ -1,6 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { cookies, headers } from 'next/headers';
-import { adminOpenAccessEnabled, COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-session';
+import {
+  COOKIE_NAME,
+  verifyAdminSessionToken,
+  type AdminSessionPayload,
+} from '@/lib/admin-session';
+import { isAdminApiAllowedForRole } from '@/lib/admin-roles';
 
 function cookieValueFromHeader(raw: string | null | undefined, name: string): string | undefined {
   if (!raw) return undefined;
@@ -38,36 +43,39 @@ function cookieFromNextRequest(request: Request | undefined): string | undefined
   return jar?.get(COOKIE_NAME)?.value;
 }
 
-/**
- * Bypass para demo: si en Vercel está seteado ADMIN_DEMO_BYPASS=true (o
- * NEXT_PUBLIC_ADMIN_DEMO_BYPASS=true para casos en que la build inline el
- * valor), `assertAdminUiSession` siempre devuelve true y todas las pantallas
- * internas funcionan sin login. Quitar la env var en produccion real para
- * restablecer el login.
- */
-// El panel interno corre como portal abierto del equipo Cleexs: sin login.
-// Las rutas /admin/* solo se exponen al equipo via URL conocida; las API
-// /api/admin-ui/* siguen forwardeando con x-admin-secret hacia la API en
-// Railway, asi que la proteccion real esta a nivel del backend y de la red.
-// Si en el futuro quisieramos exigir login con cookie de sesion, basta con
-// poner ADMIN_OPEN_ACCESS = false y redesplegar.
-export function adminAuthBypassEnabled(): boolean {
-  return adminOpenAccessEnabled();
-}
-
-/** Valida sesión admin: NextRequest.cookies, cookie store de headers(), cabecera Cookie. */
-export function assertAdminUiSession(request?: Request): boolean {
-  if (adminAuthBypassEnabled()) return true;
-
+/** Sesión verificada por cookie (HMAC). Null si no hay cookie válida. */
+export function getAdminUiSession(request?: Request): AdminSessionPayload | null {
   const fromReqCookie = cookieFromNextRequest(request);
-  if (verifyAdminSessionToken(fromReqCookie)) return true;
+  const verifiedReq = verifyAdminSessionToken(fromReqCookie);
+  if (verifiedReq) return verifiedReq;
 
   const fromJar = cookies().get(COOKIE_NAME)?.value;
-  if (verifyAdminSessionToken(fromJar)) return true;
+  const verifiedJar = verifyAdminSessionToken(fromJar);
+  if (verifiedJar) return verifiedJar;
 
   const raw = request?.headers.get('cookie') ?? headers().get('cookie');
   const c = cookieValueFromHeader(raw, COOKIE_NAME);
   return verifyAdminSessionToken(c);
+}
+
+/** Rol del usuario logueado (requiere cookie válida). */
+export function getEffectiveAdminRole(request?: Request): AdminSessionPayload['role'] {
+  const session = getAdminUiSession(request);
+  return session?.role ?? 'admin';
+}
+
+/** Valida sesión admin y permisos por rol en rutas /api/admin-ui/* y /api/reports/*. */
+export function assertAdminUiSession(request?: Request): boolean {
+  const session = getAdminUiSession(request);
+  if (!session) return false;
+
+  if (session.role === 'marketing' && request?.url) {
+    const pathname = new URL(request.url).pathname;
+    if (pathname.startsWith('/api/admin-ui') || pathname.startsWith('/api/reports')) {
+      return isAdminApiAllowedForRole(pathname, session.role);
+    }
+  }
+  return true;
 }
 
 export async function forwardToCleexsApi(path: string, init: RequestInit): Promise<Response> {

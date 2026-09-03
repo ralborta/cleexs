@@ -1,9 +1,8 @@
 name: Outreach Shadow
 
 on:
-  schedule:
-    # Diario 13:30 UTC (10:30 Argentina aprox). Envia REAL al competidor (mode=real).
-    - cron: '30 13 * * *'
+  # Pausado 2026-09-03: solo onboarding paso 1 (al completar diagnóstico).
+  # workflow_dispatch manual sigue disponible; default mode=shadow (no real).
   workflow_dispatch:
     inputs:
       dry_run:
@@ -35,9 +34,9 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CLEEXS_CRON_SECRET }}
           API_URL: https://cleexsapi-production.up.railway.app
-          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
-          MODE: ${{ github.event_name == 'schedule' && 'real' || inputs.mode }}
-          LIMIT: ${{ github.event_name == 'schedule' && '10' || inputs.limit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MODE: ${{ inputs.mode }}
+          LIMIT: ${{ inputs.limit }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "Missing CLEEXS_CRON_SECRET GitHub secret"

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { CleexsMark } from '@/components/brand/cleexs-mark';
-import { CLEEXS_APP_URL } from '@/lib/site';
+import { CLEEXS_APP_URL, formatCleexsWhatsAppPhoneDisplay } from '@/lib/site';
 import {
   buildSponsorDiagnosticAppUrl,
   buildSponsorMarketingHomeUrl,
@@ -396,7 +396,8 @@ export function SponsorLinkBuilder() {
               <code className="text-xs">ref:</code> en el texto prefijado.
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Número fijo del QR: <code className="text-[11px]">+54 9 11 6015-6473</code>
+              Número fijo del QR:{' '}
+              <code className="text-[11px]">{formatCleexsWhatsAppPhoneDisplay()}</code>
             </p>
           </div>
           <Button

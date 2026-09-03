@@ -2,6 +2,7 @@ import { CleexsEmailSendStatus, type CleexsInternalEmailCampaign } from '@prisma
 import { Resend } from 'resend';
 import {
   buildTransactionalFromAddress,
+  buildTransactionalReplyTo,
   isEmailConfigured,
   isEmailDisabled,
   sendSmtpMail,
@@ -55,6 +56,7 @@ export async function sendInternalCampaignTestEmail(
         from,
         to: [to],
         subject,
+        replyTo: buildTransactionalReplyTo(),
         template: {
           id: espId,
           variables: {
@@ -78,6 +80,7 @@ export async function sendInternalCampaignTestEmail(
         subject,
         html,
         text,
+        replyTo: buildTransactionalReplyTo(),
       });
       if (error) throw new Error(formatResendError(error));
       externalId = data?.id ?? null;

@@ -17,19 +17,28 @@ import {
   X,
 } from 'lucide-react';
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
-import { SponsorBreakdownTable } from '@/components/admin/report-ui';
+import { DiagnosticReportLink, SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 import { internalReportsApi } from '@/lib/api';
-import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDayInArgentina } from '@cleexs/shared';
+import { addDaysToDayString, argentinaDayEndUtc, argentinaDayStartUtc, formatDayInArgentina, INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS } from '@cleexs/shared';
 
 export const dynamic = 'force-dynamic';
+
+type LandingKey = 'all' | 'home' | 'meta-v1';
+
+const LANDING_OPTIONS: Array<{ key: LandingKey; label: string; sub: string }> = [
+  { key: 'all', label: 'Todas', sub: 'Home + landings' },
+  { key: 'home', label: 'Home', sub: 'cleexs.net/' },
+  { key: 'meta-v1', label: 'Meta', sub: '/meta · meta-v1' },
+];
 
 type FunnelStep = { count: number; pct: number | null };
 type EmailLeftStep = FunnelStep & { pctOfVisitors: number | null };
 type Metrics = {
   range: { from: string; to: string };
+  landing?: { key: LandingKey; label: string; sub: string };
   funnel: {
-    homeVisitors: { count: number; pageViews: number };
+    homeVisitors: { count: number; pageViews: number; source?: string };
     urlSubmitted: FunnelStep;
     emailLeft: EmailLeftStep;
     shared: FunnelStep & { byChannel: { channel: string; count: number }[] };
@@ -75,11 +84,35 @@ type UnlockClickBreakdown = {
   unlockKey: string;
   label: string;
   count: number;
+  order?: number;
+};
+
+type UnlockClickDomainRow = {
+  domain: string;
+  brandName: string | null;
+  clicks: number;
+  lastClickAt: string;
+};
+
+type UnlockClickClientRow = {
+  diagnosticId: string | null;
+  brandName: string | null;
+  domain: string | null;
+  email: string | null;
+  unlockKey: string;
+  ctaLabel: string;
+  clickedAt: string;
 };
 
 type UnlockClicksResponse = {
   ok: boolean;
   total: number;
+  totalClicks?: number;
+  uniqueVisitors?: number;
+  uniqueDomains?: number;
+  links?: UnlockClickBreakdown[];
+  domains?: UnlockClickDomainRow[];
+  clientClicks?: UnlockClickClientRow[];
   items: UnlockClickBreakdown[];
 };
 
@@ -176,7 +209,8 @@ function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: str
 const CHANNEL_LABEL: Record<string, string> = {
   whatsapp: 'WhatsApp',
   email: 'Email',
-  linkedin: 'LinkedIn',
+  meta: 'Meta',
+  linkedin: 'LinkedIn', // share social (distinto de ads Meta / utm_source=meta)
   x: 'X',
   copy: 'Copiar link',
   other: 'Otro',
@@ -187,6 +221,8 @@ export default function AdminConversionPage() {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [activePreset, setActivePreset] = useState<string | null>('15');
+  /** Default "Todas" = embudo histórico sin alterar números. */
+  const [landing, setLanding] = useState<LandingKey>('all');
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +233,7 @@ export default function AdminConversionPage() {
   const [emailLeadsError, setEmailLeadsError] = useState<string | null>(null);
 
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
-  const [unlockBreakdown, setUnlockBreakdown] = useState<UnlockClickBreakdown[] | null>(null);
+  const [unlockDetail, setUnlockDetail] = useState<UnlockClicksResponse | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
 
@@ -206,39 +242,61 @@ export default function AdminConversionPage() {
     setEmailLeadsLoading(true);
     setEmailLeadsError(null);
     try {
-      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&landing=${encodeURIComponent(landing)}`;
       const res = await adminUiFetch(`/api/admin-ui/conversion/emails${qs}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
-      setEmailLeads((json as EmailLeadsResponse).items ?? []);
+      const payload = json as EmailLeadsResponse;
+      const items = payload.items ?? [];
+      setEmailLeads(items);
+      // La tarjeta y el modal deben mostrar el mismo número (evita desfasaje por cache/carga vieja).
+      const count = typeof payload.total === 'number' ? payload.total : items.length;
+      setData((prev) => {
+        if (!prev) return prev;
+        const url = prev.funnel.urlSubmitted.count;
+        const visitors = prev.funnel.homeVisitors.count;
+        const pct = (num: number, den: number): number | null =>
+          den > 0 ? Math.round((num / den) * 1000) / 10 : null;
+        return {
+          ...prev,
+          funnel: {
+            ...prev.funnel,
+            emailLeft: {
+              count,
+              pct: pct(count, url),
+              pctOfVisitors: pct(count, visitors),
+            },
+          },
+        };
+      });
     } catch (e) {
       setEmailLeadsError(e instanceof Error ? e.message : 'Error');
     } finally {
       setEmailLeadsLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, landing]);
 
   const openUnlockDetail = useCallback(async () => {
     setUnlockModalOpen(true);
     setUnlockLoading(true);
     setUnlockError(null);
     try {
-      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&landing=${encodeURIComponent(landing)}`;
       const res = await adminUiFetch(`/api/admin-ui/conversion/unlock-clicks${qs}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el detalle');
-      setUnlockBreakdown((json as UnlockClicksResponse).items ?? []);
+      setUnlockDetail(json as UnlockClicksResponse);
     } catch (e) {
       setUnlockError(e instanceof Error ? e.message : 'Error');
     } finally {
       setUnlockLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, landing]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&landing=${encodeURIComponent(landing)}`;
       const [res, pendingMp] = await Promise.all([
         adminUiFetch(`/api/admin-ui/conversion${qs}`),
         countPendingMpInRange(from, to),
@@ -257,7 +315,7 @@ export default function AdminConversionPage() {
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, landing]);
 
   useEffect(() => {
     void load();
@@ -275,6 +333,20 @@ export default function AdminConversionPage() {
   }
 
   const f = data?.funnel;
+  const activeLanding =
+    LANDING_OPTIONS.find((o) => o.key === landing) ?? LANDING_OPTIONS[0];
+  const visitorsHint =
+    landing === 'meta-v1'
+      ? 'vistas · /meta'
+      : landing === 'home'
+        ? 'vistas · home'
+        : 'vistas · home + landings';
+  const activeLandingHint =
+    landing === 'all'
+      ? ' — suma home + landings (visitantes únicos)'
+      : landing === 'meta-v1'
+        ? ' — /meta + ads Meta/IG (facebook/ig + medium ads)'
+        : ' — visitantes home · sin landings/ads Meta';
 
   return (
     <div className="space-y-6">
@@ -286,8 +358,8 @@ export default function AdminConversionPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Métricas de Conversión</h1>
             <p className="text-sm text-slate-600">
-              Embudo de adquisición de Cleexs. Elegí el rango de fechas para ver cómo venimos. Los días cierran a
-              medianoche hora Argentina.
+              Embudo de adquisición de Cleexs. Por defecto ves Todas (mismo embudo de siempre).
+              Filtrá por Home o Meta cuando quieras. Los días cierran a medianoche hora Argentina.
             </p>
           </div>
         </div>
@@ -301,6 +373,40 @@ export default function AdminConversionPage() {
           Actualizar
         </button>
       </header>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+          Landing
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {LANDING_OPTIONS.map((l) => (
+            <button
+              key={l.key}
+              type="button"
+              onClick={() => setLanding(l.key)}
+              className={`rounded-xl px-3.5 py-2 text-left transition ${
+                landing === l.key
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span className="block text-sm font-semibold">{l.label}</span>
+              <span
+                className={`block text-[11px] ${
+                  landing === l.key ? 'text-emerald-100' : 'text-slate-500'
+                }`}
+              >
+                {l.sub}
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Activo:{' '}
+          <span className="font-medium text-slate-800">{activeLanding.label}</span>
+          {activeLandingHint}
+        </p>
+      </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-wrap gap-2">
@@ -368,7 +474,7 @@ export default function AdminConversionPage() {
           icon={<Eye className="h-4 w-4 text-slate-600" />}
           label="Visitantes"
           value={fmt(f?.homeVisitors.count ?? 0)}
-          hint={`${fmt(f?.homeVisitors.pageViews ?? 0)} vistas`}
+          hint={`${fmt(f?.homeVisitors.pageViews ?? 0)} ${visitorsHint}`}
           pct="100%"
         />
         <FunnelCard
@@ -405,7 +511,7 @@ export default function AdminConversionPage() {
         />
         <FunnelCard
           icon={<Lock className="h-4 w-4 text-violet-600" />}
-          label="Clics desbloquear"
+          label="Clics Plan Conquistar"
           value={fmt(f?.unlockClicks.count ?? 0)}
           pct={pctLabel(f?.unlockClicks.pct ?? null)}
           pctHint="de los que dejaron email"
@@ -513,7 +619,7 @@ export default function AdminConversionPage() {
         <UnlockClicksModal
           loading={unlockLoading}
           error={unlockError}
-          items={unlockBreakdown}
+          detail={unlockDetail}
           rangeFrom={from}
           rangeTo={to}
           onClose={() => setUnlockModalOpen(false)}
@@ -663,6 +769,16 @@ function EmailLeadsModal({
                         </span>
                       ) : null}
                     </div>
+                    {lead.status === 'completed' ? (
+                      <div className="mt-2">
+                        <DiagnosticReportLink
+                          diagnosticId={lead.id}
+                          tier={lead.tier}
+                          status={lead.status}
+                          label="Ver diagnóstico"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
                     {fmtDateTime(lead.createdAt)}
@@ -680,14 +796,14 @@ function EmailLeadsModal({
 function UnlockClicksModal({
   loading,
   error,
-  items,
+  detail,
   rangeFrom,
   rangeTo,
   onClose,
 }: {
   loading: boolean;
   error: string | null;
-  items: UnlockClickBreakdown[] | null;
+  detail: UnlockClicksResponse | null;
   rangeFrom: string;
   rangeTo: string;
   onClose: () => void;
@@ -700,15 +816,37 @@ function UnlockClicksModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const total = items?.reduce((acc, r) => acc + r.count, 0) ?? 0;
+  const links = detail?.links ?? detail?.items ?? [];
+  const domains = detail?.domains ?? [];
+  const clientClicks = detail?.clientClicks ?? [];
+  const total = detail?.totalClicks ?? detail?.total ?? links.reduce((acc, r) => acc + r.count, 0);
+  const uniqueVisitors = detail?.uniqueVisitors ?? 0;
+  const uniqueDomains = detail?.uniqueDomains ?? domains.length;
+
+  const informeV225KeySet = useMemo(
+    () => new Set<string>(INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS.map((l) => l.key as string)),
+    [],
+  );
+  const informeV225Links = useMemo(() => {
+    const byKey = new Map(links.map((row) => [row.unlockKey, row]));
+    return INFORME_DIAGNOSTICO_V225_UNLOCK_LINKS.map((def) => {
+      const row = byKey.get(def.key);
+      return {
+        unlockKey: def.key,
+        label: def.label,
+        count: row?.count ?? 0,
+      };
+    });
+  }, [links]);
+  const otherLinks = links.filter((row) => !informeV225KeySet.has(row.unlockKey));
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px] sm:items-center sm:p-6">
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Detalle de clics en desbloquear"
-        className="relative my-4 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        aria-label="Detalle de clics Plan Conquistar"
+        className="relative my-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-white px-6 py-4">
           <div className="flex items-center gap-3">
@@ -716,7 +854,7 @@ function UnlockClicksModal({
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Clics desbloquear</h2>
+              <h2 className="text-base font-bold text-slate-900">Clics Plan Conquistar</h2>
               <p className="text-xs text-slate-500">
                 {rangeFrom} → {rangeTo}
                 {!loading && !error ? ` · ${fmt(total)} ${total === 1 ? 'clic' : 'clics'}` : ''}
@@ -733,7 +871,7 @@ function UnlockClicksModal({
           </button>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -744,24 +882,127 @@ function UnlockClicksModal({
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{error}</p>
             </div>
-          ) : !items?.length ? (
+          ) : total === 0 ? (
             <div className="py-12 text-center text-sm text-slate-400">
-              No hay clics de desbloquear en este rango de fechas.
+              No hay clics al Plan Conquistar en este rango de fechas.
             </div>
           ) : (
-            <ul className="space-y-2">
-              {items.map((row) => (
-                <li
-                  key={row.unlockKey}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
-                >
-                  <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
-                  <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
-                    {fmt(row.count)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MiniStat label="Clics totales" value={fmt(total)} />
+                <MiniStat label="Clientes distintos" value={fmt(uniqueVisitors)} />
+                <MiniStat label="Sitios / marcas" value={fmt(uniqueDomains)} />
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Por cliente (cada clic)
+                </h3>
+                {clientClicks.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
+                    Sin clics en este rango.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {clientClicks.map((row, idx) => (
+                      <li
+                        key={`${row.clickedAt}-${row.unlockKey}-${idx}`}
+                        className="rounded-xl border border-slate-100 bg-white px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {row.brandName || row.domain || row.email || 'Sin diagnóstico vinculado'}
+                            </p>
+                            {row.domain && row.brandName ? (
+                              <p className="truncate text-xs text-slate-500">{row.domain}</p>
+                            ) : null}
+                            {row.email ? (
+                              <p className="truncate text-xs text-slate-500">{row.email}</p>
+                            ) : null}
+                            <p className="mt-1 text-xs text-violet-700">{row.ctaLabel}</p>
+                          </div>
+                          <p className="shrink-0 text-[11px] text-slate-400">{fmtDateTime(row.clickedAt)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Por botón o enlace · Informe v2.25
+                </h3>
+                <ul className="space-y-2">
+                  {informeV225Links.map((row) => (
+                    <li
+                      key={row.unlockKey}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
+                    >
+                      <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
+                      <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
+                        {fmt(row.count)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {otherLinks.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Otros enlaces
+                </h3>
+                <ul className="space-y-2">
+                  {otherLinks.map((row) => (
+                    <li
+                      key={row.unlockKey}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
+                    >
+                      <span className="min-w-0 text-sm font-medium text-slate-800">{row.label}</span>
+                      <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-violet-800">
+                        {fmt(row.count)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              ) : null}
+
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Sitios / marcas que clickearon
+                </h3>
+                {domains.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
+                    Sin sitio o marca asociada (clics desde landing sin diagnóstico).
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {domains.map((row) => (
+                      <li
+                        key={row.domain}
+                        className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">{row.domain}</p>
+                          {row.brandName ? (
+                            <p className="truncate text-xs text-slate-500">{row.brandName}</p>
+                          ) : null}
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Último clic: {fmtDateTime(row.lastClickAt)}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-emerald-800">
+                          {fmt(row.clicks)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

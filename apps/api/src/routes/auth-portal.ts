@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { consumePortalMagicLink } from '../lib/portal-magic-link';
 import { maybeAttachReferralForTenant } from '../lib/portal-referral';
 import { prisma } from '../lib/prisma';
 import { signPortalToken } from '../lib/portal-jwt';
@@ -10,6 +11,10 @@ const loginBody = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   referralSlug: z.string().max(64).optional(),
+});
+
+const magicConsumeBody = z.object({
+  token: z.string().min(16).max(500),
 });
 
 const authPortalRoutes: FastifyPluginAsync = async (fastify) => {
@@ -46,6 +51,24 @@ const authPortalRoutes: FastifyPluginAsync = async (fastify) => {
       user: { id: user.id, email: user.email, tenantId: user.tenantId },
     };
   });
+
+  fastify.post<{ Body: z.infer<typeof magicConsumeBody> }>(
+    '/portal/magic-link/consume',
+    async (request, reply) => {
+      const parsed = magicConsumeBody.safeParse(request.body ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: 'Token inválido.' });
+
+      const result = await consumePortalMagicLink(parsed.data.token);
+      if (!result.ok) return reply.code(401).send({ error: result.error });
+
+      return {
+        token: result.token,
+        expiresInSeconds: result.expiresInSeconds,
+        redirectUrl: result.redirectUrl,
+        user: result.user,
+      };
+    },
+  );
 
   fastify.get('/portal/me', async (request, reply) => {
     const u = await resolvePortalUserFromRequest(request);

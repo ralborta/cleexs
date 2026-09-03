@@ -71,12 +71,12 @@ export default function CrearDiagnosticoPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const sp = new URLSearchParams(window.location.search);
-    resolveDiagnosticAttributionForCreate(sp);
+    const attribution = resolveDiagnosticAttributionForCreate(sp);
     trackPageview('/diagnostico/crear', {
-      refCode: sp.get('ref') || sp.get('ref_code') || refParam || undefined,
-      utmSource: sp.get('utm_source') || utmSourceParam || undefined,
-      utmMedium: sp.get('utm_medium') || utmMediumParam || undefined,
-      utmCampaign: sp.get('utm_campaign') || utmCampaignParam || undefined,
+      refCode: attribution.refCode || refParam || undefined,
+      utmSource: attribution.utmSource || utmSourceParam || undefined,
+      utmMedium: attribution.utmMedium || utmMediumParam || undefined,
+      utmCampaign: attribution.utmCampaign || utmCampaignParam || undefined,
     });
   }, [refParam, utmSourceParam, utmMediumParam, utmCampaignParam]);
 

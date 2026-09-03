@@ -140,12 +140,53 @@ Así en WP basta con **un solo campo** y pasar su valor en `?q=`. La app decide 
   var APP = 'https://app.cleexs.net/diagnostico/crear';
   var STORAGE_KEY = 'cleexs_diagnostic_attribution';
 
+  function attributionFromReferrer() {
+    try {
+      var refUrl = document.referrer ? new URL(document.referrer) : null;
+      if (!refUrl) return null;
+      var host = refUrl.hostname.replace(/^www\./, '').toLowerCase();
+      var isYt =
+        host === 'youtube.com' ||
+        host === 'm.youtube.com' ||
+        host === 'youtu.be' ||
+        host === 'youtube-nocookie.com';
+      if (!isYt) return null;
+      var videoId = refUrl.searchParams.get('v') || '';
+      // Video Herederos conocido
+      if (videoId && videoId.toLowerCase() === 'h6tusfuydqo') {
+        return {
+          ref: 'herederos',
+          utm_source: 'auspiciador',
+          utm_medium: 'youtube',
+          utm_campaign: 'herederos',
+        };
+      }
+      return {
+        ref: '',
+        utm_source: 'youtube',
+        utm_medium: 'referral',
+        utm_campaign: videoId ? 'yt_' + videoId.toLowerCase() : 'youtube_organic',
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   function attributionFromLanding() {
     var sp = new URLSearchParams(window.location.search);
     var ref = sp.get('ref') || sp.get('ref_code') || '';
     var utm_source = sp.get('utm_source') || '';
     var utm_medium = sp.get('utm_medium') || '';
     var utm_campaign = sp.get('utm_campaign') || '';
+    if (!ref && !utm_source && !utm_medium && !utm_campaign) {
+      var fromRef = attributionFromReferrer();
+      if (fromRef) {
+        ref = fromRef.ref || '';
+        utm_source = fromRef.utm_source || '';
+        utm_medium = fromRef.utm_medium || '';
+        utm_campaign = fromRef.utm_campaign || '';
+      }
+    }
     if (ref || utm_source || utm_medium || utm_campaign) {
       try {
         sessionStorage.setItem(
@@ -192,7 +233,11 @@ Así en WP basta con **un solo campo** y pasar su valor en `?q=`. La app decide 
 
 `https://cleexs.net/?ref=tipito_entrevista&utm_source=sponsor&utm_medium=youtube&utm_campaign=entrevista`
 
-El usuario ve la landing; al hacer clic en “Checkear visibilidad”, el script anterior lleva a la app con el mismo `ref` y UTM.
+**Herederos (video `h6TUsFUyDQo`):** pegar en la descripción de YouTube:
+
+`https://cleexs.net/?ref=herederos&utm_source=auspiciador&utm_medium=youtube&utm_campaign=herederos`
+
+El usuario ve la landing; al hacer clic en “Checkear visibilidad”, el script anterior lleva a la app con el mismo `ref` y UTM. Si alguien llega desde YouTube **sin** esos params, el script (y la app) intentan inferir `youtube` / `herederos` desde `document.referrer` cuando el navegador lo envía.
 
 4. Si el input en Elementor tiene otro ID, cambiá en el script `input-checkear-visibilidad` por ese ID.
 

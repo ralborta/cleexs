@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
+import { PaymentStatusScreen } from '@/components/pago/payment-status-screen';
 
 const API_URL = resolveApiBaseUrl();
 
@@ -21,11 +21,12 @@ function PagoExitoContent() {
   const paymentId = searchParams.get('payment');
   const product = searchParams.get('product');
   const pending = searchParams.get('status') === 'pending';
+  const isPlanConquistar = product === 'plan-conquistar';
   const [status, setStatus] = useState<PaymentStatus | null>(null);
-  const [polling, setPolling] = useState(Boolean(paymentId && product === 'plan-conquistar'));
+  const [polling, setPolling] = useState(Boolean(paymentId && isPlanConquistar));
 
   useEffect(() => {
-    if (!paymentId || product !== 'plan-conquistar') return;
+    if (!paymentId || !isPlanConquistar) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -59,81 +60,105 @@ function PagoExitoContent() {
     return () => {
       cancelled = true;
     };
-  }, [paymentId, product]);
+  }, [paymentId, isPlanConquistar]);
 
-  const premiumReady = Boolean(status?.premiumActive);
+  const planReady = Boolean(status?.premiumActive) || (!polling && !pending && isPlanConquistar && status?.status === 'approved');
+  const planAtaqueUrl = status?.portalUrl || '/portal-crecimiento/plan-ataque';
   const portalUrl = status?.portalUrl || '/portal-crecimiento';
-  const portalEmail = status?.portalEmail;
+
+  const tone = planReady || (!isPlanConquistar && !polling && !pending)
+    ? 'success'
+    : polling
+      ? 'processing'
+      : pending
+        ? 'pending'
+        : 'success';
+
+  const badge = isPlanConquistar
+    ? planReady
+      ? 'Plan Conquistar'
+      : polling
+        ? 'Confirmando pago'
+        : pending
+          ? 'En proceso'
+          : 'Pago recibido'
+    : pending
+      ? 'En proceso'
+      : 'Pago recibido';
+
+  const title = isPlanConquistar
+    ? pending
+      ? 'Pago en proceso'
+      : planReady
+        ? 'Plan Conquistar Activado'
+        : polling
+          ? 'Estamos activando tu Plan Conquistar'
+          : 'Pago recibido'
+    : pending
+      ? 'Pago en proceso'
+      : 'Pago recibido';
+
+  const description = isPlanConquistar ? (
+    planReady ? (
+      'Tu Plan Conquistar ya está activo y tu Plan de Ataque quedó listo.'
+    ) : polling ? (
+      'Estamos confirmando tu pago con Mercado Pago y activando tu Plan Conquistar…'
+    ) : pending ? (
+      'Mercado Pago está procesando el pago. Cuando se apruebe, activamos tu Plan Conquistar.'
+    ) : (
+      'Mercado Pago nos notifica la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos.'
+    )
+  ) : (
+    'Mercado Pago nos va a notificar la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y volvé al portal.'
+  );
 
   return (
-    <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4 py-16">
-      <section className="w-full max-w-lg rounded-2xl border border-emerald-100 bg-white p-8 text-center shadow-sm">
-        <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
-          {pending ? 'Pago en proceso' : premiumReady ? '¡Premium activado!' : 'Pago recibido'}
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          {product === 'plan-conquistar' ? (
-            premiumReady ? (
-              <>
-                Tu Plan Conquistar ya está activo. Te enviamos un email con acceso al portal Premium
-                {portalEmail ? (
-                  <>
-                    {' '}
-                    para <strong>{portalEmail}</strong>
-                  </>
-                ) : null}
-                .
-              </>
-            ) : polling ? (
-              'Estamos confirmando tu pago y activando Cleexs Premium…'
-            ) : pending ? (
-              'Mercado Pago está procesando el pago. Cuando se apruebe, activamos tu Premium y te llega el email de acceso.'
-            ) : (
-              'Mercado Pago nos notifica la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y entrá al portal.'
-            )
-          ) : (
-            'Mercado Pago nos va a notificar la aprobación por webhook. Si el plan no aparece activo al instante, esperá unos segundos y volvé al portal.'
-          )}
-        </p>
+    <PaymentStatusScreen
+      tone={tone}
+      badge={badge}
+      icon={
+        polling ? (
+          <Loader2 className="h-8 w-8 animate-spin" />
+        ) : planReady || !isPlanConquistar ? (
+          <Sparkles className="h-8 w-8" />
+        ) : (
+          <CheckCircle2 className="h-8 w-8" />
+        )
+      }
+      title={title}
+      description={description}
+      primaryHref={isPlanConquistar ? planAtaqueUrl : portalUrl}
+      primaryLabel={isPlanConquistar ? 'Ver mi Plan de Ataque' : 'Ir al portal'}
+      secondaryHref={isPlanConquistar ? undefined : '/plan-conquistar'}
+      secondaryLabel={isPlanConquistar ? undefined : 'Ver detalle del plan'}
+    >
+      {polling ? (
+        <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-800">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Activando tu Plan Conquistar…
+        </div>
+      ) : null}
+    </PaymentStatusScreen>
+  );
+}
 
-        {polling ? (
-          <div className="mt-5 inline-flex items-center gap-2 text-sm text-violet-700">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Activando tu cuenta Premium…
-          </div>
-        ) : null}
-
-        {portalEmail ? (
-          <div className="mx-auto mt-5 flex max-w-md items-start gap-2 rounded-xl border border-violet-100 bg-violet-50/70 px-4 py-3 text-left text-sm text-violet-950">
-            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-            <p>
-              Accedé al portal Premium con tu email <strong>{portalEmail}</strong>. Si es cuenta nueva, la contraseña
-              temporal llega en el mismo correo.
-            </p>
-          </div>
-        ) : null}
-
-        <Link
-          href={portalUrl}
-          className="mt-6 inline-flex rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
-        >
-          Ir al portal Premium
-        </Link>
-      </section>
-    </main>
+function ExitoFallback() {
+  return (
+    <PaymentStatusScreen
+      tone="processing"
+      badge="Cargando"
+      icon={<Loader2 className="h-8 w-8 animate-spin" />}
+      title="Confirmando tu pago"
+      description="Un momento mientras verificamos el estado…"
+      primaryHref="/portal-crecimiento/plan-ataque"
+      primaryLabel="Ver mi Plan de Ataque"
+    />
   );
 }
 
 export default function PagoExitoPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-slate-50 px-4 py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
-        </main>
-      }
-    >
+    <Suspense fallback={<ExitoFallback />}>
       <PagoExitoContent />
     </Suspense>
   );

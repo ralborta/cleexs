@@ -5,6 +5,9 @@ import {
   ensurePremiumPlan,
   getBillingCurrency,
   getPlanConquistarAmountUsd,
+  getPlanConquistarAmountArs,
+  getPremiumSubscriptionAmountArs,
+  getMpCheckoutArsOverride,
   getBillingUsdToArsRate,
   getPlanBillingAmountUsd,
   usdToArs,
@@ -13,6 +16,7 @@ import { getPreApprovalClient, getPreferenceClient, getPublicAppUrl, resolveMerc
 import {
   activatePlanConquistarPremiumAfterPayment,
   ensurePortalUserForDiagnosticCheckout,
+  ensurePortalUserForEmailCheckout,
 } from '../lib/plan-conquistar-activation';
 import { resolvePlanKey } from '../lib/entitlements';
 import { signPortalToken } from '../lib/portal-jwt';
@@ -23,12 +27,15 @@ const attributionField = z.string().trim().max(120).optional();
 const checkoutSchema = z.object({
   planId: z.enum(['crecimiento']),
   billingMode: z.enum(['monthly', 'annual']).default('monthly'),
-  // Atribuci?n de adquisici?n (funnel interno). Opcional.
+  // Atribución de adquisición (funnel interno). Opcional.
   refCode: attributionField,
   utmSource: attributionField,
   utmMedium: attributionField,
   utmCampaign: attributionField,
   sourceChannel: attributionField,
+  /** Checkout desde reporte público sin sesión previa en el portal. */
+  diagnosticId: z.string().uuid().optional(),
+  customerEmail: z.string().email().optional(),
 });
 
 const planConquistarCheckoutSchema = z.object({
@@ -72,10 +79,42 @@ function mercadoPagoCheckoutUrl(preapproval: { init_point?: string | null; sandb
 const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof checkoutSchema> }>('/subscriptions/checkout', async (request, reply) => {
     try {
-      const portalUser = await resolvePortalUserFromRequest(request);
+      const parsed = checkoutSchema.safeParse(request.body ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: 'Payload inválido para crear suscripción.' });
+
+      let portalUser = await resolvePortalUserFromRequest(request);
+
+      if (!portalUser && parsed.data.diagnosticId) {
+        const ensured = await ensurePortalUserForDiagnosticCheckout(prisma, parsed.data.diagnosticId);
+        if (!ensured) {
+          return reply.code(400).send({
+            error:
+              'No encontramos el email de tu diagnóstico. Completá el reporte con tu correo antes de contratar Premium.',
+          });
+        }
+        // El email del diagnóstico define la cuenta Cleexs; el pagador de MP puede ser otro.
+        portalUser = {
+          userId: ensured.userId,
+          tenantId: ensured.tenantId,
+          email: ensured.email,
+        };
+      }
+
+      if (!portalUser && parsed.data.customerEmail) {
+        const ensured = await ensurePortalUserForEmailCheckout(prisma, parsed.data.customerEmail);
+        if (!ensured) {
+          return reply.code(400).send({ error: 'Ingresá un email válido para continuar al pago.' });
+        }
+        portalUser = {
+          userId: ensured.userId,
+          tenantId: ensured.tenantId,
+          email: ensured.email,
+        };
+      }
+
       if (!portalUser) {
-        return reply.code(401).send({
-          error: 'Para pagar necesit?s iniciar sesi?n en el portal, as? podemos activar el plan en tu cuenta.',
+        return reply.code(400).send({
+          error: 'Ingresá tu email para continuar al pago con Mercado Pago.',
         });
       }
 
@@ -87,23 +126,25 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(403).send({ error: 'Solo el administrador de la cuenta puede contratar el plan.' });
       }
 
-      const parsed = checkoutSchema.safeParse(request.body ?? {});
-      if (!parsed.success) return reply.code(400).send({ error: 'Payload inv?lido para crear suscripci?n.' });
-
       if (!process.env.MP_ACCESS_TOKEN?.trim()) {
-        return reply.code(503).send({ error: 'Mercado Pago no est? configurado en el servidor (MP_ACCESS_TOKEN).' });
+        return reply.code(503).send({ error: 'Mercado Pago no está configurado en el servidor (MP_ACCESS_TOKEN).' });
       }
 
       const interval = toBillingInterval(parsed.data.billingMode);
       const plan = await ensurePremiumPlan(prisma);
       const fxRate = getBillingUsdToArsRate();
       const amountUsd = getPlanBillingAmountUsd(parsed.data.planId, interval);
-      const amountArs = usdToArs(amountUsd, fxRate);
+      const amountArs = getPremiumSubscriptionAmountArs(amountUsd, fxRate);
       const publicUrl = getPublicAppUrl();
+      const arsOverride = getMpCheckoutArsOverride();
       const reason =
         interval === BillingInterval.annual
-          ? `Cleexs Premium anual - ${amountUsd} USD referenciales`
-          : `Cleexs Premium mensual - ${amountUsd} USD referenciales`;
+          ? arsOverride
+            ? `Cleexs Premium anual - ARS ${amountArs} (prueba)`
+            : `Cleexs Premium anual - ${amountUsd} USD referenciales`
+          : arsOverride
+            ? `Cleexs Premium mensual - ARS ${amountArs} (prueba)`
+            : `Cleexs Premium mensual - ${amountUsd} USD referenciales`;
 
       const subscription = await prisma.subscription.create({
         data: {
@@ -165,6 +206,8 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           subscriptionId: subscription.id,
           mpPreapprovalId: preapproval.id,
           checkoutUrl,
+          portalToken: signPortalToken(portalUser.userId),
+          portalEmail: portalUser.email,
           amount: {
             usd: amountUsd,
             ars: amountArs,
@@ -204,12 +247,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
                 'No encontramos el email de tu diagnóstico. En la web el reporte solo se genera después de registrar tu correo.',
             });
           }
-          if (
-            parsed.data.customerEmail &&
-            parsed.data.customerEmail.trim().toLowerCase() !== ensured.email.toLowerCase()
-          ) {
-            return reply.code(400).send({ error: 'El email del checkout no coincide con el del diagnóstico.' });
-          }
+          // Cuenta Cleexs = email del diagnóstico. El pago en MP puede hacerse con otra cuenta/mail.
           portalUser = {
             userId: ensured.userId,
             tenantId: ensured.tenantId,
@@ -239,7 +277,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
 
         const fxRate = getBillingUsdToArsRate();
         const amountUsd = getPlanConquistarAmountUsd();
-        const amountArs = usdToArs(amountUsd, fxRate);
+        const amountArs = getPlanConquistarAmountArs(fxRate);
         const publicUrl = getPublicAppUrl();
 
         const localPayment = await prisma.payment.create({
@@ -261,6 +299,7 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
               utmMedium: cleanAttr(parsed.data.utmMedium),
               utmCampaign: cleanAttr(parsed.data.utmCampaign),
               sourceChannel: cleanAttr(parsed.data.sourceChannel),
+              amountArsOverride: process.env.PLAN_CONQUISTAR_ARS?.trim() || null,
             },
           },
         });
@@ -275,20 +314,23 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
                 failure: `${publicUrl}/plan-conquistar?payment=failed`,
               },
               auto_return: 'approved',
-              payer: {
-                email: portalUser.email,
-              },
+              // No fijamos payer.email: si coincide con el diagnóstico fuerza login MP
+              // con ese mail y rechaza por "seguridad" cuando paga otra cuenta.
               metadata: {
                 product: 'plan_conquistar_90d',
                 payment_id: localPayment.id,
                 tenant_id: portalUser.tenantId,
                 user_id: portalUser.userId,
+                account_email: portalUser.email,
               },
               items: [
                 {
                   id: 'plan_conquistar_90d',
                   title: 'Plan Conquistar ChatGPT',
-                  description: 'Pago único USD 99 — plan de acción personalizado + Cleexs Premium',
+                  description:
+                    amountArs !== usdToArs(amountUsd, fxRate)
+                      ? `Pago único ARS ${amountArs} (prueba) — plan de acción personalizado + Cleexs Premium`
+                      : 'Pago único USD 99 — plan de acción personalizado + Cleexs Premium',
                   quantity: 1,
                   unit_price: amountArs,
                   currency_id: 'ARS',
@@ -395,6 +437,13 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         select: { email: true },
       });
 
+      const planAtaquePath =
+        typeof raw.planAtaquePath === 'string' && raw.planAtaquePath.trim()
+          ? raw.planAtaquePath.trim()
+          : typeof raw.diagnosticId === 'string' && raw.diagnosticId.trim()
+            ? `/portal-crecimiento/plan-ataque?diagnosticId=${encodeURIComponent(raw.diagnosticId.trim())}`
+            : '/portal-crecimiento';
+
       return {
         ok: true,
         paymentId: payment.id,
@@ -403,7 +452,10 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         premiumActive: planKey === 'crecimiento' || planKey === 'enterprise',
         portalEmail: owner?.email ?? payment.payerEmail,
         paidAt: payment.paidAt,
-        portalUrl: `${getPublicAppUrl()}/portal-crecimiento`,
+        portalUrl: `${getPublicAppUrl()}${planAtaquePath.startsWith('/') ? '' : '/'}${planAtaquePath}`,
+        planAtaquePath,
+        diagnosticId: typeof raw.diagnosticId === 'string' ? raw.diagnosticId : null,
+        planGenerated: Boolean(raw.planDeliverable),
       };
     },
   );

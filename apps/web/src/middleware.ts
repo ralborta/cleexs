@@ -3,8 +3,12 @@ import type { NextRequest } from 'next/server';
 import {
   ADMIN_UI_COOKIE_NAME,
   adminRequireAuthEnabled,
-  hasAdminSessionCookie,
+  parseAdminSessionLite,
 } from '@/lib/admin-auth-config';
+import {
+  defaultAdminHomeForRole,
+  isAdminPathAllowedForRole,
+} from '@/lib/admin-roles';
 
 /**
  * Rutas públicas para pruebas (sin login).
@@ -27,6 +31,7 @@ const PUBLIC_PATHS = [
   '/email/unsubscribe',
   '/plan-conquistar',
   '/tools/auspiciadores',
+  '/borrador',
 ];
 
 /**
@@ -61,7 +66,45 @@ function isAllowedOnPublicTestHost(pathname: string): boolean {
   if (pathname === '/terminos' || pathname === '/privacidad' || pathname === '/contacto') return true;
   if (pathname.startsWith('/admin')) return true;
   if (pathname.startsWith('/tools/auspiciadores')) return true;
+  if (pathname.startsWith('/borrador')) return true;
   return false;
+}
+
+function adminRoleGuard(request: NextRequest): NextResponse | null {
+  const pathname = request.nextUrl.pathname;
+  if (!pathname.startsWith('/admin')) return null;
+  if (pathname.startsWith('/admin/login')) return null;
+
+  const token = request.cookies.get(ADMIN_UI_COOKIE_NAME)?.value;
+  const session = parseAdminSessionLite(token);
+  if (!session || session.role === 'admin') return null;
+
+  if (!isAdminPathAllowedForRole(pathname, session.role)) {
+    const url = request.nextUrl.clone();
+    url.pathname = defaultAdminHomeForRole(session.role);
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  return null;
+}
+
+function clearAdminSessionCookie(res: NextResponse) {
+  const secure = process.env.NODE_ENV === 'production';
+  res.cookies.set(ADMIN_UI_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
+  res.cookies.set(ADMIN_UI_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/admin',
+    maxAge: 0,
+  });
 }
 
 function adminLoginRedirect(request: NextRequest): NextResponse | null {
@@ -71,12 +114,14 @@ function adminLoginRedirect(request: NextRequest): NextResponse | null {
   if (!adminRequireAuthEnabled()) return null;
 
   const token = request.cookies.get(ADMIN_UI_COOKIE_NAME)?.value;
-  if (hasAdminSessionCookie(token)) return null;
+  if (parseAdminSessionLite(token)) return null;
 
   const url = request.nextUrl.clone();
   url.pathname = '/admin/login';
   url.search = '';
-  return NextResponse.redirect(url);
+  const res = NextResponse.redirect(url);
+  if (token) clearAdminSessionCookie(res);
+  return res;
 }
 
 function isPublicPath(pathname: string): boolean {
@@ -91,7 +136,16 @@ function isPublicPath(pathname: string): boolean {
   if (path === '/terminos' || path === '/privacidad' || path === '/contacto') return true;
   if (path.startsWith('/email/unsubscribe')) return true;
   if (path.startsWith('/plan-conquistar')) return true;
+  if (path.startsWith('/borrador')) return true;
   return false;
+}
+
+function nextWithPathname(request: NextRequest): NextResponse {
+  const pathname = request.nextUrl.pathname;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', pathname);
+  requestHeaders.set('x-cleexs-gtm', pathname.startsWith('/admin') ? '0' : '1');
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export function middleware(request: NextRequest) {
@@ -99,6 +153,9 @@ export function middleware(request: NextRequest) {
   if (marketingRedirect) return marketingRedirect;
 
   const pathname = request.nextUrl.pathname;
+  const roleRedirect = adminRoleGuard(request);
+  if (roleRedirect) return roleRedirect;
+
   const adminRedirect = adminLoginRedirect(request);
   if (adminRedirect) return adminRedirect;
 
@@ -119,7 +176,8 @@ export function middleware(request: NextRequest) {
       pathname === '/terminos' ||
       pathname === '/privacidad' ||
       pathname === '/contacto' ||
-      pathname.startsWith('/admin');
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/borrador');
     if (!allowed || pathname === '/' || pathname === '') {
       const url = request.nextUrl.clone();
       url.pathname = '/diagnostico/crear';
@@ -129,8 +187,7 @@ export function middleware(request: NextRequest) {
   }
 
   const publicAccess = isPublicPath(pathname);
-  // Sin auth por ahora: todo pasa. Cuando agregues sesión, redirigir a /diagnostico/crear si !publicAccess && !hasSession(request).
-  const res = NextResponse.next();
+  const res = nextWithPathname(request);
   if (publicAccess) res.headers.set('x-cleexs-public', '1');
   return res;
 }
@@ -140,6 +197,6 @@ export const config = {
     /*
      * Match all paths except static files and api.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|borrador/).*)',
   ],
 };

@@ -87,7 +87,7 @@ export function buildWeeklySequenceHtmlEmail(campaign: CampaignContent): {
           <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;">Ref. interna: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">${slug}</code></p>
         </td></tr>
         <tr><td style="padding:16px 24px;border-top:1px solid #f1f5f9;font-size:12px;color:#64748b;">
-          Cleexs · visibilidad en IA y buscadores
+          Cleexs - Conseguí clientes desde ChatGPT
         </td></tr>
       </table>
     </td></tr>

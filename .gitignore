@@ -46,3 +46,8 @@ Thumbs.db
 # Sentry
 .sentryclirc
 .vercel
+
+# Muestras locales para cliente (no subir)
+docs/presentacion-bloques-email-secuencia.html
+docs/mockup-carta-bloque-postdiag.html
+docs/borrador-home-v2/

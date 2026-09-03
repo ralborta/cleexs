@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Mail } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** 3 minutos y medio para completar el correo antes de cancelar el análisis. */
+/** 3 minutos y medio de espera mientras se completa el email. */
 export const ONBOARDING_EMAIL_COUNTDOWN_SEC = 210;
+
+export const ONBOARDING_EMAIL_COUNTDOWN_HALF_SEC = Math.floor(ONBOARDING_EMAIL_COUNTDOWN_SEC / 2);
 
 function formatCountdown(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -17,10 +19,15 @@ export function OnboardingEmailCountdown({
   active,
   onExpire,
   className,
+  variant = 'inline',
 }: {
   active: boolean;
+  /** Reservado: callers pueden seguir pasándolo; ya no se usa en la barra. */
+  diagnosticId?: string;
   onExpire: () => void;
   className?: string;
+  /** inline = compacto vertical dentro de la tarjeta email; banner = barra ancha (legacy). */
+  variant?: 'inline' | 'banner';
 }) {
   const [secondsLeft, setSecondsLeft] = useState(ONBOARDING_EMAIL_COUNTDOWN_SEC);
   const expiredRef = useRef(false);
@@ -53,94 +60,96 @@ export function OnboardingEmailCountdown({
 
   if (!active) return null;
 
+  const phaseTwo = secondsLeft <= ONBOARDING_EMAIL_COUNTDOWN_HALF_SEC;
   const urgent = secondsLeft <= 60;
-  const pct =
-    ((ONBOARDING_EMAIL_COUNTDOWN_SEC - secondsLeft) / ONBOARDING_EMAIL_COUNTDOWN_SEC) * 100;
 
-  return (
-    <aside
-      role="status"
-      aria-live="polite"
-      className={cn(
-        'pointer-events-none fixed bottom-4 right-4 z-[120] w-[min(100%,18.5rem)]',
-        className
-      )}
-    >
-      <div
+  const emailHeadline = phaseTwo
+    ? 'Completá tu email — no pierdas tu análisis'
+    : 'Completá tu email — último paso';
+
+  const emailSubline = phaseTwo
+    ? 'Dejanos tu correo y arrancamos la corrida.'
+    : 'Te enviamos el informe cuando esté listo.';
+
+  if (variant === 'inline') {
+    return (
+      <aside
+        role="status"
+        aria-live="polite"
         className={cn(
-          'overflow-hidden rounded-2xl border shadow-xl shadow-red-900/25',
-          urgent ? 'border-red-400 ring-2 ring-red-400/40' : 'border-red-300/80'
+          'overflow-hidden rounded-xl border bg-amber-50/80',
+          urgent ? 'border-amber-400 ring-1 ring-amber-300/60' : 'border-amber-200',
+          className
         )}
       >
-        <div className="bg-gradient-to-br from-red-600 via-red-600 to-rose-700 px-4 py-3.5 text-white">
+        <div className="space-y-2.5 px-3.5 py-3">
           <div className="flex items-start gap-3">
             <span
               className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25',
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white',
                 urgent && 'animate-pulse'
               )}
             >
-              <Mail className="h-5 w-5" aria-hidden />
+              <Clock className="h-4 w-4" aria-hidden />
             </span>
-            <div className="min-w-0 pt-0.5">
-              <p className="text-sm font-bold leading-snug">
-                Ingresá tu correo para continuar con el análisis
-              </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-red-50/95">
-                Si no lo completás a tiempo, este análisis se cancela.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-red-100/90">
-                Tiempo restante
-              </p>
-              <p
-                className={cn(
-                  'mt-0.5 font-mono text-3xl font-extrabold tabular-nums tracking-tight',
-                  urgent && 'animate-pulse'
-                )}
-              >
-                {formatCountdown(secondsLeft)}
-              </p>
-            </div>
-            <div
-              className="relative flex h-14 w-14 shrink-0 items-center justify-center"
-              aria-hidden
-            >
-              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 56 56">
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="24"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.2)"
-                  strokeWidth="4"
-                />
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="24"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 24}
-                  strokeDashoffset={2 * Math.PI * 24 * (1 - pct / 100)}
-                  className="transition-[stroke-dashoffset] duration-1000 ease-linear"
-                />
-              </svg>
-              <Mail className="relative h-5 w-5 text-white/90" />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <p className="font-mono text-xl font-extrabold tabular-nums text-amber-950">
+                  {formatCountdown(secondsLeft)}
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800/80">
+                  restantes
+                </p>
+              </div>
+              <p className="mt-1 text-sm font-bold leading-snug text-slate-900">{emailHeadline}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">{emailSubline}</p>
             </div>
           </div>
         </div>
 
-        <div className="h-1.5 bg-red-950/30">
+        <div className="h-1 bg-amber-100">
           <div
-            className="h-full bg-white/90 transition-[width] duration-1000 ease-linear"
-            style={{ width: `${100 - pct}%` }}
+            className="h-full bg-amber-500 transition-[width] duration-1000 ease-linear"
+            style={{
+              width: `${((ONBOARDING_EMAIL_COUNTDOWN_SEC - secondsLeft) / ONBOARDING_EMAIL_COUNTDOWN_SEC) * 100}%`,
+            }}
+          />
+        </div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside role="status" aria-live="polite" className={cn('shrink-0', className)}>
+      <div
+        className={cn(
+          'overflow-hidden rounded-2xl border shadow-md',
+          urgent ? 'border-amber-400 ring-2 ring-amber-300/50' : 'border-amber-200/90'
+        )}
+      >
+        <div className="space-y-px bg-slate-200/80">
+          <div className="flex items-center gap-3 bg-gradient-to-br from-amber-500 to-orange-600 px-4 py-3 text-white">
+            <Clock className="h-5 w-5 shrink-0" aria-hidden />
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-50/95">
+                Tiempo restante
+              </p>
+              <p className={cn('font-mono text-2xl font-extrabold tabular-nums', urgent && 'animate-pulse')}>
+                {formatCountdown(secondsLeft)}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white px-4 py-3">
+            <p className="text-sm font-bold text-slate-900">{emailHeadline}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{emailSubline}</p>
+          </div>
+        </div>
+        <div className="h-1 bg-amber-100">
+          <div
+            className="h-full bg-amber-500 transition-[width] duration-1000 ease-linear"
+            style={{
+              width: `${((ONBOARDING_EMAIL_COUNTDOWN_SEC - secondsLeft) / ONBOARDING_EMAIL_COUNTDOWN_SEC) * 100}%`,
+            }}
           />
         </div>
       </div>

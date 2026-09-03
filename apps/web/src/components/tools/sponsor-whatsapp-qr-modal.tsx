@@ -7,7 +7,7 @@ import {
   buildSponsorWhatsAppUrl,
 } from '@/lib/sponsor-link';
 import { renderBrandedWhatsAppQrDataUrl } from '@/lib/sponsor-whatsapp-qr';
-import { CLEEXS_WHATSAPP_PHONE_E164 } from '@/lib/site';
+import { CLEEXS_WHATSAPP_PHONE_E164, formatCleexsWhatsAppPhoneDisplay } from '@/lib/site';
 import { Button } from '@/components/ui/button';
 import { Check, Copy, Download, Loader2, MessageCircle, X } from 'lucide-react';
 
@@ -195,7 +195,8 @@ export function SponsorWhatsAppQrModal({
                 className={fieldCls}
               />
               <span className="mt-1 block text-[11px] text-slate-500">
-                Número fijo para todos los QR: <code className="text-xs">+54 9 11 6015-6473</code>
+                Número fijo para todos los QR:{' '}
+                <code className="text-xs">{formatCleexsWhatsAppPhoneDisplay(phone)}</code>
               </span>
             </label>
 

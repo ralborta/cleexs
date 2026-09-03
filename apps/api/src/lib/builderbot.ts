@@ -1,11 +1,13 @@
 /**
- * Envío de mensajes WhatsApp vía BuilderBot Cloud API v2 (mismo patrón que Mis Reclamos).
+ * Envío de mensajes WhatsApp vía Baileys self-hosted o BuilderBot Cloud API v2.
  */
 
 import { logOutgoingWhatsApp } from './whatsapp-message-log';
 
 const BUILDERBOT_BASE_URL =
   (process.env.BUILDERBOT_BASE_URL || 'https://app.builderbot.cloud').replace(/\/$/, '');
+
+const BAILEYS_BOT_URL = (process.env.BAILEYS_BOT_URL || '').trim().replace(/\/$/, '');
 
 export interface SendWhatsAppOptions {
   number: string;
@@ -19,6 +21,7 @@ export interface SendWhatsAppOptions {
 }
 
 export function isBuilderBotSendConfigured(): boolean {
+  if (BAILEYS_BOT_URL) return true;
   const botId = (process.env.BUILDERBOT_BOT_ID || '').trim();
   const apiKey = (process.env.BUILDERBOT_API_KEY || '').trim();
   return Boolean(botId && apiKey);
@@ -33,18 +36,125 @@ export function formatBuilderBotRecipient(raw: string): string {
   return digits || s;
 }
 
+async function sendViaBaileysBot(options: SendWhatsAppOptions): Promise<unknown> {
+  const phone = formatBuilderBotRecipient(options.number);
+  const res = await fetch(`${BAILEYS_BOT_URL}/v1/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      number: phone,
+      message: options.message || ' ',
+      urlMedia: options.mediaUrl ?? null,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  const raw = await res.text().catch(() => '');
+  let data: Record<string, unknown> = {};
+  try {
+    data = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+  } catch {
+    data = { error: raw.slice(0, 200) };
+  }
+
+  if (!res.ok) {
+    throw new Error(String(data.error || `Bot Baileys respondió ${res.status}`));
+  }
+  return data;
+}
+
+/**
+ * Pausar / reactivar respuestas automáticas para un número (como BBC blacklist).
+ * intent: "add" = bloquear bot · "remove" = desbloquear
+ */
+export async function setWhatsAppBlacklist(
+  number: string,
+  intent: 'add' | 'remove'
+): Promise<{ ok: true; number: string; intent: 'add' | 'remove'; via: 'baileys' | 'builderbot_cloud' }> {
+  const phone = formatBuilderBotRecipient(number).replace(/@.*$/, '');
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 9) {
+    throw new Error('Número inválido (mínimo 9 dígitos)');
+  }
+
+  if (BAILEYS_BOT_URL) {
+    const res = await fetch(`${BAILEYS_BOT_URL}/v1/blacklist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: digits, intent }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const raw = await res.text().catch(() => '');
+    if (!res.ok) {
+      throw new Error(`Baileys blacklist ${res.status}: ${raw.slice(0, 200)}`);
+    }
+    return { ok: true, number: digits, intent, via: 'baileys' };
+  }
+
+  const BOT_ID = (process.env.BUILDERBOT_BOT_ID || '').trim();
+  const API_KEY = (process.env.BUILDERBOT_API_KEY || '').trim();
+  if (!BOT_ID || !API_KEY) {
+    throw new Error('WhatsApp: definí BAILEYS_BOT_URL o BUILDERBOT_BOT_ID + BUILDERBOT_API_KEY');
+  }
+
+  const url = `${BUILDERBOT_BASE_URL}/api/v2/${BOT_ID}/blacklist`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-builderbot': API_KEY,
+    },
+    body: JSON.stringify({ number: digits, intent }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`BuilderBot blacklist ${res.status}: ${detail.slice(0, 200)}`);
+  }
+  return { ok: true, number: digits, intent, via: 'builderbot_cloud' };
+}
+
 export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise<unknown> {
   const { number, message, mediaUrl, checkIfExists = false, logSource = 'api_send', diagnosticId = null } = options;
+  const recipient = formatBuilderBotRecipient(number);
+  if (!recipient) {
+    throw new Error('WhatsApp: número o JID de destino vacío');
+  }
+
+  const logger = { error: (obj: unknown, _msg?: string) => console.error('WA log', obj) };
+
+  if (BAILEYS_BOT_URL) {
+    try {
+      const json = await sendViaBaileysBot(options);
+      void logOutgoingWhatsApp(logger, {
+        chatId: recipient,
+        message,
+        source: logSource,
+        mediaUrl: mediaUrl ?? null,
+        status: 'sent',
+        diagnosticId,
+      });
+      return json;
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      void logOutgoingWhatsApp(logger, {
+        chatId: recipient,
+        message,
+        source: logSource,
+        mediaUrl: mediaUrl ?? null,
+        status: 'failed',
+        errorMessage: errMsg,
+        diagnosticId,
+      });
+      throw err;
+    }
+  }
+
   const BOT_ID = (process.env.BUILDERBOT_BOT_ID || '').trim();
   const API_KEY = (process.env.BUILDERBOT_API_KEY || '').trim();
 
   if (!BOT_ID || !API_KEY) {
-    throw new Error('BuilderBot: definí BUILDERBOT_BOT_ID y BUILDERBOT_API_KEY');
-  }
-
-  const recipient = formatBuilderBotRecipient(number);
-  if (!recipient) {
-    throw new Error('BuilderBot: número o JID de destino vacío');
+    throw new Error('WhatsApp: definí BAILEYS_BOT_URL o BUILDERBOT_BOT_ID + BUILDERBOT_API_KEY');
   }
 
   const url = `${BUILDERBOT_BASE_URL}/api/v2/${BOT_ID}/messages`;
@@ -53,8 +163,6 @@ export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise
     number: recipient,
     checkIfExists,
   };
-
-  const logger = { error: (obj: unknown, _msg?: string) => console.error('WA log', obj) };
 
   try {
     const res = await fetch(url, {
@@ -70,7 +178,6 @@ export async function sendWhatsAppMessage(options: SendWhatsAppOptions): Promise
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
       const errMsg = `BuilderBot send failed (${res.status}): ${detail.slice(0, 200)}`;
-      // Persistimos el saliente como fallido para que quede en el log de admin.
       void logOutgoingWhatsApp(logger, {
         chatId: recipient,
         message,

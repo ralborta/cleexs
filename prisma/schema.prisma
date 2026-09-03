@@ -267,10 +267,27 @@ model User {
   claims                      ProfileClaim[]
   entitlementOverrides        EntitlementOverride[]
   cleexsInternalEmailSendLogs CleexsInternalEmailSendLog[]
+  portalLoginTokens           PortalLoginToken[]
 
   @@index([tenantId])
   @@index([email])
   @@map("users")
+}
+
+model PortalLoginToken {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  usedAt       DateTime? @map("used_at")
+  createdBy    String?   @map("created_by")
+  redirectPath String?   @map("redirect_path")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("portal_login_tokens")
 }
 
 // ============================================
@@ -972,6 +989,12 @@ model FreeEmailSequenceStep {
   subject                String?                   @db.Text
   preheader              String?                   @db.Text
   body                   String?                   @db.Text
+  /// Uno de los 12 insights del catálogo free (ver free-email-insights.ts).
+  insightKey             String?                   @map("insight_key")
+  /// Texto editable del insight en la tarjeta (independiente del cuerpo del mail).
+  insightText            String?                   @map("insight_text") @db.Text
+  /// Postdata (P.D.) al pie de la carta. Null = default de la plantilla.
+  postscript             String?                   @db.Text
   templateVariant        CleexsEmailTemplateVariant @default(letter) @map("template_variant")
   active                 Boolean                   @default(true)
   createdAt              DateTime                  @default(now()) @map("created_at")
@@ -1246,4 +1269,27 @@ model DomainRatingCache {
   fetchedAt DateTime @default(now()) @map("fetched_at")
 
   @@map("domain_rating_cache")
+}
+
+/// Capa 1 de logos de marca: cache de URL resuelta (Brandfetch / Logo.dev / curado).
+/// No guarda el binario; guarda la decisión (URL + fuente) para no reconsultar.
+model BrandAsset {
+  /// Dominio normalizado sin www (ej. carsenlatam.com).
+  domain     String   @id
+  brandName  String?  @map("brand_name")
+  /// URL del logo (CDN o asset propio). null = se resolvió y no hay logo confiable.
+  logoUrl    String?  @map("logo_url") @db.Text
+  /// curated | brandfetch | logo.dev | none
+  source     String?
+  /// ok | missing
+  status     String   @default("missing")
+  /// 0–100 heurístico (capa 1: 100 curated, ~85 brandfetch, ~70 logo.dev).
+  confidence Int?
+  checkedAt  DateTime @default(now()) @map("checked_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([checkedAt])
+  @@map("brand_assets")
 }
