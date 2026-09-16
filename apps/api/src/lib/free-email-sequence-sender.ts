@@ -275,13 +275,23 @@ export async function wasFreeOnboardingStepSent(email: string, sortOrder: number
 export async function resolveFreeOnboardingCandidates(input: {
   sortOrder: number;
   cumulativeDays: number;
+  /**
+   * Ventana inclusiva [cumulativeDays, untilDaysExclusive).
+   * Evita perder el paso si el cron no corrió el día exacto (pausa/outage).
+   * Por defecto: solo el día exacto.
+   */
+  untilDaysExclusive?: number;
   timezone: string;
   enrolledWithinDays: number;
   limit: number;
   now?: Date;
 }): Promise<FreeOnboardingCandidate[]> {
   const now = input.now ?? new Date();
-  const lookbackDays = input.enrolledWithinDays + input.cumulativeDays + 3;
+  const untilDaysExclusive = Math.max(
+    input.untilDaysExclusive ?? input.cumulativeDays + 1,
+    input.cumulativeDays + 1
+  );
+  const lookbackDays = input.enrolledWithinDays + untilDaysExclusive + 3;
   const since = new Date(now);
   since.setDate(since.getDate() - lookbackDays);
   since.setHours(0, 0, 0, 0);
@@ -328,7 +338,8 @@ export async function resolveFreeOnboardingCandidates(input: {
   for (const row of rows) {
     const email = row.email?.trim().toLowerCase();
     if (!email || isPlaceholderEmail(email) || seenEmails.has(email)) continue;
-    if (daysBetweenLocalDates(row.updatedAt, now, input.timezone) !== input.cumulativeDays) continue;
+    const daysAgo = daysBetweenLocalDates(row.updatedAt, now, input.timezone);
+    if (daysAgo < input.cumulativeDays || daysAgo >= untilDaysExclusive) continue;
 
     if (await isPremiumEmail(email)) continue;
 
@@ -688,11 +699,17 @@ export async function runFreeOnboardingEmailBatch(input: {
   let failed = 0;
   const errors: Array<{ email: string; sortOrder: number; error: string }> = [];
 
-  for (const step of activeSteps) {
+  for (let i = 0; i < activeSteps.length; i++) {
+    const step = activeSteps[i]!;
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
+    const next = activeSteps[i + 1];
+    const untilDaysExclusive = next
+      ? cumulativeDaysForStep(sequence.steps, next.sortOrder)
+      : cumulativeDays + Math.max(step.delayDaysAfterPrevious || 2, 3);
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
       cumulativeDays,
+      untilDaysExclusive,
       timezone: sequence.timezone,
       enrolledWithinDays,
       limit,
@@ -712,6 +729,7 @@ export async function runFreeOnboardingEmailBatch(input: {
       stepSummaries.push({
         sortOrder: step.sortOrder,
         cumulativeDays,
+        untilDaysExclusive,
         candidates: candidates.length,
         wouldSend: pending.length,
         sample: pending.slice(0, 10).map((c) => ({
@@ -751,6 +769,7 @@ export async function runFreeOnboardingEmailBatch(input: {
     stepSummaries.push({
       sortOrder: step.sortOrder,
       cumulativeDays,
+      untilDaysExclusive,
       candidates: candidates.length,
       sent: stepSent,
     });
