@@ -1,8 +1,9 @@
 name: Free Onboarding Emails
 
 on:
-  # Pausado 2026-09-03: solo paso 1 al completar diagnóstico (no cron de pasos 2+).
-  # workflow_dispatch manual sigue disponible para pruebas.
+  schedule:
+    # Cada hora — respeta sendHourLocal de la secuencia (AR) en el API.
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
