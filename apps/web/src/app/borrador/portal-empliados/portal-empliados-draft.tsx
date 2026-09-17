@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   BarChart3,
   Filter,
@@ -320,14 +320,6 @@ export function PortalEmpliadosDraft() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const activeLabel = useMemo(() => {
-    for (const s of NAV) {
-      const hit = s.links.find((l) => l.id === section);
-      if (hit) return hit.label;
-    }
-    return 'Dashboard';
-  }, [section]);
 
   async function saveConfig(payload: {
     brand?: typeof brandForm;
