@@ -716,8 +716,9 @@ export async function runFreeOnboardingEmailBatch(input: {
   for (let i = 0; i < activeSteps.length; i++) {
     const step = activeSteps[i]!;
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
-    // Día exacto + 1 de gracia (si el cron de ese día falló), sin barrer hasta el paso siguiente.
-    const untilDaysExclusive = cumulativeDays + 2;
+    // Ventana: desde el día del paso hasta enrolledWithinDays (catch-up de backlog).
+    // Sigue exigiendo cadena s1..s(N-1); no reenvía si ya está sent.
+    const untilDaysExclusive = cumulativeDays + enrolledWithinDays;
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
       cumulativeDays,
