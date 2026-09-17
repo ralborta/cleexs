@@ -31,7 +31,7 @@ export const FREE_ONBOARDING_CAMPAIGN_PREFIX = 'free-onboarding-s';
 
 /** Aviso de corrida de secuencia free (inicio/fin). Override: FREE_ONBOARDING_OPS_TO */
 export function freeOnboardingOpsNotifyTo(): string {
-  return (process.env.FREE_ONBOARDING_OPS_TO || 'gonzalo@revolucia.net').trim().toLowerCase();
+  return (process.env.FREE_ONBOARDING_OPS_TO || 'garzuaga@gmail.com').trim().toLowerCase();
 }
 
 export type FreeOnboardingCandidate = {
