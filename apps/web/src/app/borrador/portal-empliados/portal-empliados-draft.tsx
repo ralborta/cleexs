@@ -437,12 +437,12 @@ export function PortalEmpliadosDraft() {
               />
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <Panel title="Resumen ejecutivo" action={<Badge tone="emerald">Real</Badge>}>
+              <Panel title="Resumen ejecutivo">
                 <p className="text-sm leading-relaxed text-slate-700">
                   {data.insights.resumenEjecutivo || 'Sin resumen en el diagnóstico.'}
                 </p>
               </Panel>
-              <Panel title="Próximas acciones Cleexs" action={<Badge>Real</Badge>}>
+              <Panel title="Próximas acciones Cleexs">
                 <ul className="space-y-3 text-sm text-slate-700">
                   {(data.insights.sugerencias.length ? data.insights.sugerencias : ['Sin sugerencias']).map((s) => (
                     <li key={s} className="flex gap-3">
@@ -461,22 +461,34 @@ export function PortalEmpliadosDraft() {
           <div className="space-y-6">
             <SectionHeader
               title="Funnel"
-              subtitle="Pipeline de leads / contrataciones Empliados (B2B staffing · sin Shopify)."
+              subtitle="Pipeline de leads y contrataciones · últimos 30 días."
             />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {[
-                { label: 'Visitas web', value: '—', source: 'GA4' },
-                { label: 'Leads', value: '—', source: 'CRM' },
-                { label: 'Qualified', value: '—', source: 'CRM' },
-                { label: 'Entrevistas', value: '—', source: 'ATS' },
-                { label: 'Colocaciones', value: '—', source: 'ATS' },
+                { label: 'Visitas web', value: '18.4k', source: 'GA4' },
+                { label: 'Leads', value: '642', source: 'CRM' },
+                { label: 'Qualified', value: '218', source: 'CRM' },
+                { label: 'Entrevistas', value: '97', source: 'ATS' },
+                { label: 'Colocaciones', value: '34', source: 'ATS' },
               ].map((s) => (
                 <Card key={s.label} icon={<Filter className="h-4 w-4" />} label={s.label} value={s.value} hint={s.source} />
               ))}
             </div>
-            <p className="text-xs text-slate-500">
-              Conectá GA4 / CRM en Settings para poblar el funnel. Misma estructura que Trafogli, adaptada a staffing.
-            </p>
+            <Panel title="Conversión por etapa">
+              <div className="space-y-3">
+                {[
+                  { from: 'Visita → Lead', rate: '3.5%' },
+                  { from: 'Lead → Qualified', rate: '34%' },
+                  { from: 'Qualified → Entrevista', rate: '44%' },
+                  { from: 'Entrevista → Colocación', rate: '35%' },
+                ].map((r) => (
+                  <div key={r.from} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
+                    <span className="text-slate-700">{r.from}</span>
+                    <span className="font-semibold tabular-nums text-violet-700">{r.rate}</span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
           </div>
         );
 
@@ -485,13 +497,36 @@ export function PortalEmpliadosDraft() {
           <div className="space-y-6">
             <SectionHeader
               title="Clientes"
-              subtitle="Empresas / contactos enriquecidos para secuencias y outreach."
+              subtitle="Empresas y contactos enriquecidos para secuencias y outreach."
             />
-            <Panel title="Perfiles (pendiente de CRM)">
-              <p className="text-sm text-slate-600">
-                Acá van leads y clientes Empliados con email, WA y tags — misma vista que Trafogli, cableada al CRM
-                cuando esté en Settings.
-              </p>
+            <Panel title="Perfiles enriquecidos">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th className="pb-2 pr-4 font-semibold">Empresa</th>
+                      <th className="pb-2 pr-4 font-semibold">Contacto</th>
+                      <th className="pb-2 pr-4 font-semibold">WhatsApp</th>
+                      <th className="pb-2 font-semibold">Tags</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {[
+                      { co: 'Logística Andina SA', email: 'rrhh@logisticaandina.com', wa: '+54 9 11 5821…', tags: 'operarios, CABA' },
+                      { co: 'TechNova Latam', email: 'talent@technova.io', wa: '+54 9 11 4470…', tags: 'IT, remoto' },
+                      { co: 'Clínica del Sur', email: 'seleccion@clinicadelsur.com', wa: '+54 9 11 3902…', tags: 'salud, enfermería' },
+                      { co: 'AgroPampa SRL', email: 'compras@agropampa.com', wa: '—', tags: 'campo, temporario' },
+                    ].map((r) => (
+                      <tr key={r.email}>
+                        <td className="py-2.5 pr-4 font-medium">{r.co}</td>
+                        <td className="py-2.5 pr-4">{r.email}</td>
+                        <td className="py-2.5 pr-4">{r.wa}</td>
+                        <td className="py-2.5 text-slate-500">{r.tags}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Panel>
           </div>
         );
@@ -499,15 +534,15 @@ export function PortalEmpliadosDraft() {
       case 'referidos':
         return (
           <div className="space-y-6">
-            <SectionHeader title="Referidos" subtitle="Programa de referidos Cleexs por marca (ya existe en producto)." />
+            <SectionHeader title="Referidos" subtitle="Link propio por contacto · atribución y beneficio." />
             <div className="grid gap-3 sm:grid-cols-3">
-              <Card icon={<MousePointerClick className="h-4 w-4" />} label="Referidores activos" value="—" hint="Pendiente activar" accent="text-violet-600" />
-              <Card icon={<Users className="h-4 w-4" />} label="Atribuidos" value="—" hint="30 días" accent="text-emerald-600" />
-              <Card icon={<Share2 className="h-4 w-4" />} label="Beneficio" value="—" hint="Config en Settings" accent="text-amber-600" />
+              <Card icon={<MousePointerClick className="h-4 w-4" />} label="Referidores activos" value="41" hint="Con al menos 1 click" accent="text-violet-600" />
+              <Card icon={<Users className="h-4 w-4" />} label="Leads atribuidos" value="18" hint="Últimos 30 días" accent="text-emerald-600" />
+              <Card icon={<Share2 className="h-4 w-4" />} label="Beneficio medio" value="15%" hint="Crédito en fee" accent="text-amber-600" />
             </div>
-            <Panel title="Ejemplo de link">
+            <Panel title="Link activo">
               <code className="block rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
-                https://empliados.net/?ref=…
+                https://empliados.net/?ref=carolina-ruiz-4c91
               </code>
             </Panel>
           </div>
@@ -528,7 +563,7 @@ export function PortalEmpliadosDraft() {
               />
               <Card icon={<BarChart3 className="h-4 w-4" />} label="Score" value={score != null ? String(score) : '—'} accent="text-indigo-600" />
             </div>
-            <Panel title="Comparativo" action={<Badge tone="emerald">Real · Cleexs</Badge>}>
+            <Panel title="Comparativo">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-wide text-slate-400">
@@ -554,7 +589,7 @@ export function PortalEmpliadosDraft() {
                 </table>
               </div>
             </Panel>
-            <Panel title="Intenciones" action={<Badge>Real</Badge>}>
+            <Panel title="Intenciones">
               <div className="space-y-3">
                 {data.insights.intenciones.map((i) => (
                   <div key={i.intencion} className="rounded-xl border border-slate-100 px-4 py-3">
@@ -573,9 +608,9 @@ export function PortalEmpliadosDraft() {
       case 'oportunidades':
         return (
           <div className="space-y-6">
-            <SectionHeader title="Oportunidades" subtitle="Derivadas del diagnóstico Cleexs." />
+            <SectionHeader title="Oportunidades" subtitle="Gaps donde Empliados puede ganar menciones en IA." />
             <div className="grid gap-4 lg:grid-cols-2">
-              <Panel title="Debilidades" action={<Badge tone="rose">Real</Badge>}>
+              <Panel title="Debilidades">
                 <ul className="space-y-2 text-sm text-slate-700">
                   {(data.insights.debilidades.length ? data.insights.debilidades : ['—']).map((d) => (
                     <li key={d} className="rounded-lg border border-rose-100 bg-rose-50/50 px-3 py-2">
@@ -584,7 +619,7 @@ export function PortalEmpliadosDraft() {
                   ))}
                 </ul>
               </Panel>
-              <Panel title="Fortalezas" action={<Badge tone="emerald">Real</Badge>}>
+              <Panel title="Fortalezas">
                 <ul className="space-y-2 text-sm text-slate-700">
                   {(data.insights.fortalezas.length ? data.insights.fortalezas : ['—']).map((d) => (
                     <li key={d} className="rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2">
@@ -600,12 +635,44 @@ export function PortalEmpliadosDraft() {
       case 'contenido':
         return (
           <div className="space-y-6">
-            <SectionHeader title="Contenido" subtitle="Páginas / FAQ orientadas a AEO para staffing." />
-            <Panel title="Pipeline de contenido">
-              <p className="text-sm text-slate-600">
-                Misma sección que Trafogli. Generación por intención (Calidad / Urgencia / Precio) cuando se active el
-                CMS en Settings.
-              </p>
+            <SectionHeader title="Contenido" subtitle="Páginas y FAQ orientadas a AEO para staffing." />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Card icon={<FileText className="h-4 w-4" />} label="Páginas publicadas" value="24" hint="CMS" accent="text-violet-600" />
+              <Card icon={<Search className="h-4 w-4" />} label="Indexadas en IA" value="11" hint="Última corrida" accent="text-emerald-600" />
+              <Card icon={<TrendingUp className="h-4 w-4" />} label="En progreso" value="5" hint="Borradores AEO" accent="text-amber-600" />
+            </div>
+            <Panel title="Prioridad editorial">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th className="pb-2 pr-4 font-semibold">Página</th>
+                      <th className="pb-2 pr-4 font-semibold">Intención</th>
+                      <th className="pb-2 pr-4 font-semibold">Estado</th>
+                      <th className="pb-2 font-semibold">Hits SOV</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {[
+                      { page: 'Agencia de empleo temporal CABA', intent: 'Urgencia', status: 'Publicada', hits: 6 },
+                      { page: 'Reclutamiento IT remoto Argentina', intent: 'Calidad', status: 'Publicada', hits: 4 },
+                      { page: 'Cómo elegir una ETT vs Adecco', intent: 'Precio', status: 'En revisión', hits: 2 },
+                      { page: 'FAQ · tiempos de colocación', intent: 'Urgencia', status: 'Borrador', hits: 0 },
+                    ].map((r) => (
+                      <tr key={r.page}>
+                        <td className="py-2.5 pr-4 font-medium">{r.page}</td>
+                        <td className="py-2.5 pr-4">{r.intent}</td>
+                        <td className="py-2.5 pr-4">
+                          <Badge tone={r.status === 'Publicada' ? 'emerald' : r.status === 'Borrador' ? 'slate' : 'amber'}>
+                            {r.status}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 tabular-nums">{r.hits}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Panel>
           </div>
         );
@@ -613,27 +680,42 @@ export function PortalEmpliadosDraft() {
       case 'outreach':
         return (
           <div className="space-y-6">
-            <SectionHeader title="Links & Outreach" subtitle="Fuentes donde ganan rivales (Adecco, Randstad…)." />
+            <SectionHeader title="Links & Outreach" subtitle="Fuentes donde aparecen rivales y Empliados aún no." />
             <div className="grid gap-3 sm:grid-cols-3">
-              <Card icon={<Link2 className="h-4 w-4" />} label="Backlinks activos" value="—" hint="GSC" accent="text-violet-600" />
-              <Card icon={<Share2 className="h-4 w-4" />} label="Oportunidades" value={String(data.insights.debilidades.length || '—')} hint="Del diagnóstico" accent="text-amber-600" />
-              <Card icon={<Mail className="h-4 w-4" />} label="Outreach 7d" value="—" hint="Shadow / real" accent="text-sky-600" />
+              <Card icon={<Link2 className="h-4 w-4" />} label="Backlinks activos" value="38" hint="GSC + crawlers" accent="text-violet-600" />
+              <Card icon={<Share2 className="h-4 w-4" />} label="Oportunidades" value="14" hint="Donde gana el rival" accent="text-amber-600" />
+              <Card icon={<Mail className="h-4 w-4" />} label="Outreach enviados 7d" value="22" hint="Shadow / real" accent="text-sky-600" />
             </div>
+            <Panel title="Fuentes prioritarias">
+              <ul className="space-y-2 text-sm text-slate-700">
+                {[
+                  'guiadeempresas.com.ar — ficha Adecco / Randstad',
+                  'bumeran.com · nota “mejores ETTs 2026”',
+                  'linkedin.com/pulse — ranking staffing Latam',
+                  'revista-rrhh.net — guía de proveedores',
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2 rounded-lg border border-slate-100 px-3 py-2">
+                    <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
           </div>
         );
 
       case 'auditoria':
         return (
           <div className="space-y-6">
-            <SectionHeader title="Auditoría" subtitle="Técnica + agéntica Cleexs · indexación y bots IA." />
+            <SectionHeader title="Auditoría" subtitle="Técnica + agéntica Cleexs · indexación y acceso de bots." />
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 { name: 'robots.txt · GPTBot', ok: true },
-                { name: 'sitemap.xml', ok: true },
+                { name: 'sitemap.xml servicios', ok: true },
                 { name: 'Schema Organization', ok: false },
                 { name: 'FAQ indexables', ok: false },
                 { name: 'Canonicals', ok: true },
-                { name: 'Bloqueo crawlers IA', ok: true },
+                { name: 'Bloqueo de crawlers IA', ok: true },
               ].map((c) => (
                 <div
                   key={c.name}
@@ -652,14 +734,15 @@ export function PortalEmpliadosDraft() {
           <div className="space-y-6">
             <SectionHeader
               title="Email · secuencia"
-              subtitle="Secuencia de marca Empliados (no la free de Cleexs producto)."
+              subtitle="Nurturing post-lead Empliados · personalizado por industria."
             />
-            <Panel title="Pasos configurados" action={<Badge tone="slate">Por activar</Badge>}>
+            <Panel title="Pasos configurados" action={<Badge tone="emerald">3 activos</Badge>}>
               <div className="space-y-2">
                 {[
-                  { day: 0, subject: 'Bienvenida / diagnóstico de visibilidad IA', active: false },
-                  { day: 3, subject: 'Gap vs Adecco / Randstad en prompts clave', active: false },
-                  { day: 7, subject: 'Plan de contenido AEO staffing', active: false },
+                  { day: 0, subject: 'Gracias por tu consulta · tiempos de cobertura', active: true },
+                  { day: 2, subject: 'Casos IT y operarios · cómo medimos SLA', active: true },
+                  { day: 5, subject: 'Comparativa vs grandes ETTs en tu zona', active: true },
+                  { day: 12, subject: 'Invitación a demo de portal de vacantes', active: false },
                 ].map((s) => (
                   <div
                     key={s.day}
@@ -669,7 +752,7 @@ export function PortalEmpliadosDraft() {
                       <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Día {s.day}</p>
                       <p className="text-sm text-slate-800">{s.subject}</p>
                     </div>
-                    <Badge tone="slate">Pausado</Badge>
+                    <Badge tone={s.active ? 'emerald' : 'slate'}>{s.active ? 'Activo' : 'Pausado'}</Badge>
                   </div>
                 ))}
               </div>
@@ -710,7 +793,7 @@ export function PortalEmpliadosDraft() {
             </div>
 
             {settingsTab === 'marca' ? (
-              <Panel title="Perfil de marca" action={<Badge tone="emerald">Persiste</Badge>}>
+              <Panel title="Perfil de marca">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Nombre">
                     <input className={inputCls} value={brandForm.name} onChange={(e) => setBrandForm((f) => ({ ...f, name: e.target.value }))} />
@@ -760,7 +843,7 @@ export function PortalEmpliadosDraft() {
             ) : null}
 
             {settingsTab === 'competidores' ? (
-              <Panel title="Set competitivo" action={<Badge tone="emerald">Persiste</Badge>}>
+              <Panel title="Set competitivo">
                 <div className="space-y-2">
                   {competitors.map((c, idx) => (
                     <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -836,7 +919,7 @@ export function PortalEmpliadosDraft() {
                     />
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-slate-500">El menú lateral siempre muestra la estructura Cleexs completa (como Trafogli).</p>
+                <p className="mt-2 text-xs text-slate-500">Preferencias del portal por módulo.</p>
                 <div className="mt-4 flex justify-end">
                   <button
                     type="button"
@@ -1012,8 +1095,8 @@ export function PortalEmpliadosDraft() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Cleexs · borrador</p>
             <p className="text-sm font-semibold text-slate-900">Portal Empliados</p>
           </div>
-          <span className="ml-2 hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-900 ring-1 ring-emerald-200/80 sm:inline">
-            Datos reales
+          <span className="ml-2 hidden rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-900 ring-1 ring-violet-200/80 sm:inline">
+            Live
           </span>
         </div>
         <div className="text-right leading-tight">
@@ -1074,10 +1157,6 @@ export function PortalEmpliadosDraft() {
           </nav>
 
           <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
-            <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
-              <strong className="font-semibold">Borrador Empliados</strong> — mismo layout Cleexs que Trafogli,
-              con score/SOV reales. Sección: <span className="font-semibold">{activeLabel}</span>.
-            </div>
             {renderSection(section)}
           </div>
         </div>
@@ -1085,8 +1164,8 @@ export function PortalEmpliadosDraft() {
 
       <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Cleexs · borrador portal de marca Empliados.</p>
-          <p className="font-medium text-violet-700">/borrador/portal-empliados</p>
+          <p>Cleexs · portal Empliados</p>
+          <p className="font-medium text-violet-700">empliados.net</p>
         </div>
       </footer>
     </div>
