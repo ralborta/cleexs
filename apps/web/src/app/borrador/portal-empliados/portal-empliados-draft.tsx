@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 
 type SectionId =
   | 'dashboard'
@@ -119,15 +120,6 @@ const EMAIL_STEPS = [
   { day: 5, subject: 'Tu link de referidos Empliados', active: true },
   { day: 12, subject: 'Activá el 2º agente · seguimiento de viajes', active: false },
 ];
-
-function fmt(n: number): string {
-  return n.toLocaleString('es-AR');
-}
-
-function pct(n: number, d: number): string {
-  if (d <= 0) return '—';
-  return `${Math.round((n / d) * 1000) / 10}%`;
-}
 
 function Card({
   icon,
@@ -296,59 +288,108 @@ function DashboardView() {
 }
 
 function FunnelView() {
-  const steps = [
-    { label: 'Visitas web', value: 9200, source: 'GA4' },
-    { label: 'Leads demo', value: 410, source: 'CRM' },
-    { label: 'Demos hechas', value: 168, source: 'CRM' },
-    { label: 'Piloto / trial', value: 54, source: 'Producto' },
-    { label: 'Cliente pago', value: 19, source: 'Billing' },
-  ];
+  const today = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }, []);
+
+  function addDays(day: string, delta: number): string {
+    const [y, m, d] = day.split('-').map(Number);
+    const dt = new Date(Date.UTC(y!, m! - 1, d!));
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    return dt.toISOString().slice(0, 10);
+  }
+
+  function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
+    if (preset === 'hoy') return { from: today, to: today };
+    if (preset === 'ayer') {
+      const yesterday = addDays(today, -1);
+      return { from: yesterday, to: yesterday };
+    }
+    const span = preset === '7' ? 6 : preset === '15' ? 14 : 29;
+    return { from: addDays(today, -span), to: today };
+  }
+
+  const initial = useMemo(() => rangeForPreset('30'), [today]);
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
+  const [activePreset, setActivePreset] = useState<string | null>('30');
+  const [adSpendInput, setAdSpendInput] = useState('');
+  const [data, setData] = useState<FunnelMetrics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ from, to });
+      const spend = Number(adSpendInput.replace(',', '.'));
+      if (Number.isFinite(spend) && spend >= 0 && adSpendInput.trim() !== '') {
+        params.set('adSpendUsd', String(spend));
+      }
+      const res = await fetch(`/api/borrador/portal-funnel?${params.toString()}`, { cache: 'no-store' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el funnel');
+      setData(json as FunnelMetrics);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setLoading(false);
+    }
+  }, [from, to, adSpendInput]);
+
+  useEffect(() => {
+    void load();
+  }, [from, to]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30') {
+    const r = rangeForPreset(preset);
+    setFrom(r.from);
+    setTo(r.to);
+    setActivePreset(preset);
+  }
+
+  const periodLabel =
+    activePreset === 'hoy'
+      ? 'Hoy'
+      : activePreset === 'ayer'
+        ? 'Ayer'
+        : activePreset === '7'
+          ? 'Últimos 7 días'
+          : activePreset === '15'
+            ? 'Últimos 15 días'
+            : activePreset === '30'
+              ? 'Últimos 30 días'
+              : `${from} → ${to}`;
+
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Funnel" subtitle="Conversión comercial · visita → demo → piloto → contrato." />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {steps.map((s, i) => (
-          <Card
-            key={s.label}
-            icon={<Filter className="h-4 w-4" />}
-            label={s.label}
-            value={fmt(s.value)}
-            hint={i === 0 ? s.source : `${pct(s.value, steps[0].value)} del top · ${s.source}`}
-            accent="text-violet-600"
-          />
-        ))}
-      </div>
-      <Panel title="Canales de entrada (7d)">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="pb-2 pr-4 font-semibold">Fuente</th>
-                <th className="pb-2 pr-4 font-semibold">Visitas</th>
-                <th className="pb-2 pr-4 font-semibold">Demos</th>
-                <th className="pb-2 font-semibold">Conv.</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {[
-                ['Google', 3800, 62],
-                ['LinkedIn', 2100, 48],
-                ['ChatGPT / LLM', 520, 27],
-                ['Referidos', 410, 21],
-                ['WhatsApp / outbound', 980, 19],
-              ].map(([src, v, c]) => (
-                <tr key={String(src)}>
-                  <td className="py-2.5 pr-4 font-medium">{src}</td>
-                  <td className="py-2.5 pr-4 tabular-nums">{fmt(Number(v))}</td>
-                  <td className="py-2.5 pr-4 tabular-nums">{fmt(Number(c))}</td>
-                  <td className="py-2.5 tabular-nums">{pct(Number(c), Number(v))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
-    </div>
+    <FunnelDashboard
+      data={data}
+      loading={loading}
+      error={error}
+      periodLabel={periodLabel}
+      from={from}
+      to={to}
+      activePreset={activePreset}
+      onPreset={applyPreset}
+      onFromChange={(v) => {
+        setFrom(v);
+        setActivePreset(null);
+      }}
+      onToChange={(v) => {
+        setTo(v);
+        setActivePreset(null);
+      }}
+      maxTo={today}
+      adSpendInput={adSpendInput}
+      setAdSpendInput={setAdSpendInput}
+      onRefresh={() => void load()}
+      onApplySpend={() => void load()}
+    />
   );
 }
 
