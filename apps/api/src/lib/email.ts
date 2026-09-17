@@ -77,6 +77,29 @@ async function sendTransactionalMessage(opts: {
   });
 }
 
+/** Aviso operativo interno (ops / founder), vía Resend o SMTP. */
+export async function sendCleexsOpsEmail(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+}): Promise<void> {
+  if (isEmailDisabled()) return;
+  if (!isOutboundEmailAvailable()) return;
+  const html =
+    opts.html ||
+    `<pre style="font-family:ui-monospace,Menlo,monospace;font-size:13px;white-space:pre-wrap;">${opts.text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')}</pre>`;
+  await sendTransactionalMessage({
+    to: opts.to,
+    subject: opts.subject,
+    text: opts.text,
+    html,
+  });
+}
+
 /** Remitente canónico Cleexs (nunca @nivel41.com). */
 export const DEFAULT_CLEEXS_FROM_EMAIL = 'hola@cleexs.net';
 export const DEFAULT_CLEEXS_FROM_NAME = 'Cleexs';
