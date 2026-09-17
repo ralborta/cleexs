@@ -39,6 +39,7 @@ import adminAgenticAuditsRoutes, { publicAgenticAuditRoutes } from './routes/adm
 import adminAeoAuditsRoutes, { publicAeoAuditRoutes } from './routes/admin-aeo-audits';
 import adminPromoRoutes from './routes/admin-promo';
 import brandAssetsRoutes from './routes/brand-assets';
+import adminBrandPortalRoutes from './routes/admin-brand-portal';
 
 log('2/7 Módulos cargados, iniciando bootstrap...');
 
@@ -149,6 +150,7 @@ async function bootstrap() {
   await server.register(adminAeoAuditsRoutes, { prefix: '/api/admin' });
   await server.register(publicAeoAuditRoutes, { prefix: '/api/public' });
   await server.register(adminPromoRoutes, { prefix: '/api/admin' });
+  await server.register(adminBrandPortalRoutes, { prefix: '/api/admin' });
   await server.register(brandAssetsRoutes, { prefix: '/api/public' });
   log('6/7 Rutas OK, iniciando listen...');
 
