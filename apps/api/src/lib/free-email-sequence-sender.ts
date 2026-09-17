@@ -704,7 +704,6 @@ export async function runFreeOnboardingEmailBatch(input: {
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
     // Día exacto + 1 de gracia (si el cron de ese día falló), sin barrer hasta el paso siguiente.
     const untilDaysExclusive = cumulativeDays + 2;
-    const prevSortOrder = step.sortOrder - 1;
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
       cumulativeDays,
@@ -721,10 +720,16 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
-      // Secuencia ordenada: no mandar sN si no recibió s(N-1) (s1 es el ancla).
-      if (!force && prevSortOrder >= 1) {
-        const prevSent = await wasFreeOnboardingStepSent(candidate.email, prevSortOrder);
-        if (!prevSent) {
+      // Secuencia completa: sN solo si ya recibió s1..s(N-1). Evita seguir un catch-up con huecos.
+      if (!force && step.sortOrder > 1) {
+        let missingPrevious = false;
+        for (let prev = 1; prev < step.sortOrder; prev += 1) {
+          if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
+            missingPrevious = true;
+            break;
+          }
+        }
+        if (missingPrevious) {
           skipped += 1;
           continue;
         }
@@ -737,7 +742,7 @@ export async function runFreeOnboardingEmailBatch(input: {
         sortOrder: step.sortOrder,
         cumulativeDays,
         untilDaysExclusive,
-        requirePreviousStep: prevSortOrder >= 1 ? prevSortOrder : null,
+        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         wouldSend: pending.length,
         sample: pending.slice(0, 10).map((c) => ({
@@ -778,7 +783,7 @@ export async function runFreeOnboardingEmailBatch(input: {
       sortOrder: step.sortOrder,
       cumulativeDays,
       untilDaysExclusive,
-      requirePreviousStep: prevSortOrder >= 1 ? prevSortOrder : null,
+      requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
       candidates: candidates.length,
       sent: stepSent,
     });
