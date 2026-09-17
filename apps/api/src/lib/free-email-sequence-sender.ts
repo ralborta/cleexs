@@ -11,6 +11,7 @@ import {
   isEmailConfigured,
   isEmailDisabled,
   isOutboundEmailAvailable,
+  sendCleexsOpsEmail,
   sendDiagnosticLink,
   sendSmtpMail,
   type DiagnosticAnalysisForEmail,
@@ -27,6 +28,11 @@ import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
 export const FREE_ONBOARDING_CAMPAIGN_PREFIX = 'free-onboarding-s';
+
+/** Aviso de corrida de secuencia free (inicio/fin). Override: FREE_ONBOARDING_OPS_TO */
+export function freeOnboardingOpsNotifyTo(): string {
+  return (process.env.FREE_ONBOARDING_OPS_TO || 'garzuaga@gmail.com').trim().toLowerCase();
+}
 
 export type FreeOnboardingCandidate = {
   diagnosticId: string;
@@ -275,13 +281,23 @@ export async function wasFreeOnboardingStepSent(email: string, sortOrder: number
 export async function resolveFreeOnboardingCandidates(input: {
   sortOrder: number;
   cumulativeDays: number;
+  /**
+   * Ventana inclusiva [cumulativeDays, untilDaysExclusive).
+   * Evita perder el paso si el cron no corrió el día exacto (pausa/outage).
+   * Por defecto: solo el día exacto.
+   */
+  untilDaysExclusive?: number;
   timezone: string;
   enrolledWithinDays: number;
   limit: number;
   now?: Date;
 }): Promise<FreeOnboardingCandidate[]> {
   const now = input.now ?? new Date();
-  const lookbackDays = input.enrolledWithinDays + input.cumulativeDays + 3;
+  const untilDaysExclusive = Math.max(
+    input.untilDaysExclusive ?? input.cumulativeDays + 1,
+    input.cumulativeDays + 1
+  );
+  const lookbackDays = input.enrolledWithinDays + untilDaysExclusive + 3;
   const since = new Date(now);
   since.setDate(since.getDate() - lookbackDays);
   since.setHours(0, 0, 0, 0);
@@ -328,7 +344,8 @@ export async function resolveFreeOnboardingCandidates(input: {
   for (const row of rows) {
     const email = row.email?.trim().toLowerCase();
     if (!email || isPlaceholderEmail(email) || seenEmails.has(email)) continue;
-    if (daysBetweenLocalDates(row.updatedAt, now, input.timezone) !== input.cumulativeDays) continue;
+    const daysAgo = daysBetweenLocalDates(row.updatedAt, now, input.timezone);
+    if (daysAgo < input.cumulativeDays || daysAgo >= untilDaysExclusive) continue;
 
     if (await isPremiumEmail(email)) continue;
 
@@ -688,11 +705,23 @@ export async function runFreeOnboardingEmailBatch(input: {
   let failed = 0;
   const errors: Array<{ email: string; sortOrder: number; error: string }> = [];
 
-  for (const step of activeSteps) {
+  type PlannedSend = {
+    step: (typeof activeSteps)[number];
+    cumulativeDays: number;
+    untilDaysExclusive: number;
+    candidate: FreeOnboardingCandidate;
+  };
+  const planned: PlannedSend[] = [];
+
+  for (let i = 0; i < activeSteps.length; i++) {
+    const step = activeSteps[i]!;
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
+    // Día exacto + 1 de gracia (si el cron de ese día falló), sin barrer hasta el paso siguiente.
+    const untilDaysExclusive = cumulativeDays + 2;
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
       cumulativeDays,
+      untilDaysExclusive,
       timezone: sequence.timezone,
       enrolledWithinDays,
       limit,
@@ -705,13 +734,30 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
+      // Secuencia completa: sN solo si ya recibió s1..s(N-1). Evita seguir un catch-up con huecos.
+      if (!force && step.sortOrder > 1) {
+        let missingPrevious = false;
+        for (let prev = 1; prev < step.sortOrder; prev += 1) {
+          if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
+            missingPrevious = true;
+            break;
+          }
+        }
+        if (missingPrevious) {
+          skipped += 1;
+          continue;
+        }
+      }
       pending.push(candidate);
+      planned.push({ step, cumulativeDays, untilDaysExclusive, candidate });
     }
 
     if (dryRun) {
       stepSummaries.push({
         sortOrder: step.sortOrder,
         cumulativeDays,
+        untilDaysExclusive,
+        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         wouldSend: pending.length,
         sample: pending.slice(0, 10).map((c) => ({
@@ -723,42 +769,125 @@ export async function runFreeOnboardingEmailBatch(input: {
           score: c.score,
         })),
       });
-      continue;
+    } else {
+      stepSummaries.push({
+        sortOrder: step.sortOrder,
+        cumulativeDays,
+        untilDaysExclusive,
+        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
+        candidates: candidates.length,
+        planned: pending.length,
+        sent: 0,
+      });
     }
+  }
 
-    let stepSent = 0;
-    for (const candidate of pending) {
-      try {
-        const result = await sendFreeOnboardingStep({ candidate, step });
-        if (result.sent) {
-          sent += 1;
-          stepSent += 1;
-        } else {
-          skipped += 1;
-        }
-      } catch (e) {
-        failed += 1;
-        if (errors.length < 20) {
-          errors.push({
-            email: candidate.email,
-            sortOrder: step.sortOrder,
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
+  if (dryRun) {
+    return {
+      ok: true,
+      dryRun: true,
+      due: true,
+      enabled: sequence.enabled,
+      timezone: sequence.timezone,
+      sendHourLocal: sequence.sendHourLocal,
+      sendMinuteLocal: sequence.sendMinuteLocal,
+      enrolledWithinDays,
+      sent: 0,
+      skipped,
+      failed: 0,
+      steps: stepSummaries,
+      errors: [],
+    };
+  }
+
+  const opsTo = freeOnboardingOpsNotifyTo();
+
+  if (planned.length > 0 && opsTo) {
+    const lines = planned.map(
+      (p) =>
+        `· Paso ${p.step.sortOrder} → ${p.candidate.email} (${p.candidate.domain || p.candidate.brandName}) score=${p.candidate.score ?? '—'}`
+    );
+    const text = [
+      'Inicio de secuencia free onboarding',
+      '',
+      `Fecha: ${now.toISOString()}`,
+      `Hora local config: ${sequence.sendHourLocal}:${String(sequence.sendMinuteLocal).padStart(2, '0')} ${sequence.timezone}`,
+      `Correos a enviar: ${planned.length}`,
+      '',
+      ...lines,
+      '',
+      'Cleexs · aviso automático',
+    ].join('\n');
+    try {
+      await sendCleexsOpsEmail({
+        to: opsTo,
+        subject: `[Cleexs] Inicio de secuencia · ${planned.length} correo${planned.length === 1 ? '' : 's'}`,
+        text,
+      });
+    } catch (e) {
+      console.error('[free-onboarding] ops start notify failed', e);
+    }
+  }
+
+  const sentByStep = new Map<number, number>();
+  for (const item of planned) {
+    try {
+      const result = await sendFreeOnboardingStep({ candidate: item.candidate, step: item.step });
+      if (result.sent) {
+        sent += 1;
+        sentByStep.set(item.step.sortOrder, (sentByStep.get(item.step.sortOrder) ?? 0) + 1);
+      } else {
+        skipped += 1;
+      }
+    } catch (e) {
+      failed += 1;
+      if (errors.length < 20) {
+        errors.push({
+          email: item.candidate.email,
+          sortOrder: item.step.sortOrder,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
+  }
 
-    stepSummaries.push({
-      sortOrder: step.sortOrder,
-      cumulativeDays,
-      candidates: candidates.length,
-      sent: stepSent,
-    });
+  for (const summary of stepSummaries) {
+    const so = summary.sortOrder as number;
+    summary.sent = sentByStep.get(so) ?? 0;
+  }
+
+  if (planned.length > 0 && opsTo) {
+    const stepLines = [...sentByStep.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([so, n]) => `· Paso ${so}: ${n} enviado${n === 1 ? '' : 's'}`);
+    const text = [
+      'Finalizado · secuencia free onboarding',
+      '',
+      `Se enviaron ${sent} correo${sent === 1 ? '' : 's'}.`,
+      `Planificados: ${planned.length} · omitidos: ${skipped} · fallidos: ${failed}`,
+      '',
+      ...(stepLines.length ? stepLines : ['· (sin envíos)']),
+      '',
+      errors.length
+        ? `Errores (máx 20):\n${errors.map((e) => `· p${e.sortOrder} ${e.email}: ${e.error}`).join('\n')}`
+        : 'Sin errores.',
+      '',
+      'Cleexs · aviso automático',
+    ].join('\n');
+    try {
+      await sendCleexsOpsEmail({
+        to: opsTo,
+        subject: `[Cleexs] Finalizado secuencia · se enviaron ${sent} correo${sent === 1 ? '' : 's'}`,
+        text,
+      });
+    } catch (e) {
+      console.error('[free-onboarding] ops end notify failed', e);
+    }
   }
 
   return {
     ok: failed === 0,
-    dryRun,
+    dryRun: false,
     due: true,
     enabled: sequence.enabled,
     timezone: sequence.timezone,
@@ -770,5 +899,6 @@ export async function runFreeOnboardingEmailBatch(input: {
     failed,
     steps: stepSummaries,
     errors,
+    opsNotifyTo: opsTo || null,
   };
 }
