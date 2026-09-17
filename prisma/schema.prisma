@@ -339,6 +339,8 @@ model Brand {
   runSchedule                  RunSchedule?  @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
   /// Prompt guardado en portal (1 de 5) usado en corridas `weekly_portal` cuando está seleccionado
   selectedWeeklyPortalPromptId String?       @map("selected_weekly_portal_prompt_id")
+  /// Preferencias del portal de marca (módulos, alertas, integraciones, contacto)
+  portalSettings               Json?         @map("portal_settings")
   createdAt                    DateTime      @default(now()) @map("created_at")
   updatedAt                    DateTime      @updatedAt @map("updated_at")
 
