@@ -702,10 +702,9 @@ export async function runFreeOnboardingEmailBatch(input: {
   for (let i = 0; i < activeSteps.length; i++) {
     const step = activeSteps[i]!;
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
-    const next = activeSteps[i + 1];
-    const untilDaysExclusive = next
-      ? cumulativeDaysForStep(sequence.steps, next.sortOrder)
-      : cumulativeDays + Math.max(step.delayDaysAfterPrevious || 2, 3);
+    // Día exacto + 1 de gracia (si el cron de ese día falló), sin barrer hasta el paso siguiente.
+    const untilDaysExclusive = cumulativeDays + 2;
+    const prevSortOrder = step.sortOrder - 1;
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
       cumulativeDays,
@@ -722,6 +721,14 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
+      // Secuencia ordenada: no mandar sN si no recibió s(N-1) (s1 es el ancla).
+      if (!force && prevSortOrder >= 1) {
+        const prevSent = await wasFreeOnboardingStepSent(candidate.email, prevSortOrder);
+        if (!prevSent) {
+          skipped += 1;
+          continue;
+        }
+      }
       pending.push(candidate);
     }
 
@@ -730,6 +737,7 @@ export async function runFreeOnboardingEmailBatch(input: {
         sortOrder: step.sortOrder,
         cumulativeDays,
         untilDaysExclusive,
+        requirePreviousStep: prevSortOrder >= 1 ? prevSortOrder : null,
         candidates: candidates.length,
         wouldSend: pending.length,
         sample: pending.slice(0, 10).map((c) => ({
@@ -770,6 +778,7 @@ export async function runFreeOnboardingEmailBatch(input: {
       sortOrder: step.sortOrder,
       cumulativeDays,
       untilDaysExclusive,
+      requirePreviousStep: prevSortOrder >= 1 ? prevSortOrder : null,
       candidates: candidates.length,
       sent: stepSent,
     });
