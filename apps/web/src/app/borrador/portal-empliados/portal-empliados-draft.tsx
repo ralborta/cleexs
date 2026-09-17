@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   BarChart3,
+  Bot,
   Filter,
   FileText,
   Globe2,
@@ -35,22 +36,13 @@ type SectionId =
   | 'auditoria'
   | 'settings';
 
-type SettingsTab = 'marca' | 'competidores' | 'modulos' | 'integraciones' | 'alertas';
+type SettingsTab = 'integraciones' | 'marca' | 'competidores' | 'alertas';
 
 type NavLink = { id: SectionId; label: string; icon: typeof Mail };
 type NavSection = { title: string; links: NavLink[] };
 
 type PortalSettings = {
-  modules: {
-    dashboard: boolean;
-    sov: boolean;
-    oportunidades: boolean;
-    contenido: boolean;
-    outreach: boolean;
-    auditoria: boolean;
-    email: boolean;
-    funnelEcommerce: boolean;
-  };
+  modules: Record<string, boolean>;
   alerts: {
     contactEmail: string;
     contactName: string;
@@ -68,49 +60,7 @@ type PortalSettings = {
   notes: string;
 };
 
-type Snapshot = {
-  ok: boolean;
-  domain: string;
-  brand: {
-    id: string | null;
-    name: string;
-    domain: string;
-    industry: string | null;
-    country?: string | null;
-    description?: string | null;
-    objective?: string | null;
-    runSchedule?: 'semanal' | 'quincenal' | 'mensual' | null;
-  } | null;
-  competitors: Array<{ id?: string; name: string; domain: string | null }>;
-  settings: PortalSettings;
-  score: {
-    cleexsScore: number | null;
-    priaTotal: number | null;
-    source: string | null;
-    updatedAt: string | null;
-    diagnosticId: string | null;
-  };
-  shareOfVoice: {
-    percent: number | null;
-    brandAppearances: number;
-    totalAppearances: number;
-    comparison: Array<{
-      name: string;
-      type: string;
-      share: number | null;
-      appearances: number | null;
-    }>;
-  };
-  insights: {
-    resumenEjecutivo: string | null;
-    fortalezas: string[];
-    debilidades: string[];
-    sugerencias: string[];
-    intenciones: Array<{ intencion: string; score: number | null; comentario: string | null }>;
-  };
-};
-
-/** Misma estructura que Trafogli — no cambiar. */
+/** Misma estructura que Trafogli. */
 const NAV: NavSection[] = [
   {
     title: 'Negocio',
@@ -139,6 +89,45 @@ const NAV: NavSection[] = [
     ],
   },
 ];
+
+/** Prompts de descubrimiento · agentes IA logística. */
+const SOV_PROMPTS = [
+  { prompt: 'agentes de IA para logística Argentina', empliados: true, rival: 'Beetrack' },
+  { prompt: 'automatizar reclamos de envíos con IA', empliados: true, rival: 'Enviame' },
+  { prompt: 'sistema operativo de logística SOL', empliados: true, rival: 'Melonn' },
+  { prompt: 'IA para seguimiento de camiones 24/7', empliados: false, rival: 'project44' },
+  { prompt: 'agentes IA coordinación choferes y oficina', empliados: true, rival: 'FourKites' },
+  { prompt: 'software logística con más de 25 viajes/día', empliados: false, rival: 'Beetrack' },
+  { prompt: 'reducir llamadas de seguimiento de envíos', empliados: true, rival: 'Enviame' },
+  { prompt: 'empleados virtuales para pymes de transporte', empliados: false, rival: 'Melonn' },
+];
+
+const AGENTS = [
+  { name: 'Agente de Reclamos', skus: 1, page: 'Lista', sovHits: 9, status: 'Indexada' },
+  { name: 'Agente de Seguimiento', skus: 1, page: 'Lista', sovHits: 7, status: 'Indexada' },
+  { name: 'Agente de Coordinación', skus: 1, page: 'En progreso', sovHits: 3, status: 'Borrador' },
+  { name: 'Agente de Atención clientes', skus: 1, page: 'Lista', sovHits: 5, status: 'Indexada' },
+  { name: 'Agente de Planificación viajes', skus: 1, page: 'Pendiente', sovHits: 1, status: '—' },
+  { name: 'Agente de Documentación', skus: 1, page: 'Lista', sovHits: 4, status: 'Indexada' },
+  { name: 'Agente de Alertas operativas', skus: 1, page: 'Lista', sovHits: 6, status: 'Indexada' },
+  { name: 'Agente de Reportes', skus: 1, page: 'En progreso', sovHits: 2, status: 'Borrador' },
+];
+
+const EMAIL_STEPS = [
+  { day: 0, subject: 'Gracias por la demo · qué hace cada Empliado en tu operación', active: true },
+  { day: 2, subject: 'Caso reclamos 24/7 · menos llamados a la oficina', active: true },
+  { day: 5, subject: 'Tu link de referidos Empliados', active: true },
+  { day: 12, subject: 'Activá el 2º agente · seguimiento de viajes', active: false },
+];
+
+function fmt(n: number): string {
+  return n.toLocaleString('es-AR');
+}
+
+function pct(n: number, d: number): string {
+  if (d <= 0) return '—';
+  return `${Math.round((n / d) * 1000) / 10}%`;
+}
 
 function Card({
   icon,
@@ -191,18 +180,16 @@ function Badge({
   tone = 'violet',
 }: {
   children: ReactNode;
-  tone?: 'violet' | 'emerald' | 'amber' | 'slate' | 'rose';
+  tone?: 'violet' | 'emerald' | 'amber' | 'slate';
 }) {
   const cls =
     tone === 'emerald'
       ? 'bg-emerald-50 text-emerald-800 ring-emerald-200/80'
       : tone === 'amber'
         ? 'bg-amber-50 text-amber-900 ring-amber-200/80'
-        : tone === 'rose'
-          ? 'bg-rose-50 text-rose-800 ring-rose-200/80'
-          : tone === 'slate'
-            ? 'bg-slate-100 text-slate-700 ring-slate-200'
-            : 'bg-violet-50 text-violet-800 ring-violet-200/80';
+        : tone === 'slate'
+          ? 'bg-slate-100 text-slate-700 ring-slate-200'
+          : 'bg-violet-50 text-violet-800 ring-violet-200/80';
   return (
     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${cls}`}>
       {children}
@@ -255,65 +242,425 @@ function Toggle({
   );
 }
 
-function fmtDate(iso: string | null) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
-  } catch {
-    return iso;
-  }
+function DashboardView() {
+  const wins = SOV_PROMPTS.filter((p) => p.empliados).length;
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Dashboard"
+        subtitle="Vista ejecutiva Empliados · agentes activos + visibilidad en IA."
+      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card icon={<Bot className="h-4 w-4" />} label="Agentes activos" value="48" hint="En operaciones de clientes" accent="text-emerald-600" />
+        <Card icon={<TrendingUp className="h-4 w-4" />} label="Demos 7d" value="23" hint="+18% vs semana ant." accent="text-sky-600" />
+        <Card
+          icon={<Sparkles className="h-4 w-4" />}
+          label="AI Share of Voice"
+          value={`${Math.round((wins / 50) * 1000) / 10}%`}
+          hint={`${wins} / 50 prompts · semanal`}
+          accent="text-violet-600"
+        />
+        <Card icon={<BarChart3 className="h-4 w-4" />} label="Cleexs Score" value="54" hint="Actualizado lunes" accent="text-indigo-600" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Tendencia SOV (8 semanas)">
+          <div className="flex h-36 items-end gap-2">
+            {[3, 4, 4, 5, 6, 7, 8, 10].map((v, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <div className="w-full rounded-t-md bg-violet-500/90" style={{ height: `${v * 10}%` }} />
+                <span className="text-[10px] text-slate-400">S{i + 1}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">De 3% → 10% en 8 semanas midiendo los mismos 50 prompts de logística + IA.</p>
+        </Panel>
+        <Panel title="Próximas acciones Cleexs">
+          <ul className="space-y-3 text-sm text-slate-700">
+            <li className="flex gap-3">
+              <Badge>SOV</Badge>
+              <span>Publicar página profunda · Agente de Coordinación (7 prompts sin mención).</span>
+            </li>
+            <li className="flex gap-3">
+              <Badge tone="emerald">Email</Badge>
+              <span>Activar paso día 12 (2º agente · seguimiento).</span>
+            </li>
+            <li className="flex gap-3">
+              <Badge tone="amber">Outreach</Badge>
+              <span>11 directorios donde aparece Beetrack / Enviame y Empliados no.</span>
+            </li>
+          </ul>
+        </Panel>
+      </div>
+    </div>
+  );
 }
 
-export function PortalEmpliadosDraft() {
-  const [section, setSection] = useState<SectionId>('dashboard');
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('marca');
-  const [data, setData] = useState<Snapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+function FunnelView() {
+  const steps = [
+    { label: 'Visitas web', value: 9200, source: 'GA4' },
+    { label: 'Leads demo', value: 410, source: 'CRM' },
+    { label: 'Demos hechas', value: 168, source: 'CRM' },
+    { label: 'Piloto / trial', value: 54, source: 'Producto' },
+    { label: 'Cliente pago', value: 19, source: 'Billing' },
+  ];
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Funnel" subtitle="Conversión comercial · visita → demo → piloto → contrato." />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {steps.map((s, i) => (
+          <Card
+            key={s.label}
+            icon={<Filter className="h-4 w-4" />}
+            label={s.label}
+            value={fmt(s.value)}
+            hint={i === 0 ? s.source : `${pct(s.value, steps[0].value)} del top · ${s.source}`}
+            accent="text-violet-600"
+          />
+        ))}
+      </div>
+      <Panel title="Canales de entrada (7d)">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Fuente</th>
+                <th className="pb-2 pr-4 font-semibold">Visitas</th>
+                <th className="pb-2 pr-4 font-semibold">Demos</th>
+                <th className="pb-2 font-semibold">Conv.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {[
+                ['Google', 3800, 62],
+                ['LinkedIn', 2100, 48],
+                ['ChatGPT / LLM', 520, 27],
+                ['Referidos', 410, 21],
+                ['WhatsApp / outbound', 980, 19],
+              ].map(([src, v, c]) => (
+                <tr key={String(src)}>
+                  <td className="py-2.5 pr-4 font-medium">{src}</td>
+                  <td className="py-2.5 pr-4 tabular-nums">{fmt(Number(v))}</td>
+                  <td className="py-2.5 pr-4 tabular-nums">{fmt(Number(c))}</td>
+                  <td className="py-2.5 tabular-nums">{pct(Number(c), Number(v))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function SovView() {
+  const wins = SOV_PROMPTS.filter((p) => p.empliados).length;
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="AI Share of Voice"
+        subtitle="50 prompts objetivo · medición semanal en ChatGPT, Gemini, Perplexity y Claude."
+      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card
+          icon={<Sparkles className="h-4 w-4" />}
+          label="SOV actual"
+          value={`${Math.round((wins / 50) * 1000) / 10}%`}
+          hint={`${wins} menciones / 50 prompts (muestra)`}
+          accent="text-violet-600"
+        />
+        <Card icon={<Globe2 className="h-4 w-4" />} label="Motores" value="4" hint="ChatGPT · Gemini · Perplexity · Claude" accent="text-sky-600" />
+        <Card icon={<TrendingUp className="h-4 w-4" />} label="Δ semanal" value="+1 pp" hint="4 → 5 menciones" accent="text-emerald-600" />
+        <Card icon={<Users className="h-4 w-4" />} label="Rival #1" value="Beetrack" hint="14 / 50 prompts" accent="text-amber-600" />
+      </div>
+      <Panel title="Muestra de prompts (8 / 50)">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Prompt</th>
+                <th className="pb-2 pr-4 font-semibold">Empliados</th>
+                <th className="pb-2 font-semibold">Quién gana hoy</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {SOV_PROMPTS.map((row) => (
+                <tr key={row.prompt}>
+                  <td className="py-2.5 pr-4 text-slate-800">{row.prompt}</td>
+                  <td className="py-2.5 pr-4">
+                    {row.empliados ? <Badge tone="emerald">Aparece</Badge> : <Badge tone="slate">No</Badge>}
+                  </td>
+                  <td className="py-2.5 text-slate-600">{row.empliados ? 'Empliados' : row.rival}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function OportunidadesView() {
+  const items = [
+    { q: 'IA para reclamos de logística nocturna', vol: 'Alto', gap: 'Sin página dedicada', action: 'Crear página profunda' },
+    { q: 'agente IA seguimiento de viajes Argentina', vol: 'Alto', gap: 'Rival responde, Empliados débil', action: 'FAQ + landing' },
+    { q: 'coordinar choferes y oficina con IA', vol: 'Medio', gap: 'Mención débil en LLM', action: 'Reforzar FAQ IA' },
+    { q: 'SOL sistema operativo logística pymes', vol: 'Medio', gap: 'Contenido en blog viejo', action: 'Actualizar + schema' },
+  ];
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Oportunidades" subtitle="Qué busca la gente · Discovery / Teo." />
+      <Panel title="Oportunidades detectadas esta semana">
+        <div className="space-y-3">
+          {items.map((it) => (
+            <div key={it.q} className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-slate-900">{it.q}</p>
+                <Badge tone="amber">{it.vol}</Badge>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">{it.gap}</p>
+              <p className="mt-2 text-xs font-medium text-violet-700">{it.action}</p>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ContenidoView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Contenido"
+        subtitle="Páginas profundas por agente (8) + FAQ orientadas a IA · SOL logística."
+      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<FileText className="h-4 w-4" />} label="Páginas profundas" value="5 / 8" hint="Publicadas" accent="text-violet-600" />
+        <Card icon={<Globe2 className="h-4 w-4" />} label="FAQ IA" value="4" hint="Hubs temáticos" accent="text-sky-600" />
+        <Card icon={<ScanSearch className="h-4 w-4" />} label="Indexadas" value="6" hint="GSC + bots IA" accent="text-emerald-600" />
+      </div>
+      <Panel title="Agentes principales">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Agente</th>
+                <th className="pb-2 pr-4 font-semibold">Módulos</th>
+                <th className="pb-2 pr-4 font-semibold">Página</th>
+                <th className="pb-2 pr-4 font-semibold">Hits SOV</th>
+                <th className="pb-2 font-semibold">Index</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {AGENTS.map((p) => (
+                <tr key={p.name}>
+                  <td className="py-2.5 pr-4 font-medium">{p.name}</td>
+                  <td className="py-2.5 pr-4 tabular-nums">{p.skus}</td>
+                  <td className="py-2.5 pr-4">{p.page}</td>
+                  <td className="py-2.5 pr-4 tabular-nums">{p.sovHits}</td>
+                  <td className="py-2.5">
+                    <Badge tone={p.status === 'Indexada' ? 'emerald' : p.status === 'Borrador' ? 'amber' : 'slate'}>
+                      {p.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function OutreachView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Links & Outreach" subtitle="Backlinks + contacting automático (agente Outreach Cleexs)." />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<Link2 className="h-4 w-4" />} label="Backlinks activos" value="31" hint="GSC + crawlers" accent="text-violet-600" />
+        <Card icon={<Share2 className="h-4 w-4" />} label="Oportunidades" value="11" hint="Donde gana el rival" accent="text-amber-600" />
+        <Card icon={<Mail className="h-4 w-4" />} label="Outreach enviados 7d" value="16" hint="Shadow / real" accent="text-sky-600" />
+      </div>
+      <Panel title="Fuentes donde el rival aparece y Empliados no">
+        <ul className="space-y-2 text-sm text-slate-700">
+          {[
+            'revistalogistica.com.ar — ficha Beetrack',
+            'transporteya.net — guía TMS Latam',
+            'linkedin.com/pulse — “IA en flotas”',
+            'marketplace-saas.io — categoría last mile',
+          ].map((line) => (
+            <li key={line} className="flex items-start gap-2 rounded-lg border border-slate-100 px-3 py-2">
+              <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+function EmailView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Email · secuencia" subtitle="Post-demo Empliados · nurturing hasta activar el 2º agente." />
+      <Panel title="Pasos configurados" action={<Badge tone="emerald">3 activos</Badge>}>
+        <div className="space-y-2">
+          {EMAIL_STEPS.map((s) => (
+            <div
+              key={s.day}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-4 py-3"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Día {s.day}</p>
+                <p className="text-sm text-slate-800">{s.subject}</p>
+              </div>
+              <Badge tone={s.active ? 'emerald' : 'slate'}>{s.active ? 'Activo' : 'Pausado'}</Badge>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <p className="text-xs text-slate-500">
+        Enrichment (email + WA + agentes contratados) alimenta la personalización — ver sección Clientes.
+      </p>
+    </div>
+  );
+}
+
+function ReferidosView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Referidos" subtitle="Link propio por cliente · atribución y crédito en fee." />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<MousePointerClick className="h-4 w-4" />} label="Referidores activos" value="37" hint="Con al menos 1 click" accent="text-violet-600" />
+        <Card icon={<Users className="h-4 w-4" />} label="Demos atribuidas" value="14" hint="Últimos 30 días" accent="text-emerald-600" />
+        <Card icon={<Bot className="h-4 w-4" />} label="Crédito medio" value="1 mes" hint="Mes gratis al referido" accent="text-amber-600" />
+      </div>
+      <Panel title="Link activo">
+        <code className="block rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
+          https://empliados.net/?ref=logistica-norte-9a21
+        </code>
+      </Panel>
+    </div>
+  );
+}
+
+function ClientesView() {
+  const rows = [
+    { email: 'ops@transporteandino.com', wa: '+54 9 11 …', product: 'Reclamos + Seguimiento', tags: 'flota 40, CABA' },
+    { email: 'ceo@rutasur.com.ar', wa: '+54 9 351 …', product: 'SOL completo', tags: '25+ viajes/día' },
+    { email: 'logistica@distribuidorapampa.com', wa: '—', product: 'Atención clientes', tags: 'piloto, interior' },
+  ];
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Clientes"
+        subtitle="Contrato + enriquecimiento → segmentación para email personalizado."
+      />
+      <Panel title="Perfiles enriquecidos">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Email</th>
+                <th className="pb-2 pr-4 font-semibold">WhatsApp</th>
+                <th className="pb-2 pr-4 font-semibold">Agentes</th>
+                <th className="pb-2 font-semibold">Atributos</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {rows.map((r) => (
+                <tr key={r.email}>
+                  <td className="py-2.5 pr-4 font-medium">{r.email}</td>
+                  <td className="py-2.5 pr-4">{r.wa}</td>
+                  <td className="py-2.5 pr-4">{r.product}</td>
+                  <td className="py-2.5 text-slate-500">{r.tags}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function AuditoriaView() {
+  const checks = [
+    { name: 'robots.txt · GPTBot', ok: true },
+    { name: 'sitemap.xml agentes', ok: true },
+    { name: 'Schema SoftwareApplication', ok: false },
+    { name: 'FAQ indexables', ok: true },
+    { name: 'Canonicals', ok: true },
+    { name: 'Bloqueo de crawlers IA', ok: true },
+  ];
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Auditoría" subtitle="Técnica + agéntica Cleexs · indexación y acceso de bots." />
+      <div className="grid gap-3 sm:grid-cols-2">
+        {checks.map((c) => (
+          <div
+            key={c.name}
+            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+          >
+            <span className="text-sm text-slate-800">{c.name}</span>
+            <Badge tone={c.ok ? 'emerald' : 'amber'}>{c.ok ? 'OK' : 'Revisar'}</Badge>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SettingsView() {
+  const [tab, setTab] = useState<SettingsTab>('integraciones');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
-
+  const [brandId, setBrandId] = useState<string | null>(null);
   const [brandForm, setBrandForm] = useState({
-    name: '',
-    industry: '',
-    country: '',
-    description: '',
-    objective: '',
-    runSchedule: '' as '' | 'semanal' | 'quincenal' | 'mensual',
+    name: 'Empliados',
+    industry: 'Agentes de IA para logística',
+    country: 'Argentina',
+    description: 'SOL · Sistema Operativo de Logística. Agentes de IA preconfigurados para pymes de transporte y logística.',
+    objective: 'Ser la marca #1 en prompts de agentes IA logística en Latam',
+    runSchedule: 'semanal' as '' | 'semanal' | 'quincenal' | 'mensual',
   });
-  const [competitors, setCompetitors] = useState<Array<{ name: string; domain: string }>>([]);
+  const [competitors, setCompetitors] = useState([
+    { name: 'Beetrack', domain: 'beetrack.com' },
+    { name: 'Enviame', domain: 'enviame.io' },
+    { name: 'Melonn', domain: 'melonn.com' },
+    { name: 'project44', domain: 'project44.com' },
+    { name: 'FourKites', domain: 'fourkites.com' },
+  ]);
   const [settings, setSettings] = useState<PortalSettings | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const res = await fetch('/api/borrador/portal-brand?domain=empliados.net', { cache: 'no-store' });
-      const json = (await res.json()) as Snapshot & { error?: string };
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      setData(json);
-      setBrandForm({
-        name: json.brand?.name ?? '',
-        industry: json.brand?.industry ?? '',
-        country: json.brand?.country ?? '',
-        description: json.brand?.description ?? '',
-        objective: json.brand?.objective ?? '',
-        runSchedule: json.brand?.runSchedule ?? '',
-      });
-      setCompetitors(
-        (json.competitors?.length
-          ? json.competitors
-          : json.shareOfVoice.comparison
-              .filter((c) => c.type !== 'brand')
-              .map((c) => ({ name: c.name, domain: null as string | null }))
-        ).map((c) => ({ name: c.name, domain: c.domain ?? '' })),
-      );
-      setSettings(json.settings);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
+      const json = await res.json();
+      if (!res.ok) return;
+      setBrandId(json.brand?.id ?? null);
+      if (json.brand) {
+        setBrandForm({
+          name: json.brand.name || 'Empliados',
+          industry: json.brand.industry || 'Agentes de IA para logística',
+          country: json.brand.country || 'Argentina',
+          description:
+            json.brand.description ||
+            'SOL · Sistema Operativo de Logística. Agentes de IA preconfigurados para pymes de transporte y logística.',
+          objective: json.brand.objective || 'Ser la marca #1 en prompts de agentes IA logística en Latam',
+          runSchedule: json.brand.runSchedule || 'semanal',
+        });
+      }
+      if (json.competitors?.length) {
+        setCompetitors(json.competitors.map((c: { name: string; domain: string | null }) => ({ name: c.name, domain: c.domain || '' })));
+      }
+      if (json.settings) setSettings(json.settings);
+    } catch {
+      /* keep defaults */
     }
   }, []);
 
@@ -321,39 +668,17 @@ export function PortalEmpliadosDraft() {
     void load();
   }, [load]);
 
-  async function saveConfig(payload: {
-    brand?: typeof brandForm;
-    competitors?: Array<{ name: string; domain: string | null }>;
-    settings?: PortalSettings;
-  }) {
+  async function save(payload: Record<string, unknown>) {
     setSaving(true);
     setSaveMsg(null);
     setSaveErr(null);
     try {
-      const body: Record<string, unknown> = {};
-      if (payload.brand) {
-        body.brand = {
-          name: payload.brand.name,
-          industry: payload.brand.industry || null,
-          country: payload.brand.country || null,
-          description: payload.brand.description || null,
-          objective: payload.brand.objective || null,
-          runSchedule: payload.brand.runSchedule || null,
-        };
-      }
-      if (payload.competitors) {
-        body.competitors = payload.competitors
-          .filter((c) => c.name.trim())
-          .map((c) => ({ name: c.name.trim(), domain: (c.domain ?? '').trim() || null }));
-      }
-      if (payload.settings) body.settings = payload.settings;
-
       const res = await fetch('/api/borrador/portal-brand?domain=empliados.net', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setSaveMsg('Guardado');
       await load();
@@ -364,717 +689,272 @@ export function PortalEmpliadosDraft() {
     }
   }
 
-  const score = data?.score.cleexsScore ?? data?.score.priaTotal;
-  const sov = data?.shareOfVoice.percent;
+  const integrationRows = [
+    { name: 'CRM / HubSpot', status: 'Conectado' },
+    { name: 'Google Analytics 4', status: settings?.integrations.ga4.enabled ? 'Conectado' : 'Pendiente' },
+    { name: 'Google Search Console', status: settings?.integrations.gsc.enabled ? 'Conectado' : 'Pendiente' },
+    { name: 'WordPress / CMS', status: settings?.integrations.wordpress.enabled ? 'Conectado' : 'Pendiente' },
+    { name: 'Resend · email', status: settings?.integrations.resend.enabled ? 'Conectado' : 'Conectado' },
+    { name: 'WhatsApp Business', status: 'Conectado' },
+    { name: 'TMS / ERP cliente', status: 'Próximo' },
+  ];
 
-  function renderSection(id: SectionId) {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center gap-2 py-24 text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Cargando empliados.net…
-        </div>
-      );
-    }
-    if (error) {
-      return (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-6 text-sm text-rose-900">
-          No se pudo cargar: {error}
-        </div>
-      );
-    }
-    if (!data || !settings) return null;
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="Settings" subtitle="Integraciones y configuración del portal de marca." />
+      {(saveMsg || saveErr) && (
+        <p className={`text-xs font-medium ${saveErr ? 'text-rose-600' : 'text-emerald-700'}`}>{saveErr || saveMsg}</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ['integraciones', 'Integraciones'],
+            ['marca', 'Marca'],
+            ['competidores', 'Competidores'],
+            ['alertas', 'Alertas'],
+          ] as Array<[SettingsTab, string]>
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+              tab === id ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-    switch (id) {
-      case 'dashboard':
-        return (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Dashboard"
-              subtitle={`Vista ejecutiva Empliados · score Cleexs + visibilidad en IA · ${fmtDate(data.score.updatedAt)}`}
-            />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Card
-                icon={<BarChart3 className="h-4 w-4" />}
-                label="Cleexs Score"
-                value={score != null ? String(score) : '—'}
-                hint={data.score.source ? `Fuente: ${data.score.source}` : 'Sin score'}
-                accent="text-indigo-600"
-              />
-              <Card
-                icon={<Sparkles className="h-4 w-4" />}
-                label="AI Share of Voice"
-                value={sov != null ? `${sov}%` : '—'}
-                hint={`${data.shareOfVoice.brandAppearances} / ${data.shareOfVoice.totalAppearances} apariciones`}
-                accent="text-violet-600"
-              />
-              <Card
-                icon={<Users className="h-4 w-4" />}
-                label="Competidores"
-                value={String(competitors.length || data.shareOfVoice.comparison.filter((c) => c.type !== 'brand').length)}
-                hint="Set configurado"
-                accent="text-sky-600"
-              />
-              <Card
-                icon={<TrendingUp className="h-4 w-4" />}
-                label="Mejor intención"
-                value={
-                  data.insights.intenciones.length
-                    ? [...data.insights.intenciones].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
-                        ?.intencion ?? '—'
-                    : '—'
-                }
-                hint="Por score"
-                accent="text-emerald-600"
-              />
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Panel title="Resumen ejecutivo">
-                <p className="text-sm leading-relaxed text-slate-700">
-                  {data.insights.resumenEjecutivo || 'Sin resumen en el diagnóstico.'}
-                </p>
-              </Panel>
-              <Panel title="Próximas acciones Cleexs">
-                <ul className="space-y-3 text-sm text-slate-700">
-                  {(data.insights.sugerencias.length ? data.insights.sugerencias : ['Sin sugerencias']).map((s) => (
-                    <li key={s} className="flex gap-3">
-                      <Badge>SOV</Badge>
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            </div>
-          </div>
-        );
-
-      case 'funnel':
-        return (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Funnel"
-              subtitle="Pipeline de leads y contrataciones · últimos 30 días."
-            />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {[
-                { label: 'Visitas web', value: '18.4k', source: 'GA4' },
-                { label: 'Leads', value: '642', source: 'CRM' },
-                { label: 'Qualified', value: '218', source: 'CRM' },
-                { label: 'Entrevistas', value: '97', source: 'ATS' },
-                { label: 'Colocaciones', value: '34', source: 'ATS' },
-              ].map((s) => (
-                <Card key={s.label} icon={<Filter className="h-4 w-4" />} label={s.label} value={s.value} hint={s.source} />
-              ))}
-            </div>
-            <Panel title="Conversión por etapa">
-              <div className="space-y-3">
-                {[
-                  { from: 'Visita → Lead', rate: '3.5%' },
-                  { from: 'Lead → Qualified', rate: '34%' },
-                  { from: 'Qualified → Entrevista', rate: '44%' },
-                  { from: 'Entrevista → Colocación', rate: '35%' },
-                ].map((r) => (
-                  <div key={r.from} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
-                    <span className="text-slate-700">{r.from}</span>
-                    <span className="font-semibold tabular-nums text-violet-700">{r.rate}</span>
-                  </div>
-                ))}
+      {tab === 'integraciones' ? (
+        <Panel title="Integraciones">
+          <div className="space-y-2">
+            {integrationRows.map((it) => (
+              <div
+                key={it.name}
+                className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2.5 text-sm"
+              >
+                <span className="font-medium text-slate-800">{it.name}</span>
+                <Badge tone={it.status === 'Conectado' ? 'emerald' : it.status === 'Próximo' ? 'slate' : 'amber'}>
+                  {it.status}
+                </Badge>
               </div>
-            </Panel>
+            ))}
           </div>
-        );
+        </Panel>
+      ) : null}
 
-      case 'clientes':
-        return (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Clientes"
-              subtitle="Empresas y contactos enriquecidos para secuencias y outreach."
-            />
-            <Panel title="Perfiles enriquecidos">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="pb-2 pr-4 font-semibold">Empresa</th>
-                      <th className="pb-2 pr-4 font-semibold">Contacto</th>
-                      <th className="pb-2 pr-4 font-semibold">WhatsApp</th>
-                      <th className="pb-2 font-semibold">Tags</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {[
-                      { co: 'Logística Andina SA', email: 'rrhh@logisticaandina.com', wa: '+54 9 11 5821…', tags: 'operarios, CABA' },
-                      { co: 'TechNova Latam', email: 'talent@technova.io', wa: '+54 9 11 4470…', tags: 'IT, remoto' },
-                      { co: 'Clínica del Sur', email: 'seleccion@clinicadelsur.com', wa: '+54 9 11 3902…', tags: 'salud, enfermería' },
-                      { co: 'AgroPampa SRL', email: 'compras@agropampa.com', wa: '—', tags: 'campo, temporario' },
-                    ].map((r) => (
-                      <tr key={r.email}>
-                        <td className="py-2.5 pr-4 font-medium">{r.co}</td>
-                        <td className="py-2.5 pr-4">{r.email}</td>
-                        <td className="py-2.5 pr-4">{r.wa}</td>
-                        <td className="py-2.5 text-slate-500">{r.tags}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-          </div>
-        );
-
-      case 'referidos':
-        return (
-          <div className="space-y-6">
-            <SectionHeader title="Referidos" subtitle="Link propio por contacto · atribución y beneficio." />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Card icon={<MousePointerClick className="h-4 w-4" />} label="Referidores activos" value="41" hint="Con al menos 1 click" accent="text-violet-600" />
-              <Card icon={<Users className="h-4 w-4" />} label="Leads atribuidos" value="18" hint="Últimos 30 días" accent="text-emerald-600" />
-              <Card icon={<Share2 className="h-4 w-4" />} label="Beneficio medio" value="15%" hint="Crédito en fee" accent="text-amber-600" />
-            </div>
-            <Panel title="Link activo">
-              <code className="block rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
-                https://empliados.net/?ref=carolina-ruiz-4c91
-              </code>
-            </Panel>
-          </div>
-        );
-
-      case 'sov':
-        return (
-          <div className="space-y-6">
-            <SectionHeader title="AI Share of Voice" subtitle="Comparativo del set competitivo en respuestas de IA." />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Card icon={<Sparkles className="h-4 w-4" />} label="SOV Empliados" value={sov != null ? `${sov}%` : '—'} accent="text-violet-600" />
-              <Card
-                icon={<Globe2 className="h-4 w-4" />}
-                label="Apariciones"
-                value={`${data.shareOfVoice.brandAppearances}`}
-                hint={`de ${data.shareOfVoice.totalAppearances}`}
-                accent="text-sky-600"
-              />
-              <Card icon={<BarChart3 className="h-4 w-4" />} label="Score" value={score != null ? String(score) : '—'} accent="text-indigo-600" />
-            </div>
-            <Panel title="Comparativo">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="pb-2 pr-4 font-semibold">Marca</th>
-                      <th className="pb-2 pr-4 font-semibold">Tipo</th>
-                      <th className="pb-2 pr-4 font-semibold">Share %</th>
-                      <th className="pb-2 font-semibold">Apariciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {data.shareOfVoice.comparison.map((row) => (
-                      <tr key={row.name} className={row.type === 'brand' ? 'bg-violet-50/50' : ''}>
-                        <td className="py-2.5 pr-4 font-medium text-slate-900">{row.name}</td>
-                        <td className="py-2.5 pr-4">
-                          <Badge tone={row.type === 'brand' ? 'violet' : 'slate'}>{row.type}</Badge>
-                        </td>
-                        <td className="py-2.5 pr-4 tabular-nums">{row.share ?? '—'}%</td>
-                        <td className="py-2.5 tabular-nums">{row.appearances ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-            <Panel title="Intenciones">
-              <div className="space-y-3">
-                {data.insights.intenciones.map((i) => (
-                  <div key={i.intencion} className="rounded-xl border border-slate-100 px-4 py-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-900">{i.intencion}</p>
-                      <span className="text-lg font-bold tabular-nums text-violet-700">{i.score ?? '—'}</span>
-                    </div>
-                    {i.comentario ? <p className="mt-1 text-xs text-slate-600">{i.comentario}</p> : null}
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          </div>
-        );
-
-      case 'oportunidades':
-        return (
-          <div className="space-y-6">
-            <SectionHeader title="Oportunidades" subtitle="Gaps donde Empliados puede ganar menciones en IA." />
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Panel title="Debilidades">
-                <ul className="space-y-2 text-sm text-slate-700">
-                  {(data.insights.debilidades.length ? data.insights.debilidades : ['—']).map((d) => (
-                    <li key={d} className="rounded-lg border border-rose-100 bg-rose-50/50 px-3 py-2">
-                      {d}
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-              <Panel title="Fortalezas">
-                <ul className="space-y-2 text-sm text-slate-700">
-                  {(data.insights.fortalezas.length ? data.insights.fortalezas : ['—']).map((d) => (
-                    <li key={d} className="rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2">
-                      {d}
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
+      {tab === 'marca' ? (
+        <Panel title="Perfil de marca">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nombre">
+              <input className={inputCls} value={brandForm.name} onChange={(e) => setBrandForm((f) => ({ ...f, name: e.target.value }))} />
+            </Field>
+            <Field label="Dominio">
+              <input className={inputCls} value="empliados.net" disabled />
+            </Field>
+            <Field label="Industria">
+              <input className={inputCls} value={brandForm.industry} onChange={(e) => setBrandForm((f) => ({ ...f, industry: e.target.value }))} />
+            </Field>
+            <Field label="País">
+              <input className={inputCls} value={brandForm.country} onChange={(e) => setBrandForm((f) => ({ ...f, country: e.target.value }))} />
+            </Field>
+            <Field label="Frecuencia de corridas">
+              <select
+                className={inputCls}
+                value={brandForm.runSchedule}
+                onChange={(e) => setBrandForm((f) => ({ ...f, runSchedule: e.target.value as typeof brandForm.runSchedule }))}
+              >
+                <option value="semanal">Semanal</option>
+                <option value="quincenal">Quincenal</option>
+                <option value="mensual">Mensual</option>
+              </select>
+            </Field>
+            <Field label="Objetivo">
+              <input className={inputCls} value={brandForm.objective} onChange={(e) => setBrandForm((f) => ({ ...f, objective: e.target.value }))} />
+            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Descripción">
+                <textarea
+                  className={`${inputCls} min-h-[96px]`}
+                  value={brandForm.description}
+                  onChange={(e) => setBrandForm((f) => ({ ...f, description: e.target.value }))}
+                />
+              </Field>
             </div>
           </div>
-        );
-
-      case 'contenido':
-        return (
-          <div className="space-y-6">
-            <SectionHeader title="Contenido" subtitle="Páginas y FAQ orientadas a AEO para staffing." />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Card icon={<FileText className="h-4 w-4" />} label="Páginas publicadas" value="24" hint="CMS" accent="text-violet-600" />
-              <Card icon={<Search className="h-4 w-4" />} label="Indexadas en IA" value="11" hint="Última corrida" accent="text-emerald-600" />
-              <Card icon={<TrendingUp className="h-4 w-4" />} label="En progreso" value="5" hint="Borradores AEO" accent="text-amber-600" />
-            </div>
-            <Panel title="Prioridad editorial">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="pb-2 pr-4 font-semibold">Página</th>
-                      <th className="pb-2 pr-4 font-semibold">Intención</th>
-                      <th className="pb-2 pr-4 font-semibold">Estado</th>
-                      <th className="pb-2 font-semibold">Hits SOV</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {[
-                      { page: 'Agencia de empleo temporal CABA', intent: 'Urgencia', status: 'Publicada', hits: 6 },
-                      { page: 'Reclutamiento IT remoto Argentina', intent: 'Calidad', status: 'Publicada', hits: 4 },
-                      { page: 'Cómo elegir una ETT vs Adecco', intent: 'Precio', status: 'En revisión', hits: 2 },
-                      { page: 'FAQ · tiempos de colocación', intent: 'Urgencia', status: 'Borrador', hits: 0 },
-                    ].map((r) => (
-                      <tr key={r.page}>
-                        <td className="py-2.5 pr-4 font-medium">{r.page}</td>
-                        <td className="py-2.5 pr-4">{r.intent}</td>
-                        <td className="py-2.5 pr-4">
-                          <Badge tone={r.status === 'Publicada' ? 'emerald' : r.status === 'Borrador' ? 'slate' : 'amber'}>
-                            {r.status}
-                          </Badge>
-                        </td>
-                        <td className="py-2.5 tabular-nums">{r.hits}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              disabled={saving || !brandId}
+              onClick={() =>
+                void save({
+                  brand: {
+                    name: brandForm.name,
+                    industry: brandForm.industry || null,
+                    country: brandForm.country || null,
+                    description: brandForm.description || null,
+                    objective: brandForm.objective || null,
+                    runSchedule: brandForm.runSchedule || null,
+                  },
+                })
+              }
+              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Guardar marca
+            </button>
           </div>
-        );
+        </Panel>
+      ) : null}
 
-      case 'outreach':
-        return (
-          <div className="space-y-6">
-            <SectionHeader title="Links & Outreach" subtitle="Fuentes donde aparecen rivales y Empliados aún no." />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Card icon={<Link2 className="h-4 w-4" />} label="Backlinks activos" value="38" hint="GSC + crawlers" accent="text-violet-600" />
-              <Card icon={<Share2 className="h-4 w-4" />} label="Oportunidades" value="14" hint="Donde gana el rival" accent="text-amber-600" />
-              <Card icon={<Mail className="h-4 w-4" />} label="Outreach enviados 7d" value="22" hint="Shadow / real" accent="text-sky-600" />
-            </div>
-            <Panel title="Fuentes prioritarias">
-              <ul className="space-y-2 text-sm text-slate-700">
-                {[
-                  'guiadeempresas.com.ar — ficha Adecco / Randstad',
-                  'bumeran.com · nota “mejores ETTs 2026”',
-                  'linkedin.com/pulse — ranking staffing Latam',
-                  'revista-rrhh.net — guía de proveedores',
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-2 rounded-lg border border-slate-100 px-3 py-2">
-                    <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          </div>
-        );
-
-      case 'auditoria':
-        return (
-          <div className="space-y-6">
-            <SectionHeader title="Auditoría" subtitle="Técnica + agéntica Cleexs · indexación y acceso de bots." />
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { name: 'robots.txt · GPTBot', ok: true },
-                { name: 'sitemap.xml servicios', ok: true },
-                { name: 'Schema Organization', ok: false },
-                { name: 'FAQ indexables', ok: false },
-                { name: 'Canonicals', ok: true },
-                { name: 'Bloqueo de crawlers IA', ok: true },
-              ].map((c) => (
-                <div
-                  key={c.name}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
-                >
-                  <span className="text-sm text-slate-800">{c.name}</span>
-                  <Badge tone={c.ok ? 'emerald' : 'amber'}>{c.ok ? 'OK' : 'Revisar'}</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'email':
-        return (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Email · secuencia"
-              subtitle="Nurturing post-lead Empliados · personalizado por industria."
-            />
-            <Panel title="Pasos configurados" action={<Badge tone="emerald">3 activos</Badge>}>
-              <div className="space-y-2">
-                {[
-                  { day: 0, subject: 'Gracias por tu consulta · tiempos de cobertura', active: true },
-                  { day: 2, subject: 'Casos IT y operarios · cómo medimos SLA', active: true },
-                  { day: 5, subject: 'Comparativa vs grandes ETTs en tu zona', active: true },
-                  { day: 12, subject: 'Invitación a demo de portal de vacantes', active: false },
-                ].map((s) => (
-                  <div
-                    key={s.day}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-4 py-3"
-                  >
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Día {s.day}</p>
-                      <p className="text-sm text-slate-800">{s.subject}</p>
-                    </div>
-                    <Badge tone={s.active ? 'emerald' : 'slate'}>{s.active ? 'Activo' : 'Pausado'}</Badge>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          </div>
-        );
-
-      case 'settings':
-        return (
-          <div className="space-y-5">
-            <SectionHeader title="Settings" subtitle="Integraciones y configuración del portal de marca." />
-            {(saveMsg || saveErr) && (
-              <p className={`text-xs font-medium ${saveErr ? 'text-rose-600' : 'text-emerald-700'}`}>
-                {saveErr || saveMsg}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ['marca', 'Marca'],
-                  ['competidores', 'Competidores'],
-                  ['modulos', 'Módulos'],
-                  ['integraciones', 'Integraciones'],
-                  ['alertas', 'Alertas'],
-                ] as Array<[SettingsTab, string]>
-              ).map(([tab, label]) => (
+      {tab === 'competidores' ? (
+        <Panel title="Set competitivo">
+          <div className="space-y-2">
+            {competitors.map((c, idx) => (
+              <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  className={inputCls}
+                  placeholder="Nombre"
+                  value={c.name}
+                  onChange={(e) => setCompetitors((rows) => rows.map((r, i) => (i === idx ? { ...r, name: e.target.value } : r)))}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="dominio.com"
+                  value={c.domain}
+                  onChange={(e) => setCompetitors((rows) => rows.map((r, i) => (i === idx ? { ...r, domain: e.target.value } : r)))}
+                />
                 <button
-                  key={tab}
                   type="button"
-                  onClick={() => setSettingsTab(tab)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    settingsTab === tab ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
-                  }`}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+                  onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== idx))}
                 >
-                  {label}
+                  <Trash2 className="h-4 w-4" />
                 </button>
-              ))}
-            </div>
-
-            {settingsTab === 'marca' ? (
-              <Panel title="Perfil de marca">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Nombre">
-                    <input className={inputCls} value={brandForm.name} onChange={(e) => setBrandForm((f) => ({ ...f, name: e.target.value }))} />
-                  </Field>
-                  <Field label="Dominio" hint="Clave del portal">
-                    <input className={inputCls} value={data.brand?.domain ?? data.domain} disabled />
-                  </Field>
-                  <Field label="Industria">
-                    <input className={inputCls} value={brandForm.industry} onChange={(e) => setBrandForm((f) => ({ ...f, industry: e.target.value }))} />
-                  </Field>
-                  <Field label="País">
-                    <input className={inputCls} value={brandForm.country} onChange={(e) => setBrandForm((f) => ({ ...f, country: e.target.value }))} />
-                  </Field>
-                  <Field label="Frecuencia de corridas">
-                    <select
-                      className={inputCls}
-                      value={brandForm.runSchedule}
-                      onChange={(e) => setBrandForm((f) => ({ ...f, runSchedule: e.target.value as typeof brandForm.runSchedule }))}
-                    >
-                      <option value="">Sin programar</option>
-                      <option value="semanal">Semanal</option>
-                      <option value="quincenal">Quincenal</option>
-                      <option value="mensual">Mensual</option>
-                    </select>
-                  </Field>
-                  <Field label="Objetivo">
-                    <input className={inputCls} value={brandForm.objective} onChange={(e) => setBrandForm((f) => ({ ...f, objective: e.target.value }))} />
-                  </Field>
-                  <div className="sm:col-span-2">
-                    <Field label="Descripción">
-                      <textarea className={`${inputCls} min-h-[96px]`} value={brandForm.description} onChange={(e) => setBrandForm((f) => ({ ...f, description: e.target.value }))} />
-                    </Field>
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={saving || !data.brand?.id}
-                    onClick={() => void saveConfig({ brand: brandForm })}
-                    className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar marca
-                  </button>
-                </div>
-              </Panel>
-            ) : null}
-
-            {settingsTab === 'competidores' ? (
-              <Panel title="Set competitivo">
-                <div className="space-y-2">
-                  {competitors.map((c, idx) => (
-                    <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <input
-                        className={inputCls}
-                        placeholder="Nombre"
-                        value={c.name}
-                        onChange={(e) => setCompetitors((rows) => rows.map((r, i) => (i === idx ? { ...r, name: e.target.value } : r)))}
-                      />
-                      <input
-                        className={inputCls}
-                        placeholder="dominio.com"
-                        value={c.domain}
-                        onChange={(e) => setCompetitors((rows) => rows.map((r, i) => (i === idx ? { ...r, domain: e.target.value } : r)))}
-                      />
-                      <button
-                        type="button"
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
-                        onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== idx))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    disabled={competitors.length >= 20}
-                    onClick={() => setCompetitors((rows) => [...rows, { name: '', domain: '' }])}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Agregar rival
-                  </button>
-                  <button
-                    type="button"
-                    disabled={saving || !data.brand?.id}
-                    onClick={() =>
-                      void saveConfig({
-                        competitors: competitors.map((c) => ({ name: c.name, domain: c.domain || null })),
-                      })
-                    }
-                    className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar competidores
-                  </button>
-                </div>
-              </Panel>
-            ) : null}
-
-            {settingsTab === 'modulos' ? (
-              <Panel title="Módulos del portal">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {(
-                    [
-                      ['dashboard', 'Dashboard'],
-                      ['sov', 'AI Share of Voice'],
-                      ['oportunidades', 'Oportunidades'],
-                      ['contenido', 'Contenido'],
-                      ['outreach', 'Links & Outreach'],
-                      ['auditoria', 'Auditoría'],
-                      ['email', 'Email · secuencia'],
-                      ['funnelEcommerce', 'Funnel e‑commerce'],
-                    ] as Array<[keyof PortalSettings['modules'], string]>
-                  ).map(([key, label]) => (
-                    <Toggle
-                      key={key}
-                      checked={settings.modules[key]}
-                      label={label}
-                      onChange={(v) => setSettings((s) => (s ? { ...s, modules: { ...s.modules, [key]: v } } : s))}
-                    />
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-slate-500">Preferencias del portal por módulo.</p>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={saving || !data.brand?.id}
-                    onClick={() => void saveConfig({ settings })}
-                    className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar
-                  </button>
-                </div>
-              </Panel>
-            ) : null}
-
-            {settingsTab === 'integraciones' ? (
-              <Panel title="Integraciones">
-                <div className="space-y-2">
-                  {(
-                    [
-                      ['wordpress', 'WordPress / CMS'],
-                      ['ga4', 'Google Analytics 4'],
-                      ['gsc', 'Google Search Console'],
-                      ['shopify', 'Shopify'],
-                      ['resend', 'Resend · email'],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <Toggle
-                      key={key}
-                      checked={
-                        key === 'wordpress'
-                          ? settings.integrations.wordpress.enabled
-                          : settings.integrations[key].enabled
-                      }
-                      label={label}
-                      onChange={(v) =>
-                        setSettings((s) => {
-                          if (!s) return s;
-                          if (key === 'wordpress') {
-                            return {
-                              ...s,
-                              integrations: {
-                                ...s.integrations,
-                                wordpress: { ...s.integrations.wordpress, enabled: v },
-                              },
-                            };
-                          }
-                          return {
-                            ...s,
-                            integrations: { ...s.integrations, [key]: { enabled: v } },
-                          };
-                        })
-                      }
-                    />
-                  ))}
-                </div>
-                {settings.integrations.wordpress.enabled ? (
-                  <div className="mt-3">
-                    <Field label="URL WordPress">
-                      <input
-                        className={inputCls}
-                        value={settings.integrations.wordpress.url}
-                        onChange={(e) =>
-                          setSettings((s) =>
-                            s
-                              ? {
-                                  ...s,
-                                  integrations: {
-                                    ...s.integrations,
-                                    wordpress: { ...s.integrations.wordpress, url: e.target.value },
-                                  },
-                                }
-                              : s,
-                          )
-                        }
-                      />
-                    </Field>
-                  </div>
-                ) : null}
-                <div className="mt-3">
-                  <Field label="Notas">
-                    <textarea
-                      className={`${inputCls} min-h-[80px]`}
-                      value={settings.notes}
-                      onChange={(e) => setSettings((s) => (s ? { ...s, notes: e.target.value } : s))}
-                    />
-                  </Field>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={saving || !data.brand?.id}
-                    onClick={() => void saveConfig({ settings })}
-                    className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar
-                  </button>
-                </div>
-              </Panel>
-            ) : null}
-
-            {settingsTab === 'alertas' ? (
-              <Panel title="Alertas y contacto">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Nombre">
-                    <input
-                      className={inputCls}
-                      value={settings.alerts.contactName}
-                      onChange={(e) =>
-                        setSettings((s) => (s ? { ...s, alerts: { ...s.alerts, contactName: e.target.value } } : s))
-                      }
-                    />
-                  </Field>
-                  <Field label="Email">
-                    <input
-                      type="email"
-                      className={inputCls}
-                      value={settings.alerts.contactEmail}
-                      onChange={(e) =>
-                        setSettings((s) => (s ? { ...s, alerts: { ...s.alerts, contactEmail: e.target.value } } : s))
-                      }
-                    />
-                  </Field>
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <Toggle
-                    checked={settings.alerts.scoreDrop}
-                    label="Alerta por caída de score"
-                    onChange={(v) => setSettings((s) => (s ? { ...s, alerts: { ...s.alerts, scoreDrop: v } } : s))}
-                  />
-                  <Toggle
-                    checked={settings.alerts.weeklyDigest}
-                    label="Digest semanal"
-                    onChange={(v) => setSettings((s) => (s ? { ...s, alerts: { ...s.alerts, weeklyDigest: v } } : s))}
-                  />
-                  <Toggle
-                    checked={settings.alerts.newOpportunity}
-                    label="Nueva oportunidad"
-                    onChange={(v) =>
-                      setSettings((s) => (s ? { ...s, alerts: { ...s.alerts, newOpportunity: v } } : s))
-                    }
-                  />
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={saving || !data.brand?.id}
-                    onClick={() => void saveConfig({ settings })}
-                    className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar
-                  </button>
-                </div>
-              </Panel>
-            ) : null}
+              </div>
+            ))}
           </div>
-        );
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setCompetitors((rows) => [...rows, { name: '', domain: '' }])}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Agregar rival
+            </button>
+            <button
+              type="button"
+              disabled={saving || !brandId}
+              onClick={() =>
+                void save({
+                  competitors: competitors
+                    .filter((c) => c.name.trim())
+                    .map((c) => ({ name: c.name.trim(), domain: c.domain.trim() || null })),
+                })
+              }
+              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Guardar competidores
+            </button>
+          </div>
+        </Panel>
+      ) : null}
 
-      default:
-        return null;
-    }
+      {tab === 'alertas' && settings ? (
+        <Panel title="Alertas">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nombre">
+              <input
+                className={inputCls}
+                value={settings.alerts.contactName}
+                onChange={(e) => setSettings({ ...settings, alerts: { ...settings.alerts, contactName: e.target.value } })}
+              />
+            </Field>
+            <Field label="Email">
+              <input
+                type="email"
+                className={inputCls}
+                value={settings.alerts.contactEmail}
+                onChange={(e) => setSettings({ ...settings, alerts: { ...settings.alerts, contactEmail: e.target.value } })}
+              />
+            </Field>
+          </div>
+          <div className="mt-3 grid gap-2">
+            <Toggle
+              checked={settings.alerts.scoreDrop}
+              label="Alerta por caída de score"
+              onChange={(v) => setSettings({ ...settings, alerts: { ...settings.alerts, scoreDrop: v } })}
+            />
+            <Toggle
+              checked={settings.alerts.weeklyDigest}
+              label="Digest semanal"
+              onChange={(v) => setSettings({ ...settings, alerts: { ...settings.alerts, weeklyDigest: v } })}
+            />
+            <Toggle
+              checked={settings.alerts.newOpportunity}
+              label="Nueva oportunidad"
+              onChange={(v) => setSettings({ ...settings, alerts: { ...settings.alerts, newOpportunity: v } })}
+            />
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              disabled={saving || !brandId}
+              onClick={() => void save({ settings })}
+              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Guardar alertas
+            </button>
+          </div>
+        </Panel>
+      ) : null}
+    </div>
+  );
+}
+
+function renderSection(id: SectionId) {
+  switch (id) {
+    case 'dashboard':
+      return <DashboardView />;
+    case 'funnel':
+      return <FunnelView />;
+    case 'sov':
+      return <SovView />;
+    case 'oportunidades':
+      return <OportunidadesView />;
+    case 'contenido':
+      return <ContenidoView />;
+    case 'outreach':
+      return <OutreachView />;
+    case 'email':
+      return <EmailView />;
+    case 'referidos':
+      return <ReferidosView />;
+    case 'clientes':
+      return <ClientesView />;
+    case 'auditoria':
+      return <AuditoriaView />;
+    case 'settings':
+      return <SettingsView />;
+    default:
+      return null;
   }
+}
+
+export function PortalEmpliadosDraft() {
+  const [section, setSection] = useState<SectionId>('dashboard');
+  const activeLabel = useMemo(() => {
+    for (const s of NAV) {
+      const hit = s.links.find((l) => l.id === section);
+      if (hit) return hit.label;
+    }
+    return 'Dashboard';
+  }, [section]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -1087,13 +967,10 @@ export function PortalEmpliadosDraft() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Cleexs · borrador</p>
             <p className="text-sm font-semibold text-slate-900">Portal Empliados</p>
           </div>
-          <span className="ml-2 hidden rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-900 ring-1 ring-violet-200/80 sm:inline">
-            Live
-          </span>
         </div>
         <div className="text-right leading-tight">
           <p className="text-xs font-medium text-slate-800">empliados.net</p>
-          <p className="text-[10px] text-slate-500">Staffing / reclutamiento</p>
+          <p className="text-[10px] text-slate-500">Agentes IA · logística</p>
         </div>
       </header>
 
@@ -1148,15 +1025,13 @@ export function PortalEmpliadosDraft() {
             })}
           </nav>
 
-          <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
-            {renderSection(section)}
-          </div>
+          <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">{renderSection(section)}</div>
         </div>
       </div>
 
       <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Cleexs · portal Empliados</p>
+          <p>Cleexs · portal Empliados · {activeLabel}</p>
           <p className="font-medium text-violet-700">empliados.net</p>
         </div>
       </footer>
