@@ -360,7 +360,7 @@ export function PortalEmpliadosDraft() {
       if (payload.competitors) {
         body.competitors = payload.competitors
           .filter((c) => c.name.trim())
-          .map((c) => ({ name: c.name.trim(), domain: c.domain.trim() || null }));
+          .map((c) => ({ name: c.name.trim(), domain: (c.domain ?? '').trim() || null }));
       }
       if (payload.settings) body.settings = payload.settings;
 
