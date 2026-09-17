@@ -493,7 +493,7 @@ const cronRoutes: FastifyPluginAsync = async (fastify) => {
     const schema = z.object({
       dryRun: z.boolean().default(false),
       force: z.boolean().default(false),
-      limit: z.number().int().min(1).max(500).default(100),
+      limit: z.number().int().min(1).max(1000).default(350),
       enrolledWithinDays: z.number().int().min(7).max(180).default(60),
     });
     const parsed = schema.safeParse(request.body ?? {});
