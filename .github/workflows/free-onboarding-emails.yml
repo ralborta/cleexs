@@ -2,8 +2,9 @@ name: Free Onboarding Emails
 
 on:
   schedule:
-    # Cada hora — respeta sendHourLocal de la secuencia (AR) en el API.
-    - cron: '0 * * * *'
+    # Cada hora a :30 UTC → 11:30, 12:30, 13:30… AR (UTC-3).
+    # El API igual bloquea antes de sendHourLocal (11:30 AR).
+    - cron: '30 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -25,7 +26,7 @@ on:
       limit:
         description: 'Maximum recipients per step'
         required: true
-        default: '100'
+        default: '350'
       enrolled_within_days:
         description: 'Ventana de diagnósticos free (días)'
         required: true
@@ -41,7 +42,7 @@ jobs:
           API_URL: https://cleexsapi-production.up.railway.app
           DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
           FORCE: ${{ github.event_name == 'schedule' && 'false' || inputs.force }}
-          LIMIT: ${{ github.event_name == 'schedule' && '100' || inputs.limit }}
+          LIMIT: ${{ github.event_name == 'schedule' && '350' || inputs.limit }}
           ENROLLED_WITHIN_DAYS: ${{ github.event_name == 'schedule' && '60' || inputs.enrolled_within_days }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
