@@ -311,7 +311,7 @@ export async function resolveFreeOnboardingCandidates(input: {
       OR: [{ tier: null }, { tier: 'freemium' }],
     },
     orderBy: { updatedAt: 'desc' },
-    take: Math.max(input.limit * 4, input.limit),
+    take: Math.max(input.limit * 4, input.limit, 2500),
     select: {
       id: true,
       email: true,
@@ -716,15 +716,15 @@ export async function runFreeOnboardingEmailBatch(input: {
   for (let i = 0; i < activeSteps.length; i++) {
     const step = activeSteps[i]!;
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
-    // Ventana: desde el día del paso hasta enrolledWithinDays (catch-up de backlog).
-    // Sigue exigiendo cadena s1..s(N-1); no reenvía si ya está sent.
-    const untilDaysExclusive = cumulativeDays + enrolledWithinDays;
+    // Paso 2 catch-up: todos los free con diagnóstico (día 0+). Pasos 3+: día del paso + ventana.
+    const windowStart = step.sortOrder === 2 ? 0 : cumulativeDays;
+    const untilDaysExclusive = windowStart + Math.max(enrolledWithinDays, 90);
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
-      cumulativeDays,
+      cumulativeDays: windowStart,
       untilDaysExclusive,
       timezone: sequence.timezone,
-      enrolledWithinDays,
+      enrolledWithinDays: Math.max(enrolledWithinDays, 90),
       limit,
       now,
     });
@@ -735,8 +735,8 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
-      // Secuencia completa: sN solo si ya recibió s1..s(N-1). Evita seguir un catch-up con huecos.
-      if (!force && step.sortOrder > 1) {
+      // Paso 2: no exige s1 (arranque masivo). Pasos 3+: exige cadena completa.
+      if (!force && step.sortOrder > 2) {
         let missingPrevious = false;
         for (let prev = 1; prev < step.sortOrder; prev += 1) {
           if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
@@ -750,15 +750,15 @@ export async function runFreeOnboardingEmailBatch(input: {
         }
       }
       pending.push(candidate);
-      planned.push({ step, cumulativeDays, untilDaysExclusive, candidate });
+      planned.push({ step, cumulativeDays: windowStart, untilDaysExclusive, candidate });
     }
 
     if (dryRun) {
       stepSummaries.push({
         sortOrder: step.sortOrder,
-        cumulativeDays,
+        cumulativeDays: windowStart,
         untilDaysExclusive,
-        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
+        requirePreviousStepsThrough: step.sortOrder > 2 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         wouldSend: pending.length,
         sample: pending.slice(0, 10).map((c) => ({
@@ -773,9 +773,9 @@ export async function runFreeOnboardingEmailBatch(input: {
     } else {
       stepSummaries.push({
         sortOrder: step.sortOrder,
-        cumulativeDays,
+        cumulativeDays: windowStart,
         untilDaysExclusive,
-        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
+        requirePreviousStepsThrough: step.sortOrder > 2 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         planned: pending.length,
         sent: 0,
@@ -850,6 +850,8 @@ export async function runFreeOnboardingEmailBatch(input: {
         });
       }
     }
+    // Resend free/pro: ~10 req/s. Throttle para no perder el lote.
+    await new Promise((r) => setTimeout(r, 120));
   }
 
   for (const summary of stepSummaries) {
