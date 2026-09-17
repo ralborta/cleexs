@@ -311,7 +311,8 @@ export async function resolveFreeOnboardingCandidates(input: {
       OR: [{ tier: null }, { tier: 'freemium' }],
     },
     orderBy: { updatedAt: 'desc' },
-    take: Math.max(input.limit * 4, input.limit, 2500),
+    // Traer el universo del lookback; el `limit` se aplica después de filtrar ya-enviados.
+    take: Math.max(input.limit * 20, 8000),
     select: {
       id: true,
       email: true,
@@ -348,6 +349,8 @@ export async function resolveFreeOnboardingCandidates(input: {
     if (daysAgo < input.cumulativeDays || daysAgo >= untilDaysExclusive) continue;
 
     if (await isPremiumEmail(email)) continue;
+    // No llenar el cupo con gente que ya recibió este paso.
+    if (await wasFreeOnboardingStepSent(email, input.sortOrder)) continue;
 
     seenEmails.add(email);
     const actionsCount =
