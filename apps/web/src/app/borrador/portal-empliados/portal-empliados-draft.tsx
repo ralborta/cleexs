@@ -17,7 +17,6 @@ import {
   Search,
   Send,
   Settings,
-  Share2,
   Sparkles,
   Trash2,
   TrendingUp,
@@ -30,6 +29,7 @@ import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-da
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
+import { SponsorLinkBuilder } from '@/components/tools/sponsor-link-builder';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 
@@ -89,7 +89,7 @@ const NAV: NavSection[] = [
       { id: 'sov', label: 'AI Share of Voice', icon: Sparkles },
       { id: 'oportunidades', label: 'Oportunidades', icon: Search },
       { id: 'contenido', label: 'Contenido', icon: FileText },
-      { id: 'outreach', label: 'Links & Outreach', icon: Link2 },
+      { id: 'outreach', label: 'Links auspiciador', icon: Link2 },
       { id: 'auditoria', label: 'Auditoría', icon: ScanSearch },
     ],
   },
@@ -505,29 +505,10 @@ function ContenidoView() {
 }
 
 function OutreachView() {
+  // Mismo código/layout que /tools/auspiciadores.
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Links & Outreach" subtitle="Backlinks + contacting automático (agente Outreach Cleexs)." />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card icon={<Link2 className="h-4 w-4" />} label="Backlinks activos" value="31" hint="GSC + crawlers" accent="text-violet-600" />
-        <Card icon={<Share2 className="h-4 w-4" />} label="Oportunidades" value="11" hint="Donde gana el rival" accent="text-amber-600" />
-        <Card icon={<Mail className="h-4 w-4" />} label="Outreach enviados 7d" value="16" hint="Shadow / real" accent="text-sky-600" />
-      </div>
-      <Panel title="Fuentes donde el rival aparece y Empliados no">
-        <ul className="space-y-2 text-sm text-slate-700">
-          {[
-            'revistalogistica.com.ar — ficha Beetrack',
-            'transporteya.net — guía TMS Latam',
-            'linkedin.com/pulse — “IA en flotas”',
-            'marketplace-saas.io — categoría last mile',
-          ].map((line) => (
-            <li key={line} className="flex items-start gap-2 rounded-lg border border-slate-100 px-3 py-2">
-              <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      </Panel>
+    <div className="-mx-1 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-violet-50/20 px-3 py-6 sm:px-5">
+      <SponsorLinkBuilder />
     </div>
   );
 }
