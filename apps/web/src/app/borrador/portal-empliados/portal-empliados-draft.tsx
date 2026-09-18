@@ -23,6 +23,7 @@ import {
   Users,
 } from 'lucide-react';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
+import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
 
 type SectionId =
   | 'dashboard'
@@ -571,21 +572,8 @@ function EmailView() {
 }
 
 function ReferidosView() {
-  return (
-    <div className="space-y-6">
-      <SectionHeader title="Referidos" subtitle="Link propio por cliente · atribución y crédito en fee." />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card icon={<MousePointerClick className="h-4 w-4" />} label="Referidores activos" value="37" hint="Con al menos 1 click" accent="text-violet-600" />
-        <Card icon={<Users className="h-4 w-4" />} label="Demos atribuidas" value="14" hint="Últimos 30 días" accent="text-emerald-600" />
-        <Card icon={<Bot className="h-4 w-4" />} label="Crédito medio" value="1 mes" hint="Mes gratis al referido" accent="text-amber-600" />
-      </div>
-      <Panel title="Link activo">
-        <code className="block rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
-          https://empliados.net/?ref=logistica-norte-9a21
-        </code>
-      </Panel>
-    </div>
-  );
+  const fetcher = useCallback((path: string, init?: RequestInit) => fetch(path, { ...init, cache: 'no-store' }), []);
+  return <ReferidoresDashboard apiBase="/api/borrador/portal-referrals" fetcher={fetcher} />;
 }
 
 function ClientesView() {
