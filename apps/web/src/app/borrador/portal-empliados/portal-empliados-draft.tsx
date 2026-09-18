@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import {
   BarChart3,
   Bot,
-  ExternalLink,
   Filter,
   FileText,
   Globe2,
@@ -23,10 +22,9 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
-
-const DISCOVERY_URL = 'https://agente-cleexs.nivel41.com/cleexs/discovery';
 
 type SectionId =
   | 'dashboard'
@@ -446,31 +444,13 @@ function SovView() {
 }
 
 function OportunidadesView() {
+  const fetcher = useCallback((path: string, init?: RequestInit) => fetch(path, { ...init, cache: 'no-store' }), []);
   return (
-    <div className="flex h-[calc(100vh-3.5rem-3.25rem)] flex-col md:h-[calc(100vh-3.5rem)]">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 md:px-6">
-        <div className="min-w-0 leading-tight">
-          <p className="text-sm font-semibold text-slate-900">Oportunidades</p>
-          <p className="truncate text-xs text-slate-500">Discovery · Agente Cleexs</p>
-        </div>
-        <a
-          href={DISCOVERY_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Abrir
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </div>
-      <iframe
-        title="Discovery Cleexs"
-        src={DISCOVERY_URL}
-        className="min-h-0 w-full flex-1 border-0 bg-white"
-        allow="clipboard-read; clipboard-write"
-        referrerPolicy="no-referrer-when-downgrade"
-      />
-    </div>
+    <DiscoveryDashboard
+      workspace="empleados"
+      apiBase="/api/borrador/portal-discovery"
+      fetcher={fetcher}
+    />
   );
 }
 
@@ -1058,26 +1038,16 @@ export function PortalEmpliadosDraft() {
             })}
           </nav>
 
-          <div
-            className={
-              section === 'oportunidades'
-                ? 'h-full'
-                : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'
-            }
-          >
-            {renderSection(section)}
-          </div>
+          <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">{renderSection(section)}</div>
         </div>
       </div>
 
-      {section === 'oportunidades' ? null : (
-        <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>Cleexs · portal Empliados · {activeLabel}</p>
-            <p className="font-medium text-violet-700">empliados.net</p>
-          </div>
-        </footer>
-      )}
+      <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>Cleexs · portal Empliados · {activeLabel}</p>
+          <p className="font-medium text-violet-700">empliados.net</p>
+        </div>
+      </footer>
     </div>
   );
 }
