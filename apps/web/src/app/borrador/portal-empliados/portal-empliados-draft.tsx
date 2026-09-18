@@ -29,7 +29,8 @@ import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-da
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
-import { createPortalEmailFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
+import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
+import { setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 
 type SectionId =
   | 'dashboard'
@@ -532,7 +533,8 @@ function OutreachView() {
 
 function usePortalEmailApi() {
   useEffect(() => {
-    setAdminUiFetchOverride(createPortalEmailFetch());
+    // Mismo código/layout que /admin/email*; datos demo Empliados (no ops Cleexs).
+    setAdminUiFetchOverride(createPortalEmailDemoFetch());
     return () => setAdminUiFetchOverride(null);
   }, []);
 }
