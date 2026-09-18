@@ -1044,7 +1044,7 @@ export function PortalEmpliadosDraft() {
             C
           </span>
           <div className="leading-tight">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Cleexs · borrador</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Cleexs · ecomm</p>
             <p className="text-sm font-semibold text-slate-900">Portal Empliados</p>
           </div>
         </div>
