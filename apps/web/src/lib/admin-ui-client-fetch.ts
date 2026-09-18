@@ -27,6 +27,21 @@ export function createPortalEmailFetch(): FetchFn {
   };
 }
 
+/** Portal → BFF auditoría (proceso real vía API Cleexs, sin cookie admin). */
+export function createPortalAuditoriaFetch(): FetchFn {
+  return (input, init) => {
+    let url = String(input);
+    if (url.startsWith('/api/admin-ui/agentic-audits')) {
+      url = url.replace('/api/admin-ui/agentic-audits', '/api/borrador/portal-auditoria');
+    }
+    return fetch(url, {
+      ...init,
+      credentials: 'omit',
+      cache: init?.cache ?? 'no-store',
+    });
+  };
+}
+
 /** Todas las rutas `/api/admin-ui/*` requieren la cookie HttpOnly de sesión (salvo override portal). */
 export async function adminUiFetch(input: string | URL, init?: RequestInit): Promise<Response> {
   if (overrideFetch) return overrideFetch(input, init);

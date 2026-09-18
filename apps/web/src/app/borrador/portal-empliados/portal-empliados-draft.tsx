@@ -30,9 +30,8 @@ import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-da
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
-import { createPortalAuditoriaDemoFetch } from '@/lib/portal-auditoria-demo-data';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
-import { setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
+import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 
 type SectionId =
   | 'dashboard'
@@ -623,17 +622,15 @@ function ClientesView() {
   );
 }
 
-function usePortalAuditoriaApi() {
-  useEffect(() => {
-    // Mismo código/layout que /admin/auditoria-agentica; datos demo Empliados.
-    setAdminUiFetchOverride(createPortalAuditoriaDemoFetch());
-    return () => setAdminUiFetchOverride(null);
-  }, []);
-}
-
 function AuditoriaView() {
-  usePortalAuditoriaApi();
-  return <AuditoriaAgenticaDashboard />;
+  const apiFetch = useMemo(() => createPortalAuditoriaFetch(), []);
+  return (
+    <AuditoriaAgenticaDashboard
+      apiFetch={apiFetch}
+      portalCreatedBy="portal-empliados"
+      ensureTarget={{ url: 'https://empliados.net', siteLabel: 'Empliados' }}
+    />
+  );
 }
 
 function SettingsView() {

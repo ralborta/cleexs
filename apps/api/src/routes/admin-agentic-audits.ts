@@ -112,6 +112,8 @@ const adminAgenticAuditsRoutes: FastifyPluginAsync = async (fastify) => {
         overallScore: true,
         paidAt: true,
         deliveredAt: true,
+        createdBy: true,
+        notes: true,
         createdAt: true,
         updatedAt: true,
       },

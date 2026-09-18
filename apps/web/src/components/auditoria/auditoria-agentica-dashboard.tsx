@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -25,6 +25,8 @@ export type AuditRow = {
   overallScore: number | null;
   paidAt: string | null;
   deliveredAt: string | null;
+  createdBy?: string | null;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -55,27 +57,92 @@ function publicLink(slug: string): string {
 }
 
 /** Mismo layout/código que /admin/auditoria-agentica. */
-export function AuditoriaAgenticaDashboard() {
+export function AuditoriaAgenticaDashboard({
+  apiFetch,
+  ensureTarget,
+  portalCreatedBy,
+}: {
+  /** Fetch inyectado (portal BFF). Default: adminUiFetch con cookie. */
+  apiFetch?: (input: string | URL, init?: RequestInit) => Promise<Response>;
+  /** Si no existe auditoría de esta URL, la crea y corre el análisis real. */
+  ensureTarget?: { url: string; siteLabel: string };
+  /** Scope portal: solo muestra/crea auditorías de este createdBy (+ ensureTarget). */
+  portalCreatedBy?: string;
+} = {}) {
+  const doFetch = apiFetch ?? adminUiFetch;
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const ensuredRef = useRef(false);
 
   const loadList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminUiFetch('/api/admin-ui/agentic-audits');
+      const res = await doFetch('/api/admin-ui/agentic-audits');
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `Error ${res.status}`);
       const data = (await res.json()) as { items?: AuditRow[] };
-      setRows(data.items ?? []);
+      let items = data.items ?? [];
+
+      if (portalCreatedBy || ensureTarget) {
+        const needle = ensureTarget?.url.replace(/^https?:\/\//i, '').replace(/\/$/, '').toLowerCase() || '';
+        items = items.filter((r) => {
+          if (portalCreatedBy && r.createdBy === portalCreatedBy) return true;
+          if (needle && r.targetUrl.toLowerCase().includes(needle)) return true;
+          return false;
+        });
+      }
+
+      if (ensureTarget && !ensuredRef.current) {
+        const needle = ensureTarget.url.replace(/^https?:\/\//i, '').replace(/\/$/, '').toLowerCase();
+        const existing = items.find((r) => r.targetUrl.toLowerCase().includes(needle));
+        if (existing) {
+          ensuredRef.current = true;
+          setSelectedId(existing.id);
+        } else {
+          ensuredRef.current = true;
+          const createRes = await doFetch('/api/admin-ui/agentic-audits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUrl: ensureTarget.url,
+              siteLabel: ensureTarget.siteLabel,
+              notes: 'Portal Empliados · auditoría del sitio',
+              createdBy: portalCreatedBy || 'portal-empliados',
+            }),
+          });
+          if (!createRes.ok) {
+            ensuredRef.current = false;
+            throw new Error((await createRes.json().catch(() => ({})))?.error || `Error ${createRes.status}`);
+          }
+          const created = (await createRes.json().catch(() => ({}))) as { item?: AuditRow };
+          if (created.item) {
+            items = [created.item, ...items];
+            setSelectedId(created.item.id);
+          } else {
+            const res2 = await doFetch('/api/admin-ui/agentic-audits');
+            if (res2.ok) {
+              const data2 = (await res2.json()) as { items?: AuditRow[] };
+              const all = data2.items ?? [];
+              const match = all.find((r) => r.targetUrl.toLowerCase().includes(needle));
+              if (match) {
+                items = [match, ...items.filter((i) => i.id !== match.id)];
+                setSelectedId(match.id);
+              }
+            }
+          }
+        }
+      }
+
+      setRows(items);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [doFetch, ensureTarget, portalCreatedBy]);
 
   useEffect(() => {
     void loadList();
@@ -85,6 +152,7 @@ export function AuditoriaAgenticaDashboard() {
     return (
       <AuditDetailView
         id={selectedId}
+        apiFetch={doFetch}
         onBack={() => {
           setSelectedId(null);
           void loadList();
@@ -129,6 +197,13 @@ export function AuditoriaAgenticaDashboard() {
 
       {showForm && (
         <NewAuditForm
+          apiFetch={doFetch}
+          createdBy={portalCreatedBy}
+          defaults={
+            ensureTarget
+              ? { targetUrl: ensureTarget.url, siteLabel: ensureTarget.siteLabel }
+              : undefined
+          }
           onCreated={() => {
             setShowForm(false);
             void loadList();
@@ -164,7 +239,9 @@ export function AuditoriaAgenticaDashboard() {
         {loading && rows.length === 0 ? (
           <div className="p-10 text-center">
             <Loader2 className="mx-auto h-6 w-6 animate-spin text-violet-500" />
-            <p className="mt-2 text-sm text-slate-500">Cargando…</p>
+            <p className="mt-2 text-sm text-slate-500">
+              {ensureTarget ? `Analizando ${ensureTarget.url}…` : 'Cargando…'}
+            </p>
           </div>
         ) : rows.length === 0 ? (
           <div className="p-10 text-center">
@@ -221,9 +298,21 @@ export function AuditoriaAgenticaDashboard() {
   );
 }
 
-function NewAuditForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
-  const [targetUrl, setTargetUrl] = useState('');
-  const [siteLabel, setSiteLabel] = useState('');
+function NewAuditForm({
+  onCreated,
+  onCancel,
+  apiFetch,
+  defaults,
+  createdBy,
+}: {
+  onCreated: () => void;
+  onCancel: () => void;
+  apiFetch: (input: string | URL, init?: RequestInit) => Promise<Response>;
+  defaults?: { targetUrl?: string; siteLabel?: string };
+  createdBy?: string;
+}) {
+  const [targetUrl, setTargetUrl] = useState(defaults?.targetUrl || '');
+  const [siteLabel, setSiteLabel] = useState(defaults?.siteLabel || '');
   const [clientEmail, setClientEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -237,7 +326,7 @@ function NewAuditForm({ onCreated, onCancel }: { onCreated: () => void; onCancel
     setBusy(true);
     setErr(null);
     try {
-      const res = await adminUiFetch('/api/admin-ui/agentic-audits', {
+      const res = await apiFetch('/api/admin-ui/agentic-audits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,6 +334,7 @@ function NewAuditForm({ onCreated, onCancel }: { onCreated: () => void; onCancel
           siteLabel: siteLabel.trim() || null,
           clientEmail: clientEmail.trim() || null,
           notes: notes.trim() || null,
+          createdBy: createdBy || null,
         }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `Error ${res.status}`);
@@ -332,7 +422,15 @@ function NewAuditForm({ onCreated, onCancel }: { onCreated: () => void; onCancel
   );
 }
 
-function AuditDetailView({ id, onBack }: { id: string; onBack: () => void }) {
+function AuditDetailView({
+  id,
+  onBack,
+  apiFetch,
+}: {
+  id: string;
+  onBack: () => void;
+  apiFetch: (input: string | URL, init?: RequestInit) => Promise<Response>;
+}) {
   const [audit, setAudit] = useState<AuditDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -341,16 +439,17 @@ function AuditDetailView({ id, onBack }: { id: string; onBack: () => void }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await adminUiFetch(`/api/admin-ui/agentic-audits/${id}`);
+      const res = await apiFetch(`/api/admin-ui/agentic-audits/${id}`);
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `Error ${res.status}`);
       const data = (await res.json()) as { item: AuditDetail };
       setAudit(data.item);
+      setErr(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Error');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, apiFetch]);
 
   useEffect(() => {
     void load();
@@ -365,7 +464,7 @@ function AuditDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   async function patch(body: Record<string, unknown>) {
     setActing(true);
     try {
-      const res = await adminUiFetch(`/api/admin-ui/agentic-audits/${id}`, {
+      const res = await apiFetch(`/api/admin-ui/agentic-audits/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -382,7 +481,7 @@ function AuditDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   async function rerun() {
     setActing(true);
     try {
-      await adminUiFetch(`/api/admin-ui/agentic-audits/${id}/run`, { method: 'POST' });
+      await apiFetch(`/api/admin-ui/agentic-audits/${id}/run`, { method: 'POST' });
       setAudit((prev) => (prev ? { ...prev, status: 'running' } : prev));
       setTimeout(() => void load(), 3000);
     } finally {
@@ -392,7 +491,7 @@ function AuditDetailView({ id, onBack }: { id: string; onBack: () => void }) {
 
   async function remove() {
     if (!confirm('¿Eliminar esta auditoría? No se puede deshacer.')) return;
-    await adminUiFetch(`/api/admin-ui/agentic-audits/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/admin-ui/agentic-audits/${id}`, { method: 'DELETE' });
     onBack();
   }
 
