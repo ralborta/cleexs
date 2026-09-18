@@ -23,12 +23,14 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { AuditoriaAgenticaDashboard } from '@/components/auditoria/auditoria-agentica-dashboard';
 import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
 import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
+import { createPortalAuditoriaDemoFetch } from '@/lib/portal-auditoria-demo-data';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
 import { setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 
@@ -621,31 +623,17 @@ function ClientesView() {
   );
 }
 
+function usePortalAuditoriaApi() {
+  useEffect(() => {
+    // Mismo código/layout que /admin/auditoria-agentica; datos demo Empliados.
+    setAdminUiFetchOverride(createPortalAuditoriaDemoFetch());
+    return () => setAdminUiFetchOverride(null);
+  }, []);
+}
+
 function AuditoriaView() {
-  const checks = [
-    { name: 'robots.txt · GPTBot', ok: true },
-    { name: 'sitemap.xml agentes', ok: true },
-    { name: 'Schema SoftwareApplication', ok: false },
-    { name: 'FAQ indexables', ok: true },
-    { name: 'Canonicals', ok: true },
-    { name: 'Bloqueo de crawlers IA', ok: true },
-  ];
-  return (
-    <div className="space-y-6">
-      <SectionHeader title="Auditoría" subtitle="Técnica + agéntica Cleexs · indexación y acceso de bots." />
-      <div className="grid gap-3 sm:grid-cols-2">
-        {checks.map((c) => (
-          <div
-            key={c.name}
-            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
-          >
-            <span className="text-sm text-slate-800">{c.name}</span>
-            <Badge tone={c.ok ? 'emerald' : 'amber'}>{c.ok ? 'OK' : 'Revisar'}</Badge>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  usePortalAuditoriaApi();
+  return <AuditoriaAgenticaDashboard />;
 }
 
 function SettingsView() {
