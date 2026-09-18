@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import {
   BarChart3,
   Bot,
+  ExternalLink,
   Filter,
   FileText,
   Globe2,
@@ -24,6 +25,8 @@ import {
 } from 'lucide-react';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
+
+const DISCOVERY_URL = 'https://agente-cleexs.nivel41.com/cleexs/discovery';
 
 type SectionId =
   | 'dashboard'
@@ -443,29 +446,30 @@ function SovView() {
 }
 
 function OportunidadesView() {
-  const items = [
-    { q: 'IA para reclamos de logística nocturna', vol: 'Alto', gap: 'Sin página dedicada', action: 'Crear página profunda' },
-    { q: 'agente IA seguimiento de viajes Argentina', vol: 'Alto', gap: 'Rival responde, Empliados débil', action: 'FAQ + landing' },
-    { q: 'coordinar choferes y oficina con IA', vol: 'Medio', gap: 'Mención débil en LLM', action: 'Reforzar FAQ IA' },
-    { q: 'SOL sistema operativo logística pymes', vol: 'Medio', gap: 'Contenido en blog viejo', action: 'Actualizar + schema' },
-  ];
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Oportunidades" subtitle="Qué busca la gente · Discovery / Teo." />
-      <Panel title="Oportunidades detectadas esta semana">
-        <div className="space-y-3">
-          {items.map((it) => (
-            <div key={it.q} className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-slate-900">{it.q}</p>
-                <Badge tone="amber">{it.vol}</Badge>
-              </div>
-              <p className="mt-1 text-xs text-slate-500">{it.gap}</p>
-              <p className="mt-2 text-xs font-medium text-violet-700">{it.action}</p>
-            </div>
-          ))}
+    <div className="flex h-[calc(100vh-3.5rem-3.25rem)] flex-col md:h-[calc(100vh-3.5rem)]">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 md:px-6">
+        <div className="min-w-0 leading-tight">
+          <p className="text-sm font-semibold text-slate-900">Oportunidades</p>
+          <p className="truncate text-xs text-slate-500">Discovery · Agente Cleexs</p>
         </div>
-      </Panel>
+        <a
+          href={DISCOVERY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Abrir
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      </div>
+      <iframe
+        title="Discovery Cleexs"
+        src={DISCOVERY_URL}
+        className="min-h-0 w-full flex-1 border-0 bg-white"
+        allow="clipboard-read; clipboard-write"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
     </div>
   );
 }
@@ -1054,16 +1058,26 @@ export function PortalEmpliadosDraft() {
             })}
           </nav>
 
-          <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">{renderSection(section)}</div>
+          <div
+            className={
+              section === 'oportunidades'
+                ? 'h-full'
+                : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'
+            }
+          >
+            {renderSection(section)}
+          </div>
         </div>
       </div>
 
-      <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Cleexs · portal Empliados · {activeLabel}</p>
-          <p className="font-medium text-violet-700">empliados.net</p>
-        </div>
-      </footer>
+      {section === 'oportunidades' ? null : (
+        <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <p>Cleexs · portal Empliados · {activeLabel}</p>
+            <p className="font-medium text-violet-700">empliados.net</p>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
