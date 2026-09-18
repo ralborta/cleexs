@@ -85,10 +85,10 @@ const NAV: NavSection[] = [
     title: 'Negocio',
     links: [
       { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+      { id: 'reportes', label: 'Reportes', icon: FileSpreadsheet },
       { id: 'funnel', label: 'Funnel', icon: Filter },
       { id: 'clientes', label: 'Clientes', icon: Users },
       { id: 'referidos', label: 'Referidos', icon: MousePointerClick },
-      { id: 'reportes', label: 'Reportes', icon: FileSpreadsheet },
     ],
   },
   {
@@ -1055,7 +1055,7 @@ export function PortalEmpliadosDraft() {
       </header>
 
       <div className="flex min-h-[calc(100vh-3.5rem)]">
-        <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white py-6 md:block">
+        <aside className="hidden w-60 shrink-0 overflow-y-auto border-r border-slate-200 bg-white py-6 md:block">
           <nav className="flex flex-col gap-5 px-3">
             {NAV.map((group) => (
               <div key={group.title} className="flex flex-col gap-0.5">
