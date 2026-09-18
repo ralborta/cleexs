@@ -3,7 +3,7 @@
  * Dispara pageview a la API Cleexs para el embudo de conversión interno.
  *
  * Path:
- * - window.__CLEEXS_LANDING_PATH__ si la landing lo define (ej. "/linkedin")
+ * - window.__CLEEXS_LANDING_PATH__ si la landing lo define (ej. "/meta")
  * - "/" por defecto (home)
  */
 (function () {
