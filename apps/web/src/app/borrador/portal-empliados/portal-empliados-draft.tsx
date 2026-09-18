@@ -505,10 +505,23 @@ function ContenidoView() {
 }
 
 function OutreachView() {
-  // Mismo código/layout que /tools/auspiciadores.
+  // Mismo código/layout que /tools/auspiciadores, brand Empliados (portal que estamos armando).
   return (
-    <div className="-mx-1 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-violet-50/20 px-3 py-6 sm:px-5">
-      <SponsorLinkBuilder />
+    <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-violet-50/20 px-3 py-6 sm:px-6">
+      <SponsorLinkBuilder
+        brand={{
+          title: 'Links auspiciador',
+          subtitle:
+            'Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por ref (web y WhatsApp) para Empliados.',
+          rankingHint: 'Las campañas quedan en Referidos del portal para el ranking por código ref.',
+          marketingHomeLabel: 'home de empliados.net',
+          marketingBaseUrl: 'https://empliados.net',
+          hideMark: true,
+          defaultSponsorName: 'Revista Logística',
+          defaultRef: 'revista_logistica',
+          defaultUtmCampaign: 'empliados_demo',
+        }}
+      />
     </div>
   );
 }
@@ -1031,7 +1044,11 @@ export function PortalEmpliadosDraft() {
 
           <div
             className={
-              section === 'email' || section === 'email-templates' || section === 'email-envios'
+              section === 'email' ||
+              section === 'email-templates' ||
+              section === 'email-envios' ||
+              section === 'outreach' ||
+              section === 'auditoria'
                 ? 'w-full'
                 : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'
             }

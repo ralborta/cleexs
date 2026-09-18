@@ -21,13 +21,26 @@ const fieldCls =
   'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25';
 const labelCls = 'text-xs font-semibold uppercase tracking-wide text-slate-500';
 
-export function SponsorLinkBuilder() {
-  const [sponsorName, setSponsorName] = useState('');
-  const [refCode, setRefCode] = useState('');
-  const [refTouched, setRefTouched] = useState(false);
+export type SponsorLinkBuilderBrand = {
+  title?: string;
+  subtitle?: string;
+  rankingHint?: string;
+  marketingHomeLabel?: string;
+  marketingBaseUrl?: string;
+  hideMark?: boolean;
+  /** Prefill para que el portal no arranque vacío. */
+  defaultSponsorName?: string;
+  defaultRef?: string;
+  defaultUtmCampaign?: string;
+};
+
+export function SponsorLinkBuilder({ brand }: { brand?: SponsorLinkBuilderBrand } = {}) {
+  const [sponsorName, setSponsorName] = useState(brand?.defaultSponsorName || '');
+  const [refCode, setRefCode] = useState(brand?.defaultRef || '');
+  const [refTouched, setRefTouched] = useState(Boolean(brand?.defaultRef));
   const [utmSource, setUtmSource] = useState('auspiciador');
   const [utmMedium, setUtmMedium] = useState('link');
-  const [utmCampaign, setUtmCampaign] = useState('');
+  const [utmCampaign, setUtmCampaign] = useState(brand?.defaultUtmCampaign || '');
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -38,6 +51,16 @@ export function SponsorLinkBuilder() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [migrationNote, setMigrationNote] = useState<string | null>(null);
+
+  const title = brand?.title || 'Auspiciadores';
+  const subtitle =
+    brand?.subtitle ||
+    'Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por ref (web y canal WhatsApp).';
+  const rankingHint =
+    brand?.rankingHint ||
+    'Cada campaña se guarda en el servidor y aparece en Admin → Referidores para el ranking de emails.';
+  const homeLabel = brand?.marketingHomeLabel || 'home de cleexs.net';
+  const marketingBaseUrl = brand?.marketingBaseUrl;
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +96,10 @@ export function SponsorLinkBuilder() {
     [refCode, utmSource, utmMedium, utmCampaign]
   );
 
-  const generatedUrl = useMemo(() => buildSponsorMarketingHomeUrl(linkParams), [linkParams]);
+  const generatedUrl = useMemo(
+    () => buildSponsorMarketingHomeUrl({ ...linkParams, baseUrl: marketingBaseUrl }),
+    [linkParams, marketingBaseUrl]
+  );
   const appDiagnosticUrl = useMemo(() => buildSponsorDiagnosticAppUrl(linkParams), [linkParams]);
 
   const refValid = Boolean(generatedUrl);
@@ -205,17 +231,15 @@ export function SponsorLinkBuilder() {
   return (
     <div className="mx-auto max-w-lg">
       <header className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center">
-          <CleexsMark className="h-11 w-11" />
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Auspiciadores</h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por{' '}
-          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">ref</code> (web y canal WhatsApp).
-        </p>
+        {!brand?.hideMark ? (
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center">
+            <CleexsMark className="h-11 w-11" />
+          </div>
+        ) : null}
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">{subtitle}</p>
         <p className="mt-3 rounded-lg border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-          Cada campaña se guarda en el servidor y aparece en{' '}
-          <strong className="font-semibold">Admin → Referidores</strong> para el ranking de emails.
+          {rankingHint}
         </p>
         {migrationNote ? (
           <p className="mt-2 rounded-lg border border-primary-200/80 bg-primary-50 px-3 py-2 text-xs text-primary-900">
@@ -302,7 +326,7 @@ export function SponsorLinkBuilder() {
       <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
         <p className={labelCls}>Enlace para compartir</p>
         <p className="mt-1 text-[11px] text-slate-500">
-          Lleva a la <strong className="text-slate-700">home de cleexs.net</strong> con ref/UTM. El diagnóstico arranca
+          Lleva a la <strong className="text-slate-700">{homeLabel}</strong> con ref/UTM. El diagnóstico arranca
           en la app cuando el usuario usa &quot;Checkear visibilidad&quot; (el script de WordPress debe reenviar los
           parámetros).
         </p>
