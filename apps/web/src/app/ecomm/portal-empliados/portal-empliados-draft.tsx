@@ -28,6 +28,7 @@ import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
 import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
+import { ConversionMetricsDashboard } from '@/components/conversion/conversion-metrics-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
 import { SponsorLinkBuilder } from '@/components/tools/sponsor-link-builder';
@@ -36,12 +37,18 @@ import { EmailOutreachReportDashboard } from '@/components/reportes/email-outrea
 import { OnboardingReportDashboard } from '@/components/reportes/onboarding-report-dashboard';
 import { ReportesHub } from '@/components/reportes/reportes-hub';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
+import {
+  loadPortalGraficoEmailLeads,
+  loadPortalGraficoMetrics,
+  loadPortalGraficoUnlockClicks,
+} from '@/lib/portal-grafico-demo-data';
 import { createPortalReportesLoaders } from '@/lib/portal-reportes-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 
 type SectionId =
   | 'dashboard'
   | 'funnel'
+  | 'grafico'
   | 'sov'
   | 'oportunidades'
   | 'contenido'
@@ -87,6 +94,7 @@ const NAV: NavSection[] = [
       { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
       { id: 'reportes', label: 'Reportes', icon: FileSpreadsheet },
       { id: 'funnel', label: 'Funnel', icon: Filter },
+      { id: 'grafico', label: 'Gráfico', icon: TrendingUp },
       { id: 'clientes', label: 'Clientes', icon: Users },
       { id: 'referidos', label: 'Referidos', icon: MousePointerClick },
     ],
@@ -403,6 +411,17 @@ function FunnelView() {
       setAdSpendInput={setAdSpendInput}
       onRefresh={() => void load()}
       onApplySpend={() => void load()}
+    />
+  );
+}
+
+function GraficoView() {
+  return (
+    <ConversionMetricsDashboard
+      mode="portal"
+      loadMetrics={loadPortalGraficoMetrics}
+      loadEmailLeads={loadPortalGraficoEmailLeads}
+      loadUnlockClicks={loadPortalGraficoUnlockClicks}
     />
   );
 }
@@ -997,6 +1016,8 @@ function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
       return <DashboardView />;
     case 'funnel':
       return <FunnelView />;
+    case 'grafico':
+      return <GraficoView />;
     case 'sov':
       return <SovView />;
     case 'oportunidades':
