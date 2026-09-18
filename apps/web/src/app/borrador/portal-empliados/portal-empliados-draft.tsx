@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode, Suspense } from 'react';
 import {
   BarChart3,
   Bot,
@@ -15,6 +15,7 @@ import {
   Save,
   ScanSearch,
   Search,
+  Send,
   Settings,
   Share2,
   Sparkles,
@@ -23,8 +24,12 @@ import {
   Users,
 } from 'lucide-react';
 import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
+import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
+import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
+import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
+import { createPortalEmailFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 
 type SectionId =
   | 'dashboard'
@@ -34,6 +39,8 @@ type SectionId =
   | 'contenido'
   | 'outreach'
   | 'email'
+  | 'email-templates'
+  | 'email-envios'
   | 'referidos'
   | 'clientes'
   | 'auditoria'
@@ -88,6 +95,8 @@ const NAV: NavSection[] = [
     title: 'Crecimiento',
     links: [
       { id: 'email', label: 'Email · secuencia', icon: Mail },
+      { id: 'email-templates', label: 'Email · plantillas', icon: Mail },
+      { id: 'email-envios', label: 'Email · envíos', icon: Send },
       { id: 'settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -114,13 +123,6 @@ const AGENTS = [
   { name: 'Agente de Documentación', skus: 1, page: 'Lista', sovHits: 4, status: 'Indexada' },
   { name: 'Agente de Alertas operativas', skus: 1, page: 'Lista', sovHits: 6, status: 'Indexada' },
   { name: 'Agente de Reportes', skus: 1, page: 'En progreso', sovHits: 2, status: 'Borrador' },
-];
-
-const EMAIL_STEPS = [
-  { day: 0, subject: 'Gracias por la demo · qué hace cada Empliado en tu operación', active: true },
-  { day: 2, subject: 'Caso reclamos 24/7 · menos llamados a la oficina', active: true },
-  { day: 5, subject: 'Tu link de referidos Empliados', active: true },
-  { day: 12, subject: 'Activá el 2º agente · seguimiento de viajes', active: false },
 ];
 
 function Card({
@@ -528,30 +530,47 @@ function OutreachView() {
   );
 }
 
-function EmailView() {
+function usePortalEmailApi() {
+  useEffect(() => {
+    setAdminUiFetchOverride(createPortalEmailFetch());
+    return () => setAdminUiFetchOverride(null);
+  }, []);
+}
+
+function EmailSecuenciaView() {
+  usePortalEmailApi();
+  return <EmailSecuenciaDashboard />;
+}
+
+function EmailPlantillasView({ onGoEnvios }: { onGoEnvios: () => void }) {
+  usePortalEmailApi();
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Email · secuencia" subtitle="Post-demo Empliados · nurturing hasta activar el 2º agente." />
-      <Panel title="Pasos configurados" action={<Badge tone="emerald">3 activos</Badge>}>
-        <div className="space-y-2">
-          {EMAIL_STEPS.map((s) => (
-            <div
-              key={s.day}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-4 py-3"
-            >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Día {s.day}</p>
-                <p className="text-sm text-slate-800">{s.subject}</p>
-              </div>
-              <Badge tone={s.active ? 'emerald' : 'slate'}>{s.active ? 'Activo' : 'Pausado'}</Badge>
-            </div>
-          ))}
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Cargando…
         </div>
-      </Panel>
-      <p className="text-xs text-slate-500">
-        Enrichment (email + WA + agentes contratados) alimenta la personalización — ver sección Clientes.
-      </p>
-    </div>
+      }
+    >
+      <EmailPlantillasDashboard mode="portal" onGoEnvios={onGoEnvios} />
+    </Suspense>
+  );
+}
+
+function EmailEnviosView({ onGoTemplates }: { onGoTemplates: () => void }) {
+  usePortalEmailApi();
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Cargando…
+        </div>
+      }
+    >
+      <EmailEnviosDashboard mode="portal" onGoTemplates={onGoTemplates} />
+    </Suspense>
   );
 }
 
@@ -930,7 +949,7 @@ function SettingsView() {
   );
 }
 
-function renderSection(id: SectionId) {
+function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
   switch (id) {
     case 'dashboard':
       return <DashboardView />;
@@ -945,7 +964,11 @@ function renderSection(id: SectionId) {
     case 'outreach':
       return <OutreachView />;
     case 'email':
-      return <EmailView />;
+      return <EmailSecuenciaView />;
+    case 'email-templates':
+      return <EmailPlantillasView onGoEnvios={() => setSection('email-envios')} />;
+    case 'email-envios':
+      return <EmailEnviosView onGoTemplates={() => setSection('email-templates')} />;
     case 'referidos':
       return <ReferidosView />;
     case 'clientes':
@@ -1038,7 +1061,15 @@ export function PortalEmpliadosDraft() {
             })}
           </nav>
 
-          <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">{renderSection(section)}</div>
+          <div
+            className={
+              section === 'email' || section === 'email-templates' || section === 'email-envios'
+                ? 'w-full'
+                : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'
+            }
+          >
+            {renderSection(section, setSection)}
+          </div>
         </div>
       </div>
 
