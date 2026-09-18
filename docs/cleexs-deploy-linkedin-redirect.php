@@ -1,3 +1,20 @@
+<?php
+/**
+ * ONE-SHOT: /linkedin → redirect a /meta
+ * SiteGround: subir a raíz y abrir
+ * https://cleexs.net/cleexs-deploy-linkedin-redirect.php?key=cleexs-li-redirect-20260825
+ */
+if (!isset($_GET['key']) || $_GET['key'] !== 'cleexs-li-redirect-20260825') {
+  http_response_code(403);
+  exit('Forbidden');
+}
+header('Content-Type: text/plain; charset=utf-8');
+$dir = __DIR__ . '/linkedin';
+if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+  http_response_code(500);
+  exit("ERROR mkdir\n");
+}
+$bytes = file_put_contents($dir . '/index.html', <<<'HTML'
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,3 +38,7 @@
   </p>
 </body>
 </html>
+
+HTML);
+echo "OK: /linkedin ahora redirige a /meta ($bytes bytes).\n";
+echo "Borrá este PHP.\n";

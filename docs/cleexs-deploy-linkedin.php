@@ -1,8 +1,12 @@
 <?php
 /**
  * ONE-SHOT: publicar landing en cleexs.net/linkedin/
- * SiteGround — subir a la RAÍZ (public_html)
- * https://cleexs.net/cleexs-deploy-linkedin.php?key=cleexs-linkedin-20260824
+ *
+ * SiteGround:
+ * 1) Subí este PHP a la RAÍZ (public_html).
+ * 2) Subí también diagnostico-preview-cleexs-score.jpg DENTRO de la carpeta linkedin/ (créala si no existe).
+ * 3) Abrí: https://cleexs.net/cleexs-deploy-linkedin.php?key=cleexs-linkedin-20260824
+ * 4) OK → borrá este PHP + Purge cache.
  */
 if (!isset($_GET['key']) || $_GET['key'] !== 'cleexs-linkedin-20260824') {
   http_response_code(403);
@@ -16,7 +20,7 @@ if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
 }
 $html = <<<'CLEEXS_LANDING'
 <!DOCTYPE html>
-<!-- cleexs-landing-build: 2026-08-25T18:38:45Z landing=li-v1 path=/linkedin brand-only no-faq score-preview-v2 -->
+<!-- cleexs-landing-build: 2026-08-25T18:41:09Z landing=li-v1 path=/linkedin brand-only no-faq score-preview-v2 local-img -->
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -30,7 +34,7 @@ $html = <<<'CLEEXS_LANDING'
     rel="preload"
     as="image"
     type="image/jpeg"
-    href="https://app.cleexs.net/inicio/assets/diagnostico-preview-cleexs-score.jpg"
+    href="diagnostico-preview-cleexs-score.jpg"
   />
   <style>
     @font-face {
@@ -791,7 +795,7 @@ $html = <<<'CLEEXS_LANDING'
 
         <div class="report-float">
           <img
-            src="https://app.cleexs.net/inicio/assets/diagnostico-preview-cleexs-score.jpg"
+            src="diagnostico-preview-cleexs-score.jpg"
             alt="Vista previa Cleexs Score — evidencia del análisis"
             width="1024"
             height="859"
@@ -1011,7 +1015,9 @@ if ($bytes === false) {
   http_response_code(500);
   exit("ERROR: write failed\n");
 }
-echo "OK: landing publicada ($bytes bytes).\n";
+$imgOk = is_file($dir . '/diagnostico-preview-cleexs-score.jpg') ? 'SI' : 'NO — subí diagnostico-preview-cleexs-score.jpg a linkedin/';
+echo "OK: index.html publicado ($bytes bytes).\n";
+echo "Imagen diagnostico-preview-cleexs-score.jpg en linkedin/: $imgOk\n";
 echo "URL: https://cleexs.net/linkedin\n";
 echo "1) Borrá este PHP\n";
 echo "2) SiteGround → Speed → Caching → Purge\n";
