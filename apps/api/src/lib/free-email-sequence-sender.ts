@@ -29,9 +29,14 @@ import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
 export const FREE_ONBOARDING_CAMPAIGN_PREFIX = 'free-onboarding-s';
 
-/** Aviso de corrida de secuencia free (inicio/fin). Override: FREE_ONBOARDING_OPS_TO */
+/** Aviso de corrida de secuencia free (inicio/fin).
+ * Desactivado por defecto (Gonzalo no quiere el spam de ops).
+ * Para reactivar: FREE_ONBOARDING_OPS_TO=email@dominio.com
+ */
 export function freeOnboardingOpsNotifyTo(): string {
-  return (process.env.FREE_ONBOARDING_OPS_TO || 'garzuaga@gmail.com').trim().toLowerCase();
+  const raw = (process.env.FREE_ONBOARDING_OPS_TO || '').trim().toLowerCase();
+  if (!raw || raw === 'off' || raw === 'false' || raw === '0' || raw === 'disabled') return '';
+  return raw;
 }
 
 export type FreeOnboardingCandidate = {
