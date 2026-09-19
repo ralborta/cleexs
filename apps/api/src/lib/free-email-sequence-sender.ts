@@ -724,8 +724,9 @@ export async function runFreeOnboardingEmailBatch(input: {
   for (let i = 0; i < activeSteps.length; i++) {
     const step = activeSteps[i]!;
     const cumulativeDays = cumulativeDaysForStep(sequence.steps, step.sortOrder);
-    // Paso 2 catch-up: todos los free con diagnóstico (día 0+). Pasos 3+: día del paso + ventana.
-    const windowStart = step.sortOrder === 2 ? 0 : cumulativeDays;
+    // Misma regla para todos los pasos del cron (2+): día acumulado + ventana de catch-up.
+    // NUNCA arrancar el paso 2 en día 0 ni saltar la cadena (eso mandaba s2 a todo el mundo).
+    const windowStart = cumulativeDays;
     const untilDaysExclusive = windowStart + Math.max(enrolledWithinDays, 90);
     const candidates = await resolveFreeOnboardingCandidates({
       sortOrder: step.sortOrder,
@@ -743,8 +744,8 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
-      // Paso 2: no exige s1 (arranque masivo). Pasos 3+: exige cadena completa.
-      if (!force && step.sortOrder > 2) {
+      // Exigir pasos previos enviados (s1 → s2 → s3…). Sin esto el cron rompe la secuencia.
+      if (!force && step.sortOrder > 1) {
         let missingPrevious = false;
         for (let prev = 1; prev < step.sortOrder; prev += 1) {
           if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
@@ -766,7 +767,7 @@ export async function runFreeOnboardingEmailBatch(input: {
         sortOrder: step.sortOrder,
         cumulativeDays: windowStart,
         untilDaysExclusive,
-        requirePreviousStepsThrough: step.sortOrder > 2 ? step.sortOrder - 1 : null,
+        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         wouldSend: pending.length,
         sample: pending.slice(0, 10).map((c) => ({
@@ -783,7 +784,7 @@ export async function runFreeOnboardingEmailBatch(input: {
         sortOrder: step.sortOrder,
         cumulativeDays: windowStart,
         untilDaysExclusive,
-        requirePreviousStepsThrough: step.sortOrder > 2 ? step.sortOrder - 1 : null,
+        requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         planned: pending.length,
         sent: 0,
