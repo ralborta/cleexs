@@ -744,16 +744,10 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
-      // Exigir pasos previos enviados (s1 → s2 → s3…). Sin esto el cron rompe la secuencia.
+      // Exigir el paso inmediato anterior (si s2 ya salió → puede ir s3, aunque falte s1 por el bug viejo).
       if (!force && step.sortOrder > 1) {
-        let missingPrevious = false;
-        for (let prev = 1; prev < step.sortOrder; prev += 1) {
-          if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
-            missingPrevious = true;
-            break;
-          }
-        }
-        if (missingPrevious) {
+        const prev = step.sortOrder - 1;
+        if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
           skipped += 1;
           continue;
         }
