@@ -381,7 +381,11 @@ export async function runMonthlyScoreEmailBatch(input: {
     };
   }
 
-  const recipients = await resolveMarketingRecipients({ segment, limit });
+  const recipients = await resolveMarketingRecipients({
+    segment,
+    limit,
+    unsubscribeCategory: 'monthlyScore',
+  });
 
   if (input.dryRun) {
     const sample = await Promise.all(
@@ -548,11 +552,20 @@ export async function runCustomTemplateBatch(input: {
   }
 
   let sent = 0;
+  let skipped = 0;
   let failed = 0;
   const errors: Array<{ email: string; error: string }> = [];
 
   for (const email of uniqueEmails) {
     try {
+      if (await isEmailUnsubscribedFromCategory(email, 'content')) {
+        skipped += 1;
+        continue;
+      }
+      if (await isEmailUnsubscribedFromCategory(email, 'monthlyScore')) {
+        skipped += 1;
+        continue;
+      }
       const recipient = await resolveMarketingRecipientForEmail(email);
       await sendMonthlyScoreEmailToRecipient({
         recipient,
@@ -582,6 +595,7 @@ export async function runCustomTemplateBatch(input: {
     subject: subject ?? null,
     totalRecipients: uniqueEmails.length,
     sent,
+    skipped,
     failed,
     errors,
   };

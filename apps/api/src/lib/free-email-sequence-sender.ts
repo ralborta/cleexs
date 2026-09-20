@@ -365,6 +365,7 @@ export async function resolveFreeOnboardingCandidates(input: {
     const email = row.email?.trim().toLowerCase();
     if (!email || isPlaceholderEmail(email) || seenEmails.has(email)) continue;
     if (isHardBlockedMarketingEmail(email)) continue;
+    if (await isEmailUnsubscribedFromCategory(email, 'content')) continue;
     const daysAgo = daysBetweenLocalDates(row.updatedAt, now, input.timezone);
     if (daysAgo < input.cumulativeDays || daysAgo >= untilDaysExclusive) continue;
 

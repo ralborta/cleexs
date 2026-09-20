@@ -350,8 +350,11 @@ function tipsForScore(score?: number): string[] {
 export async function resolveMarketingRecipients(input: {
   segment: EmailAudienceSegment;
   limit: number;
+  /** Si se setea, excluye emails dados de baja de esa categoría. Default: content. */
+  unsubscribeCategory?: 'content' | 'monthlyScore' | 'none';
 }): Promise<MarketingEmailRecipient[]> {
   const byEmail = new Map<string, MarketingEmailRecipient>();
+  const unsubCategory = input.unsubscribeCategory ?? 'content';
 
   const users = await prisma.user.findMany({
     where: {
@@ -374,6 +377,8 @@ export async function resolveMarketingRecipients(input: {
 
   for (const user of users) {
     if (isPlaceholderEmail(user.email)) continue;
+    const email = user.email.toLowerCase();
+    if (unsubCategory !== 'none' && (await isEmailUnsubscribedFromCategory(email, unsubCategory))) continue;
     const planName = user.tenant.plan.name;
     const premium = planIsPremium(planName);
     if (input.segment === 'free' && premium) continue;
@@ -381,8 +386,8 @@ export async function resolveMarketingRecipients(input: {
 
     const brand = user.tenant.brands[0];
     const ctx = brand ? await latestBrandContext(brand.id) : { tips: tipsForScore() };
-    byEmail.set(user.email.toLowerCase(), {
-      email: user.email.toLowerCase(),
+    byEmail.set(email, {
+      email,
       userId: user.id,
       tenantId: user.tenantId,
       planName,
@@ -410,6 +415,7 @@ export async function resolveMarketingRecipients(input: {
       const email = diagnostic.email?.trim().toLowerCase();
       if (!email || byEmail.has(email)) continue;
       if (isPlaceholderEmail(email)) continue;
+      if (unsubCategory !== 'none' && (await isEmailUnsubscribedFromCategory(email, unsubCategory))) continue;
       const score = scoreFromAnalysisJson(diagnostic.analysisJson);
       byEmail.set(email, {
         email,
