@@ -24,7 +24,7 @@ import {
 import { buildMonthlyScoreDiagnosticUrl, buildFreeOnboardingPlanConquistarUrl } from './email-templates/build-email';
 import { getInsightMeta, isFreeEmailInsightKey, resolveFreeEmailInsightLine } from './free-email-insights';
 import { prisma } from './prisma';
-import { isEmailUnsubscribedFromCategory } from './email-unsubscribe';
+import { isEmailUnsubscribedFromCategory, isHardBlockedMarketingEmail } from './email-unsubscribe';
 
 const WA_PLACEHOLDER_EMAIL_DOMAIN = '@whatsapp.cleexs.net';
 export const FREE_ONBOARDING_CAMPAIGN_PREFIX = 'free-onboarding-s';
@@ -364,6 +364,7 @@ export async function resolveFreeOnboardingCandidates(input: {
   for (const row of rows) {
     const email = row.email?.trim().toLowerCase();
     if (!email || isPlaceholderEmail(email) || seenEmails.has(email)) continue;
+    if (isHardBlockedMarketingEmail(email)) continue;
     const daysAgo = daysBetweenLocalDates(row.updatedAt, now, input.timezone);
     if (daysAgo < input.cumulativeDays || daysAgo >= untilDaysExclusive) continue;
 
@@ -456,6 +457,7 @@ export async function sendFreeOnboardingStep(input: {
   if (!isOutboundEmailAvailable()) return { sent: false, reason: 'email_not_configured' };
 
   const to = input.candidate.email;
+  if (isHardBlockedMarketingEmail(to)) return { sent: false, reason: 'hard_blocked' };
   if (await isEmailUnsubscribedFromCategory(to, 'content')) return { sent: false, reason: 'unsubscribed' };
 
   const campaignSlug = freeOnboardingCampaignSlug(input.step.sortOrder);

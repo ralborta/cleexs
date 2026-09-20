@@ -1,5 +1,17 @@
 import { prisma } from './prisma';
 
+/** Cuentas internas (Gonzalo Arzuaga): no enviar marketing ni secuencia free. */
+const HARD_BLOCKED_MARKETING_EMAILS = new Set([
+  'garzuaga@gmail.com',
+  'arzuaga@hotmail.com',
+  'garzuaga@empliados.net',
+  'vuible@gmail.com',
+]);
+
+export function isHardBlockedMarketingEmail(email: string): boolean {
+  return HARD_BLOCKED_MARKETING_EMAILS.has(email.trim().toLowerCase());
+}
+
 /** Lista legacy (baja total). Se migra a preferencias granulares al leer. */
 export const MARKETING_EMAIL_UNSUBSCRIBE_KEY = 'email.marketing_unsubscribed';
 
@@ -139,6 +151,7 @@ export async function isEmailUnsubscribedFromCategory(
   email: string,
   category: EmailMarketingCategory
 ): Promise<boolean> {
+  if (isHardBlockedMarketingEmail(email)) return true;
   const prefs = await getEmailUnsubscribePreferences(email);
   return category === 'content' ? prefs.contentUnsubscribed : prefs.monthlyScoreUnsubscribed;
 }
