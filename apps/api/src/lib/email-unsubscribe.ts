@@ -77,6 +77,9 @@ async function savePreferencesStore(store: PreferencesStore): Promise<void> {
 export async function getEmailUnsubscribePreferences(email: string): Promise<EmailUnsubscribePreferences> {
   const normalized = normalizeEmail(email);
   if (!normalized.includes('@')) return emptyPreferences();
+  if (isHardBlockedMarketingEmail(normalized)) {
+    return { contentUnsubscribed: true, monthlyScoreUnsubscribed: true };
+  }
 
   const store = await loadPreferencesStore();
   if (store[normalized]) return { ...store[normalized] };
@@ -102,10 +105,11 @@ export function defaultLeaveFlagsForUnsubscribeSource(from?: string): {
   leaveContent: boolean;
   leaveMonthlyScore: boolean;
 } {
+  // monthly_score: solo ese canal. Resto (free_sequence, weekly, etc.): baja total.
   if (from === 'monthly_score') {
     return { leaveContent: false, leaveMonthlyScore: true };
   }
-  return { leaveContent: true, leaveMonthlyScore: false };
+  return { leaveContent: true, leaveMonthlyScore: true };
 }
 
 export async function resolveUnsubscribeFormState(
@@ -183,6 +187,12 @@ export async function updateEmailUnsubscribePreferences(
   const normalized = normalizeEmail(email);
   if (!normalized.includes('@')) {
     throw Object.assign(new Error('Email inválido'), { statusCode: 400 });
+  }
+
+  // Bloqueo interno (Gonzalo): no se puede reactivar por el formulario.
+  if (isHardBlockedMarketingEmail(normalized)) {
+    const locked = { contentUnsubscribed: true, monthlyScoreUnsubscribed: true };
+    return { email: normalized, preferences: locked, changed: false };
   }
 
   const store = await loadPreferencesStore();
