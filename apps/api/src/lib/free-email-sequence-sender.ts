@@ -283,6 +283,20 @@ export async function wasFreeOnboardingStepSent(email: string, sortOrder: number
   return Boolean(existing);
 }
 
+/** Fecha del último envío exitoso de un paso (para respetar delay entre mails, no solo desde el diagnóstico). */
+export async function getFreeOnboardingStepSentAt(email: string, sortOrder: number): Promise<Date | null> {
+  const existing = await prisma.cleexsInternalEmailSendLog.findFirst({
+    where: {
+      recipientEmail: email.toLowerCase(),
+      campaignSlug: freeOnboardingCampaignSlug(sortOrder),
+      status: CleexsEmailSendStatus.sent,
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { createdAt: true },
+  });
+  return existing?.createdAt ?? null;
+}
+
 export async function resolveFreeOnboardingCandidates(input: {
   sortOrder: number;
   cumulativeDays: number;
@@ -744,10 +758,17 @@ export async function runFreeOnboardingEmailBatch(input: {
         skipped += 1;
         continue;
       }
-      // Exigir el paso inmediato anterior (si s2 ya salió → puede ir s3, aunque falte s1 por el bug viejo).
+      // Cadena + delay desde el mail anterior (si no, un diagnóstico viejo dispara s3→s11 en 1-2 días).
       if (!force && step.sortOrder > 1) {
         const prev = step.sortOrder - 1;
-        if (!(await wasFreeOnboardingStepSent(candidate.email, prev))) {
+        const prevSentAt = await getFreeOnboardingStepSentAt(candidate.email, prev);
+        if (!prevSentAt) {
+          skipped += 1;
+          continue;
+        }
+        const daysSincePrev = daysBetweenLocalDates(prevSentAt, now, sequence.timezone);
+        const delayNeeded = Math.max(0, step.delayDaysAfterPrevious);
+        if (daysSincePrev < delayNeeded) {
           skipped += 1;
           continue;
         }
@@ -761,6 +782,7 @@ export async function runFreeOnboardingEmailBatch(input: {
         sortOrder: step.sortOrder,
         cumulativeDays: windowStart,
         untilDaysExclusive,
+        delayDaysAfterPrevious: step.delayDaysAfterPrevious,
         requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         wouldSend: pending.length,
@@ -778,6 +800,7 @@ export async function runFreeOnboardingEmailBatch(input: {
         sortOrder: step.sortOrder,
         cumulativeDays: windowStart,
         untilDaysExclusive,
+        delayDaysAfterPrevious: step.delayDaysAfterPrevious,
         requirePreviousStepsThrough: step.sortOrder > 1 ? step.sortOrder - 1 : null,
         candidates: candidates.length,
         planned: pending.length,
