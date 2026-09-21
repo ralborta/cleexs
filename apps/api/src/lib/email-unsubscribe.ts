@@ -6,6 +6,7 @@ const HARD_BLOCKED_MARKETING_EMAILS = new Set([
   'arzuaga@hotmail.com',
   'garzuaga@empliados.net',
   'vuible@gmail.com',
+  'robertino.calcaterra@migbirds.com',
 ]);
 
 export function isHardBlockedMarketingEmail(email: string): boolean {
