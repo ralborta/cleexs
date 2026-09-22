@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
+import { EcommPortalAuthGate } from '@/components/ecomm/ecomm-portal-auth-gate';
 import { PortalEmpliadosDraft } from './portal-empliados-draft';
 
 export const metadata: Metadata = {
-  title: 'Ecomm · Portal Empliados | Cleexs',
-  description: 'Portal de marca Empliados (empliados.net) — demo ecomm Cleexs.',
+  title: 'Admin Ecomm · Portal Empliados | Cleexs',
+  description: 'Admin Ecomm — portal de marca Empliados (empliados.net).',
   robots: { index: false, follow: false },
 };
 
 export default function EcommPortalEmpliadosPage() {
-  return <PortalEmpliadosDraft />;
+  return (
+    <EcommPortalAuthGate>
+      <PortalEmpliadosDraft />
+    </EcommPortalAuthGate>
+  );
 }
