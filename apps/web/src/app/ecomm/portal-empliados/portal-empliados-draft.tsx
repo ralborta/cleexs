@@ -4,13 +4,16 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode, Suspense } f
 import {
   BarChart3,
   Bot,
+  ExternalLink,
   Filter,
   FileSpreadsheet,
   FileText,
   Globe2,
-  Link2,
+  KeyRound,
   Loader2,
   Mail,
+  Megaphone,
+  MessageSquare,
   MousePointerClick,
   Plus,
   Save,
@@ -18,7 +21,9 @@ import {
   Search,
   Send,
   Settings,
+  Share2,
   Sparkles,
+  Target,
   Trash2,
   TrendingUp,
   Users,
@@ -47,16 +52,20 @@ import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin
 
 type SectionId =
   | 'dashboard'
+  | 'trafico'
   | 'funnel'
-  | 'grafico'
   | 'sov'
   | 'oportunidades'
   | 'contenido'
-  | 'outreach'
+  | 'outside-links'
+  | 'keywords'
+  | 'llm-hub'
+  | 'referidos-campanas'
   | 'email'
   | 'email-templates'
   | 'email-envios'
-  | 'referidos'
+  | 'redes'
+  | 'convertir'
   | 'clientes'
   | 'auditoria'
   | 'reportes'
@@ -86,17 +95,17 @@ type PortalSettings = {
   notes: string;
 };
 
-/** Misma estructura que Trafogli. */
+/** Misma estructura que Trafogli · backlog Agency Fathom. */
 const NAV: NavSection[] = [
   {
     title: 'Negocio',
     links: [
       { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+      { id: 'trafico', label: 'Tráfico', icon: TrendingUp },
       { id: 'reportes', label: 'Reportes', icon: FileSpreadsheet },
       { id: 'funnel', label: 'Funnel', icon: Filter },
-      { id: 'grafico', label: 'Gráfico', icon: TrendingUp },
       { id: 'clientes', label: 'Clientes', icon: Users },
-      { id: 'referidos', label: 'Referidos', icon: MousePointerClick },
+      { id: 'referidos-campanas', label: 'Referidos y Campañas', icon: MousePointerClick },
     ],
   },
   {
@@ -105,7 +114,9 @@ const NAV: NavSection[] = [
       { id: 'sov', label: 'AI Share of Voice', icon: Sparkles },
       { id: 'oportunidades', label: 'Oportunidades', icon: Search },
       { id: 'contenido', label: 'Contenido', icon: FileText },
-      { id: 'outreach', label: 'Links auspiciador', icon: Link2 },
+      { id: 'outside-links', label: 'Outside links', icon: ExternalLink },
+      { id: 'keywords', label: 'Keywords / Productos', icon: KeyRound },
+      { id: 'llm-hub', label: 'Hub LLM', icon: MessageSquare },
       { id: 'auditoria', label: 'Auditoría', icon: ScanSearch },
     ],
   },
@@ -115,6 +126,8 @@ const NAV: NavSection[] = [
       { id: 'email', label: 'Email · secuencia', icon: Mail },
       { id: 'email-templates', label: 'Email · plantillas', icon: Mail },
       { id: 'email-envios', label: 'Email · envíos', icon: Send },
+      { id: 'redes', label: 'Redes / Teo', icon: Share2 },
+      { id: 'convertir', label: 'Convertir', icon: Target },
       { id: 'settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -133,14 +146,117 @@ const SOV_PROMPTS = [
 ];
 
 const AGENTS = [
-  { name: 'Agente de Reclamos', skus: 1, page: 'Lista', sovHits: 9, status: 'Indexada' },
-  { name: 'Agente de Seguimiento', skus: 1, page: 'Lista', sovHits: 7, status: 'Indexada' },
-  { name: 'Agente de Coordinación', skus: 1, page: 'En progreso', sovHits: 3, status: 'Borrador' },
-  { name: 'Agente de Atención clientes', skus: 1, page: 'Lista', sovHits: 5, status: 'Indexada' },
-  { name: 'Agente de Planificación viajes', skus: 1, page: 'Pendiente', sovHits: 1, status: '—' },
-  { name: 'Agente de Documentación', skus: 1, page: 'Lista', sovHits: 4, status: 'Indexada' },
-  { name: 'Agente de Alertas operativas', skus: 1, page: 'Lista', sovHits: 6, status: 'Indexada' },
-  { name: 'Agente de Reportes', skus: 1, page: 'En progreso', sovHits: 2, status: 'Borrador' },
+  { name: 'Agente de Reclamos', skus: 1, page: 'Lista', sovHits: 9, status: 'Indexada', source: 'existente' as const },
+  { name: 'Agente de Seguimiento', skus: 1, page: 'Lista', sovHits: 7, status: 'Indexada', source: 'existente' as const },
+  { name: 'Agente de Coordinación', skus: 1, page: 'En progreso', sovHits: 3, status: 'Borrador', source: 'teo' as const },
+  { name: 'Agente de Atención clientes', skus: 1, page: 'Lista', sovHits: 5, status: 'Indexada', source: 'existente' as const },
+  { name: 'Agente de Planificación viajes', skus: 1, page: 'Pendiente', sovHits: 1, status: '—', source: 'teo' as const },
+  { name: 'Agente de Documentación', skus: 1, page: 'Lista', sovHits: 4, status: 'Indexada', source: 'existente' as const },
+  { name: 'Agente de Alertas operativas', skus: 1, page: 'Lista', sovHits: 6, status: 'Indexada', source: 'teo' as const },
+  { name: 'Agente de Reportes', skus: 1, page: 'En progreso', sovHits: 2, status: 'Borrador', source: 'teo' as const },
+];
+
+const BUSINESS_CHART = [
+  { label: 'Ene', mrr: 12, pipeline: 28, demos: 9 },
+  { label: 'Feb', mrr: 14, pipeline: 32, demos: 11 },
+  { label: 'Mar', mrr: 16, pipeline: 35, demos: 14 },
+  { label: 'Abr', mrr: 19, pipeline: 41, demos: 18 },
+  { label: 'May', mrr: 22, pipeline: 48, demos: 21 },
+  { label: 'Jun', mrr: 26, pipeline: 52, demos: 23 },
+  { label: 'Jul', mrr: 29, pipeline: 58, demos: 27 },
+  { label: 'Ago', mrr: 34, pipeline: 64, demos: 31 },
+];
+
+const TRAFFIC_SOURCES = [
+  { source: 'Orgánico', visits: 4200, conv: 3.2 },
+  { source: 'LLM / IA', visits: 1860, conv: 5.8 },
+  { source: 'Referidos', visits: 940, conv: 4.1 },
+  { source: 'Paid', visits: 710, conv: 2.4 },
+  { source: 'Directo', visits: 1280, conv: 1.9 },
+  { source: 'Email', visits: 580, conv: 6.2 },
+];
+
+const TRAFFIC_LLMS = [
+  { llm: 'ChatGPT', visits: 820, cites: 14 },
+  { llm: 'Perplexity', visits: 510, cites: 11 },
+  { llm: 'Gemini', visits: 340, cites: 7 },
+  { llm: 'Claude', visits: 190, cites: 5 },
+];
+
+const TRAFFIC_PROMPTS = [
+  { prompt: 'agentes de IA para logística Argentina', visits: 240, sov: true },
+  { prompt: 'automatizar reclamos de envíos con IA', visits: 180, sov: true },
+  { prompt: 'sistema operativo de logística SOL', visits: 150, sov: true },
+  { prompt: 'empleados virtuales para pymes de transporte', visits: 95, sov: false },
+  { prompt: 'IA para seguimiento de camiones 24/7', visits: 88, sov: false },
+];
+
+const OUTSIDE_LINKS = [
+  {
+    domain: 'beetrack.com/blog',
+    why: 'Guías profundas + citas en directorios logísticos',
+    action: 'Pedir guest post / ser source',
+    status: 'Pendiente',
+  },
+  {
+    domain: 'enviame.io/recursos',
+    why: 'Rankea por “seguimiento de envíos IA”',
+    action: 'Comparar contenido + outreach',
+    status: 'En curso',
+  },
+  {
+    domain: 'logistec.com.ar',
+    why: 'Lista de software Latam sin Empliados',
+    action: 'Contactar para inclusión',
+    status: 'Pendiente',
+  },
+  {
+    domain: 'project44.com/library',
+    why: 'Authority en visibility; LLMs lo citan',
+    action: 'Benchmark + partnership',
+    status: 'Investigar',
+  },
+];
+
+const PRODUCT_PAGES = [
+  {
+    product: 'Agente de Reclamos',
+    kwds: ['reclamos envíos IA', 'automatizar reclamos logística'],
+    page: '/agentes/reclamos',
+    status: 'Publicada',
+  },
+  {
+    product: 'Agente de Seguimiento',
+    kwds: ['seguimiento camiones 24/7', 'tracking envíos IA'],
+    page: '/agentes/seguimiento',
+    status: 'Publicada',
+  },
+  {
+    product: 'Agente de Coordinación',
+    kwds: ['coordinar choferes oficina', 'dispatch IA'],
+    page: '/agentes/coordinacion',
+    status: 'Borrador',
+  },
+  {
+    product: 'SOL completo',
+    kwds: ['sistema operativo logística', 'SOL agentes IA'],
+    page: '/sol',
+    status: 'En progreso',
+  },
+];
+
+const LLM_HUB_PAGES = [
+  { path: 'llm.empliados.net/faq/reclamos', type: 'FAQ', posts: 12, updated: 'Hoy' },
+  { path: 'llm.empliados.net/faq/seguimiento', type: 'FAQ', posts: 9, updated: 'Ayer' },
+  { path: 'llm.empliados.net/articulos', type: 'Artículos', posts: 18, updated: 'Hace 2d' },
+  { path: 'llm.empliados.net/agentica', type: 'Agentica', posts: 6, updated: 'Hoy' },
+];
+
+const TEO_POSTS = [
+  { channel: 'LinkedIn', title: 'Cómo un agente cierra reclamos en 4 min', when: 'Hoy 09:10', status: 'Programado' },
+  { channel: 'X', title: 'SOL · 3 prompts que ya citan Empliados', when: 'Ayer', status: 'Publicado' },
+  { channel: 'LinkedIn', title: 'Outside link: por qué Beetrack rankea', when: 'Mañana 10:00', status: 'Borrador Teo' },
+  { channel: 'Instagram', title: 'Carousel · 1 página por producto', when: 'Vie', status: 'Cola' },
 ];
 
 function Card({
@@ -257,51 +373,130 @@ function Toggle({
 }
 
 function DashboardView() {
-  const wins = SOV_PROMPTS.filter((p) => p.empliados).length;
+  const maxPipe = Math.max(...BUSINESS_CHART.map((d) => d.pipeline));
+  return (
+    <div className="space-y-8">
+      <SectionHeader
+        title="Dashboard"
+        subtitle="Chart de negocios primero · luego embudo de conversión Empliados."
+      />
+
+      <Panel
+        title="Chart de negocios"
+        action={<Badge tone="emerald">MRR · Pipeline · Demos</Badge>}
+      >
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <Card icon={<TrendingUp className="h-4 w-4" />} label="MRR" value="US$ 34k" hint="+18% vs mes ant." accent="text-emerald-600" />
+          <Card icon={<Target className="h-4 w-4" />} label="Pipeline" value="US$ 64k" hint="12 deals abiertos" accent="text-sky-600" />
+          <Card icon={<Bot className="h-4 w-4" />} label="Demos mes" value="31" hint="Activaciones agentes" accent="text-violet-600" />
+        </div>
+        <div className="flex h-48 items-end gap-2 sm:gap-3">
+          {BUSINESS_CHART.map((d) => (
+            <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
+              <div className="flex w-full items-end justify-center gap-0.5" style={{ height: '100%' }}>
+                <div
+                  className="w-[28%] rounded-t bg-emerald-500/90"
+                  style={{ height: `${(d.mrr / maxPipe) * 100}%` }}
+                  title={`MRR ${d.mrr}k`}
+                />
+                <div
+                  className="w-[28%] rounded-t bg-sky-500/80"
+                  style={{ height: `${(d.pipeline / maxPipe) * 100}%` }}
+                  title={`Pipeline ${d.pipeline}k`}
+                />
+                <div
+                  className="w-[28%] rounded-t bg-violet-500/70"
+                  style={{ height: `${(d.demos / maxPipe) * 100}%` }}
+                  title={`Demos ${d.demos}`}
+                />
+              </div>
+              <span className="text-[10px] text-slate-400">{d.label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Verde = MRR · Azul = pipeline · Violeta = demos. Datos demo Agency.
+        </p>
+      </Panel>
+
+      <ConversionMetricsDashboard
+        mode="portal"
+        title="Conversión"
+        loadMetrics={loadPortalGraficoMetrics}
+        loadEmailLeads={loadPortalGraficoEmailLeads}
+        loadUnlockClicks={loadPortalGraficoUnlockClicks}
+      />
+    </div>
+  );
+}
+
+function TraficoView() {
+  const maxVisits = Math.max(...TRAFFIC_SOURCES.map((s) => s.visits));
   return (
     <div className="space-y-6">
       <SectionHeader
-        title="Dashboard"
-        subtitle="Vista ejecutiva Empliados · agentes activos + visibilidad en IA."
+        title="Tráfico"
+        subtitle="Por fuentes, por LLM y por prompt · métricas de adquisición Agency."
       />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card icon={<Bot className="h-4 w-4" />} label="Agentes activos" value="48" hint="En operaciones de clientes" accent="text-emerald-600" />
-        <Card icon={<TrendingUp className="h-4 w-4" />} label="Demos 7d" value="23" hint="+18% vs semana ant." accent="text-sky-600" />
-        <Card
-          icon={<Sparkles className="h-4 w-4" />}
-          label="AI Share of Voice"
-          value={`${Math.round((wins / 50) * 1000) / 10}%`}
-          hint={`${wins} / 50 prompts · semanal`}
-          accent="text-violet-600"
-        />
-        <Card icon={<BarChart3 className="h-4 w-4" />} label="Cleexs Score" value="54" hint="Actualizado lunes" accent="text-indigo-600" />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<Globe2 className="h-4 w-4" />} label="Visitas 30d" value="9.570" hint="Todos los canales" accent="text-sky-600" />
+        <Card icon={<Sparkles className="h-4 w-4" />} label="Desde LLMs" value="1.860" hint="19% del total" accent="text-violet-600" />
+        <Card icon={<TrendingUp className="h-4 w-4" />} label="Conv. LLM" value="5,8%" hint="Mejor canal" accent="text-emerald-600" />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Tendencia SOV (8 semanas)">
-          <div className="flex h-36 items-end gap-2">
-            {[3, 4, 4, 5, 6, 7, 8, 10].map((v, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                <div className="w-full rounded-t-md bg-violet-500/90" style={{ height: `${v * 10}%` }} />
-                <span className="text-[10px] text-slate-400">S{i + 1}</span>
+
+      <Panel title="Por fuentes">
+        <div className="space-y-3">
+          {TRAFFIC_SOURCES.map((row) => (
+            <div key={row.source} className="grid grid-cols-[7rem_1fr_auto] items-center gap-3 text-sm">
+              <span className="font-medium text-slate-800">{row.source}</span>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-violet-500"
+                  style={{ width: `${(row.visits / maxVisits) * 100}%` }}
+                />
               </div>
-            ))}
+              <span className="tabular-nums text-slate-600">
+                {row.visits.toLocaleString('es-AR')} · {row.conv}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Por LLM">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="pb-2 pr-4 font-semibold">Motor</th>
+                  <th className="pb-2 pr-4 font-semibold">Visitas</th>
+                  <th className="pb-2 font-semibold">Citas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {TRAFFIC_LLMS.map((r) => (
+                  <tr key={r.llm}>
+                    <td className="py-2.5 pr-4 font-medium">{r.llm}</td>
+                    <td className="py-2.5 pr-4 tabular-nums">{r.visits.toLocaleString('es-AR')}</td>
+                    <td className="py-2.5 tabular-nums">{r.cites}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <p className="mt-3 text-xs text-slate-500">De 3% → 10% en 8 semanas midiendo los mismos 50 prompts de logística + IA.</p>
         </Panel>
-        <Panel title="Próximas acciones Cleexs">
-          <ul className="space-y-3 text-sm text-slate-700">
-            <li className="flex gap-3">
-              <Badge>SOV</Badge>
-              <span>Publicar página profunda · Agente de Coordinación (7 prompts sin mención).</span>
-            </li>
-            <li className="flex gap-3">
-              <Badge tone="emerald">Email</Badge>
-              <span>Activar paso día 12 (2º agente · seguimiento).</span>
-            </li>
-            <li className="flex gap-3">
-              <Badge tone="amber">Outreach</Badge>
-              <span>11 directorios donde aparece Beetrack / Enviame y Empliados no.</span>
-            </li>
+        <Panel title="Por prompt">
+          <ul className="space-y-3 text-sm">
+            {TRAFFIC_PROMPTS.map((p) => (
+              <li key={p.prompt} className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-800">{p.prompt}</p>
+                  <p className="text-xs text-slate-500">{p.visits} visitas · 30d</p>
+                </div>
+                {p.sov ? <Badge tone="emerald">SOV</Badge> : <Badge tone="slate">Gap</Badge>}
+              </li>
+            ))}
           </ul>
         </Panel>
       </div>
@@ -415,17 +610,6 @@ function FunnelView() {
   );
 }
 
-function GraficoView() {
-  return (
-    <ConversionMetricsDashboard
-      mode="portal"
-      loadMetrics={loadPortalGraficoMetrics}
-      loadEmailLeads={loadPortalGraficoEmailLeads}
-      loadUnlockClicks={loadPortalGraficoUnlockClicks}
-    />
-  );
-}
-
 function SovView() {
   const wins = SOV_PROMPTS.filter((p) => p.empliados).length;
   return (
@@ -486,36 +670,67 @@ function OportunidadesView() {
 }
 
 function ContenidoView() {
+  const [tab, setTab] = useState<'existente' | 'teo'>('existente');
+  const rows = AGENTS.filter((a) => (tab === 'teo' ? a.source === 'teo' : a.source === 'existente'));
   return (
     <div className="space-y-6">
       <SectionHeader
         title="Contenido"
-        subtitle="Páginas profundas por agente (8) + FAQ orientadas a IA · SOL logística."
+        subtitle="Separá lo ya publicado del sitio de lo generado por Teo."
       />
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ['existente', 'Ya existente'],
+            ['teo', 'Generado por Teo'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+              tab === id ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card icon={<FileText className="h-4 w-4" />} label="Páginas profundas" value="5 / 8" hint="Publicadas" accent="text-violet-600" />
+        <Card
+          icon={<FileText className="h-4 w-4" />}
+          label={tab === 'teo' ? 'Piezas Teo' : 'Páginas existentes'}
+          value={String(rows.length)}
+          hint={tab === 'teo' ? 'Borradores + publicados' : 'En el CMS / sitio'}
+          accent="text-violet-600"
+        />
         <Card icon={<Globe2 className="h-4 w-4" />} label="FAQ IA" value="4" hint="Hubs temáticos" accent="text-sky-600" />
         <Card icon={<ScanSearch className="h-4 w-4" />} label="Indexadas" value="6" hint="GSC + bots IA" accent="text-emerald-600" />
       </div>
-      <Panel title="Agentes principales">
+      <Panel title={tab === 'teo' ? 'Cola Teo' : 'Agentes · contenido existente'}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="text-[11px] uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="pb-2 pr-4 font-semibold">Agente</th>
-                <th className="pb-2 pr-4 font-semibold">Módulos</th>
                 <th className="pb-2 pr-4 font-semibold">Página</th>
                 <th className="pb-2 pr-4 font-semibold">Hits SOV</th>
+                <th className="pb-2 pr-4 font-semibold">Origen</th>
                 <th className="pb-2 font-semibold">Index</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {AGENTS.map((p) => (
+              {rows.map((p) => (
                 <tr key={p.name}>
                   <td className="py-2.5 pr-4 font-medium">{p.name}</td>
-                  <td className="py-2.5 pr-4 tabular-nums">{p.skus}</td>
                   <td className="py-2.5 pr-4">{p.page}</td>
                   <td className="py-2.5 pr-4 tabular-nums">{p.sovHits}</td>
+                  <td className="py-2.5 pr-4">
+                    <Badge tone={p.source === 'teo' ? 'violet' : 'slate'}>
+                      {p.source === 'teo' ? 'Teo' : 'Existente'}
+                    </Badge>
+                  </td>
                   <td className="py-2.5">
                     <Badge tone={p.status === 'Indexada' ? 'emerald' : p.status === 'Borrador' ? 'amber' : 'slate'}>
                       {p.status}
@@ -531,24 +746,287 @@ function ContenidoView() {
   );
 }
 
-function OutreachView() {
-  // Mismo código/layout que /tools/auspiciadores, brand Empliados (portal que estamos armando).
+function OutsideLinksView() {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-violet-50/20 px-3 py-6 sm:px-6">
-      <SponsorLinkBuilder
-        brand={{
-          title: 'Links auspiciador',
-          subtitle:
-            'Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por ref (web y WhatsApp) para Empliados.',
-          rankingHint: 'Las campañas quedan en Referidos del portal para el ranking por código ref.',
-          marketingHomeLabel: 'home de empliados.net',
-          marketingBaseUrl: 'https://empliados.net',
-          hideMark: true,
-          defaultSponsorName: 'Revista Logística',
-          defaultRef: 'revista_logistica',
-          defaultUtmCampaign: 'empliados_demo',
-        }}
+    <div className="space-y-6">
+      <SectionHeader
+        title="Outside links"
+        subtitle="Compará por qué rankean otros · contactá para ser source o pedir link."
       />
+      <Panel title="Oportunidades de link / source">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Dominio</th>
+                <th className="pb-2 pr-4 font-semibold">Por qué rankea</th>
+                <th className="pb-2 pr-4 font-semibold">Acción</th>
+                <th className="pb-2 font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {OUTSIDE_LINKS.map((r) => (
+                <tr key={r.domain}>
+                  <td className="py-2.5 pr-4 font-medium text-violet-700">{r.domain}</td>
+                  <td className="py-2.5 pr-4 text-slate-600">{r.why}</td>
+                  <td className="py-2.5 pr-4">{r.action}</td>
+                  <td className="py-2.5">
+                    <Badge tone={r.status === 'En curso' ? 'emerald' : r.status === 'Investigar' ? 'amber' : 'slate'}>
+                      {r.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function KeywordsView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Keywords / Productos"
+        subtitle="Abanico de kwds y prompts · 1 página por producto (contenido + fotos)."
+      />
+      <Panel title="Páginas objetivo">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Producto</th>
+                <th className="pb-2 pr-4 font-semibold">Keywords / prompts</th>
+                <th className="pb-2 pr-4 font-semibold">URL</th>
+                <th className="pb-2 font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {PRODUCT_PAGES.map((r) => (
+                <tr key={r.product}>
+                  <td className="py-2.5 pr-4 font-medium">{r.product}</td>
+                  <td className="py-2.5 pr-4">
+                    <div className="flex flex-wrap gap-1">
+                      {r.kwds.map((k) => (
+                        <Badge key={k} tone="slate">
+                          {k}
+                        </Badge>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="py-2.5 pr-4 font-mono text-xs text-slate-500">{r.page}</td>
+                  <td className="py-2.5">
+                    <Badge tone={r.status === 'Publicada' ? 'emerald' : r.status === 'Borrador' ? 'amber' : 'violet'}>
+                      {r.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function LlmHubView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Hub LLM"
+        subtitle="FAQs, artículos y parte agentica en llm.empliados.net · muchas páginas para LLMs."
+      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<MessageSquare className="h-4 w-4" />} label="FAQs" value="21" hint="2 hubs" accent="text-violet-600" />
+        <Card icon={<FileText className="h-4 w-4" />} label="Artículos" value="18" hint="llm.empliados.net" accent="text-sky-600" />
+        <Card icon={<Bot className="h-4 w-4" />} label="Agentica" value="6" hint="Flujos / demos" accent="text-emerald-600" />
+      </div>
+      <Panel title="Mapa del hub">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Path</th>
+                <th className="pb-2 pr-4 font-semibold">Tipo</th>
+                <th className="pb-2 pr-4 font-semibold">Posts</th>
+                <th className="pb-2 font-semibold">Actualizado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {LLM_HUB_PAGES.map((r) => (
+                <tr key={r.path}>
+                  <td className="py-2.5 pr-4 font-mono text-xs text-violet-700">{r.path}</td>
+                  <td className="py-2.5 pr-4">{r.type}</td>
+                  <td className="py-2.5 pr-4 tabular-nums">{r.posts}</td>
+                  <td className="py-2.5 text-slate-500">{r.updated}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function RedesTeoView() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Redes / Teo"
+        subtitle="Teo posteando seguido · cola del posteador en redes sociales."
+      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<Share2 className="h-4 w-4" />} label="Posts 7d" value="9" hint="LinkedIn · X · IG" accent="text-violet-600" />
+        <Card icon={<Bot className="h-4 w-4" />} label="Cola Teo" value="4" hint="Pendientes" accent="text-amber-600" />
+        <Card icon={<Megaphone className="h-4 w-4" />} label="Engagement" value="+22%" hint="vs semana ant." accent="text-emerald-600" />
+      </div>
+      <Panel
+        title="Cola del posteador"
+        action={
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nuevo post
+          </button>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="pb-2 pr-4 font-semibold">Canal</th>
+                <th className="pb-2 pr-4 font-semibold">Título</th>
+                <th className="pb-2 pr-4 font-semibold">Cuándo</th>
+                <th className="pb-2 font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {TEO_POSTS.map((r) => (
+                <tr key={`${r.channel}-${r.title}`}>
+                  <td className="py-2.5 pr-4 font-medium">{r.channel}</td>
+                  <td className="py-2.5 pr-4">{r.title}</td>
+                  <td className="py-2.5 pr-4 text-slate-500">{r.when}</td>
+                  <td className="py-2.5">
+                    <Badge
+                      tone={
+                        r.status === 'Publicado'
+                          ? 'emerald'
+                          : r.status === 'Programado'
+                            ? 'violet'
+                            : r.status.includes('Teo')
+                              ? 'amber'
+                              : 'slate'
+                      }
+                    >
+                      {r.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ConvertirView() {
+  const items = [
+    { title: 'Hero CTA único', detail: 'Un solo botón primario · “Pedir demo” por encima del fold.' },
+    { title: 'Prueba social arriba', detail: 'Logos / “X operadores activos” antes del scroll.' },
+    { title: 'Form corto', detail: 'Email + WhatsApp · sin fricción; enrichment después.' },
+    { title: 'Objeciones en FAQ', detail: 'Precio, onboarding, TMS · visibles cerca del CTA.' },
+    { title: 'Landing por producto', detail: '1 página / agente con fotos reales del flujo.' },
+    { title: 'A/B copy Claude', detail: 'Probar variantes de headline sugeridas en la call.' },
+  ];
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Convertir"
+        subtitle="Optimizar la landing de compra · checklist de la sesión Agency."
+      />
+      <Panel title="Prioridades landing">
+        <ul className="space-y-3">
+          {items.map((it, i) => (
+            <li key={it.title} className="flex gap-3 rounded-xl border border-slate-100 px-3 py-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800">
+                {i + 1}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{it.title}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{it.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+function ReferidosCampanasView() {
+  const [tab, setTab] = useState<'referidos' | 'campanas'>('campanas');
+  const fetcher = useCallback((path: string, init?: RequestInit) => fetch(path, { ...init, cache: 'no-store' }), []);
+
+  return (
+    <div className="space-y-4">
+      <div className={tab === 'campanas' ? '' : 'mx-auto max-w-6xl px-4 pt-6 md:px-8'}>
+        <div className={tab === 'campanas' ? 'px-4 pt-6 sm:px-6' : ''}>
+          <SectionHeader
+            title="Referidos y Campañas"
+            subtitle="Campañas = links auspiciador · Referidos = ranking y conversiones por ref."
+          />
+          <div className="mb-4 flex flex-wrap gap-2">
+            {(
+              [
+                ['campanas', 'Campañas'],
+                ['referidos', 'Referidos'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  tab === id ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {tab === 'campanas' ? (
+        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-violet-50/20 px-3 py-6 sm:px-6">
+          <SponsorLinkBuilder
+            brand={{
+              title: 'Campañas',
+              subtitle:
+                'Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por ref (web y WhatsApp) para Empliados.',
+              rankingHint: 'Las campañas alimentan Referidos del portal (ranking por código ref).',
+              marketingHomeLabel: 'home de empliados.net',
+              marketingBaseUrl: 'https://empliados.net',
+              hideMark: true,
+              defaultSponsorName: 'Revista Logística',
+              defaultRef: 'revista_logistica',
+              defaultUtmCampaign: 'empliados_demo',
+            }}
+          />
+        </div>
+      ) : (
+        <div className="mx-auto max-w-6xl px-4 pb-6 md:px-8">
+          <ReferidoresDashboard apiBase="/api/borrador/portal-referrals" fetcher={fetcher} />
+        </div>
+      )}
     </div>
   );
 }
@@ -598,41 +1076,85 @@ function EmailEnviosView({ onGoTemplates }: { onGoTemplates: () => void }) {
   );
 }
 
-function ReferidosView() {
-  const fetcher = useCallback((path: string, init?: RequestInit) => fetch(path, { ...init, cache: 'no-store' }), []);
-  return <ReferidoresDashboard apiBase="/api/borrador/portal-referrals" fetcher={fetcher} />;
-}
-
 function ClientesView() {
   const rows = [
-    { email: 'ops@transporteandino.com', wa: '+54 9 11 …', product: 'Reclamos + Seguimiento', tags: 'flota 40, CABA' },
-    { email: 'ceo@rutasur.com.ar', wa: '+54 9 351 …', product: 'SOL completo', tags: '25+ viajes/día' },
-    { email: 'logistica@distribuidorapampa.com', wa: '—', product: 'Atención clientes', tags: 'piloto, interior' },
+    {
+      email: 'ops@transporteandino.com',
+      wa: '+54 9 11 …',
+      company: 'Transporte Andino SA',
+      industry: 'Transporte de carga',
+      size: '40 unidades',
+      geo: 'CABA / GBA',
+      product: 'Reclamos + Seguimiento',
+      enrich: 'Clearbit · LinkedIn',
+      score: 82,
+    },
+    {
+      email: 'ceo@rutasur.com.ar',
+      wa: '+54 9 351 …',
+      company: 'Ruta Sur Logística',
+      industry: '3PL',
+      size: '25+ viajes/día',
+      geo: 'Córdoba',
+      product: 'SOL completo',
+      enrich: 'Apollo · manual',
+      score: 91,
+    },
+    {
+      email: 'logistica@distribuidorapampa.com',
+      wa: '—',
+      company: 'Distribuidora Pampa',
+      industry: 'Distribución',
+      size: '12 depósitos',
+      geo: 'Interior AR',
+      product: 'Atención clientes',
+      enrich: 'Pendiente',
+      score: 54,
+    },
   ];
   return (
     <div className="space-y-6">
       <SectionHeader
         title="Clientes"
-        subtitle="Contrato + enriquecimiento → segmentación para email personalizado."
+        subtitle="Enriquecimiento firmográfico → segmentación y email personalizado."
       />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card icon={<Users className="h-4 w-4" />} label="Perfiles" value="3" hint="Demo portal" accent="text-violet-600" />
+        <Card icon={<Sparkles className="h-4 w-4" />} label="Enriquecidos" value="2 / 3" hint="Clearbit · Apollo" accent="text-emerald-600" />
+        <Card icon={<Target className="h-4 w-4" />} label="Score medio" value="76" hint="Fit Agency" accent="text-sky-600" />
+      </div>
       <Panel title="Perfiles enriquecidos">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="text-[11px] uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="pb-2 pr-4 font-semibold">Email</th>
-                <th className="pb-2 pr-4 font-semibold">WhatsApp</th>
+                <th className="pb-2 pr-4 font-semibold">Empresa</th>
+                <th className="pb-2 pr-4 font-semibold">Contacto</th>
+                <th className="pb-2 pr-4 font-semibold">Industria / tamaño</th>
+                <th className="pb-2 pr-4 font-semibold">Geo</th>
                 <th className="pb-2 pr-4 font-semibold">Agentes</th>
-                <th className="pb-2 font-semibold">Atributos</th>
+                <th className="pb-2 pr-4 font-semibold">Enrich</th>
+                <th className="pb-2 font-semibold">Score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {rows.map((r) => (
                 <tr key={r.email}>
-                  <td className="py-2.5 pr-4 font-medium">{r.email}</td>
-                  <td className="py-2.5 pr-4">{r.wa}</td>
+                  <td className="py-2.5 pr-4 font-medium">{r.company}</td>
+                  <td className="py-2.5 pr-4">
+                    <div>{r.email}</div>
+                    <div className="text-xs text-slate-400">{r.wa}</div>
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <div>{r.industry}</div>
+                    <div className="text-xs text-slate-400">{r.size}</div>
+                  </td>
+                  <td className="py-2.5 pr-4">{r.geo}</td>
                   <td className="py-2.5 pr-4">{r.product}</td>
-                  <td className="py-2.5 text-slate-500">{r.tags}</td>
+                  <td className="py-2.5 pr-4">
+                    <Badge tone={r.enrich === 'Pendiente' ? 'amber' : 'emerald'}>{r.enrich}</Badge>
+                  </td>
+                  <td className="py-2.5 tabular-nums font-semibold text-slate-900">{r.score}</td>
                 </tr>
               ))}
             </tbody>
@@ -1014,26 +1536,34 @@ function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
   switch (id) {
     case 'dashboard':
       return <DashboardView />;
+    case 'trafico':
+      return <TraficoView />;
     case 'funnel':
       return <FunnelView />;
-    case 'grafico':
-      return <GraficoView />;
     case 'sov':
       return <SovView />;
     case 'oportunidades':
       return <OportunidadesView />;
     case 'contenido':
       return <ContenidoView />;
-    case 'outreach':
-      return <OutreachView />;
+    case 'outside-links':
+      return <OutsideLinksView />;
+    case 'keywords':
+      return <KeywordsView />;
+    case 'llm-hub':
+      return <LlmHubView />;
+    case 'referidos-campanas':
+      return <ReferidosCampanasView />;
     case 'email':
       return <EmailSecuenciaView />;
     case 'email-templates':
       return <EmailPlantillasView onGoEnvios={() => setSection('email-envios')} />;
     case 'email-envios':
       return <EmailEnviosView onGoTemplates={() => setSection('email-templates')} />;
-    case 'referidos':
-      return <ReferidosView />;
+    case 'redes':
+      return <RedesTeoView />;
+    case 'convertir':
+      return <ConvertirView />;
     case 'clientes':
       return <ClientesView />;
     case 'reportes':
@@ -1065,7 +1595,7 @@ export function PortalEmpliadosDraft() {
             C
           </span>
           <div className="leading-tight">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Cleexs · ecomm</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Admin Ecomm</p>
             <p className="text-sm font-semibold text-slate-900">Portal Empliados</p>
           </div>
         </div>
@@ -1131,7 +1661,7 @@ export function PortalEmpliadosDraft() {
               section === 'email' ||
               section === 'email-templates' ||
               section === 'email-envios' ||
-              section === 'outreach' ||
+              section === 'referidos-campanas' ||
               section === 'auditoria'
                 ? 'w-full'
                 : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'

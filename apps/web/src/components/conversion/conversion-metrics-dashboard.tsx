@@ -142,6 +142,8 @@ export type ConversionLoadArgs = { from: string; to: string; landing: string };
 
 export type ConversionMetricsDashboardProps = {
   mode?: 'admin' | 'portal';
+  /** Override del título (portal: por defecto "Dashboard"). */
+  title?: string;
   loadMetrics?: (args: ConversionLoadArgs) => Promise<Metrics>;
   loadEmailLeads?: (args: ConversionLoadArgs) => Promise<EmailLeadsResponse>;
   loadUnlockClicks?: (args: ConversionLoadArgs) => Promise<UnlockClicksResponse>;
@@ -274,12 +276,14 @@ const EMPTY_UNLOCK: UnlockClicksResponse = { ok: true, total: 0, items: [] };
 
 export function ConversionMetricsDashboard({
   mode = 'admin',
+  title,
   loadMetrics,
   loadEmailLeads,
   loadUnlockClicks,
 }: ConversionMetricsDashboardProps) {
   const isPortal = mode === 'portal';
   const landingOptions = isPortal ? PORTAL_LANDING_OPTIONS : ADMIN_LANDING_OPTIONS;
+  const heading = title ?? (isPortal ? 'Dashboard' : 'Métricas de Conversión');
 
   const fetchMetrics = loadMetrics ?? defaultLoadMetrics;
   const fetchEmailLeads =
@@ -422,9 +426,7 @@ export function ConversionMetricsDashboard({
             <BarChart3 className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              {isPortal ? 'Gráfico' : 'Métricas de Conversión'}
-            </h1>
+            <h1 className="text-2xl font-semibold text-slate-900">{heading}</h1>
             <p className="text-sm text-slate-600">
               {isPortal
                 ? 'Embudo demo de adquisición Empliados: de visitas a operadores logísticos que activan agentes. Filtrá por canal. Los días cierran a medianoche hora Argentina.'
