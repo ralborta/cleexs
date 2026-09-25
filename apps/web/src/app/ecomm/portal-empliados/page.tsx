@@ -3,8 +3,8 @@ import { EcommPortalAuthGate } from '@/components/ecomm/ecomm-portal-auth-gate';
 import { PortalEmpliadosDraft } from './portal-empliados-draft';
 
 export const metadata: Metadata = {
-  title: 'Admin Ecomm · Portal Empliados | Cleexs',
-  description: 'Admin Ecomm — portal de marca Empliados (empliados.net).',
+  title: 'Cleexs Agency · Portal Empliados | Cleexs',
+  description: 'Cleexs Agency — portal de marca Empliados (empliados.net).',
   robots: { index: false, follow: false },
 };
 

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-surface":"#283044","on-primary-fixed":"#07006c","surface":"#faf8ff","surface-container-lowest":"#ffffff","on-secondary-container":"#00714d","tertiary-container":"#8455ef","on-primary-fixed-variant":"#2f2ebe","on-secondary":"#ffffff","on-tertiary-container":"#fffbff","surface-tint":"#494bd6","primary-fixed":"#e1e0ff","on-primary-container":"#fffbff","secondary-fixed-dim":"#4edea3","surface-container-highest":"#dae2fd","primary-fixed-dim":"#c0c1ff","surface-container-high":"#e2e7ff","on-surface-variant":"#464554","inverse-on-surface":"#eef0ff","error-container":"#ffdad6","on-secondary-fixed-variant":"#005236","error":"#ba1a1a","on-tertiary":"#ffffff","outline":"#767586","primary-container":"#6063ee","on-surface":"#131b2e","on-tertiary-fixed":"#23005c","surface-variant":"#dae2fd","on-tertiary-fixed-variant":"#5516be","tertiary":"#6b38d4","tertiary-fixed":"#e9ddff","surface-bright":"#faf8ff","outline-variant":"#c7c4d7","on-primary":"#ffffff","primary":"#4648d4","on-secondary-fixed":"#002113","on-error":"#ffffff","secondary":"#006c49","secondary-fixed":"#6ffbbe","surface-container":"#eaedff","surface-dim":"#d2d9f4","tertiary-fixed-dim":"#d0bcff","on-error-container":"#93000a","background":"#faf8ff","on-background":"#131b2e","inverse-primary":"#c0c1ff","surface-container-low":"#f2f3ff","secondary-container":"#6cf8bb"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-lg":"1.25rem","margin":"1.5rem","gutter":"1rem","space-xs":"0.25rem","margin-desktop":"2rem","gutter-lg":"1.5rem","space-md":"0.75rem","space-sm":"0.5rem","space-xl":"1.75rem"},fontFamily:{"metric-tabular":["Inter"],"display-lg":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"badge-label":["Inter"],"headline-title":["Plus Jakarta Sans"],"headline-metric":["Plus Jakarta Sans"],"body-medium":["Plus Jakarta Sans"],"label-micro":["Inter"],"label-nav":["Plus Jakarta Sans"],"body-default":["Plus Jakarta Sans"]},fontSize:{"metric-tabular":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.03em","fontWeight":"700"}],"body-sm":["13px",{"lineHeight":"18px","letterSpacing":"0em","fontWeight":"400"}],"badge-label":["12px",{"lineHeight":"16px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-title":["20px",{"lineHeight":"26px","letterSpacing":"-0.015em","fontWeight":"600"}],"headline-metric":["26px",{"lineHeight":"32px","letterSpacing":"-0.025em","fontWeight":"700"}],"body-medium":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"500"}],"label-micro":["11px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"label-nav":["13px",{"lineHeight":"18px","letterSpacing":"-0.005em","fontWeight":"500"}],"body-default":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"400"}]}}}};</script><style id="embed-shell">
+      aside{display:none!important}
+      header.fixed{display:none!important}
+      main{margin-left:0!important;padding-top:1rem!important}
+      body{background:#faf8ff!important;margin:0}
+    </style></head><body class="bg-surface font-body-default text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><div class="pl-0"><main class="w-full pt-6 bg-surface"><div class="flex flex-col w-full">
+<div class="px-margin-desktop py-space-xl max-w-[1600px] mx-auto w-full space-y-space-xl">
+<!-- Top Bar: Title & High-Level Actions -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="space-y-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-primary font-semibold">Módulo de Negocio</span>
+<span class="text-outline-variant font-label-micro text-label-micro">•</span>
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline">BI &amp; Analytics Workspace</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface tracking-tight">Centro de Reportes &amp; Inteligencia</h1>
+<p class="font-body-default text-body-default text-on-surface-variant max-w-3xl">
+          Métricas analíticas de Empliados: adquisición de clientes, onboarding de leads, embudo comercial y performance de envíos multicanal en tiempo real.
+        </p>
+</div>
+<!-- Controls -->
+<div class="flex flex-wrap items-center gap-space-sm pt-space-xs lg:pt-0">
+<!-- Segmented Filter Range -->
+<div class="flex items-center bg-surface-container-low p-1 rounded-xl shadow-sm">
+<button class="px-3.5 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface shadow-sm font-label-nav text-label-nav font-medium transition-all" id="range-btn-30" onclick="setActiveRange(this)">Últimos 30 días</button>
+<button class="px-3.5 py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-nav text-label-nav font-medium transition-all" id="range-btn-month" onclick="setActiveRange(this)">Este mes</button>
+<button class="px-3.5 py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-nav text-label-nav font-medium transition-all" id="range-btn-quarter" onclick="setActiveRange(this)">Trimestre</button>
+</div>
+<!-- Export CTA -->
+<button class="flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-primary text-on-primary font-body-medium text-body-medium font-semibold shadow-sm hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Descargar Reporte Ejecutivo (PDF/CSV)</span>
+</button>
+</div>
+</div>
+<!-- Quick Stats Bar (Micro-KPI Overview) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Leads Totales</span>
+<span class="material-symbols-outlined text-primary text-[18px]">group_add</span>
+</div>
+<div class="mt-space-sm">
+<div class="font-headline-metric text-headline-metric text-on-surface">782</div>
+<div class="flex items-center gap-1 font-badge-label text-badge-label text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+18.4% vs mes ant.</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Diagnósticos Completados</span>
+<span class="material-symbols-outlined text-primary-container text-[18px]">query_stats</span>
+</div>
+<div class="mt-space-sm">
+<div class="font-headline-metric text-headline-metric text-on-surface">542</div>
+<div class="flex items-center gap-1 font-badge-label text-badge-label text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+24.1% ratio cierre</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Open Rate Outreach</span>
+<span class="material-symbols-outlined text-secondary text-[18px]">mark_email_read</span>
+</div>
+<div class="mt-space-sm">
+<div class="font-headline-metric text-headline-metric text-on-surface">56.4%</div>
+<div class="flex items-center gap-1 font-badge-label text-badge-label text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span>Verificado vía Resend</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Tasa de Rebote (Bounce)</span>
+<span class="material-symbols-outlined text-secondary text-[18px]">verified</span>
+</div>
+<div class="mt-space-sm">
+<div class="font-headline-metric text-headline-metric text-on-surface">0.72%</div>
+<div class="flex items-center gap-1 font-badge-label text-badge-label text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]">health_and_safety</span>
+<span>Bajo umbral crítico (1.5%)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Hub de Módulos de Reportes (3 Cards Principales) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-space-lg">
+<!-- Card 1: Adquisición y Embudo Comercial -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+<div>
+<!-- Header with Icon Badge -->
+<div class="flex items-start justify-between gap-space-sm mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]">bar_chart</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-surface-container font-label-micro text-label-micro font-semibold text-on-surface-variant">
+              Actualizado hace 15m
+            </span>
+</div>
+<!-- Title & Description -->
+<h2 class="font-headline-title text-headline-title text-on-surface font-bold tracking-tight mb-space-xs">
+            Adquisición y Embudo Comercial
+          </h2>
+<p class="font-body-default text-body-default text-on-surface-variant leading-relaxed mb-space-md">
+            Quién entra al sistema, canales de procedencia, cuántos completan el diagnóstico de IA y dejan email. Ranking de referidores y UTMs.
+          </p>
+<!-- SVG Visual Chart Snapshot -->
+<div class="bg-surface-container-low p-space-sm rounded-lg mb-space-md">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Tendencia de Ingreso (30D)</span>
+<span class="font-metric-tabular text-badge-label text-primary font-bold">26/día prom.</span>
+</div>
+<svg class="w-full h-12 text-primary" fill="none" preserveaspectratio="none" viewbox="0 0 280 40">
+<path d="M0,32 Q35,28 70,18 T140,22 T210,8 T280,14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+<path d="M0,32 Q35,28 70,18 T140,22 T210,8 T280,14 L280,40 L0,40 Z" fill="currentColor" fill-opacity="0.1"></path>
+</svg>
+</div>
+<!-- Bullets Clave & Métricas -->
+<ul class="space-y-space-sm font-body-sm text-body-sm text-on-surface-variant">
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
+<div>
+<strong class="text-on-surface font-semibold">Diagnósticos completados:</strong>
+<span> Promedio 26 por día (ritmo acelerado).</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px] shrink-0 mt-0.5">trending_up</span>
+<div>
+<strong class="text-on-surface font-semibold">Tasa de conversión a demo:</strong>
+<span class="text-secondary font-semibold"> 14.5%</span> (benchmark industria: 11.2%).
+              </div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-outline text-[18px] shrink-0 mt-0.5">ads_click</span>
+<div>
+<strong class="text-on-surface font-semibold">Top referidores:</strong>
+<span> Revista Logística (42%), Directo (31%), Google Ads (19%).</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-outline text-[18px] shrink-0 mt-0.5">database</span>
+<div>
+<strong class="text-on-surface font-semibold">Detalle granular:</strong>
+<span> Historial navegable de los últimos 25 leads capturados.</span>
+</div>
+</li>
+</ul>
+</div>
+<!-- Footer -->
+<div class="pt-space-lg mt-space-lg">
+<div class="h-px w-full bg-surface-container-high mb-space-md"></div>
+<div class="flex items-center justify-between">
+<a class="inline-flex items-center gap-space-xs text-primary font-body-medium text-body-medium font-semibold hover:text-primary-container transition-colors" href="#">
+<span>Abrir reporte interactivo</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+<span class="font-metric-tabular text-label-micro text-outline font-semibold">v2.8 Live</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Onboarding & Perfil de Leads Calificados -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+<div>
+<!-- Header with Icon Badge -->
+<div class="flex items-start justify-between gap-space-sm mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-tertiary-fixed flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]">assignment_ind</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-surface-container font-label-micro text-label-micro font-semibold text-tertiary">
+              CSV disponible
+            </span>
+</div>
+<!-- Title & Description -->
+<h2 class="font-headline-title text-headline-title text-on-surface font-bold tracking-tight mb-space-xs">
+            Onboarding &amp; Perfil de Leads
+          </h2>
+<p class="font-body-default text-body-default text-on-surface-variant leading-relaxed mb-space-md">
+            Diagnósticos de operadores logísticos que dejaron país, nombre o cómo conocieron a Cleexs/Empliados. Solo leads con datos completados.
+          </p>
+<!-- Distribution Visual Snapshot -->
+<div class="bg-surface-container-low p-space-sm rounded-lg mb-space-md space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Distribución Regional</span>
+<span class="font-metric-tabular text-badge-label text-tertiary font-bold">Arg / Cl / Otros</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full overflow-hidden flex">
+<div class="bg-tertiary h-full" style="width: 78%;" title="Argentina 78%"></div>
+<div class="bg-primary h-full" style="width: 14%;" title="Chile 14%"></div>
+<div class="bg-outline h-full" style="width: 8%;" title="Otros 8%"></div>
+</div>
+<div class="flex justify-between font-label-micro text-label-micro text-on-surface-variant pt-0.5">
+<span>Argentina: <strong>78%</strong></span>
+<span>Chile: <strong>14%</strong></span>
+<span>Otros: <strong>8%</strong></span>
+</div>
+</div>
+<!-- Bullets Clave & Métricas -->
+<ul class="space-y-space-sm font-body-sm text-body-sm text-on-surface-variant">
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-[18px] shrink-0 mt-0.5">public</span>
+<div>
+<strong class="text-on-surface font-semibold">Segmentación por país:</strong>
+<span> Argentina (78%), Chile (14%), Uruguay y resto (8%).</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-[18px] shrink-0 mt-0.5">local_shipping</span>
+<div>
+<strong class="text-on-surface font-semibold">Flotas representadas:</strong>
+<span> Concentración en rango de 50 a 200 camiones propios.</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px] shrink-0 mt-0.5">file_download</span>
+<div>
+<strong class="text-on-surface font-semibold">Tabla exportable enriquecida:</strong>
+<span> Conexión directa a exportación CSV y payload vía Webhook.</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-outline text-[18px] shrink-0 mt-0.5">date_range</span>
+<div>
+<strong class="text-on-surface font-semibold">Ventana de retención histórica:</strong>
+<span> Filtros preconfigurados a 7, 30 y 90 días.</span>
+</div>
+</li>
+</ul>
+</div>
+<!-- Footer -->
+<div class="pt-space-lg mt-space-lg">
+<div class="h-px w-full bg-surface-container-high mb-space-md"></div>
+<div class="flex items-center justify-between">
+<a class="inline-flex items-center gap-space-xs text-tertiary font-body-medium text-body-medium font-semibold hover:text-tertiary-container transition-colors" href="#">
+<span>Abrir reporte interactivo</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+<span class="font-metric-tabular text-label-micro text-outline font-semibold">Formatos: CSV, JSON</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Email Marketing & Outreach a Competidores -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+<div>
+<!-- Header with Icon Badge -->
+<div class="flex items-start justify-between gap-space-sm mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-secondary-container/40 flex items-center justify-center text-secondary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]">forward_to_inbox</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-fixed/50 text-on-secondary-fixed font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+<span>Conexión Resend Activa</span>
+</div>
+</div>
+<!-- Title & Description -->
+<h2 class="font-headline-title text-headline-title text-on-surface font-bold tracking-tight mb-space-xs">
+            Email &amp; Outreach Competitivo
+          </h2>
+<p class="font-body-default text-body-default text-on-surface-variant leading-relaxed mb-space-md">
+            Performance de secuencias automáticas post-demo, emails internos y cold outreach a empresas que usan Beetrack o Envíame.
+          </p>
+<!-- Email Metrics Snapshot Bar -->
+<div class="bg-surface-container-low p-space-sm rounded-lg mb-space-md">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-semibold">Tasa de Apertura Verificada</span>
+<span class="font-metric-tabular text-badge-label text-secondary font-bold">56.4% Open Rate</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 56.4%"></div>
+</div>
+<div class="flex justify-between items-center text-label-micro font-label-micro text-on-surface-variant mt-1.5">
+<span>5.102 enviados</span>
+<span>Rebotes: 0.72%</span>
+</div>
+</div>
+<!-- Bullets Clave & Métricas -->
+<ul class="space-y-space-sm font-body-sm text-body-sm text-on-surface-variant">
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px] shrink-0 mt-0.5">send</span>
+<div>
+<strong class="text-on-surface font-semibold">5.102 envíos procesados:</strong>
+<span> Con una tasa de apertura efectiva del 56.4% verificada.</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px] shrink-0 mt-0.5">sync_saved_locally</span>
+<div>
+<strong class="text-on-surface font-semibold">Webhook de eventos Resend:</strong>
+<span> Sincronización continua de delivered, click y bounced.</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-outline text-[18px] shrink-0 mt-0.5">business</span>
+<div>
+<strong class="text-on-surface font-semibold">Cuentas objetivo:</strong>
+<span> Operadores migrando desde soluciones heredadas (Beetrack/Envíame).</span>
+</div>
+</li>
+<li class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px] shrink-0 mt-0.5">shield</span>
+<div>
+<strong class="text-on-surface font-semibold">Salud del dominio emisor:</strong>
+<span> Tasa de rebote contenida en &lt;0.8% sin penalizaciones.</span>
+</div>
+</li>
+</ul>
+</div>
+<!-- Footer -->
+<div class="pt-space-lg mt-space-lg">
+<div class="h-px w-full bg-surface-container-high mb-space-md"></div>
+<div class="flex items-center justify-between">
+<a class="inline-flex items-center gap-space-xs text-secondary font-body-medium text-body-medium font-semibold hover:text-on-secondary-container transition-colors" href="#">
+<span>Abrir reporte interactivo</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+<span class="font-metric-tabular text-label-micro text-outline font-semibold">TLS 1.3 Auditado</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sección Inferior: Reportes Programados & Automatizaciones -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<!-- Section Header -->
+<div class="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm bg-surface-container-lowest">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">schedule_send</span>
+</div>
+<div>
+<h3 class="font-headline-title text-headline-title text-on-surface font-bold">Reportes Programados &amp; Automatizaciones</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Distribución automatizada por correo hacia directores y equipos de Revenue Ops.</p>
+</div>
+</div>
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-nav text-label-nav font-semibold transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Programar nuevo reporte</span>
+</button>
+</div>
+<div class="h-px w-full bg-surface-container-high"></div>
+<!-- Schedule Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low font-label-micro text-label-micro uppercase tracking-wider text-outline">
+<tr>
+<th class="py-space-sm px-space-lg" scope="col">Nombre del Reporte</th>
+<th class="py-space-sm px-space-md" scope="col">Frecuencia &amp; Horario</th>
+<th class="py-space-sm px-space-md" scope="col">Destinatarios</th>
+<th class="py-space-sm px-space-md" scope="col">Formato</th>
+<th class="py-space-sm px-space-md" scope="col">Estado</th>
+<th class="py-space-sm px-space-lg text-right" scope="col">Acción</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low font-body-default text-body-default text-on-surface">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-primary-fixed/60 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">trending_up</span>
+</div>
+<div>
+<div class="font-body-medium text-body-medium font-semibold text-on-surface">Resumen Semanal de Crecimiento &amp; Citas IA</div>
+<div class="font-label-micro text-label-micro text-outline">KPIs comerciales, citas agendadas y tasa de cierre</div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-1.5 font-metric-tabular text-body-sm text-on-surface font-medium">
+<span class="material-symbols-outlined text-outline text-[16px]">calendar_today</span>
+<span>Lunes 09:00 ART</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="font-medium text-on-surface">Comité de Dirección</span>
+<span class="text-label-micro font-badge-label bg-surface-container px-1.5 py-0.5 rounded text-outline">(4 miembros)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded font-badge-label text-badge-label bg-surface-container font-semibold text-on-surface-variant">PDF Ejecutivo</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container/50 text-secondary font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  Activo
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-space-xs">
+<button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Pausar o editar">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+</button>
+<button class="p-1 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Ejecutar envío ahora">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed/60 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]">hub</span>
+</div>
+<div>
+<div class="font-body-medium text-body-medium font-semibold text-on-surface">Auditoría Mensual de Leads &amp; Atribución UTM</div>
+<div class="font-label-micro text-label-micro text-outline">Desglose de CAC, UTM campaign y calificación de flotas</div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-1.5 font-metric-tabular text-body-sm text-on-surface font-medium">
+<span class="material-symbols-outlined text-outline text-[16px]">calendar_month</span>
+<span>Día 1 de mes · 08:30 ART</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="font-medium text-on-surface">Marketing &amp; Ventas</span>
+<span class="text-label-micro font-badge-label bg-surface-container px-1.5 py-0.5 rounded text-outline">(6 miembros)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded font-badge-label text-badge-label bg-surface-container font-semibold text-on-surface-variant">CSV + Webhook</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container/50 text-secondary font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  Activo
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-space-xs">
+<button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Pausar o editar">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+</button>
+<button class="p-1 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Ejecutar envío ahora">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<script>
+    function setActiveRange(button) {
+      const container = button.parentElement;
+      const buttons = container.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.classList.remove('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm');
+        btn.classList.add('text-on-surface-variant');
+      });
+      button.classList.add('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm');
+      button.classList.remove('text-on-surface-variant');
+    }
+  </script>
+</div></main></div></body></html>

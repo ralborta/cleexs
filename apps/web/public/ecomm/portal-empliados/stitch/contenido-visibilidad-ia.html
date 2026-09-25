@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-surface":"#283044","on-primary-fixed":"#07006c","surface":"#faf8ff","surface-container-lowest":"#ffffff","on-secondary-container":"#00714d","tertiary-container":"#8455ef","on-primary-fixed-variant":"#2f2ebe","on-secondary":"#ffffff","on-tertiary-container":"#fffbff","surface-tint":"#494bd6","primary-fixed":"#e1e0ff","on-primary-container":"#fffbff","secondary-fixed-dim":"#4edea3","surface-container-highest":"#dae2fd","primary-fixed-dim":"#c0c1ff","surface-container-high":"#e2e7ff","on-surface-variant":"#464554","inverse-on-surface":"#eef0ff","error-container":"#ffdad6","on-secondary-fixed-variant":"#005236","error":"#ba1a1a","on-tertiary":"#ffffff","outline":"#767586","primary-container":"#6063ee","on-surface":"#131b2e","on-tertiary-fixed":"#23005c","surface-variant":"#dae2fd","on-tertiary-fixed-variant":"#5516be","tertiary":"#6b38d4","tertiary-fixed":"#e9ddff","surface-bright":"#faf8ff","outline-variant":"#c7c4d7","on-primary":"#ffffff","primary":"#4648d4","on-secondary-fixed":"#002113","on-error":"#ffffff","secondary":"#006c49","secondary-fixed":"#6ffbbe","surface-container":"#eaedff","surface-dim":"#d2d9f4","tertiary-fixed-dim":"#d0bcff","on-error-container":"#93000a","background":"#faf8ff","on-background":"#131b2e","inverse-primary":"#c0c1ff","surface-container-low":"#f2f3ff","secondary-container":"#6cf8bb"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-lg":"1.25rem","margin":"1.5rem","gutter":"1rem","space-xs":"0.25rem","margin-desktop":"2rem","gutter-lg":"1.5rem","space-md":"0.75rem","space-sm":"0.5rem","space-xl":"1.75rem"},fontFamily:{"metric-tabular":["Inter"],"display-lg":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"badge-label":["Inter"],"headline-title":["Plus Jakarta Sans"],"headline-metric":["Plus Jakarta Sans"],"body-medium":["Plus Jakarta Sans"],"label-micro":["Inter"],"label-nav":["Plus Jakarta Sans"],"body-default":["Plus Jakarta Sans"]},fontSize:{"metric-tabular":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.03em","fontWeight":"700"}],"body-sm":["13px",{"lineHeight":"18px","letterSpacing":"0em","fontWeight":"400"}],"badge-label":["12px",{"lineHeight":"16px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-title":["20px",{"lineHeight":"26px","letterSpacing":"-0.015em","fontWeight":"600"}],"headline-metric":["26px",{"lineHeight":"32px","letterSpacing":"-0.025em","fontWeight":"700"}],"body-medium":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"500"}],"label-micro":["11px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"label-nav":["13px",{"lineHeight":"18px","letterSpacing":"-0.005em","fontWeight":"500"}],"body-default":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"400"}]}}}};</script><style id="embed-shell">
+      aside{display:none!important}
+      header.fixed{display:none!important}
+      main{margin-left:0!important;padding-top:1rem!important}
+      body{background:#faf8ff!important;margin:0}
+    </style></head><body class="bg-surface font-body-default text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><div class="pl-0"><main class="w-full pt-6 bg-surface"><div class="flex flex-col w-full">
+<div class="w-full max-w-[1600px] mx-auto px-margin-desktop py-space-xl space-y-space-xl">
+<!-- Header Section with Title, Subtitle, Tabs and Action Buttons -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
+<div class="space-y-1">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">auto_stories</span>
+<span class="font-label-micro text-label-micro text-primary uppercase font-bold tracking-wider">Visibilidad IA · Catálogo Digital</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface font-bold tracking-tight">
+          Gestión de Contenido para Visibilidad IA
+        </h1>
+<p class="font-body-default text-body-default text-on-surface-variant max-w-3xl">
+          Separá el contenido publicado del sitio web de lo generado por Teo (Agente IA) y supervisá su indexación directa en motores LLM como ChatGPT, Perplexity y Gemini.
+        </p>
+</div>
+<div class="flex items-center gap-space-sm flex-shrink-0">
+<button class="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-body-medium text-body-medium shadow-sm transition-all duration-150" id="btn-sync-cms">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:rotate-180 transition-transform">sync</span>
+<span>Sincronizar CMS / sitemap</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-body-medium text-body-medium shadow-sm hover:shadow transition-all duration-150">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">arrow_back_ios_new</span>
+<span>Generar contenido con Teo</span>
+</button>
+</div>
+</div>
+<!-- Segmented Filter Tabs Bar -->
+<div class="flex flex-wrap items-center justify-between gap-space-md pb-space-xs">
+<div class="inline-flex p-1 bg-surface-container rounded-xl shadow-inner gap-1">
+<button class="px-space-md py-1.5 rounded-lg bg-surface-container-lowest text-primary font-label-nav text-label-nav font-bold shadow-sm transition-colors flex items-center gap-2">
+<span>Ya existente en la web</span>
+<span class="px-1.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-metric-tabular text-label-micro">4</span>
+</button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-nav text-label-nav transition-colors flex items-center gap-2">
+<span>Generado por Teo (Agente IA)</span>
+<span class="px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-metric-tabular text-label-micro">12</span>
+</button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-nav text-label-nav transition-colors flex items-center gap-2">
+<span>Artículos en borrador</span>
+<span class="px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-metric-tabular text-label-micro">3</span>
+</button>
+</div>
+<div class="flex items-center gap-space-xs text-outline font-label-micro text-label-micro">
+<span class="material-symbols-outlined text-[15px] text-secondary">verified</span>
+<span>Última verificación sitemap: Hoy, 09:42hs</span>
+</div>
+</div>
+<!-- KPI Metric Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- KPI 1 -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-bold">Páginas existentes en CMS</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">article</span>
+</div>
+</div>
+<div class="my-space-md flex items-baseline gap-2">
+<span class="font-headline-metric text-headline-metric text-on-surface font-bold">4</span>
+<span class="font-body-medium text-body-medium text-outline">páginas activas</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span>En sitemap activo, 100% legibles</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-bold">FAQs para Motores IA</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">psychology_alt</span>
+</div>
+</div>
+<div class="my-space-md flex items-baseline gap-2">
+<span class="font-headline-metric text-headline-metric text-on-surface font-bold">4</span>
+<span class="font-body-medium text-body-medium text-outline">hubs temáticos</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-secondary text-[16px]">code</span>
+<span>Estructurados con schema.org</span>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline font-bold">Indexadas por Bots IA</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]">travel_explore</span>
+</div>
+</div>
+<div class="my-space-md flex items-baseline gap-2">
+<span class="font-headline-metric text-headline-metric text-on-surface font-bold">6</span>
+<span class="font-body-medium text-body-medium text-outline">URLs citadas</span>
+</div>
+<div class="flex items-center justify-between font-body-sm text-body-sm">
+<span class="text-on-surface-variant truncate">ChatGPT Search, Perplexity, Gemini</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-badge-label text-badge-label font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+            +18%
+          </span>
+</div>
+</div>
+</div>
+<!-- Main Content Module: Search, Filters & Data Table -->
+<div class="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden">
+<!-- Module Header with Title and Search/Filters Toolbar -->
+<div class="p-space-lg space-y-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">layers</span>
+<h2 class="font-headline-title text-headline-title text-on-surface font-semibold">Agentes · Contenido Existente</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-micro text-label-micro font-bold">5 URLs registradas</span>
+</div>
+<div class="flex items-center gap-space-xs text-outline font-body-sm text-body-sm">
+<span>Mostrando:</span>
+<span class="font-semibold text-on-surface">5 de 5 elementos</span>
+</div>
+</div>
+<!-- Filter Controls Bar -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<div class="relative flex-1 min-w-[280px]">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-outline">search</span>
+<input class="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-container-low text-on-surface font-body-default text-body-default placeholder:text-outline focus:outline-none focus:bg-surface-container transition-colors" placeholder="Buscar por agente, URL o temática..." type="text"/>
+</div>
+<!-- Dropdown Filter: Indexation -->
+<div class="relative">
+<select class="appearance-none pl-3 pr-8 py-2 rounded-lg bg-surface-container-low text-on-surface font-body-medium text-body-sm cursor-pointer focus:outline-none hover:bg-surface-container transition-colors">
+<option value="todos">Estado Indexación: Todos</option>
+<option value="indexada">Indexada en LLMs</option>
+<option value="pendiente">Pendiente de rastreo</option>
+<option value="no-indexable">No indexable</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2.5 text-[18px] text-outline pointer-events-none">expand_more</span>
+</div>
+<!-- Dropdown Filter: Origin -->
+<div class="relative">
+<select class="appearance-none pl-3 pr-8 py-2 rounded-lg bg-surface-container-low text-on-surface font-body-medium text-body-sm cursor-pointer focus:outline-none hover:bg-surface-container transition-colors">
+<option value="todos">Origen: Sitio Oficial (CMS)</option>
+<option value="teo">Teo AI Agent</option>
+<option value="doc">Documentación técnica</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2.5 text-[18px] text-outline pointer-events-none">expand_more</span>
+</div>
+<button class="px-space-md py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-medium text-body-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+<span>Más filtros</span>
+</button>
+</div>
+</div>
+<!-- Table View -->
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low text-outline font-label-micro text-label-micro uppercase tracking-wider">
+<th class="py-3 px-space-lg" scope="col">Agente / Página</th>
+<th class="py-3 px-space-md" scope="col">Tipo de Contenido</th>
+<th class="py-3 px-space-md" scope="col">Hits SOV (Citas)</th>
+<th class="py-3 px-space-md" scope="col">Score Agent-Readiness</th>
+<th class="py-3 px-space-md" scope="col">Origen</th>
+<th class="py-3 px-space-md" scope="col">Estado Indexación</th>
+<th class="py-3 px-space-lg text-right" scope="col">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y-0">
+<!-- Row 1: Agente de Reclamos -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">assignment_late</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-semibold">Agente de Reclamos</span>
+<span class="font-metric-tabular text-body-sm text-outline">/agentes/reclamos · Logística y envíos</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container font-label-micro text-label-micro text-on-surface-variant font-medium">
+                  Página Landing
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular text-body-medium text-on-surface font-bold">9</span>
+<span class="font-body-sm text-label-micro text-outline">citas (ChatGPT &amp; Perplexity)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm min-w-[120px]">
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 94%;"></div>
+</div>
+<span class="font-metric-tabular text-body-sm font-bold text-on-surface">94%</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  Existente en CMS
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-badge-label text-badge-label font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                  Indexada en LLMs
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-1">
+<a class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" href="#" title="Ver en vivo">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</a>
+<button class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Inspeccionar IA">
+<span class="material-symbols-outlined text-[18px]">search_insights</span>
+</button>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Agente de Seguimiento -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">local_shipping</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-semibold">Agente de Seguimiento</span>
+<span class="font-metric-tabular text-body-sm text-outline">/agentes/seguimiento · Camiones y flotas en tiempo real</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container font-label-micro text-label-micro text-on-surface-variant font-medium">
+                  Guía Técnica
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular text-body-medium text-on-surface font-bold">7</span>
+<span class="font-body-sm text-label-micro text-outline">citas (Perplexity)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm min-w-[120px]">
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 88%;"></div>
+</div>
+<span class="font-metric-tabular text-body-sm font-bold text-on-surface">88%</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  Existente en CMS
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-badge-label text-badge-label font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                  Indexada en LLMs
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-1">
+<a class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" href="#" title="Ver en vivo">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</a>
+<button class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Inspeccionar IA">
+<span class="material-symbols-outlined text-[18px]">search_insights</span>
+</button>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Agente de Atención al Cliente -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">support_agent</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-semibold">Agente de Atención al Cliente</span>
+<span class="font-metric-tabular text-body-sm text-outline">/agentes/atencion · Soporte omnicanal WhatsApp</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container font-label-micro text-label-micro text-on-surface-variant font-medium">
+                  Página Landing
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular text-body-medium text-on-surface font-bold">5</span>
+<span class="font-body-sm text-label-micro text-outline">citas (ChatGPT)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm min-w-[120px]">
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 82%;"></div>
+</div>
+<span class="font-metric-tabular text-body-sm font-bold text-on-surface">82%</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  Existente en CMS
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-badge-label text-badge-label font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                  Indexada en LLMs
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-1">
+<a class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" href="#" title="Ver en vivo">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</a>
+<button class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Inspeccionar IA">
+<span class="material-symbols-outlined text-[18px]">search_insights</span>
+</button>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4: Agente de Documentación y Remitos -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">inventory</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-semibold">Agente de Documentación y Remitos</span>
+<span class="font-metric-tabular text-body-sm text-outline">/agentes/documentacion · Gestión de remitos y POD</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container font-label-micro text-label-micro text-on-surface-variant font-medium">
+                  Casos de Uso
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular text-body-medium text-on-surface font-bold">4</span>
+<span class="font-body-sm text-label-micro text-outline">citas (Gemini)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm min-w-[120px]">
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 79%;"></div>
+</div>
+<span class="font-metric-tabular text-body-sm font-bold text-on-surface">79%</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  Existente en CMS
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-badge-label text-badge-label font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                  Indexada en LLMs
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-1">
+<a class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" href="#" title="Ver en vivo">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</a>
+<button class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Inspeccionar IA">
+<span class="material-symbols-outlined text-[18px]">search_insights</span>
+</button>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: Sistema Operativo SOL Completo -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-semibold">Sistema Operativo SOL Completo</span>
+<span class="font-metric-tabular text-body-sm text-outline">/sol · Plataforma unificada de gestión</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container font-label-micro text-label-micro text-on-surface-variant font-medium">
+                  Página Landing
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular text-body-medium text-on-surface font-bold">12</span>
+<span class="font-body-sm text-label-micro text-outline">citas (ChatGPT, Perplexity)</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm min-w-[120px]">
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 98%;"></div>
+</div>
+<span class="font-metric-tabular text-body-sm font-bold text-on-surface">98%</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  Existente en CMS
+                </span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-badge-label text-badge-label font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                  Indexada en LLMs
+                </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="flex items-center justify-end gap-1">
+<a class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" href="#" title="Ver en vivo">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</a>
+<button class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors" title="Inspeccionar IA">
+<span class="material-symbols-outlined text-[18px]">search_insights</span>
+</button>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="px-space-lg py-space-md bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm">
+<div class="flex items-center gap-2 text-outline font-label-micro text-label-micro">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span>Sincronización bidireccional activada con Webflow CMS</span>
+</div>
+<div class="flex items-center gap-space-xs font-body-sm text-body-sm">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest text-outline font-medium opacity-50 cursor-not-allowed">Anterior</button>
+<span class="px-2.5 py-1 rounded bg-primary text-on-primary font-bold">1</span>
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest text-on-surface font-medium hover:bg-surface-container">Siguiente</button>
+</div>
+</div>
+</div>
+<!-- AI Insights & Optimization Recommendations Banner -->
+<div class="p-space-lg rounded-xl bg-surface-container-low shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md">
+<div class="flex items-start gap-space-sm max-w-3xl">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 text-on-primary shadow-sm">
+<span class="material-symbols-outlined text-[22px]">psychology</span>
+</div>
+<div>
+<h3 class="font-headline-title text-headline-title text-on-surface font-bold">
+            Sugerencia de Teo para optimizar citas en ChatGPT Search
+          </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-0.5">
+            Detectamos 3 oportunidades de FAQ para la página <span class="font-semibold text-on-surface">Agente de Seguimiento</span>. Agregar schema.org estructurado podría aumentar la tasa de cita de 7 a más de 15 consultas directas.
+          </p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<button class="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-medium text-body-medium transition-colors">
+          Descartar
+        </button>
+<button class="px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-body-medium text-body-medium shadow-sm transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span>Aplicar FAQs sugeridas</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const syncBtn = document.getElementById('btn-sync-cms');
+    if (syncBtn) {
+      syncBtn.addEventListener('click', function() {
+        const icon = syncBtn.querySelector('.material-symbols-outlined');
+        if (icon) {
+          icon.classList.add('animate-spin');
+          setTimeout(() => {
+            icon.classList.remove('animate-spin');
+          }, 1200);
+        }
+      });
+    }
+  })();
+</script></main></div></body></html>

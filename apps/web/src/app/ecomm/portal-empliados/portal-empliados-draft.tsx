@@ -49,6 +49,8 @@ import {
 } from '@/lib/portal-grafico-demo-data';
 import { createPortalReportesLoaders } from '@/lib/portal-reportes-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
+import { StitchFrame } from './stitch-frame';
+import { STITCH_SCREEN_BY_SECTION } from './stitch-screens';
 
 type SectionId =
   | 'dashboard'
@@ -95,7 +97,7 @@ type PortalSettings = {
   notes: string;
 };
 
-/** Misma estructura que Trafogli · backlog Agency Fathom. */
+/** Misma estructura que Stitch · Cleexs Agency. */
 const NAV: NavSection[] = [
   {
     title: 'Negocio',
@@ -123,13 +125,16 @@ const NAV: NavSection[] = [
   {
     title: 'Crecimiento',
     links: [
-      { id: 'email', label: 'Email · secuencia', icon: Mail },
-      { id: 'email-templates', label: 'Email · plantillas', icon: Mail },
-      { id: 'email-envios', label: 'Email · envíos', icon: Send },
+      { id: 'email', label: 'Email secuencias', icon: Mail },
+      { id: 'email-templates', label: 'Plantillas', icon: Mail },
+      { id: 'email-envios', label: 'Envíos', icon: Send },
       { id: 'redes', label: 'Redes / Teo', icon: Share2 },
       { id: 'convertir', label: 'Convertir', icon: Target },
-      { id: 'settings', label: 'Settings', icon: Settings },
     ],
+  },
+  {
+    title: 'Sistema',
+    links: [{ id: 'settings', label: 'Configuración / Integraciones', icon: Settings }],
   },
 ];
 
@@ -1533,9 +1538,14 @@ function SettingsView() {
 }
 
 function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
+  const stitchSrc = STITCH_SCREEN_BY_SECTION[id];
+  if (stitchSrc) {
+    const label =
+      NAV.flatMap((g) => g.links).find((l) => l.id === id)?.label ?? id;
+    return <StitchFrame src={stitchSrc} title={label} />;
+  }
+
   switch (id) {
-    case 'dashboard':
-      return <DashboardView />;
     case 'trafico':
       return <TraficoView />;
     case 'funnel':
@@ -1572,6 +1582,8 @@ function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
       return <AuditoriaView />;
     case 'settings':
       return <SettingsView />;
+    case 'dashboard':
+      return <DashboardView />;
     default:
       return null;
   }
@@ -1587,30 +1599,49 @@ export function PortalEmpliadosDraft() {
     return 'Dashboard';
   }, [section]);
 
+  const isStitch = Boolean(STITCH_SCREEN_BY_SECTION[section]);
+
+  useEffect(() => {
+    const id = 'agency-stitch-fonts';
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href =
+      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+    document.head.appendChild(link);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
+    <div
+      className="min-h-screen text-slate-900"
+      style={{
+        background: '#faf8ff',
+        fontFamily: '"Plus Jakarta Sans", Inter, system-ui, sans-serif',
+      }}
+    >
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#e2e8f0] bg-white/90 px-4 backdrop-blur-xl md:px-6">
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-xs font-bold text-white shadow-sm">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4648d4] text-xs font-bold text-white shadow-sm">
             C
           </span>
           <div className="leading-tight">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600">Admin Ecomm</p>
-            <p className="text-sm font-semibold text-slate-900">Portal Empliados</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4648d4]">Cleexs Agency</p>
+            <p className="text-sm font-semibold text-[#0f172a]">Portal Empliados</p>
           </div>
         </div>
         <div className="text-right leading-tight">
-          <p className="text-xs font-medium text-slate-800">empliados.net</p>
-          <p className="text-[10px] text-slate-500">Agentes IA · logística</p>
+          <p className="text-xs font-medium text-[#0f172a]">empliados.net</p>
+          <p className="text-[10px] text-[#64748b]">Workspace activo</p>
         </div>
       </header>
 
       <div className="flex min-h-[calc(100vh-3.5rem)]">
-        <aside className="hidden w-60 shrink-0 overflow-y-auto border-r border-slate-200 bg-white py-6 md:block">
+        <aside className="hidden w-60 shrink-0 overflow-y-auto border-r border-[#e2e8f0] bg-white py-5 md:block">
           <nav className="flex flex-col gap-5 px-3">
             {NAV.map((group) => (
               <div key={group.title} className="flex flex-col gap-0.5">
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8]">
                   {group.title}
                 </p>
                 {group.links.map(({ id, label, icon: Icon }) => {
@@ -1620,13 +1651,13 @@ export function PortalEmpliadosDraft() {
                       key={id}
                       type="button"
                       onClick={() => setSection(id)}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition ${
                         active
-                          ? 'bg-violet-50 text-violet-900 ring-1 ring-violet-200/60'
-                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                          ? 'bg-[#eef2ff] text-[#4f46e5] shadow-sm ring-1 ring-[#eef2ff]'
+                          : 'text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]'
                       }`}
                     >
-                      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-violet-600' : 'text-slate-400'}`} />
+                      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#6366f1]' : 'text-[#94a3b8]'}`} />
                       {label}
                     </button>
                   );
@@ -1637,7 +1668,7 @@ export function PortalEmpliadosDraft() {
         </aside>
 
         <div className="min-w-0 flex-1 overflow-x-hidden">
-          <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+          <nav className="flex gap-2 overflow-x-auto border-b border-[#e2e8f0] bg-white px-4 py-3 md:hidden">
             {NAV.flatMap((g) => g.links).map(({ id, label, icon: Icon }) => {
               const active = section === id;
               return (
@@ -1646,38 +1677,34 @@ export function PortalEmpliadosDraft() {
                   type="button"
                   onClick={() => setSection(id)}
                   className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
-                    active ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-700'
+                    active ? 'bg-[#4648d4] text-white' : 'bg-[#f1f5f9] text-[#334155]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
-                  {label.split('·')[0]?.trim()}
+                  {label.split('/')[0]?.trim()}
                 </button>
               );
             })}
           </nav>
 
-          <div
-            className={
-              section === 'email' ||
-              section === 'email-templates' ||
-              section === 'email-envios' ||
-              section === 'referidos-campanas' ||
-              section === 'auditoria'
-                ? 'w-full'
-                : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'
-            }
-          >
-            {renderSection(section, setSection)}
-          </div>
+          {isStitch ? (
+            renderSection(section, setSection)
+          ) : (
+            <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+              {renderSection(section, setSection)}
+            </div>
+          )}
         </div>
       </div>
 
-      <footer className="border-t border-slate-200 bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Cleexs · portal Empliados · {activeLabel}</p>
-          <p className="font-medium text-violet-700">empliados.net</p>
-        </div>
-      </footer>
+      {!isStitch ? (
+        <footer className="border-t border-[#e2e8f0] bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-[#64748b] sm:flex-row sm:items-center sm:justify-between">
+            <p>Cleexs Agency · {activeLabel}</p>
+            <p className="font-medium text-[#4648d4]">empliados.net</p>
+          </div>
+        </footer>
+      ) : null}
     </div>
   );
 }

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-surface":"#283044","error":"#ba1a1a","surface-tint":"#494bd6","on-primary":"#ffffff","secondary":"#006c49","background":"#faf8ff","primary-fixed-dim":"#c0c1ff","on-primary-container":"#fffbff","tertiary-container":"#8455ef","on-error-container":"#93000a","tertiary-fixed-dim":"#d0bcff","secondary-fixed-dim":"#4edea3","on-background":"#131b2e","outline":"#767586","outline-variant":"#c7c4d7","on-surface-variant":"#464554","on-primary-fixed-variant":"#2f2ebe","secondary-container":"#6cf8bb","inverse-primary":"#c0c1ff","on-surface":"#131b2e","on-secondary-fixed":"#002113","on-error":"#ffffff","on-primary-fixed":"#07006c","on-secondary":"#ffffff","surface-bright":"#faf8ff","on-secondary-fixed-variant":"#005236","primary-container":"#6063ee","primary":"#4648d4","tertiary":"#6b38d4","surface-container-low":"#f2f3ff","surface-container":"#eaedff","on-secondary-container":"#00714d","on-tertiary":"#ffffff","surface-container-highest":"#dae2fd","on-tertiary-container":"#fffbff","surface-container-lowest":"#ffffff","surface":"#faf8ff","on-tertiary-fixed-variant":"#5516be","on-tertiary-fixed":"#23005c","tertiary-fixed":"#e9ddff","surface-dim":"#d2d9f4","surface-variant":"#dae2fd","surface-container-high":"#e2e7ff","primary-fixed":"#e1e0ff","inverse-on-surface":"#eef0ff","error-container":"#ffdad6","secondary-fixed":"#6ffbbe"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-sm":"0.5rem","margin-desktop":"2rem","gutter-lg":"1.5rem","space-xs":"0.25rem","gutter":"1rem","space-md":"0.75rem","space-lg":"1.25rem","space-xl":"1.75rem","margin":"1.5rem"},"fontFamily":{"label-micro":["Inter"],"body-medium":["Plus Jakarta Sans"],"body-default":["Plus Jakarta Sans"],"metric-tabular":["Inter"],"badge-label":["Inter"],"display-lg":["Plus Jakarta Sans"],"headline-metric":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"headline-title":["Plus Jakarta Sans"],"label-nav":["Plus Jakarta Sans"]},"fontSize":{"label-micro":["11px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"body-medium":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"500"}],"body-default":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"400"}],"metric-tabular":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"badge-label":["12px",{"lineHeight":"16px","letterSpacing":"0.01em","fontWeight":"600"}],"display-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.03em","fontWeight":"700"}],"headline-metric":["26px",{"lineHeight":"32px","letterSpacing":"-0.025em","fontWeight":"700"}],"body-sm":["13px",{"lineHeight":"18px","letterSpacing":"0em","fontWeight":"400"}],"headline-title":["20px",{"lineHeight":"26px","letterSpacing":"-0.015em","fontWeight":"600"}],"label-nav":["13px",{"lineHeight":"18px","letterSpacing":"-0.005em","fontWeight":"500"}]}}}}</script><style id="embed-shell">
+      aside{display:none!important}
+      header.fixed{display:none!important}
+      main{margin-left:0!important;padding-top:1rem!important}
+      body{background:#faf8ff!important;margin:0}
+    </style></head><body class="bg-background font-body-default text-on-surface antialiased"><div class="pl-0"><main class="relative pt-6 bg-surface-bright min-h-screen px-margin-desktop py-space-xl"><div class="flex flex-col w-full">
+<!-- Top Section: Header & Quick Actions -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md mb-space-lg">
+<div class="flex flex-col max-w-3xl">
+<div class="flex items-center gap-space-sm mb-space-xs">
+<h1 class="font-headline-title text-headline-title text-on-surface">Hub LLM &amp; Centro de Conocimiento IA</h1>
+<div class="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-micro text-label-micro">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Dominio Activo: llm.empliados.net</span>
+</div>
+</div>
+<p class="font-body-default text-body-sm text-on-surface-variant">
+        Gestión de FAQs, artículos estructurados y agentes orientados al rastreo y citación por modelos de lenguaje (ChatGPT, Perplexity, Gemini, Claude) en <span class="font-semibold text-primary">llm.empliados.net</span>.
+      </p>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-space-sm flex-shrink-0">
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-on-surface shadow-sm hover:bg-surface-container-low transition-all font-body-medium text-body-sm">
+<span class="material-symbols-outlined text-[18px] text-primary">open_in_new</span>
+<span>Previsualizar Hub Público</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-primary text-on-primary shadow-sm hover:opacity-95 transition-all font-body-medium text-body-sm">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+<span>Crear Nuevo Contenido IA</span>
+</button>
+</div>
+</div>
+<!-- KPI Grid (4 Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md mb-space-xl">
+<!-- Card 1: FAQs -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between mb-space-sm">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">FAQs Indexadas por LLMs</span>
+<span class="font-headline-metric text-headline-metric text-on-surface mt-1">21</span>
+</div>
+<div class="w-9 h-9 rounded-lg bg-primary-fixed/50 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">help_center</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm pt-space-xs">
+<span class="font-body-sm text-on-surface-variant">2 hubs temáticos activos</span>
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-badge-label text-badge-label bg-secondary-container/50 text-on-secondary-container">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+          +4 este mes
+        </span>
+</div>
+</div>
+<!-- Card 2: Artículos -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between mb-space-sm">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Artículos Técnicos &amp; RAG</span>
+<span class="font-headline-metric text-headline-metric text-on-surface mt-1">18</span>
+</div>
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">article</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm pt-space-xs">
+<span class="font-body-sm text-on-surface-variant">Base en llm.empliados.net</span>
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-badge-label text-badge-label bg-surface-container-high text-on-surface-variant">
+          100% legibles bots
+        </span>
+</div>
+</div>
+<!-- Card 3: Agéntica -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between mb-space-sm">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Flujos Agénticos Activos</span>
+<span class="font-headline-metric text-headline-metric text-on-surface mt-1">6</span>
+</div>
+<div class="w-9 h-9 rounded-lg bg-tertiary-fixed/60 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]">smart_toy</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm pt-space-xs">
+<span class="font-body-sm text-on-surface-variant">Demos SOL, Teo, Dispatch</span>
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-badge-label text-badge-label bg-primary-fixed text-primary">
+          Alta citación SOV
+        </span>
+</div>
+</div>
+<!-- Card 4: Score LLM -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between mb-space-sm">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Score de Legibilidad LLM</span>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="font-headline-metric text-headline-metric text-on-surface">94</span>
+<span class="font-body-sm text-outline">/ 100</span>
+</div>
+</div>
+<div class="w-9 h-9 rounded-lg bg-secondary-container/40 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm pt-space-xs">
+<span class="font-body-sm text-on-surface-variant">Markdown + JSON-LD</span>
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-badge-label text-badge-label bg-secondary-container/50 text-on-secondary-container">
+          Óptimo
+        </span>
+</div>
+</div>
+</div>
+<!-- Filter Tabs & Quick Search Bar -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm mb-space-md flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<!-- Category Tabs -->
+<div class="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0" id="hub-filter-tabs">
+<button class="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-body-medium text-body-sm whitespace-nowrap shadow-sm" data-filter="all">
+        Todos (45)
+      </button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all font-body-medium text-body-sm whitespace-nowrap" data-filter="faq">
+        FAQs (21)
+      </button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all font-body-medium text-body-sm whitespace-nowrap" data-filter="articulos">
+        Artículos (18)
+      </button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all font-body-medium text-body-sm whitespace-nowrap" data-filter="agentica">
+        Agéntica &amp; Flujos (6)
+      </button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all font-body-medium text-body-sm whitespace-nowrap" data-filter="drafts">
+        Borradores (2)
+      </button>
+</div>
+<!-- Search & Secondary Filters -->
+<div class="flex items-center gap-space-sm flex-shrink-0">
+<div class="relative flex items-center bg-surface-container-low rounded-lg px-space-sm py-1.5 w-64 focus-within:bg-surface-container-lowest focus-within:shadow-sm transition-all">
+<span class="material-symbols-outlined text-outline text-[18px] mr-1">search</span>
+<input class="w-full bg-transparent border-none outline-none font-body-default text-body-sm text-on-surface placeholder:text-outline" id="hub-search-input" placeholder="Buscar path, título..." type="text"/>
+</div>
+<div class="flex items-center bg-surface-container-low rounded-lg px-space-sm py-1.5">
+<span class="material-symbols-outlined text-outline text-[18px] mr-1">sort</span>
+<select class="bg-transparent border-none outline-none font-body-medium text-body-sm text-on-surface cursor-pointer">
+<option>Más citados</option>
+<option>Recién actualizados</option>
+<option>Mayor índice SOV</option>
+</select>
+</div>
+<button class="inline-flex items-center gap-1 px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-all font-body-medium text-body-sm" title="Exportar llms.txt estructurado">
+<span class="material-symbols-outlined text-[16px] text-primary">download</span>
+<span class="font-label-micro text-label-micro uppercase">llms.txt</span>
+</button>
+</div>
+</div>
+<!-- Main Table Section: Mapa del Hub LLM & Contenidos -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden mb-space-xl">
+<div class="p-space-lg flex items-center justify-between bg-surface-container-lowest">
+<div class="flex items-center gap-space-sm">
+<div class="w-7 h-7 rounded-md bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">hub</span>
+</div>
+<div>
+<h2 class="font-headline-title text-[17px] text-on-surface">Mapa del Hub &amp; Rutas Estructuradas</h2>
+<span class="font-body-sm text-[12px] text-outline">Jerarquía de URLs renderizadas en Markdown con metadatos Semánticos para LLMs</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-micro text-label-micro text-on-surface-variant uppercase bg-surface-container px-2 py-1 rounded">6 rutas prioritarias</span>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left" id="hub-routes-table">
+<thead>
+<tr class="bg-surface-container-low text-outline font-label-micro text-label-micro uppercase tracking-wider">
+<th class="py-space-sm px-space-lg">Ruta / Path LLM</th>
+<th class="py-space-sm px-space-md">Tipo</th>
+<th class="py-space-sm px-space-md">Contenido / Semántica</th>
+<th class="py-space-sm px-space-md">Posts / Demos</th>
+<th class="py-space-sm px-space-md">Citas LLMs</th>
+<th class="py-space-sm px-space-md">Última Act.</th>
+<th class="py-space-sm px-space-md">Estado Crawler</th>
+<th class="py-space-sm px-space-lg text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-body-sm font-body-default text-on-surface">
+<!-- Row 1: FAQ Reclamos -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group cursor-pointer" data-category="faq">
+<td class="py-space-md px-space-lg font-metric-tabular text-body-sm text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-colors">link</span>
+<span class="font-semibold">llm.empliados.net/faq/reclamos</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-badge-label text-[11px] bg-primary-fixed text-primary font-semibold">
+                FAQ
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-xs">
+<div class="font-body-medium text-on-surface truncate">Resolución automática de reclamos con IA para transporte</div>
+<div class="text-[12px] text-outline">Incluye schema FAQPage y prompts de desvío</div>
+</td>
+<td class="py-space-md px-space-md font-metric-tabular text-on-surface-variant">
+              12 posts
+            </td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular font-semibold text-on-surface">84</span>
+<span class="text-[11px] text-outline">/ mes</span>
+<div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-on-surface-variant font-body-sm">
+              Hoy 11:20
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-badge-label text-[11px] bg-secondary-container/50 text-on-secondary-container font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                Indexado
+              </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Testear en ChatGPT / Perplexity">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Editar Markdown">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: FAQ Seguimiento -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group cursor-pointer" data-category="faq">
+<td class="py-space-md px-space-lg font-metric-tabular text-body-sm text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-colors">link</span>
+<span class="font-semibold">llm.empliados.net/faq/seguimiento</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-badge-label text-[11px] bg-primary-fixed text-primary font-semibold">
+                FAQ
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-xs">
+<div class="font-body-medium text-on-surface truncate">Tracking autónomo 24/7 y notificación por WhatsApp</div>
+<div class="text-[12px] text-outline">9 casos de uso y respuestas contextualizadas</div>
+</td>
+<td class="py-space-md px-space-md font-metric-tabular text-on-surface-variant">
+              9 posts
+            </td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular font-semibold text-on-surface">62</span>
+<span class="text-[11px] text-outline">/ mes</span>
+<div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 58%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-on-surface-variant font-body-sm">
+              Ayer
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-badge-label text-[11px] bg-secondary-container/50 text-on-secondary-container font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                Indexado
+              </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Testear en ChatGPT / Perplexity">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Editar Markdown">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Artículos SOL -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group cursor-pointer" data-category="articulos">
+<td class="py-space-md px-space-lg font-metric-tabular text-body-sm text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-colors">link</span>
+<span class="font-semibold">llm.empliados.net/articulos/sistema-operativo-logistico</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-badge-label text-[11px] bg-surface-container-high text-on-surface font-semibold">
+                Artículo
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-xs">
+<div class="font-body-medium text-on-surface truncate">Qué es un SOL (Sistema Operativo Logístico) con agentes IA</div>
+<div class="text-[12px] text-outline">Citado frecuentemente por GPT-4o y Perplexity Pro</div>
+</td>
+<td class="py-space-md px-space-md font-metric-tabular text-on-surface-variant">
+              18 páginas
+            </td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular font-semibold text-secondary">140</span>
+<span class="text-[11px] text-outline">/ mes</span>
+<div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 95%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-on-surface-variant font-body-sm">
+              Hace 2d
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-badge-label text-[11px] bg-secondary-container/50 text-on-secondary-container font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                Indexado
+              </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Testear en ChatGPT / Perplexity">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Editar Markdown">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4: Agéntica Teo -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group cursor-pointer" data-category="agentica">
+<td class="py-space-md px-space-lg font-metric-tabular text-body-sm text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-colors">link</span>
+<span class="font-semibold">llm.empliados.net/agentica/flujos-soporte</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-badge-label text-[11px] bg-tertiary-fixed text-tertiary font-semibold">
+                Agéntica
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-xs">
+<div class="font-body-medium text-on-surface truncate">Demo ejecutable de Teo para consultas de flota y despacho</div>
+<div class="text-[12px] text-outline">Sandbox interactivo + JSON API spec para LLM tools</div>
+</td>
+<td class="py-space-md px-space-md font-metric-tabular text-on-surface-variant">
+              6 demos
+            </td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular font-semibold text-on-surface">95</span>
+<span class="text-[11px] text-outline">/ mes</span>
+<div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 82%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-on-surface-variant font-body-sm">
+              Hoy 09:15
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-badge-label text-[11px] bg-secondary-container/50 text-on-secondary-container font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                Indexado
+              </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Testear en ChatGPT / Perplexity">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Editar Markdown">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: Artículo Integración TMS -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group cursor-pointer" data-category="articulos">
+<td class="py-space-md px-space-lg font-metric-tabular text-body-sm text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-colors">link</span>
+<span class="font-semibold">llm.empliados.net/articulos/integracion-tms-erp</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-badge-label text-[11px] bg-surface-container-high text-on-surface font-semibold">
+                Artículo
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-xs">
+<div class="font-body-medium text-on-surface truncate">Conexión en tiempo real con TMS y WMS para RAG dinámico</div>
+<div class="text-[12px] text-outline">Guía técnica con endpoints y arquitecturas de referencia</div>
+</td>
+<td class="py-space-md px-space-md font-metric-tabular text-on-surface-variant">
+              Guía técnica
+            </td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular font-semibold text-on-surface">38</span>
+<span class="text-[11px] text-outline">/ mes</span>
+<div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 38%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-on-surface-variant font-body-sm">
+              Hace 4d
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-badge-label text-[11px] bg-secondary-container/50 text-on-secondary-container font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                Indexado
+              </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Testear en ChatGPT / Perplexity">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Editar Markdown">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 6: FAQ Costos -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group cursor-pointer" data-category="faq">
+<td class="py-space-md px-space-lg font-metric-tabular text-body-sm text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-colors">link</span>
+<span class="font-semibold">llm.empliados.net/faq/costos-implementacion</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-badge-label text-[11px] bg-primary-fixed text-primary font-semibold">
+                FAQ
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-xs">
+<div class="font-body-medium text-on-surface truncate">Estructura de costos, ROI y tiempos de despliegue en pymes</div>
+<div class="text-[12px] text-outline">Comparativa de planes y retorno estimado en 60 días</div>
+</td>
+<td class="py-space-md px-space-md font-metric-tabular text-on-surface-variant">
+              4 posts
+            </td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-metric-tabular font-semibold text-on-surface">51</span>
+<span class="text-[11px] text-outline">/ mes</span>
+<div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 50%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-on-surface-variant font-body-sm">
+              Hace 1 semana
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-badge-label text-[11px] bg-surface-container-high text-on-surface-variant font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                Cacheado
+              </span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<div class="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Testear en ChatGPT / Perplexity">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Editar Markdown">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" title="Más opciones">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="p-space-md bg-surface-container-low/40 flex items-center justify-between text-body-sm">
+<span class="text-on-surface-variant font-body-sm">Mostrando 6 de 45 recursos estructurados</span>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded bg-surface-container-lowest text-on-surface shadow-sm font-label-micro text-label-micro">1</button>
+<button class="p-1.5 rounded text-on-surface-variant hover:bg-surface-container font-label-micro text-label-micro">2</button>
+<button class="p-1.5 rounded text-on-surface-variant hover:bg-surface-container font-label-micro text-label-micro">3</button>
+</div>
+</div>
+</div>
+<!-- Bottom Bento: Diagnóstico llms.txt & Recomendaciones IA -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- Left Column (7 cols): llms.txt & Crawlers Feeds -->
+<div class="lg:col-span-7 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</div>
+<div>
+<h3 class="font-headline-title text-body-medium font-semibold text-on-surface">Configuración y Feed llms.txt</h3>
+<p class="font-body-sm text-[12px] text-outline">Especificación directa para GPTBot, PerplexityBot y ClaudeBot</p>
+</div>
+</div>
+<button class="inline-flex items-center gap-1 px-space-sm py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary-fixed-dim transition-colors font-badge-label text-badge-label">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+            Re-generar llms.txt
+          </button>
+</div>
+<!-- Terminal / Monospace Code Preview -->
+<div class="bg-inverse-surface rounded-lg p-space-md font-mono text-[12px] leading-relaxed text-inverse-on-surface overflow-x-auto shadow-inner">
+<div class="text-outline-variant select-none mb-1"># https://llm.empliados.net/llms.txt</div>
+<div class="text-secondary-fixed">User-Agent: *</div>
+<div class="text-inverse-primary">Allow: /faq/</div>
+<div class="text-inverse-primary">Allow: /articulos/</div>
+<div class="text-inverse-primary">Allow: /agentica/</div>
+<div class="text-outline-variant mt-2 mb-1"># Documentación canónica para indexadores generativos</div>
+<div><span class="text-primary-fixed">Title:</span> Cleexs Empliados - IA Operativa para Logística</div>
+<div><span class="text-primary-fixed">Summary:</span> Suite de agentes de IA para resolución autónoma de reclamos y tracking de envíos.</div>
+<div><span class="text-primary-fixed">Index:</span> https://llm.empliados.net/sitemap-llm.xml</div>
+</div>
+</div>
+<!-- Crawler Status Badges -->
+<div class="flex items-center gap-space-md mt-space-md pt-space-md border-t-0 bg-surface-container-low/50 -mx-space-lg -mb-space-lg p-space-md rounded-b-xl">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-body-sm text-[12px] text-on-surface">GPTBot: <strong class="font-semibold">Permitido (200 OK)</strong></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-body-sm text-[12px] text-on-surface">PerplexityBot: <strong class="font-semibold">Permitido (200 OK)</strong></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-body-sm text-[12px] text-on-surface">ClaudeBot: <strong class="font-semibold">Activo</strong></span>
+</div>
+</div>
+</div>
+<!-- Right Column (5 cols): AI SOV Optimization Suggestions -->
+<div class="lg:col-span-5 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-space-sm mb-space-md">
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed/60 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]">insights</span>
+</div>
+<div>
+<h3 class="font-headline-title text-body-medium font-semibold text-on-surface">Sugerencias de Optimización IA</h3>
+<p class="font-body-sm text-[12px] text-outline">Recomendaciones de Teo para ganar cuota de voz (SOV)</p>
+</div>
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Suggestion 1 -->
+<div class="p-space-sm rounded-lg bg-surface-container-low hover:bg-surface-container transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="font-badge-label text-[11px] text-primary uppercase tracking-wider font-semibold">Oportunidad de Prompt</span>
+<span class="text-secondary font-metric-tabular text-[12px] font-semibold">+18% SOV est.</span>
+</div>
+<p class="font-body-sm text-on-surface text-[13px] leading-snug">
+              Agregar 3 preguntas sobre <span class="font-semibold">"tiempos de respuesta en reclamos de última milla"</span> a <code class="text-primary text-[11px]">/faq/reclamos</code> para captar citas en Perplexity Search.
+            </p>
+</div>
+<!-- Suggestion 2 -->
+<div class="p-space-sm rounded-lg bg-surface-container-low hover:bg-surface-container transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="font-badge-label text-[11px] text-tertiary uppercase tracking-wider font-semibold">Formato RAG</span>
+<span class="text-on-surface-variant font-metric-tabular text-[12px]">Prioridad Media</span>
+</div>
+<p class="font-body-sm text-on-surface text-[13px] leading-snug">
+              Convertir tablas de tarifas en <code class="text-primary text-[11px]">/faq/costos-implementacion</code> a formato Markdown con viñetas concisas para mejorar el chunking vectorial en modelos OpenAI.
+            </p>
+</div>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center justify-end">
+<button class="inline-flex items-center gap-1 text-primary hover:text-on-primary-fixed-variant transition-colors font-body-medium text-body-sm">
+<span>Ver todas las auditorías de Share of Voice</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple tab filtering interaction
+  const tabs = document.querySelectorAll('#hub-filter-tabs button');
+  const rows = document.querySelectorAll('#hub-routes-table tbody tr');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // Toggle active states
+      tabs.forEach(t => {
+        t.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+        t.classList.add('text-on-surface-variant');
+      });
+      tab.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+      tab.classList.remove('text-on-surface-variant');
+
+      const filter = tab.getAttribute('data-filter');
+      rows.forEach(row => {
+        if (filter === 'all' || row.getAttribute('data-category') === filter) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Client-side instant path search
+  const searchInput = document.getElementById('hub-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(term)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+</script></main></div></body></html>

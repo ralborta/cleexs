@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-surface":"#283044","error":"#ba1a1a","surface-tint":"#494bd6","on-primary":"#ffffff","secondary":"#006c49","background":"#faf8ff","primary-fixed-dim":"#c0c1ff","on-primary-container":"#fffbff","tertiary-container":"#8455ef","on-error-container":"#93000a","tertiary-fixed-dim":"#d0bcff","secondary-fixed-dim":"#4edea3","on-background":"#131b2e","outline":"#767586","outline-variant":"#c7c4d7","on-surface-variant":"#464554","on-primary-fixed-variant":"#2f2ebe","secondary-container":"#6cf8bb","inverse-primary":"#c0c1ff","on-surface":"#131b2e","on-secondary-fixed":"#002113","on-error":"#ffffff","on-primary-fixed":"#07006c","on-secondary":"#ffffff","surface-bright":"#faf8ff","on-secondary-fixed-variant":"#005236","primary-container":"#6063ee","primary":"#4648d4","tertiary":"#6b38d4","surface-container-low":"#f2f3ff","surface-container":"#eaedff","on-secondary-container":"#00714d","on-tertiary":"#ffffff","surface-container-highest":"#dae2fd","on-tertiary-container":"#fffbff","surface-container-lowest":"#ffffff","surface":"#faf8ff","on-tertiary-fixed-variant":"#5516be","on-tertiary-fixed":"#23005c","tertiary-fixed":"#e9ddff","surface-dim":"#d2d9f4","surface-variant":"#dae2fd","surface-container-high":"#e2e7ff","primary-fixed":"#e1e0ff","inverse-on-surface":"#eef0ff","error-container":"#ffdad6","secondary-fixed":"#6ffbbe"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-sm":"0.5rem","margin-desktop":"2rem","gutter-lg":"1.5rem","space-xs":"0.25rem","gutter":"1rem","space-md":"0.75rem","space-lg":"1.25rem","space-xl":"1.75rem","margin":"1.5rem"},"fontFamily":{"label-micro":["Inter"],"body-medium":["Plus Jakarta Sans"],"body-default":["Plus Jakarta Sans"],"metric-tabular":["Inter"],"badge-label":["Inter"],"display-lg":["Plus Jakarta Sans"],"headline-metric":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"headline-title":["Plus Jakarta Sans"],"label-nav":["Plus Jakarta Sans"]},"fontSize":{"label-micro":["11px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"body-medium":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"500"}],"body-default":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"400"}],"metric-tabular":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"badge-label":["12px",{"lineHeight":"16px","letterSpacing":"0.01em","fontWeight":"600"}],"display-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.03em","fontWeight":"700"}],"headline-metric":["26px",{"lineHeight":"32px","letterSpacing":"-0.025em","fontWeight":"700"}],"body-sm":["13px",{"lineHeight":"18px","letterSpacing":"0em","fontWeight":"400"}],"headline-title":["20px",{"lineHeight":"26px","letterSpacing":"-0.015em","fontWeight":"600"}],"label-nav":["13px",{"lineHeight":"18px","letterSpacing":"-0.005em","fontWeight":"500"}]}}}}</script><style id="embed-shell">
+      aside{display:none!important}
+      header.fixed{display:none!important}
+      main{margin-left:0!important;padding-top:1rem!important}
+      body{background:#faf8ff!important;margin:0}
+    </style></head><body class="bg-background font-body-default text-on-surface antialiased"><div class="pl-0"><main class="relative pt-6 bg-surface-bright min-h-screen px-margin-desktop py-space-xl"><div class="flex flex-col w-full">
+<!-- Dynamic Atmospheric Glow -->
+<div class="relative w-full">
+<div class="absolute -top-12 left-1/3 w-96 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute top-20 right-10 w-72 h-44 bg-secondary-container/20 rounded-full blur-2xl pointer-events-none -z-10"></div>
+<!-- Section Header & Controls -->
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-md mb-space-lg">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-title text-headline-title font-bold text-on-surface tracking-tight">AI Share of Voice (SOV)</span>
+<span class="inline-flex items-center gap-1 px-space-xs py-0.5 rounded-full bg-secondary-container/30 text-on-secondary-container font-label-micro text-label-micro">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+            Semana 42
+          </span>
+</div>
+<p class="font-body-default text-body-sm text-on-surface-variant mt-0.5">
+          Medición semanal de presencia de marca en motores de IA generativa (ChatGPT, Gemini, Perplexity, Claude).
+        </p>
+</div>
+<!-- Controls bar -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<div class="flex items-center bg-surface-container-low p-1 rounded-xl shadow-sm">
+<button class="px-space-md py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-micro text-label-micro shadow-sm transition-all" id="btn-period-7d">Últimos 7 días</button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-micro text-label-micro transition-all" id="btn-period-30d">30 días</button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-micro text-label-micro transition-all" id="btn-period-q">Trimestre</button>
+</div>
+<button class="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest hover:bg-surface-container-low text-on-surface font-label-nav text-label-nav rounded-xl shadow-sm transition-all">
+<span class="material-symbols-outlined text-[18px] text-primary">download</span>
+<span>Exportar reporte</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-2 bg-primary hover:bg-primary-container text-on-primary font-label-nav text-label-nav rounded-xl shadow-sm transition-all">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span>Nuevo prompt</span>
+</button>
+</div>
+</div>
+<!-- Top KPI Metric Band (4 Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-lg">
+<!-- Metric 1: SOV Actual -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">SOV Actual</span>
+<div class="w-8 h-8 rounded-lg bg-primary-fixed flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[18px]">pie_chart</span>
+</div>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-headline-metric text-headline-metric font-bold text-on-surface">10.2%</span>
+<span class="inline-flex items-center font-badge-label text-badge-label text-secondary bg-secondary-fixed/50 px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-0.5">trending_up</span>
+            +1.4 pp
+          </span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>5 menciones / 50 prompts</span>
+<span class="font-metric-tabular text-label-micro text-outline font-semibold">10% ratio</span>
+</div>
+</div>
+<!-- Metric 2: Motores Monitoreados -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Motores Activos</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</div>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-headline-metric text-headline-metric font-bold text-on-surface">4</span>
+<span class="font-body-default text-body-sm text-outline">con telemetría</span>
+</div>
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="font-label-micro text-label-micro px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface font-medium">ChatGPT</span>
+<span class="font-label-micro text-label-micro px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface font-medium">Gemini</span>
+<span class="font-label-micro text-label-micro px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface font-medium">Perplexity</span>
+<span class="font-label-micro text-label-micro px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface font-medium">Claude</span>
+</div>
+</div>
+<!-- Metric 3: Delta Semanal -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Variación Semanal</span>
+<div class="w-8 h-8 rounded-lg bg-secondary-fixed/40 flex items-center justify-center text-secondary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[18px]">query_stats</span>
+</div>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-headline-metric text-headline-metric font-bold text-secondary">+1 pp</span>
+<span class="font-body-default text-body-sm text-on-secondary-container bg-secondary-container/40 px-2 py-0.5 rounded">Ganando terreno</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>4 → 5 menciones</span>
+<span class="font-label-micro text-label-micro text-secondary font-semibold">+25% net</span>
+</div>
+</div>
+<!-- Metric 4: Rival Principal -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Rival Principal #1</span>
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[18px]">military_tech</span>
+</div>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-headline-metric text-headline-metric font-bold text-on-surface">Beetrack</span>
+<span class="font-label-micro text-label-micro text-tertiary bg-tertiary-fixed/60 px-2 py-0.5 rounded font-semibold">28% SOV</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>14 / 50 menciones</span>
+<span class="text-error font-body-sm flex items-center gap-0.5 text-label-micro font-semibold">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+            +2 vs ant.
+          </span>
+</div>
+</div>
+</div>
+<!-- Main Analytics Hub: 12 Columns (8 Cols Prompts Table + 4 Cols Engine Distribution & Strategy) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg mb-space-xl">
+<!-- Left Column: Diagnostic & Prompt Audit Table (8 Cols) -->
+<div class="xl:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm flex flex-col overflow-hidden">
+<!-- Table Header & Filter Strip -->
+<div class="p-space-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-md bg-surface-container-lowest">
+<div class="flex items-center gap-space-sm">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+<div>
+<h2 class="font-headline-title text-body-medium font-bold text-on-surface">Muestra de Prompts y Diagnóstico en Motores</h2>
+<span class="font-label-micro text-label-micro text-outline">8 prompts estratégicos de 50 monitoreados</span>
+</div>
+</div>
+<!-- Quick Filters -->
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-1 rounded bg-primary-fixed text-on-primary-fixed font-label-micro text-label-micro font-semibold">Todos (8)</button>
+<button class="px-space-sm py-1 rounded hover:bg-surface-container text-on-surface-variant font-label-micro text-label-micro">Aparece (5)</button>
+<button class="px-space-sm py-1 rounded hover:bg-surface-container text-on-surface-variant font-label-micro text-label-micro">Gaps / No (3)</button>
+</div>
+</div>
+<!-- Prompts Table -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low text-outline font-label-micro text-label-micro uppercase">
+<th class="py-space-sm px-space-lg">Prompt Analizado</th>
+<th class="py-space-sm px-space-md">Empliados</th>
+<th class="py-space-sm px-space-md">Líder Actual</th>
+<th class="py-space-sm px-space-md">Mejor Motor</th>
+<th class="py-space-sm px-space-lg text-right">Acción Sugerida</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low font-body-default text-body-sm">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group">
+<td class="py-space-md px-space-lg min-w-[240px]">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">chat_bubble_outline</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">agentes de IA para logística Argentina</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-medium text-body-sm text-secondary font-semibold">
+                  Empliados (Líder)
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">ChatGPT-4o</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded text-primary hover:bg-primary-fixed/50 font-label-micro text-label-micro font-medium transition-colors">
+                    Consolidar docs
+                  </button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">chat_bubble_outline</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">automatizar reclamos de envíos con IA</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-default text-body-sm text-on-surface">
+                  Empliados
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">Perplexity</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded text-primary hover:bg-primary-fixed/50 font-label-micro text-label-micro font-medium transition-colors">
+                    Reforzar Schema
+                  </button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">chat_bubble_outline</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">sistema operativo de logística SOL</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-default text-body-sm text-on-surface">
+                  Empliados
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">Claude 3.5</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded text-primary hover:bg-primary-fixed/50 font-label-micro text-label-micro font-medium transition-colors">
+                    Optimizar landing
+                  </button>
+</td>
+</tr>
+<!-- Row 4 (Gap) -->
+<tr class="bg-error-container/10 hover:bg-error-container/20 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-error">priority_high</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">IA para seguimiento de camiones 24/7</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-high text-outline font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                    No aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-medium text-body-sm text-on-surface-variant font-medium">
+                  project44
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">Gemini 1.5</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded bg-primary text-on-primary hover:bg-primary-container font-label-micro text-label-micro font-semibold transition-all shadow-sm">
+                    Crear artículo técnico
+                  </button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">chat_bubble_outline</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">agentes IA coordinación choferes y oficina</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-default text-body-sm text-on-surface">
+                  Empliados
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">ChatGPT-4o</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded text-primary hover:bg-primary-fixed/50 font-label-micro text-label-micro font-medium transition-colors">
+                    Actualizar FAQ
+                  </button>
+</td>
+</tr>
+<!-- Row 6 (Gap) -->
+<tr class="bg-error-container/10 hover:bg-error-container/20 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-error">priority_high</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">software logística con más de 25 viajes/día</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-high text-outline font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                    No aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-medium text-body-sm text-tertiary font-semibold">
+                  Beetrack
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">Perplexity</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded bg-primary text-on-primary hover:bg-primary-container font-label-micro text-label-micro font-semibold transition-all shadow-sm">
+                    Crear caso de éxito
+                  </button>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">chat_bubble_outline</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">reducir llamadas de seguimiento de envíos</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-default text-body-sm text-on-surface">
+                  Empliados
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">Claude 3.5</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded text-primary hover:bg-primary-fixed/50 font-label-micro text-label-micro font-medium transition-colors">
+                    Replicar en blog
+                  </button>
+</td>
+</tr>
+<!-- Row 8 (Gap) -->
+<tr class="bg-error-container/10 hover:bg-error-container/20 transition-colors group">
+<td class="py-space-md px-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[16px] text-error">priority_high</span>
+<span class="font-body-medium text-body-sm font-semibold text-on-surface">empleados virtuales para pymes de transporte</span>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-high text-outline font-label-micro text-label-micro font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                    No aparece
+                  </span>
+</td>
+<td class="py-space-md px-space-md font-body-medium text-body-sm text-on-surface-variant font-medium">
+                  Melonn
+                </td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-micro text-label-micro">Gemini 1.5</span>
+</td>
+<td class="py-space-md px-space-lg text-right">
+<button class="px-space-sm py-1 rounded bg-primary text-on-primary hover:bg-primary-container font-label-micro text-label-micro font-semibold transition-all shadow-sm">
+                    Campaña PR / Backlinks
+                  </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Footer pagination note -->
+<div class="p-space-md bg-surface-container-low/40 flex items-center justify-between text-label-micro text-outline font-label-micro">
+<span>Mostrando 8 de 50 prompts evaluados mediante LLM Batch Runner</span>
+<a class="text-primary hover:underline font-semibold flex items-center gap-0.5" href="#">
+            Ver los 50 prompts completos
+            <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Right Column: Engine Breakdown & Competitive Radar (4 Cols) -->
+<div class="xl:col-span-4 flex flex-col gap-space-lg">
+<!-- Engine Distribution Card -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col">
+<div class="flex items-center justify-between mb-space-md">
+<div>
+<h3 class="font-headline-title text-body-medium font-bold text-on-surface">Distribución por Motor IA</h3>
+<span class="font-label-micro text-label-micro text-outline">Tasa de citación ponderada en respuestas</span>
+</div>
+<div class="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">hub</span>
+</div>
+</div>
+<!-- Engine Bars -->
+<div class="flex flex-col gap-space-md mt-space-xs">
+<!-- ChatGPT -->
+<div>
+<div class="flex items-center justify-between text-body-sm mb-1">
+<span class="font-body-medium font-semibold text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                  ChatGPT (GPT-4o)
+                </span>
+<span class="font-metric-tabular font-bold text-on-surface">42%</span>
+</div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-700" style="width: 42%;"></div>
+</div>
+<span class="font-label-micro text-[10px] text-outline mt-0.5 block">Principal generador de menciones orgánicas</span>
+</div>
+<!-- Perplexity -->
+<div>
+<div class="flex items-center justify-between text-body-sm mb-1">
+<span class="font-body-medium font-semibold text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+                  Perplexity AI
+                </span>
+<span class="font-metric-tabular font-bold text-on-surface">28%</span>
+</div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full transition-all duration-700" style="width: 28%;"></div>
+</div>
+<span class="font-label-micro text-[10px] text-outline mt-0.5 block">Alto ratio de citas directas con enlace</span>
+</div>
+<!-- Gemini -->
+<div>
+<div class="flex items-center justify-between text-body-sm mb-1">
+<span class="font-body-medium font-semibold text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                  Google Gemini 1.5
+                </span>
+<span class="font-metric-tabular font-bold text-on-surface">18%</span>
+</div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full transition-all duration-700" style="width: 18%;"></div>
+</div>
+<span class="font-label-micro text-[10px] text-outline mt-0.5 block">Mayor sesgo hacia Beetrack y Melonn</span>
+</div>
+<!-- Claude -->
+<div>
+<div class="flex items-center justify-between text-body-sm mb-1">
+<span class="font-body-medium font-semibold text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+                  Anthropic Claude 3.5
+                </span>
+<span class="font-metric-tabular font-bold text-on-surface">12%</span>
+</div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-outline rounded-full transition-all duration-700" style="width: 12%;"></div>
+</div>
+<span class="font-label-micro text-[10px] text-outline mt-0.5 block">Responde mejor a casos técnicos y SDK</span>
+</div>
+</div>
+<!-- Mini Inline Chart SVG Visualization -->
+<div class="mt-space-lg pt-space-md bg-surface-container-low rounded-xl p-space-md">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider block mb-space-xs">Tendencia SOV (Últimas 6 semanas)</span>
+<div class="h-16 w-full flex items-end gap-2 pt-2">
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full bg-primary-fixed rounded-t h-6"></div>
+<span class="font-label-micro text-[9px] text-outline">S37</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full bg-primary-fixed rounded-t h-7"></div>
+<span class="font-label-micro text-[9px] text-outline">S38</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full bg-primary-fixed rounded-t h-8"></div>
+<span class="font-label-micro text-[9px] text-outline">S39</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full bg-primary-fixed rounded-t h-7"></div>
+<span class="font-label-micro text-[9px] text-outline">S40</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full bg-primary-fixed rounded-t h-10"></div>
+<span class="font-label-micro text-[9px] text-outline">S41</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full bg-primary rounded-t h-12 shadow-sm"></div>
+<span class="font-label-micro text-[9px] text-primary font-bold">S42</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Strategic Gap Opportunity Card -->
+<div class="bg-gradient-to-br from-primary-fixed/30 via-surface-container-lowest to-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-space-xs text-primary mb-space-xs">
+<span class="material-symbols-outlined text-[20px]">lightbulb</span>
+<span class="font-label-micro text-label-micro font-bold uppercase tracking-wider">Oportunidad Prioritaria</span>
+</div>
+<h4 class="font-headline-title text-body-medium font-bold text-on-surface">Cierre de Brecha vs Beetrack</h4>
+<p class="font-body-default text-body-sm text-on-surface-variant mt-1">
+              Detectamos 3 prompts con alto volumen donde los LLMs recomiendan <strong class="text-on-surface">Beetrack</strong> porque no encuentran comparativas públicas de Empliados para flotas de +25 camiones.
+            </p>
+</div>
+<div class="mt-space-md pt-space-md flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase">Impacto estimado</span>
+<span class="font-body-medium text-body-sm font-bold text-secondary">+3.8 pp SOV</span>
+</div>
+<a class="px-space-md py-1.5 bg-primary text-on-primary rounded-lg font-label-nav text-label-nav font-semibold hover:bg-primary-container transition-all shadow-sm" href="#">
+              Generar Contenido
+            </a>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Comparative Context: Top 4 Competitors SOV Ranking -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm mb-space-xl">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm mb-space-md">
+<div>
+<h3 class="font-headline-title text-body-medium font-bold text-on-surface">Cuota de Voz Competitiva en Respuestas IA</h3>
+<span class="font-label-micro text-label-micro text-outline">Benchmark sobre 50 prompts evaluados</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-micro text-label-micro text-outline">Actualizado hoy 08:30 AM</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-space-md">
+<!-- Competitor 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-medium text-body-sm font-bold text-on-surface">1. Beetrack</span>
+<span class="px-2 py-0.5 rounded bg-tertiary-fixed text-tertiary font-label-micro text-label-micro font-bold">28% SOV</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 mb-space-xs">
+<div class="bg-tertiary h-1.5 rounded-full" style="width: 28%;"></div>
+</div>
+<span class="font-body-sm text-[12px] text-outline">14 menciones • Dominio en ruteo</span>
+</div>
+<!-- Competitor 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-medium text-body-sm font-bold text-on-surface">2. project44</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-micro text-label-micro font-bold">18% SOV</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 mb-space-xs">
+<div class="bg-outline text-outline h-1.5 rounded-full" style="width: 18%;"></div>
+</div>
+<span class="font-body-sm text-[12px] text-outline">9 menciones • Fuerte en visibilidad</span>
+</div>
+<!-- Empliados (You) -->
+<div class="p-space-md rounded-xl bg-primary-fixed/40 ring-1 ring-primary/20 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-medium text-body-sm font-bold text-primary flex items-center gap-1">
+              3. Empliados (Tú)
+              <span class="material-symbols-outlined text-[16px]">verified</span>
+</span>
+<span class="px-2 py-0.5 rounded bg-primary text-on-primary font-label-micro text-label-micro font-bold">10.2% SOV</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 mb-space-xs">
+<div class="bg-primary h-1.5 rounded-full" style="width: 10.2%;"></div>
+</div>
+<span class="font-body-sm text-[12px] text-primary font-medium">5 menciones • Creciendo en agentes</span>
+</div>
+<!-- Competitor 4 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-medium text-body-sm font-bold text-on-surface">4. Melonn</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-micro text-label-micro font-bold">8% SOV</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 mb-space-xs">
+<div class="bg-outline h-1.5 rounded-full" style="width: 8%;"></div>
+</div>
+<span class="font-body-sm text-[12px] text-outline">4 menciones • Enfoque ecommerce</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple tab selector toggle for demonstration
+  const buttons = ['btn-period-7d', 'btn-period-30d', 'btn-period-q'];
+  buttons.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', () => {
+      buttons.forEach(otherId => {
+        const otherEl = document.getElementById(otherId);
+        if (!otherEl) return;
+        otherEl.classList.remove('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm');
+        otherEl.classList.add('text-on-surface-variant');
+      });
+      el.classList.add('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm');
+      el.classList.remove('text-on-surface-variant');
+    });
+  });
+</script></main></div></body></html>

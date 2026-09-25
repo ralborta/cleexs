@@ -1,0 +1,15 @@
+{
+  "dashboard": "/ecomm/portal-empliados/stitch/dashboard-conversi-n.html",
+  "reportes": "/ecomm/portal-empliados/stitch/reportes-inteligencia-anal-tica.html",
+  "funnel": "/ecomm/portal-empliados/stitch/funnel-de-adquisici-n.html",
+  "referidos-campanas": "/ecomm/portal-empliados/stitch/campa-as-y-referidos.html",
+  "sov": "/ecomm/portal-empliados/stitch/ai-share-of-voice.html",
+  "contenido": "/ecomm/portal-empliados/stitch/contenido-visibilidad-ia.html",
+  "llm-hub": "/ecomm/portal-empliados/stitch/hub-llm-art-culos-de-ia.html",
+  "auditoria": "/ecomm/portal-empliados/stitch/auditor-a-ia.html",
+  "email": "/ecomm/portal-empliados/stitch/email-secuencias-y-env-os.html",
+  "email-templates": "/ecomm/portal-empliados/stitch/email-secuencias-y-env-os.html",
+  "email-envios": "/ecomm/portal-empliados/stitch/email-secuencias-y-env-os.html",
+  "convertir": "/ecomm/portal-empliados/stitch/convertir-prioridades-landing-cro.html",
+  "settings": "/ecomm/portal-empliados/stitch/configuraci-n-e-integraciones.html"
+}
