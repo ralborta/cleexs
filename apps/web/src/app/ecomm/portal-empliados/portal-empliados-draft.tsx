@@ -33,7 +33,6 @@ import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
 import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
-import { ConversionMetricsDashboard } from '@/components/conversion/conversion-metrics-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
 import { SponsorLinkBuilder } from '@/components/tools/sponsor-link-builder';
@@ -42,14 +41,10 @@ import { EmailOutreachReportDashboard } from '@/components/reportes/email-outrea
 import { OnboardingReportDashboard } from '@/components/reportes/onboarding-report-dashboard';
 import { ReportesHub } from '@/components/reportes/reportes-hub';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
-import {
-  loadPortalGraficoEmailLeads,
-  loadPortalGraficoMetrics,
-  loadPortalGraficoUnlockClicks,
-} from '@/lib/portal-grafico-demo-data';
 import { createPortalReportesLoaders } from '@/lib/portal-reportes-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
+import { AgencyDashboardView } from './agency-dashboard-view';
 
 type SectionId =
   | 'dashboard'
@@ -158,17 +153,6 @@ const AGENTS = [
   { name: 'Agente de Documentación', skus: 1, page: 'Lista', sovHits: 4, status: 'Indexada', source: 'existente' as const },
   { name: 'Agente de Alertas operativas', skus: 1, page: 'Lista', sovHits: 6, status: 'Indexada', source: 'teo' as const },
   { name: 'Agente de Reportes', skus: 1, page: 'En progreso', sovHits: 2, status: 'Borrador', source: 'teo' as const },
-];
-
-const BUSINESS_CHART = [
-  { label: 'Ene', mrr: 12, pipeline: 28, demos: 9 },
-  { label: 'Feb', mrr: 14, pipeline: 32, demos: 11 },
-  { label: 'Mar', mrr: 16, pipeline: 35, demos: 14 },
-  { label: 'Abr', mrr: 19, pipeline: 41, demos: 18 },
-  { label: 'May', mrr: 22, pipeline: 48, demos: 21 },
-  { label: 'Jun', mrr: 26, pipeline: 52, demos: 23 },
-  { label: 'Jul', mrr: 29, pipeline: 58, demos: 27 },
-  { label: 'Ago', mrr: 34, pipeline: 64, demos: 31 },
 ];
 
 const TRAFFIC_SOURCES = [
@@ -388,100 +372,7 @@ function Toggle({
 }
 
 function DashboardView() {
-  const maxPipe = Math.max(...BUSINESS_CHART.map((d) => d.pipeline));
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-start gap-3">
-          <div className={agencyCls.iconBox}>
-            <BarChart3 className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className={agencyCls.h1}>Conversión y Métricas Generales</h1>
-            <p className={`mt-0.5 ${agencyCls.sub}`}>
-              Chart de negocios + embudo Empliados · datos en vivo del portal.
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className={agencyCls.cardSm}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={agencyCls.iconBoxOk}>
-                <TrendingUp className="h-4 w-4" />
-              </span>
-              <span className={agencyCls.labelMicro}>MRR Activo</span>
-            </div>
-            <span className={agencyCls.trendUp}>+18%</span>
-          </div>
-          <p className={`mt-3 ${agencyCls.metric}`}>US$ 34k</p>
-          <p className="mt-1 text-[11px] text-[#94a3b8]">vs mes anterior</p>
-        </div>
-        <div className={agencyCls.cardSm}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={agencyCls.iconBoxSm}>
-                <Target className="h-4 w-4" />
-              </span>
-              <span className={agencyCls.labelMicro}>Pipeline Calificado</span>
-            </div>
-          </div>
-          <p className={`mt-3 ${agencyCls.metric}`}>US$ 64k</p>
-          <p className="mt-1 text-[11px] text-[#94a3b8]">12 deals abiertos</p>
-        </div>
-        <div className={agencyCls.cardSm}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={agencyCls.iconBoxSm}>
-                <Bot className="h-4 w-4" />
-              </span>
-              <span className={agencyCls.labelMicro}>Demos / agentes</span>
-            </div>
-          </div>
-          <p className={`mt-3 ${agencyCls.metric}`}>31</p>
-          <p className="mt-1 text-[11px] text-[#94a3b8]">agentes online este mes</p>
-        </div>
-      </div>
-
-      <Panel title="Tendencia de negocio" action={<Badge tone="emerald">MRR · Pipeline · Demos</Badge>}>
-        <div className="flex h-44 items-end gap-2 sm:gap-3">
-          {BUSINESS_CHART.map((d) => (
-            <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
-              <div className="flex w-full items-end justify-center gap-0.5" style={{ height: '100%' }}>
-                <div
-                  className="w-[28%] rounded-t bg-[#10b981]"
-                  style={{ height: `${(d.mrr / maxPipe) * 100}%` }}
-                  title={`MRR ${d.mrr}k`}
-                />
-                <div
-                  className="w-[28%] rounded-t bg-[#4648d4]/85"
-                  style={{ height: `${(d.pipeline / maxPipe) * 100}%` }}
-                  title={`Pipeline ${d.pipeline}k`}
-                />
-                <div
-                  className="w-[28%] rounded-t bg-[#8b5cf6]/80"
-                  style={{ height: `${(d.demos / maxPipe) * 100}%` }}
-                  title={`Demos ${d.demos}`}
-                />
-              </div>
-              <span className="text-[10px] text-[#94a3b8]">{d.label}</span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-[#64748b]">Verde = MRR · Índigo = pipeline · Violeta = demos.</p>
-      </Panel>
-
-      <ConversionMetricsDashboard
-        mode="portal"
-        title="Embudo de Adquisición Empliados"
-        loadMetrics={loadPortalGraficoMetrics}
-        loadEmailLeads={loadPortalGraficoEmailLeads}
-        loadUnlockClicks={loadPortalGraficoUnlockClicks}
-      />
-    </div>
-  );
+  return <AgencyDashboardView />;
 }
 
 function TraficoView() {
@@ -1672,24 +1563,51 @@ export function PortalEmpliadosDraft() {
         fontFamily: '"Plus Jakarta Sans", Inter, system-ui, sans-serif',
       }}
     >
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#e2e8f0] bg-white/90 px-4 backdrop-blur-xl md:px-6">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-[#e2e8f0] bg-white/90 px-4 backdrop-blur-xl md:px-6">
+        <div className="flex items-center gap-3 md:hidden">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4648d4] text-xs font-bold text-white shadow-sm">
             C
           </span>
-          <div className="leading-tight">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4648d4]">Cleexs Agency</p>
-            <p className="text-sm font-semibold text-[#0f172a]">Portal Empliados</p>
-          </div>
         </div>
-        <div className="text-right leading-tight">
-          <p className="text-xs font-medium text-[#0f172a]">empliados.net</p>
-          <p className="text-[10px] text-[#64748b]">Workspace activo</p>
+        <div className="relative hidden min-w-0 flex-1 md:block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+          <input
+            type="search"
+            placeholder="Buscar métricas, prompts, agentes…"
+            className="w-full max-w-xl rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2 pl-9 pr-12 text-[13px] text-[#0f172a] outline-none placeholder:text-[#94a3b8] focus:border-[#c7d2fe] focus:ring-2 focus:ring-[#eef2ff]"
+          />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-[#e2e8f0] bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#94a3b8]">
+            ⌘K
+          </span>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-full bg-[#d1fae5] px-2.5 py-1 text-[11px] font-semibold text-[#047857] sm:inline-flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+            En vivo
+          </span>
+          <div className="text-right leading-tight">
+            <p className="text-xs font-medium text-[#0f172a]">empliados.net</p>
+            <p className="text-[10px] text-[#64748b]">Workspace activo</p>
+          </div>
         </div>
       </header>
 
       <div className="flex min-h-[calc(100vh-3.5rem)]">
         <aside className="hidden w-60 shrink-0 overflow-y-auto border-r border-[#e2e8f0] bg-white py-5 md:block">
+          <div className="mb-5 flex items-center gap-2.5 px-4">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4648d4] text-xs font-bold text-white shadow-sm">
+              C
+            </span>
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-[13px] font-bold text-[#0f172a]">Cleexs</p>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">
+                Portal Empliados
+              </p>
+            </div>
+            <span className="ml-auto rounded-full bg-[#e0f2fe] px-2 py-0.5 text-[10px] font-bold text-[#0369a1]">
+              Admin
+            </span>
+          </div>
           <nav className="flex flex-col gap-5 px-3">
             {NAV.map((group) => (
               <div key={group.title} className="flex flex-col gap-0.5">
@@ -1705,11 +1623,11 @@ export function PortalEmpliadosDraft() {
                       onClick={() => setSection(id)}
                       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition ${
                         active
-                          ? 'bg-[#eef2ff] text-[#4f46e5] shadow-sm ring-1 ring-[#eef2ff]'
+                          ? 'bg-[#4648d4] text-white shadow-sm'
                           : 'text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]'
                       }`}
                     >
-                      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#6366f1]' : 'text-[#94a3b8]'}`} />
+                      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-[#94a3b8]'}`} />
                       {label}
                     </button>
                   );
@@ -1739,7 +1657,15 @@ export function PortalEmpliadosDraft() {
             })}
           </nav>
 
-          <div className={fullBleed ? 'w-full' : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'}>
+          <div
+            className={
+              fullBleed
+                ? 'w-full'
+                : section === 'dashboard'
+                  ? 'mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-8'
+                  : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'
+            }
+          >
             {renderSection(section, setSection)}
           </div>
         </div>
