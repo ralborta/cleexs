@@ -21,6 +21,15 @@ function scaleForLanding(landing: string): number {
   return 1;
 }
 
+/** Baseline Stitch = ~15 días. Hoy/7/30 mueven el volumen. */
+function scaleForRange(from: string, to: string): number {
+  const a = Date.parse(`${from}T12:00:00.000Z`);
+  const b = Date.parse(`${to}T12:00:00.000Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 1;
+  const days = Math.round((b - a) / 86_400_000) + 1;
+  return Math.min(2.2, Math.max(0.1, days / 15));
+}
+
 function scaleCount(n: number, factor: number): number {
   return Math.max(0, Math.round(n * factor));
 }
@@ -120,7 +129,7 @@ const DEMO_EMAIL_LEADS: EmailLead[] = [
 /** Metrics demo Empliados (operadores logísticos). */
 export function buildPortalGraficoMetrics(args: ConversionLoadArgs): Metrics {
   const landing = (args.landing || 'all') as LandingKey;
-  const factor = scaleForLanding(landing);
+  const factor = scaleForLanding(landing) * scaleForRange(args.from, args.to);
 
   const homeVisitors = scaleCount(1280, factor);
   const pageViews = scaleCount(2140, factor);

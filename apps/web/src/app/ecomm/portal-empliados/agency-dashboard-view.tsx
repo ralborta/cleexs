@@ -132,6 +132,19 @@ export function AgencyDashboardView() {
   const dropVisitToDemo =
     visitors > 0 ? Math.round(((visitors - demos) / visitors) * 1000) / 10 : null;
 
+  // KPIs Stitch escalados con el mismo volumen que el embudo (canal + fechas).
+  const loadFactor = visitors > 0 ? visitors / 1280 : 0;
+  const mrr = Math.round(34_250 * loadFactor);
+  const mrrPrev = Math.round(28_920 * loadFactor);
+  const mrrDelta = mrrPrev > 0 ? Math.round(((mrr - mrrPrev) / mrrPrev) * 1000) / 10 : 0;
+  const pipeline = Math.round(64_800 * loadFactor);
+  const deals = Math.max(0, Math.round(12 * loadFactor));
+  const activaciones = Math.max(0, Math.round(31 * loadFactor));
+  const activacionesDelta = 24;
+  const sprintMeta = 35;
+  const sprintPct = sprintMeta > 0 ? Math.min(100, Math.round((activaciones / sprintMeta) * 100)) : 0;
+  const closeRate = 22;
+
   const referrers = (data?.emailsByReferrer ?? [])
     .filter((r) => r.refCode !== '__sin_referidor__')
     .slice(0, 5);
@@ -325,7 +338,7 @@ export function AgencyDashboardView() {
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
       ) : null}
 
-      {/* KPI bento 3 */}
+      {/* KPI bento 3 · mismos slots Stitch, números vivos con canal/fechas */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="relative flex flex-col justify-between overflow-hidden rounded-xl bg-white p-5 shadow-sm ring-1 ring-[#e2e8f0] transition hover:shadow-md">
           <div className="flex items-center justify-between">
@@ -337,18 +350,23 @@ export function AgencyDashboardView() {
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-bold text-[#047857]">
               <TrendingUp className="h-3.5 w-3.5" />
-              +18.4%
+              {mrrDelta >= 0 ? '+' : ''}
+              {mrrDelta}%
             </span>
           </div>
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold tracking-tight text-[#0f172a]">US$ 34,250</span>
+              <span className="text-[32px] font-bold tracking-tight text-[#0f172a] tabular-nums">
+                US$ {fmt(mrr)}
+              </span>
               <span className="text-[13px] text-[#94a3b8]">/ mes</span>
             </div>
             <p className="mt-1 text-[13px] text-[#64748b]">Ingresos recurrentes activos de contratos logísticos.</p>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] font-semibold text-[#94a3b8]">vs. $28,920 mes ant.</span>
+            <span className="text-[11px] font-semibold text-[#94a3b8] tabular-nums">
+              vs. ${fmt(mrrPrev)} mes ant.
+            </span>
             <svg className="h-6 w-24 text-[#10b981]" fill="none" viewBox="0 0 100 24">
               <path d="M0 20 L20 18 L40 14 L60 16 L80 8 L100 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
               <path d="M0 20 L20 18 L40 14 L60 16 L80 8 L100 2 L100 24 L0 24 Z" fill="currentColor" fillOpacity="0.08" />
@@ -364,17 +382,23 @@ export function AgencyDashboardView() {
               </div>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">Pipeline Calificado</span>
             </div>
-            <span className="rounded-full bg-[#e0e7ff] px-2 py-0.5 text-[11px] font-bold text-[#3730a3]">12 Deals</span>
+            <span className="rounded-full bg-[#e0e7ff] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#3730a3]">
+              {fmt(deals)} Deals
+            </span>
           </div>
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold tracking-tight text-[#0f172a]">US$ 64,800</span>
+              <span className="text-[32px] font-bold tracking-tight text-[#0f172a] tabular-nums">
+                US$ {fmt(pipeline)}
+              </span>
               <span className="text-[13px] text-[#94a3b8]">estimado</span>
             </div>
-            <p className="mt-1 text-[13px] text-[#64748b]">12 operadores logísticos en negociación activa.</p>
+            <p className="mt-1 text-[13px] text-[#64748b]">
+              {fmt(deals)} operadores logísticos en negociación activa.
+            </p>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] font-semibold text-[#94a3b8]">Tasa de cierre prom: 22%</span>
+            <span className="text-[11px] font-semibold text-[#94a3b8]">Tasa de cierre prom: {closeRate}%</span>
             <svg className="h-6 w-24 text-[#4648d4]" fill="none" viewBox="0 0 100 24">
               <path d="M0 22 L25 19 L50 15 L75 11 L100 4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
               <path d="M0 22 L25 19 L50 15 L75 11 L100 4 L100 24 L0 24 Z" fill="currentColor" fillOpacity="0.08" />
@@ -392,20 +416,20 @@ export function AgencyDashboardView() {
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-bold text-[#047857]">
               <TrendingUp className="h-3.5 w-3.5" />
-              +24%
+              +{activacionesDelta}%
             </span>
           </div>
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold tabular-nums tracking-tight text-[#0f172a]">31</span>
+              <span className="text-[32px] font-bold tabular-nums tracking-tight text-[#0f172a]">{fmt(activaciones)}</span>
               <span className="text-[13px] text-[#94a3b8]">agentes online</span>
             </div>
             <p className="mt-1 text-[13px] text-[#64748b]">Demos con flujos de carga y despacho sincronizados.</p>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] font-semibold text-[#94a3b8]">Meta de sprint: 35</span>
+            <span className="text-[11px] font-semibold text-[#94a3b8]">Meta de sprint: {sprintMeta}</span>
             <div className="h-2 w-24 overflow-hidden rounded-full bg-[#e2e8f0]">
-              <div className="h-full rounded-full bg-[#8b5cf6]" style={{ width: '88%' }} />
+              <div className="h-full rounded-full bg-[#8b5cf6]" style={{ width: `${sprintPct}%` }} />
             </div>
           </div>
         </div>
