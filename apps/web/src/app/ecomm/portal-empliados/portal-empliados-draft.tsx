@@ -49,8 +49,6 @@ import {
 } from '@/lib/portal-grafico-demo-data';
 import { createPortalReportesLoaders } from '@/lib/portal-reportes-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
-import { StitchFrame } from './stitch-frame';
-import { STITCH_SCREEN_BY_SECTION } from './stitch-screens';
 
 type SectionId =
   | 'dashboard'
@@ -1537,15 +1535,18 @@ function SettingsView() {
   );
 }
 
-function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
-  const stitchSrc = STITCH_SCREEN_BY_SECTION[id];
-  if (stitchSrc) {
-    const label =
-      NAV.flatMap((g) => g.links).find((l) => l.id === id)?.label ?? id;
-    return <StitchFrame src={stitchSrc} title={label} />;
-  }
+const FULL_BLEED_SECTIONS: SectionId[] = [
+  'email',
+  'email-templates',
+  'email-envios',
+  'referidos-campanas',
+  'auditoria',
+];
 
+function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
   switch (id) {
+    case 'dashboard':
+      return <DashboardView />;
     case 'trafico':
       return <TraficoView />;
     case 'funnel':
@@ -1582,8 +1583,6 @@ function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
       return <AuditoriaView />;
     case 'settings':
       return <SettingsView />;
-    case 'dashboard':
-      return <DashboardView />;
     default:
       return null;
   }
@@ -1599,7 +1598,7 @@ export function PortalEmpliadosDraft() {
     return 'Dashboard';
   }, [section]);
 
-  const isStitch = Boolean(STITCH_SCREEN_BY_SECTION[section]);
+  const fullBleed = FULL_BLEED_SECTIONS.includes(section);
 
   useEffect(() => {
     const id = 'agency-stitch-fonts';
@@ -1687,24 +1686,18 @@ export function PortalEmpliadosDraft() {
             })}
           </nav>
 
-          {isStitch ? (
-            renderSection(section, setSection)
-          ) : (
-            <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
-              {renderSection(section, setSection)}
-            </div>
-          )}
+          <div className={fullBleed ? 'w-full' : 'mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10'}>
+            {renderSection(section, setSection)}
+          </div>
         </div>
       </div>
 
-      {!isStitch ? (
-        <footer className="border-t border-[#e2e8f0] bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-[#64748b] sm:flex-row sm:items-center sm:justify-between">
-            <p>Cleexs Agency · {activeLabel}</p>
-            <p className="font-medium text-[#4648d4]">empliados.net</p>
-          </div>
-        </footer>
-      ) : null}
+      <footer className="border-t border-[#e2e8f0] bg-white px-4 py-5 md:pl-[calc(15rem+2rem)] md:pr-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-[#64748b] sm:flex-row sm:items-center sm:justify-between">
+          <p>Cleexs Agency · {activeLabel}</p>
+          <p className="font-medium text-[#4648d4]">empliados.net</p>
+        </div>
+      </footer>
     </div>
   );
 }
