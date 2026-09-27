@@ -5,8 +5,8 @@ import {
   ArrowRight,
   Bot,
   Calendar,
-  BarChart3,
   CheckCircle2,
+  ClipboardList,
   Globe2,
   Info,
   Loader2,
@@ -20,10 +20,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import type { LandingKey, Metrics } from '@/components/conversion/conversion-metrics-dashboard';
-import {
-  loadPortalGraficoMetrics,
-} from '@/lib/portal-grafico-demo-data';
+import type { FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 
 function fmt(n: number) {
   return n.toLocaleString('es-AR');
@@ -31,6 +28,10 @@ function fmt(n: number) {
 
 function pctLabel(p: number | null) {
   return p == null ? '—' : `${p}%`;
+}
+
+function stepPct(num: number, den: number): number | null {
+  return den > 0 ? Math.round((num / den) * 1000) / 10 : null;
 }
 
 function addDays(day: string, delta: number): string {
@@ -56,15 +57,9 @@ function formatRange(from: string, to: string) {
   return `${fmtD(from)} — ${fmtD(to)}`;
 }
 
-const LANDINGS: Array<{ key: LandingKey; label: string; sub: string; icon: 'hub' | 'home' | 'wa' }> = [
-  { key: 'all', label: 'Todas', sub: 'Home + canales', icon: 'hub' },
-  { key: 'home', label: 'Home', sub: 'empliados.net/', icon: 'home' },
-  { key: 'meta-v1', label: 'Demo', sub: 'WhatsApp', icon: 'wa' },
-];
-
 /**
- * Dashboard Agency: layout fiel al HTML Stitch "Dashboard - Conversión",
- * cableado a métricas reales del portal (demo loaders).
+ * Dashboard Agency: layout Stitch cableado al funnel real
+ * (`/api/borrador/portal-funnel` — misma fuente que la pestaña Funnel).
  */
 export function AgencyDashboardView() {
   const today = useMemo(() => todayAR(), []);
@@ -72,23 +67,25 @@ export function AgencyDashboardView() {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [preset, setPreset] = useState<string | null>('15');
-  const [landing, setLanding] = useState<LandingKey>('all');
-  const [data, setData] = useState<Metrics | null>(null);
+  const [data, setData] = useState<FunnelMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const metrics = await loadPortalGraficoMetrics({ from, to, landing });
-      setData(metrics);
+      const params = new URLSearchParams({ from, to });
+      const res = await fetch(`/api/borrador/portal-funnel?${params.toString()}`, { cache: 'no-store' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar métricas');
+      setData(json as FunnelMetrics);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
     } finally {
       setLoading(false);
     }
-  }, [from, to, landing]);
+  }, [from, to]);
 
   useEffect(() => {
     void load();
@@ -113,44 +110,42 @@ export function AgencyDashboardView() {
   }
 
   const f = data?.funnel;
-  const visitors = f?.homeVisitors.count ?? 0;
-  const demos = f?.urlSubmitted.count ?? 0;
-  const emails = f?.emailLeft.count ?? 0;
-  const shared = f?.shared.count ?? 0;
-  const referred = f?.referred.count ?? 0;
-  const unlocks = f?.unlockClicks.count ?? 0;
-  const purchased = f?.purchased.count ?? 0;
-  const pending = f?.purchased.checkoutAttempts ?? 0;
-
-  const stepPct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
+  const visitors = f?.visitors.count ?? 0;
+  const demos = f?.diagnosticsStarted.count ?? 0;
+  const completed = f?.diagnosticsCompleted.count ?? 0;
+  const emails = f?.emailsCaptured.count ?? 0;
+  const shared = f?.shares.count ?? 0;
+  const purchaseH24 = f?.purchaseH24.count ?? 0;
+  const purchased = f?.purchaseD30.count ?? 0;
 
   const demoOfVisitors = stepPct(demos, visitors);
-  const emailOfDemos = stepPct(emails, demos);
+  const completedOfDemos = stepPct(completed, demos);
+  const emailOfCompleted = stepPct(emails, completed);
   const sharedOfEmails = stepPct(shared, emails);
-  const referredOfShared = stepPct(referred, shared);
-  const unlockOfReferred = stepPct(unlocks, referred);
-  const purchasedOfUnlocks = stepPct(purchased, unlocks);
+  const h24OfShared = stepPct(purchaseH24, shared);
+  const purchasedOfH24 = stepPct(purchased, Math.max(purchaseH24, 1));
+  // Si no hubo compra 24h, mostrar % vs emails (cohorte elegible).
+  const purchasedOfEmails = stepPct(purchased, emails);
 
   const dropVisitToDemo =
     visitors > 0 ? Math.round(((visitors - demos) / visitors) * 1000) / 10 : null;
 
-  // KPIs Stitch escalados con el mismo volumen que el embudo (canal + fechas).
-  const loadFactor = visitors > 0 ? visitors / 1280 : 0;
-  const mrr = Math.round(34_250 * loadFactor);
-  const mrrPrev = Math.round(28_920 * loadFactor);
-  const mrrDelta = mrrPrev > 0 ? Math.round(((mrr - mrrPrev) / mrrPrev) * 1000) / 10 : 0;
-  const pipeline = Math.round(64_800 * loadFactor);
-  const deals = Math.max(0, Math.round(12 * loadFactor));
-  const activaciones = Math.max(0, Math.round(31 * loadFactor));
-  const activacionesDelta = 24;
-  const sprintMeta = 35;
+  const eco = data?.economics;
+  const paying = eco?.payingCustomers ?? purchased;
+  const revenue = eco?.revenueUsd ?? 0;
+  const ltv = eco?.ltvUsd ?? 99;
+  const mrr = paying > 0 ? Math.round(paying * ltv) : Math.round(revenue);
+  const pipeline = Math.round(emails * ltv);
+  const deals = Math.max(0, emails - purchased);
+  const activaciones = demos;
+  const sprintMeta = Math.max(10, Math.ceil(demos * 1.2) || 10);
   const sprintPct = sprintMeta > 0 ? Math.min(100, Math.round((activaciones / sprintMeta) * 100)) : 0;
-  const closeRate = 22;
+  const closeRate = emails > 0 ? Math.round((purchased / emails) * 1000) / 10 : 0;
 
-  const referrers = (data?.emailsByReferrer ?? [])
-    .filter((r) => r.refCode !== '__sin_referidor__')
+  const referrers = (data?.byReferrer ?? [])
+    .filter((r) => r.refCode !== '__sin_referidor__' && !/sin referidor/i.test(r.name))
     .slice(0, 5);
-  const referrerTotal = referrers.reduce((s, r) => s + r.uniqueEmails, 0) || emails || 1;
+  const referrerTotal = referrers.reduce((s, r) => s + (r.uniqueEmails || r.withEmail || 0), 0) || 1;
 
   const stages = [
     {
@@ -175,16 +170,26 @@ export function AgencyDashboardView() {
     },
     {
       n: 3,
-      label: 'Dejaron Email',
-      value: emails,
-      pct: pctLabel(emailOfDemos),
+      label: 'Completaron',
+      value: completed,
+      pct: pctLabel(completedOfDemos),
       hint: 'del paso ant.',
-      bar: Math.min(100, emailOfDemos ?? 0),
+      bar: Math.min(100, completedOfDemos ?? 0),
       tone: 'indigo' as const,
-      icon: <Mail className="h-[18px] w-[18px] text-[#94a3b8]" />,
+      icon: <ClipboardList className="h-[18px] w-[18px] text-[#94a3b8]" />,
     },
     {
       n: 4,
+      label: 'Dejaron Email',
+      value: emails,
+      pct: pctLabel(emailOfCompleted),
+      hint: 'del paso ant.',
+      bar: Math.min(100, emailOfCompleted ?? 0),
+      tone: 'green' as const,
+      icon: <Mail className="h-[18px] w-[18px] text-[#94a3b8]" />,
+    },
+    {
+      n: 5,
       label: 'Compartieron',
       value: shared,
       pct: pctLabel(sharedOfEmails),
@@ -194,22 +199,12 @@ export function AgencyDashboardView() {
       icon: <Share2 className="h-[18px] w-[18px] text-[#94a3b8]" />,
     },
     {
-      n: 5,
-      label: 'Referidos',
-      value: referred,
-      pct: pctLabel(referredOfShared),
-      hint: 'del paso ant.',
-      bar: Math.min(100, referredOfShared ?? 0),
-      tone: 'green' as const,
-      icon: <Users className="h-[18px] w-[18px] text-[#94a3b8]" />,
-    },
-    {
       n: 6,
-      label: 'Clics Agentes',
-      value: unlocks,
-      pct: pctLabel(unlockOfReferred),
+      label: 'Compra 24h',
+      value: purchaseH24,
+      pct: pctLabel(h24OfShared),
       hint: 'del paso ant.',
-      bar: Math.min(100, unlockOfReferred ?? 0),
+      bar: Math.min(100, h24OfShared ?? 0),
       tone: 'indigo' as const,
       icon: <Zap className="h-[18px] w-[18px] text-[#94a3b8]" />,
     },
@@ -217,36 +212,25 @@ export function AgencyDashboardView() {
       n: 7,
       label: 'Contrataron',
       value: purchased,
-      pct: pctLabel(purchasedOfUnlocks),
-      hint: pending ? `${pending} pend.` : 'cerrados',
-      bar: Math.min(100, purchasedOfUnlocks ?? 0),
+      pct: pctLabel(purchaseH24 > 0 ? purchasedOfH24 : purchasedOfEmails),
+      hint: purchaseH24 > 0 ? 'vs 24h' : 'de emails',
+      bar: Math.min(100, (purchaseH24 > 0 ? purchasedOfH24 : purchasedOfEmails) ?? 0),
       tone: 'success' as const,
       icon: <CheckCircle2 className="h-[18px] w-[18px] text-[#059669]" />,
     },
   ];
 
+  const retainDemoEmail = stepPct(emails, demos);
+
   return (
     <div className="flex w-full flex-col gap-5">
-      {/* Header Stitch */}
-      <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
-        <div className="flex items-start gap-3">
-          <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4648d4] shadow-sm">
-            <BarChart3 className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[20px] font-bold tracking-tight text-[#0f172a]">
-                Conversión y Métricas Generales
-              </h1>
-              <span className="rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#047857]">
-                En Vivo
-              </span>
-            </div>
-            <p className="mt-0.5 text-[13px] text-[#64748b]">
-              Embudo de adquisición Empliados: de visitas a operadores logísticos que activan agentes IA.
-              Cierres a medianoche UTC-3.
-            </p>
-          </div>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+        <div>
+          <h1 className="text-[28px] font-bold tracking-tight text-[#0f172a]">Conversión y Métricas Generales</h1>
+          <p className="mt-1 max-w-2xl text-[14px] text-[#64748b]">
+            Embudo de adquisición Empliados: de visitas a operadores logísticos que activan agentes IA. Datos en vivo ·
+            cierres a medianoche UTC-3.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -292,37 +276,18 @@ export function AgencyDashboardView() {
         </div>
       </div>
 
-      {/* Canal activo */}
       <div className="flex flex-col items-start justify-between gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-[#e2e8f0] sm:flex-row sm:items-center">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">
-            Canal activo:
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">Fuente:</span>
+          <span className="inline-flex items-center gap-2 rounded-lg bg-[#4648d4] px-3 py-1.5 text-[13px] font-semibold text-white shadow-sm">
+            <Network className="h-4 w-4" />
+            Funnel en vivo
+            <span className="text-[11px] text-white/80">Fathom + diagnósticos</span>
           </span>
-          {LANDINGS.map((l) => {
-            const active = landing === l.key;
-            return (
-              <button
-                key={l.key}
-                type="button"
-                onClick={() => setLanding(l.key)}
-                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-medium transition ${
-                  active
-                    ? 'bg-[#4648d4] text-white shadow-sm'
-                    : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
-                }`}
-              >
-                {l.icon === 'hub' ? (
-                  <Network className="h-4 w-4" />
-                ) : l.icon === 'home' ? (
-                  <Globe2 className="h-4 w-4" />
-                ) : (
-                  <MessageCircle className="h-4 w-4" />
-                )}
-                <span className="font-semibold">{l.label}</span>
-                <span className={`text-[11px] ${active ? 'text-white/80' : 'text-[#94a3b8]'}`}>{l.sub}</span>
-              </button>
-            );
-          })}
+          <span className="inline-flex items-center gap-2 rounded-lg bg-[#f1f5f9] px-3 py-1.5 text-[13px] font-medium text-[#64748b]">
+            <Globe2 className="h-4 w-4" />
+            Consolidado
+          </span>
         </div>
         <div className="flex items-center gap-2 text-[13px] text-[#64748b]">
           <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
@@ -340,7 +305,6 @@ export function AgencyDashboardView() {
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
       ) : null}
 
-      {/* KPI bento 3 · mismos slots Stitch, números vivos con canal/fechas */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="relative flex flex-col justify-between overflow-hidden rounded-xl bg-white p-5 shadow-sm ring-1 ring-[#e2e8f0] transition hover:shadow-md">
           <div className="flex items-center justify-between">
@@ -351,9 +315,7 @@ export function AgencyDashboardView() {
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">MRR Activo</span>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-bold text-[#047857]">
-              <TrendingUp className="h-3.5 w-3.5" />
-              {mrrDelta >= 0 ? '+' : ''}
-              {mrrDelta}%
+              {fmt(paying)} pagos
             </span>
           </div>
           <div className="my-4">
@@ -363,12 +325,10 @@ export function AgencyDashboardView() {
               </span>
               <span className="text-[13px] text-[#94a3b8]">/ mes</span>
             </div>
-            <p className="mt-1 text-[13px] text-[#64748b]">Ingresos recurrentes activos de contratos logísticos.</p>
+            <p className="mt-1 text-[13px] text-[#64748b]">Ingresos estimados · LTV × clientes que pagaron en el rango.</p>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] font-semibold text-[#94a3b8] tabular-nums">
-              vs. ${fmt(mrrPrev)} mes ant.
-            </span>
+            <span className="text-[11px] font-semibold text-[#94a3b8] tabular-nums">LTV prom. US$ {fmt(ltv)}</span>
             <svg className="h-6 w-24 text-[#10b981]" fill="none" viewBox="0 0 100 24">
               <path d="M0 20 L20 18 L40 14 L60 16 L80 8 L100 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
               <path d="M0 20 L20 18 L40 14 L60 16 L80 8 L100 2 L100 24 L0 24 Z" fill="currentColor" fillOpacity="0.08" />
@@ -385,7 +345,7 @@ export function AgencyDashboardView() {
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">Pipeline Calificado</span>
             </div>
             <span className="rounded-full bg-[#e0e7ff] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#3730a3]">
-              {fmt(deals)} Deals
+              {fmt(deals)} leads
             </span>
           </div>
           <div className="my-4">
@@ -396,11 +356,11 @@ export function AgencyDashboardView() {
               <span className="text-[13px] text-[#94a3b8]">estimado</span>
             </div>
             <p className="mt-1 text-[13px] text-[#64748b]">
-              {fmt(deals)} operadores logísticos en negociación activa.
+              {fmt(emails)} emails capturados · {fmt(deals)} aún sin compra.
             </p>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] font-semibold text-[#94a3b8]">Tasa de cierre prom: {closeRate}%</span>
+            <span className="text-[11px] font-semibold text-[#94a3b8]">Tasa de cierre: {closeRate}%</span>
             <svg className="h-6 w-24 text-[#4648d4]" fill="none" viewBox="0 0 100 24">
               <path d="M0 22 L25 19 L50 15 L75 11 L100 4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
               <path d="M0 22 L25 19 L50 15 L75 11 L100 4 L100 24 L0 24 Z" fill="currentColor" fillOpacity="0.08" />
@@ -414,19 +374,18 @@ export function AgencyDashboardView() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ede9fe] text-[#7c3aed]">
                 <Bot className="h-[19px] w-[19px]" />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">Activaciones Mes</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">Demos iniciadas</span>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-bold text-[#047857]">
-              <TrendingUp className="h-3.5 w-3.5" />
-              +{activacionesDelta}%
+              en vivo
             </span>
           </div>
           <div className="my-4">
             <div className="flex items-baseline gap-2">
               <span className="text-[32px] font-bold tabular-nums tracking-tight text-[#0f172a]">{fmt(activaciones)}</span>
-              <span className="text-[13px] text-[#94a3b8]">agentes online</span>
+              <span className="text-[13px] text-[#94a3b8]">en el rango</span>
             </div>
-            <p className="mt-1 text-[13px] text-[#64748b]">Demos con flujos de carga y despacho sincronizados.</p>
+            <p className="mt-1 text-[13px] text-[#64748b]">Diagnósticos iniciados · misma cohorte del embudo.</p>
           </div>
           <div className="flex items-center justify-between pt-1">
             <span className="text-[11px] font-semibold text-[#94a3b8]">Meta de sprint: {sprintMeta}</span>
@@ -437,7 +396,6 @@ export function AgencyDashboardView() {
         </div>
       </div>
 
-      {/* Embudo */}
       <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-[#e2e8f0]">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
           <div>
@@ -446,7 +404,7 @@ export function AgencyDashboardView() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin text-[#4648d4]" /> : null}
             </div>
             <p className="text-[13px] text-[#64748b]">
-              Cohorte {formatRange(from, to)} · conversión acumulada hasta contratación.
+              Cohorte {formatRange(from, to)} · misma fuente que la pestaña Funnel.
             </p>
           </div>
         </div>
@@ -502,9 +460,9 @@ export function AgencyDashboardView() {
           <div className="flex items-start gap-2 sm:items-center">
             <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#10b981] sm:mt-0" />
             <span>
-              El flujo retiene <strong className="text-[#0f172a]">{pctLabel(emailOfDemos)}</strong> entre solicitud de
+              El flujo retiene <strong className="text-[#0f172a]">{pctLabel(retainDemoEmail)}</strong> entre solicitud de
               demo y entrega de email
-              {emailOfDemos != null && emailOfDemos >= 38
+              {retainDemoEmail != null && retainDemoEmail >= 38
                 ? ', superando la referencia B2B SaaS de logística (38%).'
                 : '.'}
             </span>
@@ -516,17 +474,16 @@ export function AgencyDashboardView() {
         </div>
       </div>
 
-      {/* Ranking + fuga */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <div className="flex flex-col justify-between rounded-xl bg-white p-5 shadow-sm ring-1 ring-[#e2e8f0] lg:col-span-7">
           <div>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-[20px] font-bold tracking-tight text-[#0f172a]">Emails por referidor (Ranking)</h3>
-                <p className="text-[13px] text-[#64748b]">Top promotores y afiliados que atrajeron registros verificados.</p>
+                <p className="text-[13px] text-[#64748b]">Top campañas / refs con emails en el rango.</p>
               </div>
               <span className="rounded bg-[#f1f5f9] px-2.5 py-1 text-[11px] font-semibold text-[#64748b]">
-                Top {referrers.length} de {(data?.emailsByReferrer ?? []).filter((r) => r.refCode !== '__sin_referidor__').length || referrers.length}
+                Top {referrers.length} de {(data?.byReferrer ?? []).filter((r) => r.refCode !== '__sin_referidor__').length || referrers.length}
               </span>
             </div>
             <div className="flex flex-col gap-1">
@@ -534,12 +491,14 @@ export function AgencyDashboardView() {
                 <p className="py-6 text-center text-[13px] text-[#94a3b8]">Sin emails atribuidos a un ref en el rango.</p>
               ) : (
                 referrers.map((r, i) => {
-                  const share = Math.round((r.uniqueEmails / referrerTotal) * 1000) / 10;
+                  const emailsCount = r.uniqueEmails || r.withEmail || 0;
+                  const share = Math.round((emailsCount / referrerTotal) * 1000) / 10;
                   const initials = r.name
                     .split(/\s+/)
                     .slice(0, 2)
                     .map((w) => w[0]?.toUpperCase() ?? '')
                     .join('');
+                  const conv = r.diagnostics > 0 ? Math.round((emailsCount / r.diagnostics) * 100) : 0;
                   return (
                     <div
                       key={r.refCode}
@@ -566,12 +525,12 @@ export function AgencyDashboardView() {
                       <div className="ml-3 flex shrink-0 items-center gap-4">
                         <div className="text-right">
                           <span className="block text-[14px] font-bold tabular-nums text-[#0f172a]">
-                            {fmt(r.uniqueEmails)} emails
+                            {fmt(emailsCount)} emails
                           </span>
                           <span className="block text-[11px] text-[#94a3b8]">{share}% del total</span>
                         </div>
                         <span className="rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-bold text-[#047857]">
-                          {Math.min(99, Math.round(40 + share))}% conv.
+                          {conv}% conv.
                         </span>
                       </div>
                     </div>
