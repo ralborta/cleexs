@@ -36,15 +36,11 @@ import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dash
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
 import { SponsorLinkBuilder } from '@/components/tools/sponsor-link-builder';
-import { AcquisitionReportDashboard } from '@/components/reportes/acquisition-report-dashboard';
-import { EmailOutreachReportDashboard } from '@/components/reportes/email-outreach-report-dashboard';
-import { OnboardingReportDashboard } from '@/components/reportes/onboarding-report-dashboard';
-import { ReportesHub } from '@/components/reportes/reportes-hub';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
-import { createPortalReportesLoaders } from '@/lib/portal-reportes-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
 import { AgencyDashboardView } from './agency-dashboard-view';
+import { AgencyReportesView } from './agency-reportes-view';
 
 type SectionId =
   | 'dashboard'
@@ -1112,57 +1108,8 @@ function ClientesView() {
   );
 }
 
-type ReportesSubView = 'hub' | 'adquisicion' | 'onboarding' | 'email-outreach';
-
 function ReportesView() {
-  const [sub, setSub] = useState<ReportesSubView>('hub');
-  const loaders = useMemo(() => createPortalReportesLoaders(), []);
-
-  useEffect(() => {
-    setAdminUiFetchOverride(createPortalEmailDemoFetch());
-    return () => setAdminUiFetchOverride(null);
-  }, []);
-
-  if (sub !== 'hub') {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setSub('hub')}
-          className="inline-flex items-center gap-2 text-sm font-medium text-violet-700 hover:text-violet-900"
-        >
-          ← Volver a Reportes
-        </button>
-        {sub === 'adquisicion' ? (
-          <AcquisitionReportDashboard
-            mode="portal"
-            loadAcquisition={loaders.acquisition}
-            searchDiagnostics={loaders.searchDiagnostics}
-          />
-        ) : null}
-        {sub === 'onboarding' ? (
-          <OnboardingReportDashboard mode="portal" loadOnboarding={loaders.onboardingProfile} />
-        ) : null}
-        {sub === 'email-outreach' ? (
-          <EmailOutreachReportDashboard mode="portal" loadEmailOutreach={loaders.emailOutreach} />
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Reportes"
-        subtitle="Métricas Empliados · adquisición, onboarding y email (datos demo, mismo UI que admin)."
-      />
-      <ReportesHub
-        mode="portal"
-        variants={['adquisicion', 'onboarding', 'email-outreach']}
-        onOpen={(id) => setSub(id)}
-      />
-    </div>
-  );
+  return <AgencyReportesView />;
 }
 
 function AuditoriaView() {

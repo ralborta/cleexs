@@ -516,16 +516,65 @@ function searchDiagnosticsDemo(params: {
   };
 }
 
+async function fetchPortalReportJson<T>(path: string, search?: Record<string, string>): Promise<T> {
+  const qs = new URLSearchParams(search);
+  const url = `/api/borrador/portal-reports/${path}${qs.toString() ? `?${qs}` : ''}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) {
+    throw new Error(json.error || `Error al cargar reporte (${res.status})`);
+  }
+  return json;
+}
+
+/**
+ * Loaders del portal: prioriza reportes internos en vivo; si fallan, usa demo Empliados.
+ */
 export function createPortalReportesLoaders() {
   return {
-    acquisition: async (windowDays: ReportWindowDays) => buildAcquisition(windowDays),
-    onboardingProfile: async (windowDays: ReportWindowDays, country?: string) =>
-      buildOnboarding(windowDays, country),
-    emailOutreach: async (windowDays: ReportWindowDays) => buildEmailOutreach(windowDays),
+    acquisition: async (windowDays: ReportWindowDays) => {
+      try {
+        return await fetchPortalReportJson<AcquisitionReport>('acquisition', {
+          windowDays: String(windowDays),
+        });
+      } catch {
+        return buildAcquisition(windowDays);
+      }
+    },
+    onboardingProfile: async (windowDays: ReportWindowDays, country?: string) => {
+      try {
+        const search: Record<string, string> = { windowDays: String(windowDays) };
+        if (country?.trim()) search.country = country.trim();
+        return await fetchPortalReportJson<OnboardingProfileReport>('onboarding-profile', search);
+      } catch {
+        return buildOnboarding(windowDays, country);
+      }
+    },
+    emailOutreach: async (windowDays: ReportWindowDays) => {
+      try {
+        return await fetchPortalReportJson<EmailOutreachReport>('email-outreach', {
+          windowDays: String(windowDays),
+        });
+      } catch {
+        return buildEmailOutreach(windowDays);
+      }
+    },
     searchDiagnostics: async (params: {
       q: string;
       limit?: number;
       completedOnly?: boolean;
-    }) => searchDiagnosticsDemo(params),
+    }) => {
+      try {
+        const search: Record<string, string> = { q: params.q.trim() };
+        if (params.limit) search.limit = String(params.limit);
+        if (params.completedOnly) search.completedOnly = 'true';
+        return await fetchPortalReportJson<AcquisitionDiagnosticSearchResult>(
+          'acquisition/diagnostic-search',
+          search
+        );
+      } catch {
+        return searchDiagnosticsDemo(params);
+      }
+    },
   };
 }

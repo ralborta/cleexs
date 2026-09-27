@@ -210,7 +210,7 @@ export function AcquisitionReportDashboard({
           <h2 className="text-lg font-semibold text-slate-900">Adquisicion y funnel</h2>
           <p className="text-xs text-slate-500">
             {mode === 'portal'
-              ? `Datos demo Empliados · capturados en los ultimos ${windowDays} dias.`
+              ? `Portal Empliados · ultimos ${windowDays} dias (en vivo con fallback demo).`
               : `Datos del modulo de diagnostico publico, capturados en los ultimos ${windowDays} dias.`}
           </p>
         </div>
