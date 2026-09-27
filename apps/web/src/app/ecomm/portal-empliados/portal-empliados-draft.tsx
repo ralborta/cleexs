@@ -49,6 +49,7 @@ import {
 } from '@/lib/portal-grafico-demo-data';
 import { createPortalReportesLoaders } from '@/lib/portal-reportes-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
+import { agencyCls } from '@/lib/agency-portal-theme';
 
 type SectionId =
   | 'dashboard'
@@ -276,31 +277,42 @@ function Card({
   accent?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2 text-xs font-medium text-slate-500">
-        <span className={accent ?? 'text-slate-500'}>{icon}</span>
+    <div className={agencyCls.cardSm}>
+      <div className={`mb-3 flex items-center gap-2 ${agencyCls.labelMicro}`}>
+        <span className={accent ?? 'text-[#4648d4]'}>{icon}</span>
         {label}
       </div>
-      <p className="text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
-      {hint ? <p className="mt-2 text-[11px] leading-snug text-slate-400">{hint}</p> : null}
+      <p className={agencyCls.metric}>{value}</p>
+      {hint ? <p className="mt-2 text-[11px] leading-snug text-[#94a3b8]">{hint}</p> : null}
     </div>
   );
 }
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function SectionHeader({
+  title,
+  subtitle,
+  icon,
+}: {
+  title: string;
+  subtitle: string;
+  icon?: ReactNode;
+}) {
   return (
-    <header className="mb-6">
-      <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-      <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
+    <header className="mb-6 flex items-start gap-3">
+      {icon ? <div className={agencyCls.iconBox}>{icon}</div> : null}
+      <div>
+        <h1 className={agencyCls.h1}>{title}</h1>
+        <p className={`mt-0.5 ${agencyCls.sub}`}>{subtitle}</p>
+      </div>
     </header>
   );
 }
 
 function Panel({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+    <section className={agencyCls.panel}>
+      <div className="flex items-center justify-between border-b border-[#f1f5f9] px-4 py-3">
+        <h2 className={agencyCls.h2}>{title}</h2>
         {action}
       </div>
       <div className="p-4">{children}</div>
@@ -378,53 +390,92 @@ function Toggle({
 function DashboardView() {
   const maxPipe = Math.max(...BUSINESS_CHART.map((d) => d.pipeline));
   return (
-    <div className="space-y-8">
-      <SectionHeader
-        title="Dashboard"
-        subtitle="Chart de negocios primero · luego embudo de conversión Empliados."
-      />
-
-      <Panel
-        title="Chart de negocios"
-        action={<Badge tone="emerald">MRR · Pipeline · Demos</Badge>}
-      >
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <Card icon={<TrendingUp className="h-4 w-4" />} label="MRR" value="US$ 34k" hint="+18% vs mes ant." accent="text-emerald-600" />
-          <Card icon={<Target className="h-4 w-4" />} label="Pipeline" value="US$ 64k" hint="12 deals abiertos" accent="text-sky-600" />
-          <Card icon={<Bot className="h-4 w-4" />} label="Demos mes" value="31" hint="Activaciones agentes" accent="text-violet-600" />
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex items-start gap-3">
+          <div className={agencyCls.iconBox}>
+            <BarChart3 className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className={agencyCls.h1}>Conversión y Métricas Generales</h1>
+            <p className={`mt-0.5 ${agencyCls.sub}`}>
+              Chart de negocios + embudo Empliados · datos en vivo del portal.
+            </p>
+          </div>
         </div>
-        <div className="flex h-48 items-end gap-2 sm:gap-3">
+      </header>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className={agencyCls.cardSm}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={agencyCls.iconBoxOk}>
+                <TrendingUp className="h-4 w-4" />
+              </span>
+              <span className={agencyCls.labelMicro}>MRR Activo</span>
+            </div>
+            <span className={agencyCls.trendUp}>+18%</span>
+          </div>
+          <p className={`mt-3 ${agencyCls.metric}`}>US$ 34k</p>
+          <p className="mt-1 text-[11px] text-[#94a3b8]">vs mes anterior</p>
+        </div>
+        <div className={agencyCls.cardSm}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={agencyCls.iconBoxSm}>
+                <Target className="h-4 w-4" />
+              </span>
+              <span className={agencyCls.labelMicro}>Pipeline Calificado</span>
+            </div>
+          </div>
+          <p className={`mt-3 ${agencyCls.metric}`}>US$ 64k</p>
+          <p className="mt-1 text-[11px] text-[#94a3b8]">12 deals abiertos</p>
+        </div>
+        <div className={agencyCls.cardSm}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={agencyCls.iconBoxSm}>
+                <Bot className="h-4 w-4" />
+              </span>
+              <span className={agencyCls.labelMicro}>Demos / agentes</span>
+            </div>
+          </div>
+          <p className={`mt-3 ${agencyCls.metric}`}>31</p>
+          <p className="mt-1 text-[11px] text-[#94a3b8]">agentes online este mes</p>
+        </div>
+      </div>
+
+      <Panel title="Tendencia de negocio" action={<Badge tone="emerald">MRR · Pipeline · Demos</Badge>}>
+        <div className="flex h-44 items-end gap-2 sm:gap-3">
           {BUSINESS_CHART.map((d) => (
             <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
               <div className="flex w-full items-end justify-center gap-0.5" style={{ height: '100%' }}>
                 <div
-                  className="w-[28%] rounded-t bg-emerald-500/90"
+                  className="w-[28%] rounded-t bg-[#10b981]"
                   style={{ height: `${(d.mrr / maxPipe) * 100}%` }}
                   title={`MRR ${d.mrr}k`}
                 />
                 <div
-                  className="w-[28%] rounded-t bg-sky-500/80"
+                  className="w-[28%] rounded-t bg-[#4648d4]/85"
                   style={{ height: `${(d.pipeline / maxPipe) * 100}%` }}
                   title={`Pipeline ${d.pipeline}k`}
                 />
                 <div
-                  className="w-[28%] rounded-t bg-violet-500/70"
+                  className="w-[28%] rounded-t bg-[#8b5cf6]/80"
                   style={{ height: `${(d.demos / maxPipe) * 100}%` }}
                   title={`Demos ${d.demos}`}
                 />
               </div>
-              <span className="text-[10px] text-slate-400">{d.label}</span>
+              <span className="text-[10px] text-[#94a3b8]">{d.label}</span>
             </div>
           ))}
         </div>
-        <p className="mt-3 text-xs text-slate-500">
-          Verde = MRR · Azul = pipeline · Violeta = demos. Datos demo Agency.
-        </p>
+        <p className="mt-3 text-xs text-[#64748b]">Verde = MRR · Índigo = pipeline · Violeta = demos.</p>
       </Panel>
 
       <ConversionMetricsDashboard
         mode="portal"
-        title="Conversión"
+        title="Embudo de Adquisición Empliados"
         loadMetrics={loadPortalGraficoMetrics}
         loadEmailLeads={loadPortalGraficoEmailLeads}
         loadUnlockClicks={loadPortalGraficoUnlockClicks}
@@ -609,6 +660,8 @@ function FunnelView() {
       setAdSpendInput={setAdSpendInput}
       onRefresh={() => void load()}
       onApplySpend={() => void load()}
+      variant="agency"
+      subtitle="Embudo de negocio Empliados · cohortes y economics en vivo."
     />
   );
 }
@@ -1044,7 +1097,7 @@ function usePortalEmailApi() {
 
 function EmailSecuenciaView() {
   usePortalEmailApi();
-  return <EmailSecuenciaDashboard />;
+  return <EmailSecuenciaDashboard variant="agency" />;
 }
 
 function EmailPlantillasView({ onGoEnvios }: { onGoEnvios: () => void }) {

@@ -25,13 +25,19 @@ import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admi
 import { CampaignContentEditor, type CampaignRow } from '@/components/admin/campaign-content-editor';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 
-const field =
+const fieldDefault =
   'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-200';
+const fieldAgency =
+  'mt-1.5 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] shadow-sm outline-none transition placeholder:text-[#94a3b8] focus:border-[#c7d2fe] focus:ring-2 focus:ring-[#eef2ff]';
 const labelCls = 'text-xs font-semibold uppercase tracking-wide text-slate-500';
-const primaryBtn =
+const primaryBtnDefault =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50';
-const secondaryBtn =
+const primaryBtnAgency =
+  'inline-flex items-center justify-center gap-2 rounded-lg bg-[#4648d4] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#4f46e5] disabled:opacity-50';
+const secondaryBtnDefault =
   'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50';
+const secondaryBtnAgency =
+  'inline-flex items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-medium text-[#334155] shadow-sm hover:bg-[#f8fafc] disabled:opacity-50';
 const subtleBtn =
   'inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50';
 
@@ -96,7 +102,11 @@ type BroadcastResult = {
 };
 
 /** UI idéntica a /admin/email (Email · secuencia). */
-export function EmailSecuenciaDashboard() {
+export function EmailSecuenciaDashboard({ variant = 'default' }: { variant?: 'default' | 'agency' } = {}) {
+  const agency = variant === 'agency';
+  const field = agency ? fieldAgency : fieldDefault;
+  const primaryBtn = agency ? primaryBtnAgency : primaryBtnDefault;
+  const secondaryBtn = agency ? secondaryBtnAgency : secondaryBtnDefault;
   const [error, setError] = useState<string | null>(null);
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -365,12 +375,26 @@ export function EmailSecuenciaDashboard() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
-            <Mail className="h-6 w-6" />
+          <div
+            className={
+              agency
+                ? 'flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4648d4] shadow-sm'
+                : 'flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700'
+            }
+          >
+            <Mail className={agency ? 'h-5 w-5' : 'h-6 w-6'} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Email · secuencia</h1>
-            <p className="text-sm text-slate-600">
+            <h1
+              className={
+                agency
+                  ? 'text-[20px] font-semibold tracking-tight text-[#0f172a]'
+                  : 'text-2xl font-semibold text-slate-900'
+              }
+            >
+              Email secuencias y envíos
+            </h1>
+            <p className={agency ? 'text-[13px] text-[#64748b]' : 'text-sm text-slate-600'}>
               Campañas por semana y bucket de score, broadcast manual y auditoría de envíos.
             </p>
           </div>
@@ -400,22 +424,22 @@ export function EmailSecuenciaDashboard() {
 
       {stats ? (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi icon={<BarChart3 className="h-4 w-4 text-violet-600" />} label="Campañas configuradas" value={stats.campaignsConfigured} />
-          <Kpi
+          <Kpi agency={agency} icon={<BarChart3 className="h-4 w-4 text-violet-600" />} label="Campañas configuradas" value={stats.campaignsConfigured} />
+          <Kpi agency={agency}
             icon={<MailCheck className="h-4 w-4 text-emerald-600" />}
             label={`Enviados (${stats.windowDays} días)`}
             value={sentLastWindow}
           />
-          <Kpi
+          <Kpi agency={agency}
             icon={<XCircle className="h-4 w-4 text-rose-600" />}
             label="Fallos / Saltados"
             value={`${failedLastWindow} / ${skippedLastWindow}`}
           />
-          <Kpi icon={<Inbox className="h-4 w-4 text-sky-600" />} label="Logs totales" value={stats.logsAllTime} />
+          <Kpi agency={agency} icon={<Inbox className="h-4 w-4 text-sky-600" />} label="Logs totales" value={stats.logsAllTime} />
         </section>
       ) : null}
 
-      <Card
+      <Card agency={agency}
         icon={<Send className="h-4 w-4" />}
         title="Enviar email de prueba"
         description="Mandá un correo real a una dirección puntual para verificar que el envío esté funcionando. El sistema usa Resend si está configurado; si no, intenta por SMTP. El resultado queda registrado en la auditoría de más abajo."
@@ -439,7 +463,7 @@ export function EmailSecuenciaDashboard() {
         </form>
       </Card>
 
-      <Card
+      <Card agency={agency}
         icon={<Megaphone className="h-4 w-4" />}
         title="Broadcast manual"
         description={
@@ -545,7 +569,7 @@ export function EmailSecuenciaDashboard() {
       </Card>
 
       {stats?.resendWebhook?.available ? (
-        <Card
+        <Card agency={agency}
           icon={<Activity className="h-4 w-4" />}
           title={`Resend · entregas y engagement (${stats.resendWebhook.windowDays} días)`}
           description="Eventos que Resend envía por POST y que esta API guarda tras verificar la firma. Independiente del envío por API: podés mandar correos y seguir viendo ceros aquí si falta el webhook configurado en Railway."
@@ -647,7 +671,7 @@ export function EmailSecuenciaDashboard() {
         </div>
       ) : null}
 
-      <Card
+      <Card agency={agency}
         icon={<LayoutList className="h-4 w-4" />}
         title="Campañas (sem × bucket)"
         description="Sin ID en Resend igual hay HTML incluido por semana (botón Probar). Con plantilla en Resend, pegá el id y usá variables WEEK, TITLE, PREHEADER, SLUG."
@@ -762,7 +786,7 @@ export function EmailSecuenciaDashboard() {
         </form>
       </Card>
 
-      <Card
+      <Card agency={agency}
         icon={<ScrollText className="h-4 w-4" />}
         title="Auditoría — últimos envíos"
         description="Entradas por jobs o manualmente. Con el ESP conectado, el worker debería escribir sent y externalId."
@@ -881,18 +905,32 @@ function Card({
   description,
   children,
   rightSlot,
+  agency = false,
 }: {
   icon: React.ReactNode;
   title: string;
   description?: React.ReactNode;
   children: React.ReactNode;
   rightSlot?: React.ReactNode;
+  agency?: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section
+      className={
+        agency
+          ? 'rounded-xl border border-[#e2e8f0] bg-white shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]'
+          : 'rounded-2xl border border-slate-200 bg-white shadow-sm'
+      }
+    >
       <header className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+          <div
+            className={
+              agency
+                ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4648d4]'
+                : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700'
+            }
+          >
             {icon}
           </div>
           <div>
@@ -913,18 +951,40 @@ function Kpi({
   icon,
   label,
   value,
+  agency = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
+  agency?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+    <div
+      className={
+        agency
+          ? 'rounded-xl border border-[#e2e8f0] bg-white p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]'
+          : 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'
+      }
+    >
+      <div
+        className={
+          agency
+            ? 'flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8]'
+            : 'flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500'
+        }
+      >
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+      <p
+        className={
+          agency
+            ? 'mt-2 text-[26px] font-bold tabular-nums tracking-tight text-[#0f172a]'
+            : 'mt-2 text-2xl font-bold tabular-nums text-slate-900'
+        }
+      >
+        {value}
+      </p>
     </div>
   );
 }

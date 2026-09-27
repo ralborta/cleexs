@@ -19,6 +19,7 @@ import {
 import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admin/admin-callout';
 import { DiagnosticReportLink, SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import { agencyCls } from '@/lib/agency-portal-theme';
 import { internalReportsApi } from '@/lib/api';
 import {
   addDaysToDayString,
@@ -418,18 +419,37 @@ export function ConversionMetricsDashboard({
   const purchasedPctHint = isPortal ? 'de los que pidieron demo' : 'de los que pusieron URL';
   const sharedPctHint = isPortal ? 'de los que pidieron demo' : 'de los que pusieron URL';
 
+  const chipOn = isPortal ? agencyCls.chipActive : 'rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm';
+  const chipOff = isPortal
+    ? agencyCls.chipIdle
+    : 'rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200';
+  const pillOn = isPortal ? agencyCls.pillActive : 'rounded-xl bg-emerald-600 px-3.5 py-2 text-left text-white shadow-sm';
+  const pillOff = isPortal
+    ? agencyCls.pillIdle
+    : 'rounded-xl bg-slate-100 px-3.5 py-2 text-left text-slate-700 hover:bg-slate-200';
+  const surface = isPortal ? agencyCls.cardSm : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm';
+  const dateInput = isPortal
+    ? agencyCls.input
+    : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200';
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-            <BarChart3 className="h-6 w-6" />
+          <div
+            className={
+              isPortal
+                ? agencyCls.iconBox
+                : 'flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700'
+            }
+          >
+            <BarChart3 className={isPortal ? 'h-5 w-5' : 'h-6 w-6'} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">{heading}</h1>
-            <p className="text-sm text-slate-600">
+            <h1 className={isPortal ? agencyCls.h1 : 'text-2xl font-semibold text-slate-900'}>{heading}</h1>
+            <p className={isPortal ? agencyCls.sub : 'text-sm text-slate-600'}>
               {isPortal
-                ? 'Embudo demo de adquisición Empliados: de visitas a operadores logísticos que activan agentes. Filtrá por canal. Los días cierran a medianoche hora Argentina.'
+                ? 'De visitas a operadores que activan agentes. Filtrá por canal · días en hora Argentina.'
                 : 'Embudo de adquisición de Cleexs. Por defecto ves Todas (mismo embudo de siempre). Filtrá por Home o Meta cuando quieras. Los días cierran a medianoche hora Argentina.'}
             </p>
           </div>
@@ -438,16 +458,16 @@ export function ConversionMetricsDashboard({
           type="button"
           onClick={() => void load()}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+          className={isPortal ? agencyCls.btnSecondary : 'inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50'}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Actualizar
         </button>
       </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-          {isPortal ? 'Canal' : 'Landing'}
+      <section className={surface}>
+        <p className={isPortal ? `${agencyCls.labelMicro} mb-2` : 'mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500'}>
+          {isPortal ? 'Canal activo' : 'Landing'}
         </p>
         <div className="flex flex-wrap gap-2">
           {landingOptions.map((l) => (
@@ -455,16 +475,16 @@ export function ConversionMetricsDashboard({
               key={l.key}
               type="button"
               onClick={() => setLanding(l.key)}
-              className={`rounded-xl px-3.5 py-2 text-left transition ${
-                landing === l.key
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={`transition ${landing === l.key ? pillOn : pillOff}`}
             >
               <span className="block text-sm font-semibold">{l.label}</span>
               <span
                 className={`block text-[11px] ${
-                  landing === l.key ? 'text-emerald-100' : 'text-slate-500'
+                  landing === l.key
+                    ? isPortal
+                      ? 'text-white/80'
+                      : 'text-emerald-100'
+                    : 'text-slate-500'
                 }`}
               >
                 {l.sub}
@@ -479,8 +499,8 @@ export function ConversionMetricsDashboard({
         </p>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-wrap gap-2">
+      <section className={`flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between ${surface}`}>
+        <div className={isPortal ? agencyCls.chipBar : 'flex flex-wrap gap-2'}>
           {(
             [
               ['hoy', 'Hoy'],
@@ -494,11 +514,7 @@ export function ConversionMetricsDashboard({
               key={key}
               type="button"
               onClick={() => applyPreset(key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                activePreset === key
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={`transition ${activePreset === key ? chipOn : chipOff}`}
             >
               {label}
             </button>
@@ -515,7 +531,7 @@ export function ConversionMetricsDashboard({
                 setFrom(e.target.value);
                 setActivePreset(null);
               }}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+              className={dateInput}
             />
           </label>
           <label className="flex flex-col gap-1 text-[11px] font-medium text-slate-500">
@@ -529,7 +545,7 @@ export function ConversionMetricsDashboard({
                 setTo(e.target.value);
                 setActivePreset(null);
               }}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+              className={dateInput}
             />
           </label>
         </div>
@@ -544,6 +560,7 @@ export function ConversionMetricsDashboard({
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <FunnelCard
+          agency={isPortal}
           icon={<Eye className="h-4 w-4 text-slate-600" />}
           label="Visitantes"
           value={fmt(f?.homeVisitors.count ?? 0)}
@@ -551,6 +568,7 @@ export function ConversionMetricsDashboard({
           pct="100%"
         />
         <FunnelCard
+          agency={isPortal}
           icon={<Globe className="h-4 w-4 text-sky-600" />}
           label={urlLabel}
           value={fmt(f?.urlSubmitted.count ?? 0)}
@@ -558,6 +576,7 @@ export function ConversionMetricsDashboard({
           pctHint="de visitantes"
         />
         <FunnelCard
+          agency={isPortal}
           icon={<Mail className="h-4 w-4 text-violet-600" />}
           label="Dejaron email"
           value={fmt(f?.emailLeft.count ?? 0)}
@@ -569,6 +588,7 @@ export function ConversionMetricsDashboard({
           actionHint="Ver detalle"
         />
         <FunnelCard
+          agency={isPortal}
           icon={<Share2 className="h-4 w-4 text-amber-600" />}
           label="Compartieron"
           value={fmt(f?.shared.count ?? 0)}
@@ -576,6 +596,7 @@ export function ConversionMetricsDashboard({
           pctHint={sharedPctHint}
         />
         <FunnelCard
+          agency={isPortal}
           icon={<Users className="h-4 w-4 text-emerald-600" />}
           label="Referidos"
           value={fmt(f?.referred.count ?? 0)}
@@ -583,6 +604,7 @@ export function ConversionMetricsDashboard({
           pctHint="vinieron por un link"
         />
         <FunnelCard
+          agency={isPortal}
           icon={<Lock className="h-4 w-4 text-violet-600" />}
           label={unlockLabel}
           value={fmt(f?.unlockClicks.count ?? 0)}
@@ -592,6 +614,7 @@ export function ConversionMetricsDashboard({
           actionHint={isPortal ? undefined : 'Ver detalle'}
         />
         <FunnelCard
+          agency={isPortal}
           icon={<DollarSign className="h-4 w-4 text-rose-600" />}
           label={purchasedLabel}
           value={fmt(f?.purchased.count ?? 0)}
@@ -1117,6 +1140,7 @@ function FunnelCard({
   hint,
   onClick,
   actionHint,
+  agency = false,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -1127,39 +1151,47 @@ function FunnelCard({
   hint?: React.ReactNode;
   onClick?: () => void;
   actionHint?: string;
+  agency?: boolean;
 }) {
   const clickable = typeof onClick === 'function';
-  const className = `group rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
-    clickable
-      ? 'border-violet-200 hover:border-violet-300 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-200'
-      : 'border-slate-200'
-  }`;
+  const className = agency
+    ? `group ${agencyCls.cardSm} text-left transition ${
+        clickable
+          ? 'cursor-pointer hover:border-[#cbd5e1] hover:shadow-[0_4px_6px_-1px_rgba(15,23,42,0.06)] focus:outline-none focus:ring-2 focus:ring-[#eef2ff]'
+          : ''
+      }`
+    : `group rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+        clickable
+          ? 'border-violet-200 hover:border-violet-300 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-200'
+          : 'border-slate-200'
+      }`;
+  const pctColor = agency ? 'text-[#059669]' : 'text-emerald-600';
   const pctBlock = pctLines?.length ? (
     <div className="mt-1 min-h-[2.5rem] space-y-0.5">
       {pctLines.map((line) => (
         <p key={line.label} className="leading-tight">
-          <span className="text-sm font-semibold text-emerald-600">{pctLabel(line.pct)}</span>{' '}
+          <span className={`text-sm font-semibold ${pctColor}`}>{pctLabel(line.pct)}</span>{' '}
           <span className="text-[10px] text-slate-400">{line.label}</span>
         </p>
       ))}
     </div>
   ) : (
     <div className="mt-1 min-h-[2.5rem] flex items-baseline gap-1">
-      <span className="text-sm font-semibold text-emerald-600">{pct}</span>
+      <span className={`text-sm font-semibold ${pctColor}`}>{pct}</span>
       {pctHint ? <span className="text-[10px] text-slate-400">{pctHint}</span> : null}
     </div>
   );
   const inner = (
     <>
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+      <div className={`flex items-center gap-2 ${agency ? agencyCls.labelMicro : 'text-xs font-medium uppercase tracking-wide text-slate-500'}`}>
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+      <p className={`mt-2 tabular-nums ${agency ? agencyCls.metric : 'text-2xl font-bold text-slate-900'}`}>{value}</p>
       {pctBlock}
       {hint ? <p className="mt-0.5 text-[10px] text-slate-400">{hint}</p> : null}
       {clickable && actionHint ? (
-        <p className="mt-1 text-[10px] font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+        <p className={`mt-1 text-[10px] font-semibold opacity-80 group-hover:opacity-100 ${agency ? 'text-[#4648d4]' : 'text-violet-600'}`}>
           {actionHint} →
         </p>
       ) : null}

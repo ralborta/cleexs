@@ -673,6 +673,8 @@ export type FunnelDashboardProps = {
   onApplySpend: () => void;
   subtitle?: string;
   purchaseLabel?: string;
+  /** Look Cleexs Agency (Stitch) sin cambiar la lógica. */
+  variant?: 'default' | 'agency';
 };
 
 /** UI idéntica a /admin/funnel (embudo + cohortes + economics + referidores). */
@@ -694,36 +696,56 @@ export function FunnelDashboard({
   onApplySpend,
   subtitle = 'Embudo de negocio y cohortes de compra. Métricas de Conversión queda igual.',
   purchaseLabel,
+  variant = 'default',
 }: FunnelDashboardProps) {
   const f = data?.funnel;
   const eco = data?.economics;
   const stages = f ? buildAcquisitionStages(f) : [];
+  const agency = variant === 'agency';
 
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
-            <Filter className="h-6 w-6" />
+          <div
+            className={
+              agency
+                ? 'flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4648d4] shadow-sm'
+                : 'flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700'
+            }
+          >
+            <Filter className={agency ? 'h-5 w-5' : 'h-6 w-6'} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Funnel</h1>
-            <p className="text-sm text-slate-600">{subtitle}</p>
+            <h1 className={agency ? 'text-[20px] font-semibold tracking-tight text-[#0f172a]' : 'text-2xl font-semibold text-slate-900'}>
+              Funnel de Adquisición
+            </h1>
+            <p className={agency ? 'text-[13px] text-[#64748b]' : 'text-sm text-slate-600'}>{subtitle}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+          className={
+            agency
+              ? 'inline-flex items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-medium text-[#334155] shadow-sm hover:bg-[#f8fafc] disabled:opacity-50'
+              : 'inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50'
+          }
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Actualizar
         </button>
       </header>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-wrap gap-2">
+      <section
+        className={
+          agency
+            ? 'flex flex-col gap-3 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] sm:flex-row sm:items-end sm:justify-between'
+            : 'flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between'
+        }
+      >
+        <div className={agency ? 'inline-flex rounded-lg bg-[#f1f5f9] p-1 shadow-sm' : 'flex flex-wrap gap-2'}>
           {(
             [
               ['hoy', 'Hoy'],
@@ -737,11 +759,19 @@ export function FunnelDashboard({
               key={key}
               type="button"
               onClick={() => onPreset(key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                activePreset === key
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={
+                agency
+                  ? `rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${
+                      activePreset === key
+                        ? 'bg-white text-[#0f172a] shadow-sm'
+                        : 'text-[#64748b] hover:text-[#0f172a]'
+                    }`
+                  : `rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      activePreset === key
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`
+              }
             >
               {label}
             </button>
@@ -755,7 +785,11 @@ export function FunnelDashboard({
               value={from}
               max={to}
               onChange={(e) => onFromChange(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+              className={
+                agency
+                  ? 'rounded-lg border border-[#e2e8f0] bg-white px-2.5 py-1.5 text-sm text-[#0f172a] shadow-sm outline-none focus:border-[#c7d2fe] focus:ring-2 focus:ring-[#eef2ff]'
+                  : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200'
+              }
             />
           </label>
           <label className="flex flex-col gap-1 text-[11px] font-medium text-slate-500">
@@ -766,7 +800,11 @@ export function FunnelDashboard({
               min={from}
               max={maxTo}
               onChange={(e) => onToChange(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+              className={
+                agency
+                  ? 'rounded-lg border border-[#e2e8f0] bg-white px-2.5 py-1.5 text-sm text-[#0f172a] shadow-sm outline-none focus:border-[#c7d2fe] focus:ring-2 focus:ring-[#eef2ff]'
+                  : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200'
+              }
             />
           </label>
         </div>
