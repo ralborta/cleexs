@@ -131,19 +131,25 @@ export function buildPortalGraficoMetrics(args: ConversionLoadArgs): Metrics {
   const landing = (args.landing || 'all') as LandingKey;
   const factor = scaleForLanding(landing) * scaleForRange(args.from, args.to);
 
+  // Embudo secuencial (siempre decreciente): visitas → demo → email → share → ref → clics → contrato.
   const homeVisitors = scaleCount(1280, factor);
   const pageViews = scaleCount(2140, factor);
   const urlSubmitted = scaleCount(186, factor);
   const emailLeft = scaleCount(94, factor);
   const shared = scaleCount(41, factor);
-  const referred = scaleCount(67, factor);
-  const unlockClicks = scaleCount(52, factor);
+  const referred = scaleCount(29, factor);
+  const unlockClicks = scaleCount(22, factor);
   const purchased = scaleCount(12, factor);
   const checkoutAttempts = scaleCount(5, factor);
 
   const emailsSent = scaleCount(420, factor);
   const domainsContacted = scaleCount(180, factor);
   const domainsReturned = scaleCount(28, factor);
+
+  const refWa = scaleCount(12, factor);
+  const refRuta = scaleCount(8, factor);
+  const refPampa = scaleCount(5, factor);
+  const refCuyo = Math.max(0, referred - refWa - refRuta - refPampa);
 
   return {
     range: { from: args.from, to: args.to },
@@ -165,52 +171,52 @@ export function buildPortalGraficoMetrics(args: ConversionLoadArgs): Metrics {
       },
       shared: {
         count: shared,
-        pct: pct(shared, urlSubmitted),
+        pct: pct(shared, emailLeft),
         byChannel: [
-          { channel: 'whatsapp', count: scaleCount(22, factor) },
-          { channel: 'email', count: scaleCount(9, factor) },
+          { channel: 'whatsapp', count: scaleCount(18, factor) },
+          { channel: 'email', count: scaleCount(12, factor) },
           { channel: 'linkedin', count: scaleCount(7, factor) },
-          { channel: 'copy', count: scaleCount(3, factor) },
+          { channel: 'copy', count: scaleCount(4, factor) },
         ],
       },
       referred: {
         count: referred,
-        pct: pct(referred, homeVisitors),
+        pct: pct(referred, shared),
         byCode: [
           {
             refCode: 'emp-wa-andino',
             name: 'WhatsApp Empliados',
-            count: scaleCount(28, factor),
+            count: refWa,
             registered: true,
           },
           {
             refCode: 'emp-web-rutasur',
             name: 'Ruta Sur',
-            count: scaleCount(18, factor),
+            count: refRuta,
             registered: true,
           },
           {
             refCode: 'emp-ref-pampa',
             name: 'Distribuidora Pampa',
-            count: scaleCount(12, factor),
+            count: refPampa,
             registered: true,
             isSponsor: true,
           },
           {
             refCode: 'emp-partner-cuyo',
             name: 'Logística Cuyo Express',
-            count: scaleCount(9, factor),
+            count: refCuyo,
             registered: false,
           },
         ],
       },
       unlockClicks: {
         count: unlockClicks,
-        pct: pct(unlockClicks, emailLeft),
+        pct: pct(unlockClicks, referred),
       },
       purchased: {
         count: purchased,
-        pct: pct(purchased, urlSubmitted),
+        pct: pct(purchased, unlockClicks),
         checkoutAttempts,
         bySource: [
           { source: 'WhatsApp', count: scaleCount(5, factor), usd: scaleCount(2400, factor) },
@@ -229,37 +235,37 @@ export function buildPortalGraficoMetrics(args: ConversionLoadArgs): Metrics {
       {
         refCode: 'emp-wa-andino',
         name: 'WhatsApp Empliados',
-        uniqueEmails: scaleCount(34, factor),
-        diagnosticsWithEmail: scaleCount(34, factor),
+        uniqueEmails: scaleCount(28, factor),
+        diagnosticsWithEmail: scaleCount(28, factor),
         registered: true,
       },
       {
         refCode: 'emp-web-rutasur',
         name: 'Ruta Sur',
-        uniqueEmails: scaleCount(21, factor),
-        diagnosticsWithEmail: scaleCount(19, factor),
+        uniqueEmails: scaleCount(22, factor),
+        diagnosticsWithEmail: scaleCount(20, factor),
         registered: true,
       },
       {
         refCode: 'emp-ref-pampa',
         name: 'Distribuidora Pampa',
-        uniqueEmails: scaleCount(15, factor),
-        diagnosticsWithEmail: scaleCount(14, factor),
+        uniqueEmails: scaleCount(18, factor),
+        diagnosticsWithEmail: scaleCount(16, factor),
         registered: true,
         isSponsor: true,
       },
       {
         refCode: 'emp-partner-cuyo',
         name: 'Logística Cuyo Express',
-        uniqueEmails: scaleCount(8, factor),
-        diagnosticsWithEmail: scaleCount(7, factor),
+        uniqueEmails: scaleCount(12, factor),
+        diagnosticsWithEmail: scaleCount(11, factor),
         registered: false,
       },
       {
         refCode: '__sin_referidor__',
         name: 'Sin referidor',
-        uniqueEmails: scaleCount(16, factor),
-        diagnosticsWithEmail: scaleCount(12, factor),
+        uniqueEmails: Math.max(0, emailLeft - scaleCount(28 + 22 + 18 + 12, factor)),
+        diagnosticsWithEmail: Math.max(0, emailLeft - scaleCount(28 + 22 + 18 + 12, factor)),
         registered: false,
       },
     ],

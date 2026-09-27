@@ -122,12 +122,14 @@ export function AgencyDashboardView() {
   const purchased = f?.purchased.count ?? 0;
   const pending = f?.purchased.checkoutAttempts ?? 0;
 
-  const demoOfVisitors = f?.urlSubmitted.pct ?? null;
-  const emailOfDemos = f?.emailLeft.pct ?? null;
-  const sharedOfDemos = f?.shared.pct ?? null;
-  const referredPct = f?.referred.pct ?? null;
-  const unlockOfEmail = f?.unlockClicks.pct ?? null;
-  const purchasedPct = f?.purchased.pct ?? null;
+  const stepPct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
+
+  const demoOfVisitors = stepPct(demos, visitors);
+  const emailOfDemos = stepPct(emails, demos);
+  const sharedOfEmails = stepPct(shared, emails);
+  const referredOfShared = stepPct(referred, shared);
+  const unlockOfReferred = stepPct(unlocks, referred);
+  const purchasedOfUnlocks = stepPct(purchased, unlocks);
 
   const dropVisitToDemo =
     visitors > 0 ? Math.round(((visitors - demos) / visitors) * 1000) / 10 : null;
@@ -166,7 +168,7 @@ export function AgencyDashboardView() {
       label: 'Pidieron Demo',
       value: demos,
       pct: pctLabel(demoOfVisitors),
-      hint: 'de visitas',
+      hint: 'del paso ant.',
       bar: Math.min(100, demoOfVisitors ?? 0),
       tone: 'indigo' as const,
       icon: <MessageCircle className="h-[18px] w-[18px] text-[#94a3b8]" />,
@@ -176,7 +178,7 @@ export function AgencyDashboardView() {
       label: 'Dejaron Email',
       value: emails,
       pct: pctLabel(emailOfDemos),
-      hint: 'de demos',
+      hint: 'del paso ant.',
       bar: Math.min(100, emailOfDemos ?? 0),
       tone: 'indigo' as const,
       icon: <Mail className="h-[18px] w-[18px] text-[#94a3b8]" />,
@@ -185,9 +187,9 @@ export function AgencyDashboardView() {
       n: 4,
       label: 'Compartieron',
       value: shared,
-      pct: pctLabel(sharedOfDemos),
-      hint: 'de demos',
-      bar: Math.min(100, sharedOfDemos ?? 0),
+      pct: pctLabel(sharedOfEmails),
+      hint: 'del paso ant.',
+      bar: Math.min(100, sharedOfEmails ?? 0),
       tone: 'green' as const,
       icon: <Share2 className="h-[18px] w-[18px] text-[#94a3b8]" />,
     },
@@ -195,9 +197,9 @@ export function AgencyDashboardView() {
       n: 5,
       label: 'Referidos',
       value: referred,
-      pct: pctLabel(referredPct),
-      hint: 'por link',
-      bar: Math.min(100, referredPct ?? 0),
+      pct: pctLabel(referredOfShared),
+      hint: 'del paso ant.',
+      bar: Math.min(100, referredOfShared ?? 0),
       tone: 'green' as const,
       icon: <Users className="h-[18px] w-[18px] text-[#94a3b8]" />,
     },
@@ -205,9 +207,9 @@ export function AgencyDashboardView() {
       n: 6,
       label: 'Clics Agentes',
       value: unlocks,
-      pct: pctLabel(unlockOfEmail),
-      hint: 'de emails',
-      bar: Math.min(100, unlockOfEmail ?? 0),
+      pct: pctLabel(unlockOfReferred),
+      hint: 'del paso ant.',
+      bar: Math.min(100, unlockOfReferred ?? 0),
       tone: 'indigo' as const,
       icon: <Zap className="h-[18px] w-[18px] text-[#94a3b8]" />,
     },
@@ -215,9 +217,9 @@ export function AgencyDashboardView() {
       n: 7,
       label: 'Contrataron',
       value: purchased,
-      pct: pctLabel(purchasedPct),
+      pct: pctLabel(purchasedOfUnlocks),
       hint: pending ? `${pending} pend.` : 'cerrados',
-      bar: 100,
+      bar: Math.min(100, purchasedOfUnlocks ?? 0),
       tone: 'success' as const,
       icon: <CheckCircle2 className="h-[18px] w-[18px] text-[#059669]" />,
     },
