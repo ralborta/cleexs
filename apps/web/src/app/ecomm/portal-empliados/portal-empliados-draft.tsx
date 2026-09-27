@@ -34,12 +34,11 @@ import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard'
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
-import { ReferidoresDashboard } from '@/components/referidores/referidores-dashboard';
-import { SponsorLinkBuilder } from '@/components/tools/sponsor-link-builder';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
 import { AgencyDashboardView } from './agency-dashboard-view';
+import { AgencyReferidosView } from './agency-referidos-view';
 import { AgencyReportesView } from './agency-reportes-view';
 
 type SectionId =
@@ -915,63 +914,7 @@ function ConvertirView() {
 }
 
 function ReferidosCampanasView() {
-  const [tab, setTab] = useState<'referidos' | 'campanas'>('campanas');
-  const fetcher = useCallback((path: string, init?: RequestInit) => fetch(path, { ...init, cache: 'no-store' }), []);
-
-  return (
-    <div className="space-y-4">
-      <div className={tab === 'campanas' ? '' : 'mx-auto max-w-6xl px-4 pt-6 md:px-8'}>
-        <div className={tab === 'campanas' ? 'px-4 pt-6 sm:px-6' : ''}>
-          <SectionHeader
-            title="Referidos y Campañas"
-            subtitle="Campañas = links auspiciador · Referidos = ranking y conversiones por ref."
-          />
-          <div className="mb-4 flex flex-wrap gap-2">
-            {(
-              [
-                ['campanas', 'Campañas'],
-                ['referidos', 'Referidos'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTab(id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  tab === id ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {tab === 'campanas' ? (
-        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-violet-50/20 px-3 py-6 sm:px-6">
-          <SponsorLinkBuilder
-            brand={{
-              title: 'Campañas',
-              subtitle:
-                'Generá link web, QR WhatsApp con mensaje de campaña y seguí conversiones por ref (web y WhatsApp) para Empliados.',
-              rankingHint: 'Las campañas alimentan Referidos del portal (ranking por código ref).',
-              marketingHomeLabel: 'home de empliados.net',
-              marketingBaseUrl: 'https://empliados.net',
-              hideMark: true,
-              defaultSponsorName: 'Revista Logística',
-              defaultRef: 'revista_logistica',
-              defaultUtmCampaign: 'empliados_demo',
-            }}
-          />
-        </div>
-      ) : (
-        <div className="mx-auto max-w-6xl px-4 pb-6 md:px-8">
-          <ReferidoresDashboard apiBase="/api/borrador/portal-referrals" fetcher={fetcher} />
-        </div>
-      )}
-    </div>
-  );
+  return <AgencyReferidosView />;
 }
 
 function usePortalEmailApi() {

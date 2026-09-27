@@ -162,9 +162,11 @@ export function buildAcquisitionStages(f: FunnelMetrics['funnel']): AcquisitionS
 function AcquisitionFunnelPanel({
   stages,
   periodLabel,
+  agency = false,
 }: {
   stages: AcquisitionStage[];
   periodLabel: string;
+  agency?: boolean;
 }) {
   const base = Math.max(stages[0]?.count ?? 0, 0);
   const last = stages[stages.length - 1];
@@ -196,29 +198,44 @@ function AcquisitionFunnelPanel({
     return label.split(' ')[0] || label;
   };
 
+  const panel = agency
+    ? 'overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]'
+    : 'overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm';
+  const kpi = agency
+    ? 'rounded-xl bg-[#f1f5f9] p-4'
+    : 'rounded-xl border border-slate-100 bg-slate-50/80 p-4';
+  const titleCls = agency ? 'text-[20px] font-semibold tracking-tight text-[#0f172a]' : 'text-lg font-semibold text-slate-900';
+  const subCls = agency ? 'mt-0.5 text-[13px] text-[#64748b]' : 'mt-0.5 text-xs text-slate-500';
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section className={panel}>
       <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Embudo de adquisición</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Conversión por etapa · {periodLabel}</p>
+          <h2 className={titleCls}>Embudo de adquisición</h2>
+          <p className={subCls}>Conversión por etapa · {periodLabel}</p>
         </div>
       </div>
 
       <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3 sm:p-5">
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+        <div className={kpi}>
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-mono text-2xl font-bold tabular-nums text-slate-900">{fmt(base)}</p>
               <p className="mt-0.5 text-xs font-medium text-slate-500">Visitantes</p>
             </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+            <span
+              className={
+                agency
+                  ? 'flex h-8 w-8 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4648d4]'
+                  : 'flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600'
+              }
+            >
               <Users className="h-4 w-4" />
             </span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+        <div className={kpi}>
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-mono text-2xl font-bold tabular-nums text-slate-900">
@@ -226,14 +243,20 @@ function AcquisitionFunnelPanel({
               </p>
               <p className="mt-0.5 text-xs font-medium text-slate-500">Conversión final</p>
             </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+            <span
+              className={
+                agency
+                  ? 'flex h-8 w-8 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4648d4]'
+                  : 'flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600'
+              }
+            >
               <Filter className="h-4 w-4" />
             </span>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">Visitantes → compartieron</p>
         </div>
 
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+        <div className={kpi}>
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-mono text-2xl font-bold tabular-nums text-slate-900">
@@ -408,16 +431,28 @@ function EconomicsCards({
   setAdSpendInput,
   onApplySpend,
   loading,
+  agency = false,
 }: {
   eco: FunnelMetrics['economics'] | undefined;
   adSpendInput: string;
   setAdSpendInput: (v: string) => void;
   onApplySpend: () => void;
   loading: boolean;
+  agency?: boolean;
 }) {
+  const card = agency
+    ? 'rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]'
+    : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm';
+  const inputCls = agency
+    ? 'min-w-0 flex-1 rounded-lg border border-[#e2e8f0] px-2.5 py-1.5 text-sm text-[#0f172a] outline-none focus:border-[#c7d2fe] focus:ring-2 focus:ring-[#eef2ff]'
+    : 'min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200';
+  const btnCls = agency
+    ? 'inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#c7d2fe] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#4648d4] hover:bg-[#eef2ff] disabled:opacity-50'
+    : 'inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50';
+
   return (
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={card}>
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-slate-500">Inversión publicitaria</p>
@@ -426,7 +461,13 @@ function EconomicsCards({
             </p>
             <p className="mt-1 text-[11px] text-slate-400">Meta Ads · rango actual</p>
           </div>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+          <span
+            className={
+              agency
+                ? 'flex h-8 w-8 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4648d4]'
+                : 'flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600'
+            }
+          >
             <DollarSign className="h-4 w-4" />
           </span>
         </div>
@@ -438,21 +479,16 @@ function EconomicsCards({
             value={adSpendInput}
             placeholder="USD"
             onChange={(e) => setAdSpendInput(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+            className={inputCls}
           />
-          <button
-            type="button"
-            onClick={onApplySpend}
-            disabled={loading}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50"
-          >
+          <button type="button" onClick={onApplySpend} disabled={loading} className={btnCls}>
             <Upload className="h-3.5 w-3.5" />
             Cargar
           </button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={card}>
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-slate-500">CAC</p>
@@ -471,7 +507,7 @@ function EconomicsCards({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={card}>
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-slate-500">LTV</p>
@@ -488,7 +524,7 @@ function EconomicsCards({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={card}>
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-slate-500">Payback</p>
@@ -822,7 +858,7 @@ export function FunnelDashboard({
 
       {f ? (
         <>
-          <AcquisitionFunnelPanel stages={stages} periodLabel={periodLabel} />
+          <AcquisitionFunnelPanel stages={stages} periodLabel={periodLabel} agency={agency} />
 
           {f.shares.byChannel.length > 0 ? (
             <p className="-mt-3 text-center text-[11px] text-slate-500">
@@ -849,6 +885,7 @@ export function FunnelDashboard({
             setAdSpendInput={setAdSpendInput}
             onApplySpend={onApplySpend}
             loading={loading}
+            agency={agency}
           />
 
           <ReferrersCampaignsTable rows={data?.byReferrer ?? []} />

@@ -115,6 +115,8 @@ export type ReferidoresDashboardProps = {
   title?: string;
   subtitle?: string;
   onError?: (message: string | null) => void;
+  /** Look Cleexs Agency (Stitch) sin cambiar la lógica. */
+  variant?: 'default' | 'agency';
 };
 
 /** UI idéntica a /admin/referidores. */
@@ -124,7 +126,9 @@ export function ReferidoresDashboard({
   title = 'Referidores',
   subtitle = 'Ranking de auspiciadores por emails únicos. Cada canal necesita su propio código ref en el link.',
   onError,
+  variant = 'default',
 }: ReferidoresDashboardProps) {
+  const agency = variant === 'agency';
   const [dashboard, setDashboard] = useState<ReferralDashboard | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -313,16 +317,38 @@ export function ReferidoresDashboard({
     URL.revokeObjectURL(url);
   }
 
+  const btnSecondary = agency
+    ? 'inline-flex items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-medium text-[#334155] shadow-sm hover:bg-[#f8fafc] disabled:opacity-50'
+    : 'inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50';
+  const panel = agency
+    ? 'rounded-xl border border-[#e2e8f0] bg-white shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]'
+    : 'rounded-2xl border border-slate-200 bg-white shadow-sm';
+  const chipOn = agency ? 'bg-[#4648d4] text-white' : 'bg-violet-600 text-white';
+  const chipOff = agency
+    ? 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+    : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+  const btnPrimary = agency
+    ? 'inline-flex items-center gap-2 rounded-lg bg-[#4648d4] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#4f46e5] disabled:opacity-50'
+    : 'inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50';
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
-            <MousePointerClick className="h-6 w-6" />
+          <div
+            className={
+              agency
+                ? 'flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4648d4] shadow-sm'
+                : 'flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700'
+            }
+          >
+            <MousePointerClick className={agency ? 'h-5 w-5' : 'h-6 w-6'} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-            <p className="text-sm text-slate-600">
+            <h1 className={agency ? 'text-[20px] font-semibold tracking-tight text-[#0f172a]' : 'text-2xl font-semibold text-slate-900'}>
+              {title}
+            </h1>
+            <p className={agency ? 'text-[13px] text-[#64748b]' : 'text-sm text-slate-600'}>
               {subtitle.includes('ref') ? (
                 <>
                   Ranking de auspiciadores por emails únicos. Cada canal necesita su propio código{' '}
@@ -335,21 +361,11 @@ export function ReferidoresDashboard({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-          >
+          <button type="button" onClick={() => void load()} disabled={loading} className={btnSecondary}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Refrescar
           </button>
-          <button
-            type="button"
-            onClick={exportCsv}
-            disabled={rows.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-          >
+          <button type="button" onClick={exportCsv} disabled={rows.length === 0} className={btnSecondary}>
             <Download className="h-4 w-4" />
             Exportar CSV
           </button>
@@ -366,26 +382,48 @@ export function ReferidoresDashboard({
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-violet-700">Emails únicos (total)</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-violet-950">{formatNumber(totalUniqueEmails)}</p>
-          <p className="mt-1 text-xs text-violet-800">
+        <div
+          className={
+            agency
+              ? 'rounded-xl border border-[#c7d2fe] bg-[#eef2ff] p-5 shadow-sm'
+              : 'rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm'
+          }
+        >
+          <p
+            className={
+              agency
+                ? 'text-xs font-medium uppercase tracking-wide text-[#3730a3]'
+                : 'text-xs font-medium uppercase tracking-wide text-violet-700'
+            }
+          >
+            Emails únicos (total)
+          </p>
+          <p
+            className={
+              agency
+                ? 'mt-2 text-2xl font-bold tabular-nums text-[#0f172a]'
+                : 'mt-2 text-2xl font-bold tabular-nums text-violet-950'
+            }
+          >
+            {formatNumber(totalUniqueEmails)}
+          </p>
+          <p className={agency ? 'mt-1 text-xs text-[#4338ca]' : 'mt-1 text-xs text-violet-800'}>
             {formatNumber(attributedUniqueEmails)} con referidor · {formatNumber(unattributedUniqueEmails)} sin ref
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className={agency ? `${panel} p-5` : 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'}>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Clicks últimos 30 días</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{formatNumber(totalClicks)}</p>
           <p className="mt-1 text-xs text-slate-500">
             Llegadas al link <code className="font-mono text-[10px]">/r/&lt;ref&gt;</code>
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className={agency ? `${panel} p-5` : 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'}>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Pusieron URL</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{formatNumber(totalStarted)}</p>
           <p className="mt-1 text-xs text-slate-500">Diagnósticos iniciados (histórico)</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className={agency ? `${panel} p-5` : 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'}>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Tasa de finalización</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{overallConversion.toFixed(1)}%</p>
           <p className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">
@@ -395,9 +433,15 @@ export function ReferidoresDashboard({
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className={panel}>
           <header className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+            <div
+              className={
+                agency
+                  ? 'flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4648d4]'
+                  : 'flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700'
+              }
+            >
               <Plus className="h-4 w-4" />
             </div>
             <div>
@@ -492,27 +536,33 @@ export function ReferidoresDashboard({
             </label>
 
             {formShortUrl ? (
-              <div className="rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">Link corto</p>
+              <div
+                className={
+                  agency
+                    ? 'rounded-xl border border-[#c7d2fe] bg-[#eef2ff]/70 px-3 py-2'
+                    : 'rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2'
+                }
+              >
+                <p
+                  className={
+                    agency
+                      ? 'text-[10px] font-semibold uppercase tracking-wide text-[#4648d4]'
+                      : 'text-[10px] font-semibold uppercase tracking-wide text-violet-700'
+                  }
+                >
+                  Link corto
+                </p>
                 <p className="mt-1 break-all font-mono text-xs text-slate-800">{formShortUrl}</p>
               </div>
             ) : null}
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50"
-              >
+              <button type="submit" disabled={saving} className={btnPrimary}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 {form.id ? 'Guardar cambios' : 'Crear campaña'}
               </button>
               {form.id ? (
-                <button
-                  type="button"
-                  onClick={() => setForm(emptyForm())}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-                >
+                <button type="button" onClick={() => setForm(emptyForm())} className={btnSecondary}>
                   Cancelar
                 </button>
               ) : null}
@@ -520,7 +570,7 @@ export function ReferidoresDashboard({
           </form>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className={panel}>
           <header className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Ranking por auspiciador</h2>
@@ -541,9 +591,7 @@ export function ReferidoresDashboard({
                   type="button"
                   onClick={() => setListFilter(key)}
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    listFilter === key
-                      ? 'bg-violet-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    listFilter === key ? chipOn : chipOff
                   }`}
                 >
                   {label}
