@@ -1211,3 +1211,15 @@
 .agency-stitch .text-\[10px\]{font-size:10px;line-height:14px;}
 .agency-stitch .divide-surface-container-low > :not([hidden]) ~ :not([hidden]){border-color:#ede9f7;}
 .agency-stitch .mb-1{margin-bottom:0.25rem;}
+
+/* Contenido / Hub / Auditoría */
+.agency-stitch .mb-space-xs{margin-bottom:0.25rem;}
+.agency-stitch .mt-space-sm{margin-top:0.5rem;}
+.agency-stitch .mt-space-xs{margin-top:0.25rem;}
+.agency-stitch .pt-space-md{padding-top:0.75rem;}
+.agency-stitch .pb-space-md{padding-bottom:0.75rem;}
+.agency-stitch .w-36{width:9rem;}
+.agency-stitch .flex-shrink-0{flex-shrink:0;}
+.agency-stitch .leading-tight{line-height:1.25;}
+.agency-stitch .bg-error-container{background-color:#ffdad6;}
+.agency-stitch .text-on-error-container{color:#410002;}

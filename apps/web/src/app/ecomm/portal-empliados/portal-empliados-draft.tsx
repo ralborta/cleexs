@@ -28,18 +28,20 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { AuditoriaAgenticaDashboard } from '@/components/auditoria/auditoria-agentica-dashboard';
 import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
 import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
-import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
+import { setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
 import { AgencyDashboardView } from './agency-dashboard-view';
 import { AgencyFunnelView } from './agency-funnel-view';
 import { AgencyReferidosView } from './agency-referidos-view';
 import { AgencySovView } from './agency-sov-view';
+import { AgencyContenidoView } from './agency-contenido-view';
+import { AgencyHubLlmView } from './agency-hub-llm-view';
+import { AgencyAuditoriaView } from './agency-auditoria-view';
 import { AgencyReportesView } from './agency-reportes-view';
 
 type SectionId =
@@ -128,18 +130,7 @@ const NAV: NavSection[] = [
   },
 ];
 
-/** Prompts de descubrimiento · agentes IA logística (datos en AgencySovView). */
-
-const AGENTS = [
-  { name: 'Agente de Reclamos', skus: 1, page: 'Lista', sovHits: 9, status: 'Indexada', source: 'existente' as const },
-  { name: 'Agente de Seguimiento', skus: 1, page: 'Lista', sovHits: 7, status: 'Indexada', source: 'existente' as const },
-  { name: 'Agente de Coordinación', skus: 1, page: 'En progreso', sovHits: 3, status: 'Borrador', source: 'teo' as const },
-  { name: 'Agente de Atención clientes', skus: 1, page: 'Lista', sovHits: 5, status: 'Indexada', source: 'existente' as const },
-  { name: 'Agente de Planificación viajes', skus: 1, page: 'Pendiente', sovHits: 1, status: '—', source: 'teo' as const },
-  { name: 'Agente de Documentación', skus: 1, page: 'Lista', sovHits: 4, status: 'Indexada', source: 'existente' as const },
-  { name: 'Agente de Alertas operativas', skus: 1, page: 'Lista', sovHits: 6, status: 'Indexada', source: 'teo' as const },
-  { name: 'Agente de Reportes', skus: 1, page: 'En progreso', sovHits: 2, status: 'Borrador', source: 'teo' as const },
-];
+/** Prompts de descubrimiento · agentes IA logística (datos en AgencySovView / AgencyContenidoView). */
 
 const TRAFFIC_SOURCES = [
   { source: 'Orgánico', visits: 4200, conv: 3.2 },
@@ -217,13 +208,6 @@ const PRODUCT_PAGES = [
     page: '/sol',
     status: 'En progreso',
   },
-];
-
-const LLM_HUB_PAGES = [
-  { path: 'llm.empliados.net/faq/reclamos', type: 'FAQ', posts: 12, updated: 'Hoy' },
-  { path: 'llm.empliados.net/faq/seguimiento', type: 'FAQ', posts: 9, updated: 'Ayer' },
-  { path: 'llm.empliados.net/articulos', type: 'Artículos', posts: 18, updated: 'Hace 2d' },
-  { path: 'llm.empliados.net/agentica', type: 'Agentica', posts: 6, updated: 'Hoy' },
 ];
 
 const TEO_POSTS = [
@@ -455,80 +439,7 @@ function OportunidadesView() {
 }
 
 function ContenidoView() {
-  const [tab, setTab] = useState<'existente' | 'teo'>('existente');
-  const rows = AGENTS.filter((a) => (tab === 'teo' ? a.source === 'teo' : a.source === 'existente'));
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Contenido"
-        subtitle="Separá lo ya publicado del sitio de lo generado por Teo."
-      />
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ['existente', 'Ya existente'],
-            ['teo', 'Generado por Teo'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              tab === id ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card
-          icon={<FileText className="h-4 w-4" />}
-          label={tab === 'teo' ? 'Piezas Teo' : 'Páginas existentes'}
-          value={String(rows.length)}
-          hint={tab === 'teo' ? 'Borradores + publicados' : 'En el CMS / sitio'}
-          accent="text-violet-600"
-        />
-        <Card icon={<Globe2 className="h-4 w-4" />} label="FAQ IA" value="4" hint="Hubs temáticos" accent="text-sky-600" />
-        <Card icon={<ScanSearch className="h-4 w-4" />} label="Indexadas" value="6" hint="GSC + bots IA" accent="text-emerald-600" />
-      </div>
-      <Panel title={tab === 'teo' ? 'Cola Teo' : 'Agentes · contenido existente'}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="pb-2 pr-4 font-semibold">Agente</th>
-                <th className="pb-2 pr-4 font-semibold">Página</th>
-                <th className="pb-2 pr-4 font-semibold">Hits SOV</th>
-                <th className="pb-2 pr-4 font-semibold">Origen</th>
-                <th className="pb-2 font-semibold">Index</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {rows.map((p) => (
-                <tr key={p.name}>
-                  <td className="py-2.5 pr-4 font-medium">{p.name}</td>
-                  <td className="py-2.5 pr-4">{p.page}</td>
-                  <td className="py-2.5 pr-4 tabular-nums">{p.sovHits}</td>
-                  <td className="py-2.5 pr-4">
-                    <Badge tone={p.source === 'teo' ? 'violet' : 'slate'}>
-                      {p.source === 'teo' ? 'Teo' : 'Existente'}
-                    </Badge>
-                  </td>
-                  <td className="py-2.5">
-                    <Badge tone={p.status === 'Indexada' ? 'emerald' : p.status === 'Borrador' ? 'amber' : 'slate'}>
-                      {p.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
-    </div>
-  );
+  return <AgencyContenidoView />;
 }
 
 function OutsideLinksView() {
@@ -618,43 +529,7 @@ function KeywordsView() {
 }
 
 function LlmHubView() {
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Hub LLM"
-        subtitle="FAQs, artículos y parte agentica en llm.empliados.net · muchas páginas para LLMs."
-      />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card icon={<MessageSquare className="h-4 w-4" />} label="FAQs" value="21" hint="2 hubs" accent="text-violet-600" />
-        <Card icon={<FileText className="h-4 w-4" />} label="Artículos" value="18" hint="llm.empliados.net" accent="text-sky-600" />
-        <Card icon={<Bot className="h-4 w-4" />} label="Agentica" value="6" hint="Flujos / demos" accent="text-emerald-600" />
-      </div>
-      <Panel title="Mapa del hub">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="pb-2 pr-4 font-semibold">Path</th>
-                <th className="pb-2 pr-4 font-semibold">Tipo</th>
-                <th className="pb-2 pr-4 font-semibold">Posts</th>
-                <th className="pb-2 font-semibold">Actualizado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {LLM_HUB_PAGES.map((r) => (
-                <tr key={r.path}>
-                  <td className="py-2.5 pr-4 font-mono text-xs text-violet-700">{r.path}</td>
-                  <td className="py-2.5 pr-4">{r.type}</td>
-                  <td className="py-2.5 pr-4 tabular-nums">{r.posts}</td>
-                  <td className="py-2.5 text-slate-500">{r.updated}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
-    </div>
-  );
+  return <AgencyHubLlmView />;
 }
 
 function RedesTeoView() {
@@ -899,14 +774,7 @@ function ReportesView() {
 }
 
 function AuditoriaView() {
-  const apiFetch = useMemo(() => createPortalAuditoriaFetch(), []);
-  return (
-    <AuditoriaAgenticaDashboard
-      apiFetch={apiFetch}
-      portalCreatedBy="portal-empliados"
-      ensureTarget={{ url: 'https://empliados.net', siteLabel: 'Empliados' }}
-    />
-  );
+  return <AgencyAuditoriaView />;
 }
 
 function SettingsView() {
