@@ -226,6 +226,24 @@ export function createPortalEmailDemoFetch() {
       if (key.startsWith('free-sequence-preview')) {
         return json({ ...FREE_SEQUENCE, message: 'Guardado (demo Empliados)' });
       }
+      if (key.startsWith('templates/send-test')) {
+        let variant = 'letter';
+        let to = '';
+        try {
+          const body = init?.body ? JSON.parse(String(init.body)) : {};
+          variant = body.variant === 'editorial' ? 'editorial' : 'letter';
+          to = body.to || '';
+        } catch {
+          /* ignore */
+        }
+        return json({
+          ok: true,
+          dryRun: true,
+          message: `Prueba demo · sin envío real${to ? ` → ${to}` : ''}`,
+          variant,
+          subject: variant === 'editorial' ? 'Newsletter demo Empliados' : 'Carta demo Empliados',
+        });
+      }
       return json({ ok: true, dryRun: true, message: 'Acción demo · sin envío real' });
     }
 
@@ -356,16 +374,38 @@ export function createPortalEmailDemoFetch() {
 
     if (key === 'free-sequence-preview') return json(FREE_SEQUENCE);
     if (key === 'templates/preview' || key.startsWith('templates/preview')) {
+      const u = new URL(url.startsWith('http') ? url : `http://local${url.startsWith('/') ? '' : '/'}${url}`);
+      const variant = u.searchParams.get('variant') === 'editorial' ? 'editorial' : 'letter';
+      const score = Number(u.searchParams.get('score') || 54);
+      const domain = u.searchParams.get('domain') || 'empliados.net';
+      const brandName = u.searchParams.get('brandName') || 'Empliados';
+      const html =
+        variant === 'editorial'
+          ? `<div style="font-family:Georgia,serif;padding:32px;background:#faf8ff;color:#131b2e">
+              <p style="letter-spacing:.12em;text-transform:uppercase;font-size:11px;color:#4648d4">Newsletter Empliados</p>
+              <h1 style="font-size:28px;margin:8px 0 16px">${brandName} · agentes IA en ${domain}</h1>
+              <p style="font-size:16px;line-height:1.5">Edición editorial de muestra. Score de visibilidad: <strong>${score}</strong>.</p>
+              <div style="margin-top:24px;padding:16px;border-radius:12px;background:#fff;border:1px solid #e4e1f0">Casos · referidos · próximo agente</div>
+            </div>`
+          : `<div style="font-family:system-ui,sans-serif;padding:28px;color:#131b2e">
+              <img src="/CleexsLogo.png" alt="" width="120" style="margin-bottom:16px"/>
+              <h1 style="font-size:22px;margin:0 0 12px">Hola — gracias por la demo</h1>
+              <p style="line-height:1.55;color:#464554">Carta ejecutiva para <strong>${brandName}</strong> (${domain}). Tu score de muestra: <strong>${score}</strong>.</p>
+              <p style="margin-top:20px;padding:14px;border-radius:10px;background:#eaedff;color:#2f2ebe;font-size:14px">Próximo paso: activar Agente de Reclamos</p>
+            </div>`;
       return json({
         ok: true,
-        variant: 'letter',
-        subject: 'Gracias por la demo · Empliados',
-        html: '<div style="font-family:sans-serif;padding:24px"><h1>Empliados</h1><p>Vista previa carta · agentes IA logística.</p></div>',
-        text: 'Empliados — vista previa carta',
+        variant,
+        subject:
+          variant === 'editorial'
+            ? `Newsletter · ${brandName} en motores de IA`
+            : `Gracias por la demo · ${brandName}`,
+        html,
+        text: `${brandName} — preview ${variant}`,
         assets: { logoUrl: '/CleexsLogo.png', heroImageUrl: null, founderPhotoUrl: null },
-        sampleScore: 54,
-        sampleDomain: 'empliados.net',
-        sampleBrandName: 'Empliados',
+        sampleScore: score,
+        sampleDomain: domain,
+        sampleBrandName: brandName,
         newDiagnosticUrl: 'https://app.cleexs.net/diagnostico/crear',
         plansUrl: 'https://app.cleexs.net/planes',
       });

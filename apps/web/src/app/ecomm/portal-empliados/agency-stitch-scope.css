@@ -1235,3 +1235,5 @@
 .agency-stitch .whitespace-pre-wrap{white-space:pre-wrap;}
 .agency-stitch .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .agency-stitch .shadow-lg{box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1),0 4px 6px -4px rgb(0 0 0 / 0.1);}
+.agency-stitch .h-\[720px\]{height:720px;}
+.agency-stitch .border-outline-variant\/30{border-color:color-mix(in srgb,#c7c4d7 30%, transparent);}

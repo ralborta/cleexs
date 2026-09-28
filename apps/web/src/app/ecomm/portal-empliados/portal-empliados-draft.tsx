@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode, Suspense } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   BarChart3,
   Bot,
@@ -10,7 +10,6 @@ import {
   FileText,
   Globe2,
   KeyRound,
-  Loader2,
   Mail,
   Megaphone,
   MessageSquare,
@@ -29,7 +28,6 @@ import {
   Users,
 } from 'lucide-react';
 import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
-import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
 import { setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
@@ -42,6 +40,7 @@ import { AgencyHubLlmView } from './agency-hub-llm-view';
 import { AgencyAuditoriaView } from './agency-auditoria-view';
 import { AgencyReportesView } from './agency-reportes-view';
 import { AgencyEmailView } from './agency-email-view';
+import { AgencyPlantillasView } from './agency-plantillas-view';
 import { AgencyConvertirView } from './agency-convertir-view';
 import { AgencySettingsView } from './agency-settings-view';
 
@@ -621,18 +620,7 @@ function EmailSecuenciaView() {
 
 function EmailPlantillasView({ onGoEnvios }: { onGoEnvios: () => void }) {
   usePortalEmailApi();
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Cargando…
-        </div>
-      }
-    >
-      <EmailPlantillasDashboard mode="portal" onGoEnvios={onGoEnvios} />
-    </Suspense>
-  );
+  return <AgencyPlantillasView onGoEnvios={onGoEnvios} />;
 }
 
 function EmailEnviosView({ onGoTemplates: _onGoTemplates }: { onGoTemplates: () => void }) {
