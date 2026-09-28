@@ -42,6 +42,7 @@ import { AgencyReportesView } from './agency-reportes-view';
 import { AgencyEmailView } from './agency-email-view';
 import { AgencyPlantillasView } from './agency-plantillas-view';
 import { AgencyClientesView } from './agency-clientes-view';
+import { AgencyKeywordsView } from './agency-keywords-view';
 import { AgencyConvertirView } from './agency-convertir-view';
 import { AgencySettingsView } from './agency-settings-view';
 
@@ -181,33 +182,6 @@ const OUTSIDE_LINKS = [
     why: 'Authority en visibility; LLMs lo citan',
     action: 'Benchmark + partnership',
     status: 'Investigar',
-  },
-];
-
-const PRODUCT_PAGES = [
-  {
-    product: 'Agente de Reclamos',
-    kwds: ['reclamos envíos IA', 'automatizar reclamos logística'],
-    page: '/agentes/reclamos',
-    status: 'Publicada',
-  },
-  {
-    product: 'Agente de Seguimiento',
-    kwds: ['seguimiento camiones 24/7', 'tracking envíos IA'],
-    page: '/agentes/seguimiento',
-    status: 'Publicada',
-  },
-  {
-    product: 'Agente de Coordinación',
-    kwds: ['coordinar choferes oficina', 'dispatch IA'],
-    page: '/agentes/coordinacion',
-    status: 'Borrador',
-  },
-  {
-    product: 'SOL completo',
-    kwds: ['sistema operativo logística', 'SOL agentes IA'],
-    page: '/sol',
-    status: 'En progreso',
   },
 ];
 
@@ -482,51 +456,8 @@ function OutsideLinksView() {
   );
 }
 
-function KeywordsView() {
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Keywords / Productos"
-        subtitle="Abanico de kwds y prompts · 1 página por producto (contenido + fotos)."
-      />
-      <Panel title="Páginas objetivo">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="pb-2 pr-4 font-semibold">Producto</th>
-                <th className="pb-2 pr-4 font-semibold">Keywords / prompts</th>
-                <th className="pb-2 pr-4 font-semibold">URL</th>
-                <th className="pb-2 font-semibold">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {PRODUCT_PAGES.map((r) => (
-                <tr key={r.product}>
-                  <td className="py-2.5 pr-4 font-medium">{r.product}</td>
-                  <td className="py-2.5 pr-4">
-                    <div className="flex flex-wrap gap-1">
-                      {r.kwds.map((k) => (
-                        <Badge key={k} tone="slate">
-                          {k}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="py-2.5 pr-4 font-mono text-xs text-slate-500">{r.page}</td>
-                  <td className="py-2.5">
-                    <Badge tone={r.status === 'Publicada' ? 'emerald' : r.status === 'Borrador' ? 'amber' : 'violet'}>
-                      {r.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
-    </div>
-  );
+function KeywordsView({ onGoContenido }: { onGoContenido?: () => void }) {
+  return <AgencyKeywordsView onGoContenido={onGoContenido} />;
 }
 
 function LlmHubView() {
@@ -657,6 +588,7 @@ const FULL_BLEED_SECTIONS: SectionId[] = [
   'convertir',
   'settings',
   'clientes',
+  'keywords',
 ];
 
 function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
@@ -676,7 +608,7 @@ function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
     case 'outside-links':
       return <OutsideLinksView />;
     case 'keywords':
-      return <KeywordsView />;
+      return <KeywordsView onGoContenido={() => setSection('contenido')} />;
     case 'llm-hub':
       return <LlmHubView />;
     case 'referidos-campanas':
