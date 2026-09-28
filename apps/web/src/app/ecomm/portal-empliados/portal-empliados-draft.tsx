@@ -41,6 +41,7 @@ import { AgencyAuditoriaView } from './agency-auditoria-view';
 import { AgencyReportesView } from './agency-reportes-view';
 import { AgencyEmailView } from './agency-email-view';
 import { AgencyPlantillasView } from './agency-plantillas-view';
+import { AgencyClientesView } from './agency-clientes-view';
 import { AgencyConvertirView } from './agency-convertir-view';
 import { AgencySettingsView } from './agency-settings-view';
 
@@ -628,93 +629,8 @@ function EmailEnviosView({ onGoTemplates: _onGoTemplates }: { onGoTemplates: () 
   return <AgencyEmailView initialFocus="envios" />;
 }
 
-function ClientesView() {
-  const rows = [
-    {
-      email: 'ops@transporteandino.com',
-      wa: '+54 9 11 …',
-      company: 'Transporte Andino SA',
-      industry: 'Transporte de carga',
-      size: '40 unidades',
-      geo: 'CABA / GBA',
-      product: 'Reclamos + Seguimiento',
-      enrich: 'Clearbit · LinkedIn',
-      score: 82,
-    },
-    {
-      email: 'ceo@rutasur.com.ar',
-      wa: '+54 9 351 …',
-      company: 'Ruta Sur Logística',
-      industry: '3PL',
-      size: '25+ viajes/día',
-      geo: 'Córdoba',
-      product: 'SOL completo',
-      enrich: 'Apollo · manual',
-      score: 91,
-    },
-    {
-      email: 'logistica@distribuidorapampa.com',
-      wa: '—',
-      company: 'Distribuidora Pampa',
-      industry: 'Distribución',
-      size: '12 depósitos',
-      geo: 'Interior AR',
-      product: 'Atención clientes',
-      enrich: 'Pendiente',
-      score: 54,
-    },
-  ];
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Clientes"
-        subtitle="Enriquecimiento firmográfico → segmentación y email personalizado."
-      />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card icon={<Users className="h-4 w-4" />} label="Perfiles" value="3" hint="Demo portal" accent="text-violet-600" />
-        <Card icon={<Sparkles className="h-4 w-4" />} label="Enriquecidos" value="2 / 3" hint="Clearbit · Apollo" accent="text-emerald-600" />
-        <Card icon={<Target className="h-4 w-4" />} label="Score medio" value="76" hint="Fit Agency" accent="text-sky-600" />
-      </div>
-      <Panel title="Perfiles enriquecidos">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="pb-2 pr-4 font-semibold">Empresa</th>
-                <th className="pb-2 pr-4 font-semibold">Contacto</th>
-                <th className="pb-2 pr-4 font-semibold">Industria / tamaño</th>
-                <th className="pb-2 pr-4 font-semibold">Geo</th>
-                <th className="pb-2 pr-4 font-semibold">Agentes</th>
-                <th className="pb-2 pr-4 font-semibold">Enrich</th>
-                <th className="pb-2 font-semibold">Score</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {rows.map((r) => (
-                <tr key={r.email}>
-                  <td className="py-2.5 pr-4 font-medium">{r.company}</td>
-                  <td className="py-2.5 pr-4">
-                    <div>{r.email}</div>
-                    <div className="text-xs text-slate-400">{r.wa}</div>
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <div>{r.industry}</div>
-                    <div className="text-xs text-slate-400">{r.size}</div>
-                  </td>
-                  <td className="py-2.5 pr-4">{r.geo}</td>
-                  <td className="py-2.5 pr-4">{r.product}</td>
-                  <td className="py-2.5 pr-4">
-                    <Badge tone={r.enrich === 'Pendiente' ? 'amber' : 'emerald'}>{r.enrich}</Badge>
-                  </td>
-                  <td className="py-2.5 tabular-nums font-semibold text-slate-900">{r.score}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
-    </div>
-  );
+function ClientesView({ onGoEmail }: { onGoEmail?: () => void }) {
+  return <AgencyClientesView onGoEmail={onGoEmail} />;
 }
 
 function ReportesView() {
@@ -740,6 +656,7 @@ const FULL_BLEED_SECTIONS: SectionId[] = [
   'llm-hub',
   'convertir',
   'settings',
+  'clientes',
 ];
 
 function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
@@ -775,7 +692,7 @@ function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
     case 'convertir':
       return <ConvertirView />;
     case 'clientes':
-      return <ClientesView />;
+      return <ClientesView onGoEmail={() => setSection('email')} />;
     case 'reportes':
       return <ReportesView />;
     case 'auditoria':
