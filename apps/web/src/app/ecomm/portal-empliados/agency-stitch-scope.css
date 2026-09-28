@@ -1193,3 +1193,21 @@
 .agency-stitch .mt-2{margin-top:0.5rem;}
 .agency-stitch .px-2\.5{padding-left:0.625rem;padding-right:0.625rem;}
 @media (min-width:768px){.agency-stitch .md\:w-56{width:14rem;}}
+
+/* SOV extras */
+.agency-stitch .my-space-sm{margin-top:0.5rem;margin-bottom:0.5rem;}
+.agency-stitch .mb-space-lg{margin-bottom:1.25rem;}
+.agency-stitch .mb-space-sm{margin-bottom:0.5rem;}
+.agency-stitch .mb-space-xs{margin-bottom:0.25rem;}
+.agency-stitch .mt-space-xs{margin-top:0.25rem;}
+.agency-stitch .mr-0\.5{margin-right:0.125rem;}
+.agency-stitch .w-1\.5{width:0.375rem;}
+.agency-stitch .h-1\.5{height:0.375rem;}
+.agency-stitch .w-2{width:0.5rem;}
+.agency-stitch .h-2{height:0.5rem;}
+.agency-stitch .w-7{width:1.75rem;}
+.agency-stitch .h-7{height:1.75rem;}
+.agency-stitch .min-w-\[240px\]{min-width:240px;}
+.agency-stitch .text-\[10px\]{font-size:10px;line-height:14px;}
+.agency-stitch .divide-surface-container-low > :not([hidden]) ~ :not([hidden]){border-color:#ede9f7;}
+.agency-stitch .mb-1{margin-bottom:0.25rem;}

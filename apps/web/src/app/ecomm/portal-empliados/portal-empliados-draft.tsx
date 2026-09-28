@@ -39,6 +39,7 @@ import { agencyCls } from '@/lib/agency-portal-theme';
 import { AgencyDashboardView } from './agency-dashboard-view';
 import { AgencyFunnelView } from './agency-funnel-view';
 import { AgencyReferidosView } from './agency-referidos-view';
+import { AgencySovView } from './agency-sov-view';
 import { AgencyReportesView } from './agency-reportes-view';
 
 type SectionId =
@@ -127,17 +128,7 @@ const NAV: NavSection[] = [
   },
 ];
 
-/** Prompts de descubrimiento · agentes IA logística. */
-const SOV_PROMPTS = [
-  { prompt: 'agentes de IA para logística Argentina', empliados: true, rival: 'Beetrack' },
-  { prompt: 'automatizar reclamos de envíos con IA', empliados: true, rival: 'Enviame' },
-  { prompt: 'sistema operativo de logística SOL', empliados: true, rival: 'Melonn' },
-  { prompt: 'IA para seguimiento de camiones 24/7', empliados: false, rival: 'project44' },
-  { prompt: 'agentes IA coordinación choferes y oficina', empliados: true, rival: 'FourKites' },
-  { prompt: 'software logística con más de 25 viajes/día', empliados: false, rival: 'Beetrack' },
-  { prompt: 'reducir llamadas de seguimiento de envíos', empliados: true, rival: 'Enviame' },
-  { prompt: 'empleados virtuales para pymes de transporte', empliados: false, rival: 'Melonn' },
-];
+/** Prompts de descubrimiento · agentes IA logística (datos en AgencySovView). */
 
 const AGENTS = [
   { name: 'Agente de Reclamos', skus: 1, page: 'Lista', sovHits: 9, status: 'Indexada', source: 'existente' as const },
@@ -449,51 +440,7 @@ function FunnelView() {
 }
 
 function SovView() {
-  const wins = SOV_PROMPTS.filter((p) => p.empliados).length;
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="AI Share of Voice"
-        subtitle="50 prompts objetivo · medición semanal en ChatGPT, Gemini, Perplexity y Claude."
-      />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          icon={<Sparkles className="h-4 w-4" />}
-          label="SOV actual"
-          value={`${Math.round((wins / 50) * 1000) / 10}%`}
-          hint={`${wins} menciones / 50 prompts (muestra)`}
-          accent="text-violet-600"
-        />
-        <Card icon={<Globe2 className="h-4 w-4" />} label="Motores" value="4" hint="ChatGPT · Gemini · Perplexity · Claude" accent="text-sky-600" />
-        <Card icon={<TrendingUp className="h-4 w-4" />} label="Δ semanal" value="+1 pp" hint="4 → 5 menciones" accent="text-emerald-600" />
-        <Card icon={<Users className="h-4 w-4" />} label="Rival #1" value="Beetrack" hint="14 / 50 prompts" accent="text-amber-600" />
-      </div>
-      <Panel title="Muestra de prompts (8 / 50)">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="pb-2 pr-4 font-semibold">Prompt</th>
-                <th className="pb-2 pr-4 font-semibold">Empliados</th>
-                <th className="pb-2 font-semibold">Quién gana hoy</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {SOV_PROMPTS.map((row) => (
-                <tr key={row.prompt}>
-                  <td className="py-2.5 pr-4 text-slate-800">{row.prompt}</td>
-                  <td className="py-2.5 pr-4">
-                    {row.empliados ? <Badge tone="emerald">Aparece</Badge> : <Badge tone="slate">No</Badge>}
-                  </td>
-                  <td className="py-2.5 text-slate-600">{row.empliados ? 'Empliados' : row.rival}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
-    </div>
-  );
+  return <AgencySovView />;
 }
 
 function OportunidadesView() {
