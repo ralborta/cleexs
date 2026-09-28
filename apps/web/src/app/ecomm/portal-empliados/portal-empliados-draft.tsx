@@ -33,11 +33,11 @@ import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
 import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
 import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
-import { FunnelDashboard, type FunnelMetrics } from '@/components/funnel/funnel-dashboard';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
 import { createPortalAuditoriaFetch, setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
 import { AgencyDashboardView } from './agency-dashboard-view';
+import { AgencyFunnelView } from './agency-funnel-view';
 import { AgencyReferidosView } from './agency-referidos-view';
 import { AgencyReportesView } from './agency-reportes-view';
 
@@ -445,111 +445,7 @@ function TraficoView() {
 }
 
 function FunnelView() {
-  const today = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
-    } catch {
-      return new Date().toISOString().slice(0, 10);
-    }
-  }, []);
-
-  function addDays(day: string, delta: number): string {
-    const [y, m, d] = day.split('-').map(Number);
-    const dt = new Date(Date.UTC(y!, m! - 1, d!));
-    dt.setUTCDate(dt.getUTCDate() + delta);
-    return dt.toISOString().slice(0, 10);
-  }
-
-  function rangeForPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30'): { from: string; to: string } {
-    if (preset === 'hoy') return { from: today, to: today };
-    if (preset === 'ayer') {
-      const yesterday = addDays(today, -1);
-      return { from: yesterday, to: yesterday };
-    }
-    const span = preset === '7' ? 6 : preset === '15' ? 14 : 29;
-    return { from: addDays(today, -span), to: today };
-  }
-
-  const initial = useMemo(() => rangeForPreset('30'), [today]);
-  const [from, setFrom] = useState(initial.from);
-  const [to, setTo] = useState(initial.to);
-  const [activePreset, setActivePreset] = useState<string | null>('30');
-  const [adSpendInput, setAdSpendInput] = useState('');
-  const [data, setData] = useState<FunnelMetrics | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ from, to });
-      const spend = Number(adSpendInput.replace(',', '.'));
-      if (Number.isFinite(spend) && spend >= 0 && adSpendInput.trim() !== '') {
-        params.set('adSpendUsd', String(spend));
-      }
-      const res = await fetch(`/api/borrador/portal-funnel?${params.toString()}`, { cache: 'no-store' });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar el funnel');
-      setData(json as FunnelMetrics);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to, adSpendInput]);
-
-  useEffect(() => {
-    void load();
-  }, [from, to]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function applyPreset(preset: 'hoy' | 'ayer' | '7' | '15' | '30') {
-    const r = rangeForPreset(preset);
-    setFrom(r.from);
-    setTo(r.to);
-    setActivePreset(preset);
-  }
-
-  const periodLabel =
-    activePreset === 'hoy'
-      ? 'Hoy'
-      : activePreset === 'ayer'
-        ? 'Ayer'
-        : activePreset === '7'
-          ? 'Últimos 7 días'
-          : activePreset === '15'
-            ? 'Últimos 15 días'
-            : activePreset === '30'
-              ? 'Últimos 30 días'
-              : `${from} → ${to}`;
-
-  return (
-    <FunnelDashboard
-      data={data}
-      loading={loading}
-      error={error}
-      periodLabel={periodLabel}
-      from={from}
-      to={to}
-      activePreset={activePreset}
-      onPreset={applyPreset}
-      onFromChange={(v) => {
-        setFrom(v);
-        setActivePreset(null);
-      }}
-      onToChange={(v) => {
-        setTo(v);
-        setActivePreset(null);
-      }}
-      maxTo={today}
-      adSpendInput={adSpendInput}
-      setAdSpendInput={setAdSpendInput}
-      onRefresh={() => void load()}
-      onApplySpend={() => void load()}
-      variant="agency"
-      subtitle="Embudo de negocio Empliados · cohortes y economics en vivo."
-    />
-  );
+  return <AgencyFunnelView />;
 }
 
 function SovView() {

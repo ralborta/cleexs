@@ -36,7 +36,7 @@ export function AgencyReferidosView() {
     return () => {
       cancelled = true;
     };
-  }, [fetcher, tab]);
+  }, [fetcher]);
 
   const rows = summary?.rows ?? [];
   const activeCampaigns = rows.filter((r) => r.registered && r.active).length;
@@ -46,25 +46,32 @@ export function AgencyReferidosView() {
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">
-            Crecimiento & Adquisición
-          </p>
-          <h1 className="mt-1 text-[28px] font-bold tracking-tight text-[#0f172a]">
-            Campañas y Tracking de Referidos
-          </h1>
-          <p className="mt-1 max-w-2xl text-[14px] text-[#64748b]">
-            Generá links/QR de auspiciadores y medí emails únicos por código ref · datos en vivo.
-          </p>
+      <div className="flex flex-col justify-between gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-[#e2e8f0] md:flex-row md:items-center">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#e1e0ff] text-[#4648d4] shadow-sm">
+            <MousePointerClick className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[20px] font-semibold tracking-tight text-[#0f172a]">
+                Campañas y Tracking de Referidos
+              </h1>
+              <span className="rounded-full bg-[#6ffbbe]/40 px-2 py-0.5 text-[12px] font-semibold text-[#005236]">
+                Live Tracker
+              </span>
+            </div>
+            <p className="text-[13px] text-[#64748b]">
+              Generá links/QR de auspiciadores y medí emails únicos por código ref · datos en vivo.
+            </p>
+          </div>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-[#334155] shadow-sm ring-1 ring-[#e2e8f0]">
+        <div className="inline-flex items-center gap-2 rounded-lg bg-[#f1f5f9] px-3 py-1.5 text-[12px] font-semibold text-[#334155]">
           {loadingSummary ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-[#4648d4]" />
           ) : (
             <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
           )}
-          Live Tracker
+          En tiempo real
         </div>
       </div>
 
