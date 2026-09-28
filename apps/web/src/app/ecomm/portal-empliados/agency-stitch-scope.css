@@ -1223,3 +1223,15 @@
 .agency-stitch .leading-tight{line-height:1.25;}
 .agency-stitch .bg-error-container{background-color:#ffdad6;}
 .agency-stitch .text-on-error-container{color:#410002;}
+
+.agency-stitch .line-through{text-decoration:line-through;}
+.agency-stitch .fixed{position:fixed;}
+.agency-stitch .inset-0{inset:0;}
+.agency-stitch .z-50{z-index:50;}
+.agency-stitch .bg-black\/40{background-color:rgba(0,0,0,0.4);}
+.agency-stitch .max-w-md{max-width:28rem;}
+.agency-stitch .max-w-xl{max-width:36rem;}
+.agency-stitch .max-w-xs{max-width:20rem;}
+.agency-stitch .whitespace-pre-wrap{white-space:pre-wrap;}
+.agency-stitch .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.agency-stitch .shadow-lg{box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1),0 4px 6px -4px rgb(0 0 0 / 0.1);}

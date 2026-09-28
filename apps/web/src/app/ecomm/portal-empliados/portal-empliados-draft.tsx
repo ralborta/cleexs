@@ -29,9 +29,7 @@ import {
   Users,
 } from 'lucide-react';
 import { DiscoveryDashboard } from '@/components/discovery/discovery-dashboard';
-import { EmailEnviosDashboard } from '@/components/email/email-envios-dashboard';
 import { EmailPlantillasDashboard } from '@/components/email/email-plantillas-dashboard';
-import { EmailSecuenciaDashboard } from '@/components/email/email-secuencia-dashboard';
 import { createPortalEmailDemoFetch } from '@/lib/portal-email-demo-data';
 import { setAdminUiFetchOverride } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
@@ -43,6 +41,9 @@ import { AgencyContenidoView } from './agency-contenido-view';
 import { AgencyHubLlmView } from './agency-hub-llm-view';
 import { AgencyAuditoriaView } from './agency-auditoria-view';
 import { AgencyReportesView } from './agency-reportes-view';
+import { AgencyEmailView } from './agency-email-view';
+import { AgencyConvertirView } from './agency-convertir-view';
+import { AgencySettingsView } from './agency-settings-view';
 
 type SectionId =
   | 'dashboard'
@@ -598,37 +599,7 @@ function RedesTeoView() {
 }
 
 function ConvertirView() {
-  const items = [
-    { title: 'Hero CTA único', detail: 'Un solo botón primario · “Pedir demo” por encima del fold.' },
-    { title: 'Prueba social arriba', detail: 'Logos / “X operadores activos” antes del scroll.' },
-    { title: 'Form corto', detail: 'Email + WhatsApp · sin fricción; enrichment después.' },
-    { title: 'Objeciones en FAQ', detail: 'Precio, onboarding, TMS · visibles cerca del CTA.' },
-    { title: 'Landing por producto', detail: '1 página / agente con fotos reales del flujo.' },
-    { title: 'A/B copy Claude', detail: 'Probar variantes de headline sugeridas en la call.' },
-  ];
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Convertir"
-        subtitle="Optimizar la landing de compra · checklist de la sesión Agency."
-      />
-      <Panel title="Prioridades landing">
-        <ul className="space-y-3">
-          {items.map((it, i) => (
-            <li key={it.title} className="flex gap-3 rounded-xl border border-slate-100 px-3 py-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800">
-                {i + 1}
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">{it.title}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{it.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Panel>
-    </div>
-  );
+  return <AgencyConvertirView />;
 }
 
 function ReferidosCampanasView() {
@@ -645,7 +616,7 @@ function usePortalEmailApi() {
 
 function EmailSecuenciaView() {
   usePortalEmailApi();
-  return <EmailSecuenciaDashboard variant="agency" />;
+  return <AgencyEmailView initialFocus="secuencia" />;
 }
 
 function EmailPlantillasView({ onGoEnvios }: { onGoEnvios: () => void }) {
@@ -664,20 +635,9 @@ function EmailPlantillasView({ onGoEnvios }: { onGoEnvios: () => void }) {
   );
 }
 
-function EmailEnviosView({ onGoTemplates }: { onGoTemplates: () => void }) {
+function EmailEnviosView({ onGoTemplates: _onGoTemplates }: { onGoTemplates: () => void }) {
   usePortalEmailApi();
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Cargando…
-        </div>
-      }
-    >
-      <EmailEnviosDashboard mode="portal" onGoTemplates={onGoTemplates} />
-    </Suspense>
-  );
+  return <AgencyEmailView initialFocus="envios" />;
 }
 
 function ClientesView() {
@@ -778,306 +738,7 @@ function AuditoriaView() {
 }
 
 function SettingsView() {
-  const [tab, setTab] = useState<SettingsTab>('integraciones');
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [saveErr, setSaveErr] = useState<string | null>(null);
-  const [brandId, setBrandId] = useState<string | null>(null);
-  const [brandForm, setBrandForm] = useState({
-    name: 'Empliados',
-    industry: 'Agentes de IA para logística',
-    country: 'Argentina',
-    description: 'SOL · Sistema Operativo de Logística. Agentes de IA preconfigurados para pymes de transporte y logística.',
-    objective: 'Ser la marca #1 en prompts de agentes IA logística en Latam',
-    runSchedule: 'semanal' as '' | 'semanal' | 'quincenal' | 'mensual',
-  });
-  const [competitors, setCompetitors] = useState([
-    { name: 'Beetrack', domain: 'beetrack.com' },
-    { name: 'Enviame', domain: 'enviame.io' },
-    { name: 'Melonn', domain: 'melonn.com' },
-    { name: 'project44', domain: 'project44.com' },
-    { name: 'FourKites', domain: 'fourkites.com' },
-  ]);
-  const [settings, setSettings] = useState<PortalSettings | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch('/api/borrador/portal-brand?domain=empliados.net', { cache: 'no-store' });
-      const json = await res.json();
-      if (!res.ok) return;
-      setBrandId(json.brand?.id ?? null);
-      if (json.brand) {
-        setBrandForm({
-          name: json.brand.name || 'Empliados',
-          industry: json.brand.industry || 'Agentes de IA para logística',
-          country: json.brand.country || 'Argentina',
-          description:
-            json.brand.description ||
-            'SOL · Sistema Operativo de Logística. Agentes de IA preconfigurados para pymes de transporte y logística.',
-          objective: json.brand.objective || 'Ser la marca #1 en prompts de agentes IA logística en Latam',
-          runSchedule: json.brand.runSchedule || 'semanal',
-        });
-      }
-      if (json.competitors?.length) {
-        setCompetitors(json.competitors.map((c: { name: string; domain: string | null }) => ({ name: c.name, domain: c.domain || '' })));
-      }
-      if (json.settings) setSettings(json.settings);
-    } catch {
-      /* keep defaults */
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function save(payload: Record<string, unknown>) {
-    setSaving(true);
-    setSaveMsg(null);
-    setSaveErr(null);
-    try {
-      const res = await fetch('/api/borrador/portal-brand?domain=empliados.net', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      setSaveMsg('Guardado');
-      await load();
-    } catch (e) {
-      setSaveErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const integrationRows = [
-    { name: 'CRM / HubSpot', status: 'Conectado' },
-    { name: 'Google Analytics 4', status: settings?.integrations.ga4.enabled ? 'Conectado' : 'Pendiente' },
-    { name: 'Google Search Console', status: settings?.integrations.gsc.enabled ? 'Conectado' : 'Pendiente' },
-    { name: 'WordPress / CMS', status: settings?.integrations.wordpress.enabled ? 'Conectado' : 'Pendiente' },
-    { name: 'Resend · email', status: settings?.integrations.resend.enabled ? 'Conectado' : 'Conectado' },
-    { name: 'WhatsApp Business', status: 'Conectado' },
-    { name: 'TMS / ERP cliente', status: 'Próximo' },
-  ];
-
-  return (
-    <div className="space-y-5">
-      <SectionHeader title="Settings" subtitle="Integraciones y configuración del portal de marca." />
-      {(saveMsg || saveErr) && (
-        <p className={`text-xs font-medium ${saveErr ? 'text-rose-600' : 'text-emerald-700'}`}>{saveErr || saveMsg}</p>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ['integraciones', 'Integraciones'],
-            ['marca', 'Marca'],
-            ['competidores', 'Competidores'],
-            ['alertas', 'Alertas'],
-          ] as Array<[SettingsTab, string]>
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              tab === id ? 'bg-violet-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'integraciones' ? (
-        <Panel title="Integraciones">
-          <div className="space-y-2">
-            {integrationRows.map((it) => (
-              <div
-                key={it.name}
-                className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2.5 text-sm"
-              >
-                <span className="font-medium text-slate-800">{it.name}</span>
-                <Badge tone={it.status === 'Conectado' ? 'emerald' : it.status === 'Próximo' ? 'slate' : 'amber'}>
-                  {it.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      ) : null}
-
-      {tab === 'marca' ? (
-        <Panel title="Perfil de marca">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nombre">
-              <input className={inputCls} value={brandForm.name} onChange={(e) => setBrandForm((f) => ({ ...f, name: e.target.value }))} />
-            </Field>
-            <Field label="Dominio">
-              <input className={inputCls} value="empliados.net" disabled />
-            </Field>
-            <Field label="Industria">
-              <input className={inputCls} value={brandForm.industry} onChange={(e) => setBrandForm((f) => ({ ...f, industry: e.target.value }))} />
-            </Field>
-            <Field label="País">
-              <input className={inputCls} value={brandForm.country} onChange={(e) => setBrandForm((f) => ({ ...f, country: e.target.value }))} />
-            </Field>
-            <Field label="Frecuencia de corridas">
-              <select
-                className={inputCls}
-                value={brandForm.runSchedule}
-                onChange={(e) => setBrandForm((f) => ({ ...f, runSchedule: e.target.value as typeof brandForm.runSchedule }))}
-              >
-                <option value="semanal">Semanal</option>
-                <option value="quincenal">Quincenal</option>
-                <option value="mensual">Mensual</option>
-              </select>
-            </Field>
-            <Field label="Objetivo">
-              <input className={inputCls} value={brandForm.objective} onChange={(e) => setBrandForm((f) => ({ ...f, objective: e.target.value }))} />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="Descripción">
-                <textarea
-                  className={`${inputCls} min-h-[96px]`}
-                  value={brandForm.description}
-                  onChange={(e) => setBrandForm((f) => ({ ...f, description: e.target.value }))}
-                />
-              </Field>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              disabled={saving || !brandId}
-              onClick={() =>
-                void save({
-                  brand: {
-                    name: brandForm.name,
-                    industry: brandForm.industry || null,
-                    country: brandForm.country || null,
-                    description: brandForm.description || null,
-                    objective: brandForm.objective || null,
-                    runSchedule: brandForm.runSchedule || null,
-                  },
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Guardar marca
-            </button>
-          </div>
-        </Panel>
-      ) : null}
-
-      {tab === 'competidores' ? (
-        <Panel title="Set competitivo">
-          <div className="space-y-2">
-            {competitors.map((c, idx) => (
-              <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  className={inputCls}
-                  placeholder="Nombre"
-                  value={c.name}
-                  onChange={(e) => setCompetitors((rows) => rows.map((r, i) => (i === idx ? { ...r, name: e.target.value } : r)))}
-                />
-                <input
-                  className={inputCls}
-                  placeholder="dominio.com"
-                  value={c.domain}
-                  onChange={(e) => setCompetitors((rows) => rows.map((r, i) => (i === idx ? { ...r, domain: e.target.value } : r)))}
-                />
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
-                  onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== idx))}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setCompetitors((rows) => [...rows, { name: '', domain: '' }])}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Agregar rival
-            </button>
-            <button
-              type="button"
-              disabled={saving || !brandId}
-              onClick={() =>
-                void save({
-                  competitors: competitors
-                    .filter((c) => c.name.trim())
-                    .map((c) => ({ name: c.name.trim(), domain: c.domain.trim() || null })),
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Guardar competidores
-            </button>
-          </div>
-        </Panel>
-      ) : null}
-
-      {tab === 'alertas' && settings ? (
-        <Panel title="Alertas">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nombre">
-              <input
-                className={inputCls}
-                value={settings.alerts.contactName}
-                onChange={(e) => setSettings({ ...settings, alerts: { ...settings.alerts, contactName: e.target.value } })}
-              />
-            </Field>
-            <Field label="Email">
-              <input
-                type="email"
-                className={inputCls}
-                value={settings.alerts.contactEmail}
-                onChange={(e) => setSettings({ ...settings, alerts: { ...settings.alerts, contactEmail: e.target.value } })}
-              />
-            </Field>
-          </div>
-          <div className="mt-3 grid gap-2">
-            <Toggle
-              checked={settings.alerts.scoreDrop}
-              label="Alerta por caída de score"
-              onChange={(v) => setSettings({ ...settings, alerts: { ...settings.alerts, scoreDrop: v } })}
-            />
-            <Toggle
-              checked={settings.alerts.weeklyDigest}
-              label="Digest semanal"
-              onChange={(v) => setSettings({ ...settings, alerts: { ...settings.alerts, weeklyDigest: v } })}
-            />
-            <Toggle
-              checked={settings.alerts.newOpportunity}
-              label="Nueva oportunidad"
-              onChange={(v) => setSettings({ ...settings, alerts: { ...settings.alerts, newOpportunity: v } })}
-            />
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              disabled={saving || !brandId}
-              onClick={() => void save({ settings })}
-              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Guardar alertas
-            </button>
-          </div>
-        </Panel>
-      ) : null}
-    </div>
-  );
+  return <AgencySettingsView />;
 }
 
 const FULL_BLEED_SECTIONS: SectionId[] = [
@@ -1086,6 +747,11 @@ const FULL_BLEED_SECTIONS: SectionId[] = [
   'email-envios',
   'referidos-campanas',
   'auditoria',
+  'sov',
+  'contenido',
+  'llm-hub',
+  'convertir',
+  'settings',
 ];
 
 function renderSection(id: SectionId, setSection: (id: SectionId) => void) {
