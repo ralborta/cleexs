@@ -1332,13 +1332,23 @@ export function PortalEmpliadosDraft() {
 
   useEffect(() => {
     const id = 'agency-stitch-fonts';
-    if (document.getElementById(id)) return;
-    const link = document.createElement('link');
-    link.id = id;
-    link.rel = 'stylesheet';
-    link.href =
-      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
-    document.head.appendChild(link);
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href =
+        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+      document.head.appendChild(link);
+    }
+    const iconsId = 'agency-stitch-icons';
+    if (!document.getElementById(iconsId)) {
+      const icons = document.createElement('link');
+      icons.id = iconsId;
+      icons.rel = 'stylesheet';
+      icons.href =
+        'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap';
+      document.head.appendChild(icons);
+    }
   }, []);
 
   return (

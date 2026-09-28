@@ -1,0 +1,1170 @@
+/* Cleexs Agency · tokens Stitch scoped */
+.agency-stitch{font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif;color:#131b2e;}
+.agency-stitch .material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;vertical-align:middle;}
+.agency-stitch .bg-inverse-surface{background-color:#283044;}
+.agency-stitch .text-inverse-surface{color:#283044;}
+.agency-stitch .border-inverse-surface{border-color:#283044;}
+.agency-stitch .bg-inverse-surface\/20{background-color:color-mix(in srgb,#283044 20%, transparent);}
+.agency-stitch .text-inverse-surface\/20{color:color-mix(in srgb,#283044 20%, transparent);}
+.agency-stitch .border-inverse-surface\/20{border-color:color-mix(in srgb,#283044 20%, transparent);}
+.agency-stitch .bg-inverse-surface\/30{background-color:color-mix(in srgb,#283044 30%, transparent);}
+.agency-stitch .text-inverse-surface\/30{color:color-mix(in srgb,#283044 30%, transparent);}
+.agency-stitch .border-inverse-surface\/30{border-color:color-mix(in srgb,#283044 30%, transparent);}
+.agency-stitch .bg-inverse-surface\/40{background-color:color-mix(in srgb,#283044 40%, transparent);}
+.agency-stitch .text-inverse-surface\/40{color:color-mix(in srgb,#283044 40%, transparent);}
+.agency-stitch .border-inverse-surface\/40{border-color:color-mix(in srgb,#283044 40%, transparent);}
+.agency-stitch .bg-inverse-surface\/50{background-color:color-mix(in srgb,#283044 50%, transparent);}
+.agency-stitch .text-inverse-surface\/50{color:color-mix(in srgb,#283044 50%, transparent);}
+.agency-stitch .border-inverse-surface\/50{border-color:color-mix(in srgb,#283044 50%, transparent);}
+.agency-stitch .bg-inverse-surface\/60{background-color:color-mix(in srgb,#283044 60%, transparent);}
+.agency-stitch .text-inverse-surface\/60{color:color-mix(in srgb,#283044 60%, transparent);}
+.agency-stitch .border-inverse-surface\/60{border-color:color-mix(in srgb,#283044 60%, transparent);}
+.agency-stitch .bg-error{background-color:#ba1a1a;}
+.agency-stitch .text-error{color:#ba1a1a;}
+.agency-stitch .border-error{border-color:#ba1a1a;}
+.agency-stitch .bg-error\/20{background-color:color-mix(in srgb,#ba1a1a 20%, transparent);}
+.agency-stitch .text-error\/20{color:color-mix(in srgb,#ba1a1a 20%, transparent);}
+.agency-stitch .border-error\/20{border-color:color-mix(in srgb,#ba1a1a 20%, transparent);}
+.agency-stitch .bg-error\/30{background-color:color-mix(in srgb,#ba1a1a 30%, transparent);}
+.agency-stitch .text-error\/30{color:color-mix(in srgb,#ba1a1a 30%, transparent);}
+.agency-stitch .border-error\/30{border-color:color-mix(in srgb,#ba1a1a 30%, transparent);}
+.agency-stitch .bg-error\/40{background-color:color-mix(in srgb,#ba1a1a 40%, transparent);}
+.agency-stitch .text-error\/40{color:color-mix(in srgb,#ba1a1a 40%, transparent);}
+.agency-stitch .border-error\/40{border-color:color-mix(in srgb,#ba1a1a 40%, transparent);}
+.agency-stitch .bg-error\/50{background-color:color-mix(in srgb,#ba1a1a 50%, transparent);}
+.agency-stitch .text-error\/50{color:color-mix(in srgb,#ba1a1a 50%, transparent);}
+.agency-stitch .border-error\/50{border-color:color-mix(in srgb,#ba1a1a 50%, transparent);}
+.agency-stitch .bg-error\/60{background-color:color-mix(in srgb,#ba1a1a 60%, transparent);}
+.agency-stitch .text-error\/60{color:color-mix(in srgb,#ba1a1a 60%, transparent);}
+.agency-stitch .border-error\/60{border-color:color-mix(in srgb,#ba1a1a 60%, transparent);}
+.agency-stitch .bg-surface-tint{background-color:#494bd6;}
+.agency-stitch .text-surface-tint{color:#494bd6;}
+.agency-stitch .border-surface-tint{border-color:#494bd6;}
+.agency-stitch .bg-surface-tint\/20{background-color:color-mix(in srgb,#494bd6 20%, transparent);}
+.agency-stitch .text-surface-tint\/20{color:color-mix(in srgb,#494bd6 20%, transparent);}
+.agency-stitch .border-surface-tint\/20{border-color:color-mix(in srgb,#494bd6 20%, transparent);}
+.agency-stitch .bg-surface-tint\/30{background-color:color-mix(in srgb,#494bd6 30%, transparent);}
+.agency-stitch .text-surface-tint\/30{color:color-mix(in srgb,#494bd6 30%, transparent);}
+.agency-stitch .border-surface-tint\/30{border-color:color-mix(in srgb,#494bd6 30%, transparent);}
+.agency-stitch .bg-surface-tint\/40{background-color:color-mix(in srgb,#494bd6 40%, transparent);}
+.agency-stitch .text-surface-tint\/40{color:color-mix(in srgb,#494bd6 40%, transparent);}
+.agency-stitch .border-surface-tint\/40{border-color:color-mix(in srgb,#494bd6 40%, transparent);}
+.agency-stitch .bg-surface-tint\/50{background-color:color-mix(in srgb,#494bd6 50%, transparent);}
+.agency-stitch .text-surface-tint\/50{color:color-mix(in srgb,#494bd6 50%, transparent);}
+.agency-stitch .border-surface-tint\/50{border-color:color-mix(in srgb,#494bd6 50%, transparent);}
+.agency-stitch .bg-surface-tint\/60{background-color:color-mix(in srgb,#494bd6 60%, transparent);}
+.agency-stitch .text-surface-tint\/60{color:color-mix(in srgb,#494bd6 60%, transparent);}
+.agency-stitch .border-surface-tint\/60{border-color:color-mix(in srgb,#494bd6 60%, transparent);}
+.agency-stitch .bg-on-primary{background-color:#ffffff;}
+.agency-stitch .text-on-primary{color:#ffffff;}
+.agency-stitch .border-on-primary{border-color:#ffffff;}
+.agency-stitch .bg-on-primary\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .text-on-primary\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .border-on-primary\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .bg-on-primary\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .text-on-primary\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .border-on-primary\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .bg-on-primary\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .text-on-primary\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .border-on-primary\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .bg-on-primary\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .text-on-primary\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .border-on-primary\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .bg-on-primary\/60{background-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .text-on-primary\/60{color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .border-on-primary\/60{border-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .bg-secondary{background-color:#006c49;}
+.agency-stitch .text-secondary{color:#006c49;}
+.agency-stitch .border-secondary{border-color:#006c49;}
+.agency-stitch .bg-secondary\/20{background-color:color-mix(in srgb,#006c49 20%, transparent);}
+.agency-stitch .text-secondary\/20{color:color-mix(in srgb,#006c49 20%, transparent);}
+.agency-stitch .border-secondary\/20{border-color:color-mix(in srgb,#006c49 20%, transparent);}
+.agency-stitch .bg-secondary\/30{background-color:color-mix(in srgb,#006c49 30%, transparent);}
+.agency-stitch .text-secondary\/30{color:color-mix(in srgb,#006c49 30%, transparent);}
+.agency-stitch .border-secondary\/30{border-color:color-mix(in srgb,#006c49 30%, transparent);}
+.agency-stitch .bg-secondary\/40{background-color:color-mix(in srgb,#006c49 40%, transparent);}
+.agency-stitch .text-secondary\/40{color:color-mix(in srgb,#006c49 40%, transparent);}
+.agency-stitch .border-secondary\/40{border-color:color-mix(in srgb,#006c49 40%, transparent);}
+.agency-stitch .bg-secondary\/50{background-color:color-mix(in srgb,#006c49 50%, transparent);}
+.agency-stitch .text-secondary\/50{color:color-mix(in srgb,#006c49 50%, transparent);}
+.agency-stitch .border-secondary\/50{border-color:color-mix(in srgb,#006c49 50%, transparent);}
+.agency-stitch .bg-secondary\/60{background-color:color-mix(in srgb,#006c49 60%, transparent);}
+.agency-stitch .text-secondary\/60{color:color-mix(in srgb,#006c49 60%, transparent);}
+.agency-stitch .border-secondary\/60{border-color:color-mix(in srgb,#006c49 60%, transparent);}
+.agency-stitch .bg-background{background-color:#faf8ff;}
+.agency-stitch .text-background{color:#faf8ff;}
+.agency-stitch .border-background{border-color:#faf8ff;}
+.agency-stitch .bg-background\/20{background-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .text-background\/20{color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .border-background\/20{border-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .bg-background\/30{background-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .text-background\/30{color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .border-background\/30{border-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .bg-background\/40{background-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .text-background\/40{color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .border-background\/40{border-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .bg-background\/50{background-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .text-background\/50{color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .border-background\/50{border-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .bg-background\/60{background-color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .text-background\/60{color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .border-background\/60{border-color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .bg-primary-fixed-dim{background-color:#c0c1ff;}
+.agency-stitch .text-primary-fixed-dim{color:#c0c1ff;}
+.agency-stitch .border-primary-fixed-dim{border-color:#c0c1ff;}
+.agency-stitch .bg-primary-fixed-dim\/20{background-color:color-mix(in srgb,#c0c1ff 20%, transparent);}
+.agency-stitch .text-primary-fixed-dim\/20{color:color-mix(in srgb,#c0c1ff 20%, transparent);}
+.agency-stitch .border-primary-fixed-dim\/20{border-color:color-mix(in srgb,#c0c1ff 20%, transparent);}
+.agency-stitch .bg-primary-fixed-dim\/30{background-color:color-mix(in srgb,#c0c1ff 30%, transparent);}
+.agency-stitch .text-primary-fixed-dim\/30{color:color-mix(in srgb,#c0c1ff 30%, transparent);}
+.agency-stitch .border-primary-fixed-dim\/30{border-color:color-mix(in srgb,#c0c1ff 30%, transparent);}
+.agency-stitch .bg-primary-fixed-dim\/40{background-color:color-mix(in srgb,#c0c1ff 40%, transparent);}
+.agency-stitch .text-primary-fixed-dim\/40{color:color-mix(in srgb,#c0c1ff 40%, transparent);}
+.agency-stitch .border-primary-fixed-dim\/40{border-color:color-mix(in srgb,#c0c1ff 40%, transparent);}
+.agency-stitch .bg-primary-fixed-dim\/50{background-color:color-mix(in srgb,#c0c1ff 50%, transparent);}
+.agency-stitch .text-primary-fixed-dim\/50{color:color-mix(in srgb,#c0c1ff 50%, transparent);}
+.agency-stitch .border-primary-fixed-dim\/50{border-color:color-mix(in srgb,#c0c1ff 50%, transparent);}
+.agency-stitch .bg-primary-fixed-dim\/60{background-color:color-mix(in srgb,#c0c1ff 60%, transparent);}
+.agency-stitch .text-primary-fixed-dim\/60{color:color-mix(in srgb,#c0c1ff 60%, transparent);}
+.agency-stitch .border-primary-fixed-dim\/60{border-color:color-mix(in srgb,#c0c1ff 60%, transparent);}
+.agency-stitch .bg-on-primary-container{background-color:#fffbff;}
+.agency-stitch .text-on-primary-container{color:#fffbff;}
+.agency-stitch .border-on-primary-container{border-color:#fffbff;}
+.agency-stitch .bg-on-primary-container\/20{background-color:color-mix(in srgb,#fffbff 20%, transparent);}
+.agency-stitch .text-on-primary-container\/20{color:color-mix(in srgb,#fffbff 20%, transparent);}
+.agency-stitch .border-on-primary-container\/20{border-color:color-mix(in srgb,#fffbff 20%, transparent);}
+.agency-stitch .bg-on-primary-container\/30{background-color:color-mix(in srgb,#fffbff 30%, transparent);}
+.agency-stitch .text-on-primary-container\/30{color:color-mix(in srgb,#fffbff 30%, transparent);}
+.agency-stitch .border-on-primary-container\/30{border-color:color-mix(in srgb,#fffbff 30%, transparent);}
+.agency-stitch .bg-on-primary-container\/40{background-color:color-mix(in srgb,#fffbff 40%, transparent);}
+.agency-stitch .text-on-primary-container\/40{color:color-mix(in srgb,#fffbff 40%, transparent);}
+.agency-stitch .border-on-primary-container\/40{border-color:color-mix(in srgb,#fffbff 40%, transparent);}
+.agency-stitch .bg-on-primary-container\/50{background-color:color-mix(in srgb,#fffbff 50%, transparent);}
+.agency-stitch .text-on-primary-container\/50{color:color-mix(in srgb,#fffbff 50%, transparent);}
+.agency-stitch .border-on-primary-container\/50{border-color:color-mix(in srgb,#fffbff 50%, transparent);}
+.agency-stitch .bg-on-primary-container\/60{background-color:color-mix(in srgb,#fffbff 60%, transparent);}
+.agency-stitch .text-on-primary-container\/60{color:color-mix(in srgb,#fffbff 60%, transparent);}
+.agency-stitch .border-on-primary-container\/60{border-color:color-mix(in srgb,#fffbff 60%, transparent);}
+.agency-stitch .bg-tertiary-container{background-color:#8455ef;}
+.agency-stitch .text-tertiary-container{color:#8455ef;}
+.agency-stitch .border-tertiary-container{border-color:#8455ef;}
+.agency-stitch .bg-tertiary-container\/20{background-color:color-mix(in srgb,#8455ef 20%, transparent);}
+.agency-stitch .text-tertiary-container\/20{color:color-mix(in srgb,#8455ef 20%, transparent);}
+.agency-stitch .border-tertiary-container\/20{border-color:color-mix(in srgb,#8455ef 20%, transparent);}
+.agency-stitch .bg-tertiary-container\/30{background-color:color-mix(in srgb,#8455ef 30%, transparent);}
+.agency-stitch .text-tertiary-container\/30{color:color-mix(in srgb,#8455ef 30%, transparent);}
+.agency-stitch .border-tertiary-container\/30{border-color:color-mix(in srgb,#8455ef 30%, transparent);}
+.agency-stitch .bg-tertiary-container\/40{background-color:color-mix(in srgb,#8455ef 40%, transparent);}
+.agency-stitch .text-tertiary-container\/40{color:color-mix(in srgb,#8455ef 40%, transparent);}
+.agency-stitch .border-tertiary-container\/40{border-color:color-mix(in srgb,#8455ef 40%, transparent);}
+.agency-stitch .bg-tertiary-container\/50{background-color:color-mix(in srgb,#8455ef 50%, transparent);}
+.agency-stitch .text-tertiary-container\/50{color:color-mix(in srgb,#8455ef 50%, transparent);}
+.agency-stitch .border-tertiary-container\/50{border-color:color-mix(in srgb,#8455ef 50%, transparent);}
+.agency-stitch .bg-tertiary-container\/60{background-color:color-mix(in srgb,#8455ef 60%, transparent);}
+.agency-stitch .text-tertiary-container\/60{color:color-mix(in srgb,#8455ef 60%, transparent);}
+.agency-stitch .border-tertiary-container\/60{border-color:color-mix(in srgb,#8455ef 60%, transparent);}
+.agency-stitch .bg-on-error-container{background-color:#93000a;}
+.agency-stitch .text-on-error-container{color:#93000a;}
+.agency-stitch .border-on-error-container{border-color:#93000a;}
+.agency-stitch .bg-on-error-container\/20{background-color:color-mix(in srgb,#93000a 20%, transparent);}
+.agency-stitch .text-on-error-container\/20{color:color-mix(in srgb,#93000a 20%, transparent);}
+.agency-stitch .border-on-error-container\/20{border-color:color-mix(in srgb,#93000a 20%, transparent);}
+.agency-stitch .bg-on-error-container\/30{background-color:color-mix(in srgb,#93000a 30%, transparent);}
+.agency-stitch .text-on-error-container\/30{color:color-mix(in srgb,#93000a 30%, transparent);}
+.agency-stitch .border-on-error-container\/30{border-color:color-mix(in srgb,#93000a 30%, transparent);}
+.agency-stitch .bg-on-error-container\/40{background-color:color-mix(in srgb,#93000a 40%, transparent);}
+.agency-stitch .text-on-error-container\/40{color:color-mix(in srgb,#93000a 40%, transparent);}
+.agency-stitch .border-on-error-container\/40{border-color:color-mix(in srgb,#93000a 40%, transparent);}
+.agency-stitch .bg-on-error-container\/50{background-color:color-mix(in srgb,#93000a 50%, transparent);}
+.agency-stitch .text-on-error-container\/50{color:color-mix(in srgb,#93000a 50%, transparent);}
+.agency-stitch .border-on-error-container\/50{border-color:color-mix(in srgb,#93000a 50%, transparent);}
+.agency-stitch .bg-on-error-container\/60{background-color:color-mix(in srgb,#93000a 60%, transparent);}
+.agency-stitch .text-on-error-container\/60{color:color-mix(in srgb,#93000a 60%, transparent);}
+.agency-stitch .border-on-error-container\/60{border-color:color-mix(in srgb,#93000a 60%, transparent);}
+.agency-stitch .bg-tertiary-fixed-dim{background-color:#d0bcff;}
+.agency-stitch .text-tertiary-fixed-dim{color:#d0bcff;}
+.agency-stitch .border-tertiary-fixed-dim{border-color:#d0bcff;}
+.agency-stitch .bg-tertiary-fixed-dim\/20{background-color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.agency-stitch .text-tertiary-fixed-dim\/20{color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.agency-stitch .border-tertiary-fixed-dim\/20{border-color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.agency-stitch .bg-tertiary-fixed-dim\/30{background-color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.agency-stitch .text-tertiary-fixed-dim\/30{color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.agency-stitch .border-tertiary-fixed-dim\/30{border-color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.agency-stitch .bg-tertiary-fixed-dim\/40{background-color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.agency-stitch .text-tertiary-fixed-dim\/40{color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.agency-stitch .border-tertiary-fixed-dim\/40{border-color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.agency-stitch .bg-tertiary-fixed-dim\/50{background-color:color-mix(in srgb,#d0bcff 50%, transparent);}
+.agency-stitch .text-tertiary-fixed-dim\/50{color:color-mix(in srgb,#d0bcff 50%, transparent);}
+.agency-stitch .border-tertiary-fixed-dim\/50{border-color:color-mix(in srgb,#d0bcff 50%, transparent);}
+.agency-stitch .bg-tertiary-fixed-dim\/60{background-color:color-mix(in srgb,#d0bcff 60%, transparent);}
+.agency-stitch .text-tertiary-fixed-dim\/60{color:color-mix(in srgb,#d0bcff 60%, transparent);}
+.agency-stitch .border-tertiary-fixed-dim\/60{border-color:color-mix(in srgb,#d0bcff 60%, transparent);}
+.agency-stitch .bg-secondary-fixed-dim{background-color:#4edea3;}
+.agency-stitch .text-secondary-fixed-dim{color:#4edea3;}
+.agency-stitch .border-secondary-fixed-dim{border-color:#4edea3;}
+.agency-stitch .bg-secondary-fixed-dim\/20{background-color:color-mix(in srgb,#4edea3 20%, transparent);}
+.agency-stitch .text-secondary-fixed-dim\/20{color:color-mix(in srgb,#4edea3 20%, transparent);}
+.agency-stitch .border-secondary-fixed-dim\/20{border-color:color-mix(in srgb,#4edea3 20%, transparent);}
+.agency-stitch .bg-secondary-fixed-dim\/30{background-color:color-mix(in srgb,#4edea3 30%, transparent);}
+.agency-stitch .text-secondary-fixed-dim\/30{color:color-mix(in srgb,#4edea3 30%, transparent);}
+.agency-stitch .border-secondary-fixed-dim\/30{border-color:color-mix(in srgb,#4edea3 30%, transparent);}
+.agency-stitch .bg-secondary-fixed-dim\/40{background-color:color-mix(in srgb,#4edea3 40%, transparent);}
+.agency-stitch .text-secondary-fixed-dim\/40{color:color-mix(in srgb,#4edea3 40%, transparent);}
+.agency-stitch .border-secondary-fixed-dim\/40{border-color:color-mix(in srgb,#4edea3 40%, transparent);}
+.agency-stitch .bg-secondary-fixed-dim\/50{background-color:color-mix(in srgb,#4edea3 50%, transparent);}
+.agency-stitch .text-secondary-fixed-dim\/50{color:color-mix(in srgb,#4edea3 50%, transparent);}
+.agency-stitch .border-secondary-fixed-dim\/50{border-color:color-mix(in srgb,#4edea3 50%, transparent);}
+.agency-stitch .bg-secondary-fixed-dim\/60{background-color:color-mix(in srgb,#4edea3 60%, transparent);}
+.agency-stitch .text-secondary-fixed-dim\/60{color:color-mix(in srgb,#4edea3 60%, transparent);}
+.agency-stitch .border-secondary-fixed-dim\/60{border-color:color-mix(in srgb,#4edea3 60%, transparent);}
+.agency-stitch .bg-on-background{background-color:#131b2e;}
+.agency-stitch .text-on-background{color:#131b2e;}
+.agency-stitch .border-on-background{border-color:#131b2e;}
+.agency-stitch .bg-on-background\/20{background-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.agency-stitch .text-on-background\/20{color:color-mix(in srgb,#131b2e 20%, transparent);}
+.agency-stitch .border-on-background\/20{border-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.agency-stitch .bg-on-background\/30{background-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.agency-stitch .text-on-background\/30{color:color-mix(in srgb,#131b2e 30%, transparent);}
+.agency-stitch .border-on-background\/30{border-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.agency-stitch .bg-on-background\/40{background-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.agency-stitch .text-on-background\/40{color:color-mix(in srgb,#131b2e 40%, transparent);}
+.agency-stitch .border-on-background\/40{border-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.agency-stitch .bg-on-background\/50{background-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.agency-stitch .text-on-background\/50{color:color-mix(in srgb,#131b2e 50%, transparent);}
+.agency-stitch .border-on-background\/50{border-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.agency-stitch .bg-on-background\/60{background-color:color-mix(in srgb,#131b2e 60%, transparent);}
+.agency-stitch .text-on-background\/60{color:color-mix(in srgb,#131b2e 60%, transparent);}
+.agency-stitch .border-on-background\/60{border-color:color-mix(in srgb,#131b2e 60%, transparent);}
+.agency-stitch .bg-outline{background-color:#767586;}
+.agency-stitch .text-outline{color:#767586;}
+.agency-stitch .border-outline{border-color:#767586;}
+.agency-stitch .bg-outline\/20{background-color:color-mix(in srgb,#767586 20%, transparent);}
+.agency-stitch .text-outline\/20{color:color-mix(in srgb,#767586 20%, transparent);}
+.agency-stitch .border-outline\/20{border-color:color-mix(in srgb,#767586 20%, transparent);}
+.agency-stitch .bg-outline\/30{background-color:color-mix(in srgb,#767586 30%, transparent);}
+.agency-stitch .text-outline\/30{color:color-mix(in srgb,#767586 30%, transparent);}
+.agency-stitch .border-outline\/30{border-color:color-mix(in srgb,#767586 30%, transparent);}
+.agency-stitch .bg-outline\/40{background-color:color-mix(in srgb,#767586 40%, transparent);}
+.agency-stitch .text-outline\/40{color:color-mix(in srgb,#767586 40%, transparent);}
+.agency-stitch .border-outline\/40{border-color:color-mix(in srgb,#767586 40%, transparent);}
+.agency-stitch .bg-outline\/50{background-color:color-mix(in srgb,#767586 50%, transparent);}
+.agency-stitch .text-outline\/50{color:color-mix(in srgb,#767586 50%, transparent);}
+.agency-stitch .border-outline\/50{border-color:color-mix(in srgb,#767586 50%, transparent);}
+.agency-stitch .bg-outline\/60{background-color:color-mix(in srgb,#767586 60%, transparent);}
+.agency-stitch .text-outline\/60{color:color-mix(in srgb,#767586 60%, transparent);}
+.agency-stitch .border-outline\/60{border-color:color-mix(in srgb,#767586 60%, transparent);}
+.agency-stitch .bg-outline-variant{background-color:#c7c4d7;}
+.agency-stitch .text-outline-variant{color:#c7c4d7;}
+.agency-stitch .border-outline-variant{border-color:#c7c4d7;}
+.agency-stitch .bg-outline-variant\/20{background-color:color-mix(in srgb,#c7c4d7 20%, transparent);}
+.agency-stitch .text-outline-variant\/20{color:color-mix(in srgb,#c7c4d7 20%, transparent);}
+.agency-stitch .border-outline-variant\/20{border-color:color-mix(in srgb,#c7c4d7 20%, transparent);}
+.agency-stitch .bg-outline-variant\/30{background-color:color-mix(in srgb,#c7c4d7 30%, transparent);}
+.agency-stitch .text-outline-variant\/30{color:color-mix(in srgb,#c7c4d7 30%, transparent);}
+.agency-stitch .border-outline-variant\/30{border-color:color-mix(in srgb,#c7c4d7 30%, transparent);}
+.agency-stitch .bg-outline-variant\/40{background-color:color-mix(in srgb,#c7c4d7 40%, transparent);}
+.agency-stitch .text-outline-variant\/40{color:color-mix(in srgb,#c7c4d7 40%, transparent);}
+.agency-stitch .border-outline-variant\/40{border-color:color-mix(in srgb,#c7c4d7 40%, transparent);}
+.agency-stitch .bg-outline-variant\/50{background-color:color-mix(in srgb,#c7c4d7 50%, transparent);}
+.agency-stitch .text-outline-variant\/50{color:color-mix(in srgb,#c7c4d7 50%, transparent);}
+.agency-stitch .border-outline-variant\/50{border-color:color-mix(in srgb,#c7c4d7 50%, transparent);}
+.agency-stitch .bg-outline-variant\/60{background-color:color-mix(in srgb,#c7c4d7 60%, transparent);}
+.agency-stitch .text-outline-variant\/60{color:color-mix(in srgb,#c7c4d7 60%, transparent);}
+.agency-stitch .border-outline-variant\/60{border-color:color-mix(in srgb,#c7c4d7 60%, transparent);}
+.agency-stitch .bg-on-surface-variant{background-color:#464554;}
+.agency-stitch .text-on-surface-variant{color:#464554;}
+.agency-stitch .border-on-surface-variant{border-color:#464554;}
+.agency-stitch .bg-on-surface-variant\/20{background-color:color-mix(in srgb,#464554 20%, transparent);}
+.agency-stitch .text-on-surface-variant\/20{color:color-mix(in srgb,#464554 20%, transparent);}
+.agency-stitch .border-on-surface-variant\/20{border-color:color-mix(in srgb,#464554 20%, transparent);}
+.agency-stitch .bg-on-surface-variant\/30{background-color:color-mix(in srgb,#464554 30%, transparent);}
+.agency-stitch .text-on-surface-variant\/30{color:color-mix(in srgb,#464554 30%, transparent);}
+.agency-stitch .border-on-surface-variant\/30{border-color:color-mix(in srgb,#464554 30%, transparent);}
+.agency-stitch .bg-on-surface-variant\/40{background-color:color-mix(in srgb,#464554 40%, transparent);}
+.agency-stitch .text-on-surface-variant\/40{color:color-mix(in srgb,#464554 40%, transparent);}
+.agency-stitch .border-on-surface-variant\/40{border-color:color-mix(in srgb,#464554 40%, transparent);}
+.agency-stitch .bg-on-surface-variant\/50{background-color:color-mix(in srgb,#464554 50%, transparent);}
+.agency-stitch .text-on-surface-variant\/50{color:color-mix(in srgb,#464554 50%, transparent);}
+.agency-stitch .border-on-surface-variant\/50{border-color:color-mix(in srgb,#464554 50%, transparent);}
+.agency-stitch .bg-on-surface-variant\/60{background-color:color-mix(in srgb,#464554 60%, transparent);}
+.agency-stitch .text-on-surface-variant\/60{color:color-mix(in srgb,#464554 60%, transparent);}
+.agency-stitch .border-on-surface-variant\/60{border-color:color-mix(in srgb,#464554 60%, transparent);}
+.agency-stitch .bg-on-primary-fixed-variant{background-color:#2f2ebe;}
+.agency-stitch .text-on-primary-fixed-variant{color:#2f2ebe;}
+.agency-stitch .border-on-primary-fixed-variant{border-color:#2f2ebe;}
+.agency-stitch .bg-on-primary-fixed-variant\/20{background-color:color-mix(in srgb,#2f2ebe 20%, transparent);}
+.agency-stitch .text-on-primary-fixed-variant\/20{color:color-mix(in srgb,#2f2ebe 20%, transparent);}
+.agency-stitch .border-on-primary-fixed-variant\/20{border-color:color-mix(in srgb,#2f2ebe 20%, transparent);}
+.agency-stitch .bg-on-primary-fixed-variant\/30{background-color:color-mix(in srgb,#2f2ebe 30%, transparent);}
+.agency-stitch .text-on-primary-fixed-variant\/30{color:color-mix(in srgb,#2f2ebe 30%, transparent);}
+.agency-stitch .border-on-primary-fixed-variant\/30{border-color:color-mix(in srgb,#2f2ebe 30%, transparent);}
+.agency-stitch .bg-on-primary-fixed-variant\/40{background-color:color-mix(in srgb,#2f2ebe 40%, transparent);}
+.agency-stitch .text-on-primary-fixed-variant\/40{color:color-mix(in srgb,#2f2ebe 40%, transparent);}
+.agency-stitch .border-on-primary-fixed-variant\/40{border-color:color-mix(in srgb,#2f2ebe 40%, transparent);}
+.agency-stitch .bg-on-primary-fixed-variant\/50{background-color:color-mix(in srgb,#2f2ebe 50%, transparent);}
+.agency-stitch .text-on-primary-fixed-variant\/50{color:color-mix(in srgb,#2f2ebe 50%, transparent);}
+.agency-stitch .border-on-primary-fixed-variant\/50{border-color:color-mix(in srgb,#2f2ebe 50%, transparent);}
+.agency-stitch .bg-on-primary-fixed-variant\/60{background-color:color-mix(in srgb,#2f2ebe 60%, transparent);}
+.agency-stitch .text-on-primary-fixed-variant\/60{color:color-mix(in srgb,#2f2ebe 60%, transparent);}
+.agency-stitch .border-on-primary-fixed-variant\/60{border-color:color-mix(in srgb,#2f2ebe 60%, transparent);}
+.agency-stitch .bg-secondary-container{background-color:#6cf8bb;}
+.agency-stitch .text-secondary-container{color:#6cf8bb;}
+.agency-stitch .border-secondary-container{border-color:#6cf8bb;}
+.agency-stitch .bg-secondary-container\/20{background-color:color-mix(in srgb,#6cf8bb 20%, transparent);}
+.agency-stitch .text-secondary-container\/20{color:color-mix(in srgb,#6cf8bb 20%, transparent);}
+.agency-stitch .border-secondary-container\/20{border-color:color-mix(in srgb,#6cf8bb 20%, transparent);}
+.agency-stitch .bg-secondary-container\/30{background-color:color-mix(in srgb,#6cf8bb 30%, transparent);}
+.agency-stitch .text-secondary-container\/30{color:color-mix(in srgb,#6cf8bb 30%, transparent);}
+.agency-stitch .border-secondary-container\/30{border-color:color-mix(in srgb,#6cf8bb 30%, transparent);}
+.agency-stitch .bg-secondary-container\/40{background-color:color-mix(in srgb,#6cf8bb 40%, transparent);}
+.agency-stitch .text-secondary-container\/40{color:color-mix(in srgb,#6cf8bb 40%, transparent);}
+.agency-stitch .border-secondary-container\/40{border-color:color-mix(in srgb,#6cf8bb 40%, transparent);}
+.agency-stitch .bg-secondary-container\/50{background-color:color-mix(in srgb,#6cf8bb 50%, transparent);}
+.agency-stitch .text-secondary-container\/50{color:color-mix(in srgb,#6cf8bb 50%, transparent);}
+.agency-stitch .border-secondary-container\/50{border-color:color-mix(in srgb,#6cf8bb 50%, transparent);}
+.agency-stitch .bg-secondary-container\/60{background-color:color-mix(in srgb,#6cf8bb 60%, transparent);}
+.agency-stitch .text-secondary-container\/60{color:color-mix(in srgb,#6cf8bb 60%, transparent);}
+.agency-stitch .border-secondary-container\/60{border-color:color-mix(in srgb,#6cf8bb 60%, transparent);}
+.agency-stitch .bg-inverse-primary{background-color:#c0c1ff;}
+.agency-stitch .text-inverse-primary{color:#c0c1ff;}
+.agency-stitch .border-inverse-primary{border-color:#c0c1ff;}
+.agency-stitch .bg-inverse-primary\/20{background-color:color-mix(in srgb,#c0c1ff 20%, transparent);}
+.agency-stitch .text-inverse-primary\/20{color:color-mix(in srgb,#c0c1ff 20%, transparent);}
+.agency-stitch .border-inverse-primary\/20{border-color:color-mix(in srgb,#c0c1ff 20%, transparent);}
+.agency-stitch .bg-inverse-primary\/30{background-color:color-mix(in srgb,#c0c1ff 30%, transparent);}
+.agency-stitch .text-inverse-primary\/30{color:color-mix(in srgb,#c0c1ff 30%, transparent);}
+.agency-stitch .border-inverse-primary\/30{border-color:color-mix(in srgb,#c0c1ff 30%, transparent);}
+.agency-stitch .bg-inverse-primary\/40{background-color:color-mix(in srgb,#c0c1ff 40%, transparent);}
+.agency-stitch .text-inverse-primary\/40{color:color-mix(in srgb,#c0c1ff 40%, transparent);}
+.agency-stitch .border-inverse-primary\/40{border-color:color-mix(in srgb,#c0c1ff 40%, transparent);}
+.agency-stitch .bg-inverse-primary\/50{background-color:color-mix(in srgb,#c0c1ff 50%, transparent);}
+.agency-stitch .text-inverse-primary\/50{color:color-mix(in srgb,#c0c1ff 50%, transparent);}
+.agency-stitch .border-inverse-primary\/50{border-color:color-mix(in srgb,#c0c1ff 50%, transparent);}
+.agency-stitch .bg-inverse-primary\/60{background-color:color-mix(in srgb,#c0c1ff 60%, transparent);}
+.agency-stitch .text-inverse-primary\/60{color:color-mix(in srgb,#c0c1ff 60%, transparent);}
+.agency-stitch .border-inverse-primary\/60{border-color:color-mix(in srgb,#c0c1ff 60%, transparent);}
+.agency-stitch .bg-on-surface{background-color:#131b2e;}
+.agency-stitch .text-on-surface{color:#131b2e;}
+.agency-stitch .border-on-surface{border-color:#131b2e;}
+.agency-stitch .bg-on-surface\/20{background-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.agency-stitch .text-on-surface\/20{color:color-mix(in srgb,#131b2e 20%, transparent);}
+.agency-stitch .border-on-surface\/20{border-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.agency-stitch .bg-on-surface\/30{background-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.agency-stitch .text-on-surface\/30{color:color-mix(in srgb,#131b2e 30%, transparent);}
+.agency-stitch .border-on-surface\/30{border-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.agency-stitch .bg-on-surface\/40{background-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.agency-stitch .text-on-surface\/40{color:color-mix(in srgb,#131b2e 40%, transparent);}
+.agency-stitch .border-on-surface\/40{border-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.agency-stitch .bg-on-surface\/50{background-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.agency-stitch .text-on-surface\/50{color:color-mix(in srgb,#131b2e 50%, transparent);}
+.agency-stitch .border-on-surface\/50{border-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.agency-stitch .bg-on-surface\/60{background-color:color-mix(in srgb,#131b2e 60%, transparent);}
+.agency-stitch .text-on-surface\/60{color:color-mix(in srgb,#131b2e 60%, transparent);}
+.agency-stitch .border-on-surface\/60{border-color:color-mix(in srgb,#131b2e 60%, transparent);}
+.agency-stitch .bg-on-secondary-fixed{background-color:#002113;}
+.agency-stitch .text-on-secondary-fixed{color:#002113;}
+.agency-stitch .border-on-secondary-fixed{border-color:#002113;}
+.agency-stitch .bg-on-secondary-fixed\/20{background-color:color-mix(in srgb,#002113 20%, transparent);}
+.agency-stitch .text-on-secondary-fixed\/20{color:color-mix(in srgb,#002113 20%, transparent);}
+.agency-stitch .border-on-secondary-fixed\/20{border-color:color-mix(in srgb,#002113 20%, transparent);}
+.agency-stitch .bg-on-secondary-fixed\/30{background-color:color-mix(in srgb,#002113 30%, transparent);}
+.agency-stitch .text-on-secondary-fixed\/30{color:color-mix(in srgb,#002113 30%, transparent);}
+.agency-stitch .border-on-secondary-fixed\/30{border-color:color-mix(in srgb,#002113 30%, transparent);}
+.agency-stitch .bg-on-secondary-fixed\/40{background-color:color-mix(in srgb,#002113 40%, transparent);}
+.agency-stitch .text-on-secondary-fixed\/40{color:color-mix(in srgb,#002113 40%, transparent);}
+.agency-stitch .border-on-secondary-fixed\/40{border-color:color-mix(in srgb,#002113 40%, transparent);}
+.agency-stitch .bg-on-secondary-fixed\/50{background-color:color-mix(in srgb,#002113 50%, transparent);}
+.agency-stitch .text-on-secondary-fixed\/50{color:color-mix(in srgb,#002113 50%, transparent);}
+.agency-stitch .border-on-secondary-fixed\/50{border-color:color-mix(in srgb,#002113 50%, transparent);}
+.agency-stitch .bg-on-secondary-fixed\/60{background-color:color-mix(in srgb,#002113 60%, transparent);}
+.agency-stitch .text-on-secondary-fixed\/60{color:color-mix(in srgb,#002113 60%, transparent);}
+.agency-stitch .border-on-secondary-fixed\/60{border-color:color-mix(in srgb,#002113 60%, transparent);}
+.agency-stitch .bg-on-error{background-color:#ffffff;}
+.agency-stitch .text-on-error{color:#ffffff;}
+.agency-stitch .border-on-error{border-color:#ffffff;}
+.agency-stitch .bg-on-error\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .text-on-error\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .border-on-error\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .bg-on-error\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .text-on-error\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .border-on-error\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .bg-on-error\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .text-on-error\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .border-on-error\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .bg-on-error\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .text-on-error\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .border-on-error\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .bg-on-error\/60{background-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .text-on-error\/60{color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .border-on-error\/60{border-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .bg-on-primary-fixed{background-color:#07006c;}
+.agency-stitch .text-on-primary-fixed{color:#07006c;}
+.agency-stitch .border-on-primary-fixed{border-color:#07006c;}
+.agency-stitch .bg-on-primary-fixed\/20{background-color:color-mix(in srgb,#07006c 20%, transparent);}
+.agency-stitch .text-on-primary-fixed\/20{color:color-mix(in srgb,#07006c 20%, transparent);}
+.agency-stitch .border-on-primary-fixed\/20{border-color:color-mix(in srgb,#07006c 20%, transparent);}
+.agency-stitch .bg-on-primary-fixed\/30{background-color:color-mix(in srgb,#07006c 30%, transparent);}
+.agency-stitch .text-on-primary-fixed\/30{color:color-mix(in srgb,#07006c 30%, transparent);}
+.agency-stitch .border-on-primary-fixed\/30{border-color:color-mix(in srgb,#07006c 30%, transparent);}
+.agency-stitch .bg-on-primary-fixed\/40{background-color:color-mix(in srgb,#07006c 40%, transparent);}
+.agency-stitch .text-on-primary-fixed\/40{color:color-mix(in srgb,#07006c 40%, transparent);}
+.agency-stitch .border-on-primary-fixed\/40{border-color:color-mix(in srgb,#07006c 40%, transparent);}
+.agency-stitch .bg-on-primary-fixed\/50{background-color:color-mix(in srgb,#07006c 50%, transparent);}
+.agency-stitch .text-on-primary-fixed\/50{color:color-mix(in srgb,#07006c 50%, transparent);}
+.agency-stitch .border-on-primary-fixed\/50{border-color:color-mix(in srgb,#07006c 50%, transparent);}
+.agency-stitch .bg-on-primary-fixed\/60{background-color:color-mix(in srgb,#07006c 60%, transparent);}
+.agency-stitch .text-on-primary-fixed\/60{color:color-mix(in srgb,#07006c 60%, transparent);}
+.agency-stitch .border-on-primary-fixed\/60{border-color:color-mix(in srgb,#07006c 60%, transparent);}
+.agency-stitch .bg-on-secondary{background-color:#ffffff;}
+.agency-stitch .text-on-secondary{color:#ffffff;}
+.agency-stitch .border-on-secondary{border-color:#ffffff;}
+.agency-stitch .bg-on-secondary\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .text-on-secondary\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .border-on-secondary\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .bg-on-secondary\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .text-on-secondary\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .border-on-secondary\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .bg-on-secondary\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .text-on-secondary\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .border-on-secondary\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .bg-on-secondary\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .text-on-secondary\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .border-on-secondary\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .bg-on-secondary\/60{background-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .text-on-secondary\/60{color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .border-on-secondary\/60{border-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .bg-surface-bright{background-color:#faf8ff;}
+.agency-stitch .text-surface-bright{color:#faf8ff;}
+.agency-stitch .border-surface-bright{border-color:#faf8ff;}
+.agency-stitch .bg-surface-bright\/20{background-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .text-surface-bright\/20{color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .border-surface-bright\/20{border-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .bg-surface-bright\/30{background-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .text-surface-bright\/30{color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .border-surface-bright\/30{border-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .bg-surface-bright\/40{background-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .text-surface-bright\/40{color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .border-surface-bright\/40{border-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .bg-surface-bright\/50{background-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .text-surface-bright\/50{color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .border-surface-bright\/50{border-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .bg-surface-bright\/60{background-color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .text-surface-bright\/60{color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .border-surface-bright\/60{border-color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .bg-on-secondary-fixed-variant{background-color:#005236;}
+.agency-stitch .text-on-secondary-fixed-variant{color:#005236;}
+.agency-stitch .border-on-secondary-fixed-variant{border-color:#005236;}
+.agency-stitch .bg-on-secondary-fixed-variant\/20{background-color:color-mix(in srgb,#005236 20%, transparent);}
+.agency-stitch .text-on-secondary-fixed-variant\/20{color:color-mix(in srgb,#005236 20%, transparent);}
+.agency-stitch .border-on-secondary-fixed-variant\/20{border-color:color-mix(in srgb,#005236 20%, transparent);}
+.agency-stitch .bg-on-secondary-fixed-variant\/30{background-color:color-mix(in srgb,#005236 30%, transparent);}
+.agency-stitch .text-on-secondary-fixed-variant\/30{color:color-mix(in srgb,#005236 30%, transparent);}
+.agency-stitch .border-on-secondary-fixed-variant\/30{border-color:color-mix(in srgb,#005236 30%, transparent);}
+.agency-stitch .bg-on-secondary-fixed-variant\/40{background-color:color-mix(in srgb,#005236 40%, transparent);}
+.agency-stitch .text-on-secondary-fixed-variant\/40{color:color-mix(in srgb,#005236 40%, transparent);}
+.agency-stitch .border-on-secondary-fixed-variant\/40{border-color:color-mix(in srgb,#005236 40%, transparent);}
+.agency-stitch .bg-on-secondary-fixed-variant\/50{background-color:color-mix(in srgb,#005236 50%, transparent);}
+.agency-stitch .text-on-secondary-fixed-variant\/50{color:color-mix(in srgb,#005236 50%, transparent);}
+.agency-stitch .border-on-secondary-fixed-variant\/50{border-color:color-mix(in srgb,#005236 50%, transparent);}
+.agency-stitch .bg-on-secondary-fixed-variant\/60{background-color:color-mix(in srgb,#005236 60%, transparent);}
+.agency-stitch .text-on-secondary-fixed-variant\/60{color:color-mix(in srgb,#005236 60%, transparent);}
+.agency-stitch .border-on-secondary-fixed-variant\/60{border-color:color-mix(in srgb,#005236 60%, transparent);}
+.agency-stitch .bg-primary-container{background-color:#6063ee;}
+.agency-stitch .text-primary-container{color:#6063ee;}
+.agency-stitch .border-primary-container{border-color:#6063ee;}
+.agency-stitch .bg-primary-container\/20{background-color:color-mix(in srgb,#6063ee 20%, transparent);}
+.agency-stitch .text-primary-container\/20{color:color-mix(in srgb,#6063ee 20%, transparent);}
+.agency-stitch .border-primary-container\/20{border-color:color-mix(in srgb,#6063ee 20%, transparent);}
+.agency-stitch .bg-primary-container\/30{background-color:color-mix(in srgb,#6063ee 30%, transparent);}
+.agency-stitch .text-primary-container\/30{color:color-mix(in srgb,#6063ee 30%, transparent);}
+.agency-stitch .border-primary-container\/30{border-color:color-mix(in srgb,#6063ee 30%, transparent);}
+.agency-stitch .bg-primary-container\/40{background-color:color-mix(in srgb,#6063ee 40%, transparent);}
+.agency-stitch .text-primary-container\/40{color:color-mix(in srgb,#6063ee 40%, transparent);}
+.agency-stitch .border-primary-container\/40{border-color:color-mix(in srgb,#6063ee 40%, transparent);}
+.agency-stitch .bg-primary-container\/50{background-color:color-mix(in srgb,#6063ee 50%, transparent);}
+.agency-stitch .text-primary-container\/50{color:color-mix(in srgb,#6063ee 50%, transparent);}
+.agency-stitch .border-primary-container\/50{border-color:color-mix(in srgb,#6063ee 50%, transparent);}
+.agency-stitch .bg-primary-container\/60{background-color:color-mix(in srgb,#6063ee 60%, transparent);}
+.agency-stitch .text-primary-container\/60{color:color-mix(in srgb,#6063ee 60%, transparent);}
+.agency-stitch .border-primary-container\/60{border-color:color-mix(in srgb,#6063ee 60%, transparent);}
+.agency-stitch .bg-primary{background-color:#4648d4;}
+.agency-stitch .text-primary{color:#4648d4;}
+.agency-stitch .border-primary{border-color:#4648d4;}
+.agency-stitch .bg-primary\/20{background-color:color-mix(in srgb,#4648d4 20%, transparent);}
+.agency-stitch .text-primary\/20{color:color-mix(in srgb,#4648d4 20%, transparent);}
+.agency-stitch .border-primary\/20{border-color:color-mix(in srgb,#4648d4 20%, transparent);}
+.agency-stitch .bg-primary\/30{background-color:color-mix(in srgb,#4648d4 30%, transparent);}
+.agency-stitch .text-primary\/30{color:color-mix(in srgb,#4648d4 30%, transparent);}
+.agency-stitch .border-primary\/30{border-color:color-mix(in srgb,#4648d4 30%, transparent);}
+.agency-stitch .bg-primary\/40{background-color:color-mix(in srgb,#4648d4 40%, transparent);}
+.agency-stitch .text-primary\/40{color:color-mix(in srgb,#4648d4 40%, transparent);}
+.agency-stitch .border-primary\/40{border-color:color-mix(in srgb,#4648d4 40%, transparent);}
+.agency-stitch .bg-primary\/50{background-color:color-mix(in srgb,#4648d4 50%, transparent);}
+.agency-stitch .text-primary\/50{color:color-mix(in srgb,#4648d4 50%, transparent);}
+.agency-stitch .border-primary\/50{border-color:color-mix(in srgb,#4648d4 50%, transparent);}
+.agency-stitch .bg-primary\/60{background-color:color-mix(in srgb,#4648d4 60%, transparent);}
+.agency-stitch .text-primary\/60{color:color-mix(in srgb,#4648d4 60%, transparent);}
+.agency-stitch .border-primary\/60{border-color:color-mix(in srgb,#4648d4 60%, transparent);}
+.agency-stitch .bg-tertiary{background-color:#6b38d4;}
+.agency-stitch .text-tertiary{color:#6b38d4;}
+.agency-stitch .border-tertiary{border-color:#6b38d4;}
+.agency-stitch .bg-tertiary\/20{background-color:color-mix(in srgb,#6b38d4 20%, transparent);}
+.agency-stitch .text-tertiary\/20{color:color-mix(in srgb,#6b38d4 20%, transparent);}
+.agency-stitch .border-tertiary\/20{border-color:color-mix(in srgb,#6b38d4 20%, transparent);}
+.agency-stitch .bg-tertiary\/30{background-color:color-mix(in srgb,#6b38d4 30%, transparent);}
+.agency-stitch .text-tertiary\/30{color:color-mix(in srgb,#6b38d4 30%, transparent);}
+.agency-stitch .border-tertiary\/30{border-color:color-mix(in srgb,#6b38d4 30%, transparent);}
+.agency-stitch .bg-tertiary\/40{background-color:color-mix(in srgb,#6b38d4 40%, transparent);}
+.agency-stitch .text-tertiary\/40{color:color-mix(in srgb,#6b38d4 40%, transparent);}
+.agency-stitch .border-tertiary\/40{border-color:color-mix(in srgb,#6b38d4 40%, transparent);}
+.agency-stitch .bg-tertiary\/50{background-color:color-mix(in srgb,#6b38d4 50%, transparent);}
+.agency-stitch .text-tertiary\/50{color:color-mix(in srgb,#6b38d4 50%, transparent);}
+.agency-stitch .border-tertiary\/50{border-color:color-mix(in srgb,#6b38d4 50%, transparent);}
+.agency-stitch .bg-tertiary\/60{background-color:color-mix(in srgb,#6b38d4 60%, transparent);}
+.agency-stitch .text-tertiary\/60{color:color-mix(in srgb,#6b38d4 60%, transparent);}
+.agency-stitch .border-tertiary\/60{border-color:color-mix(in srgb,#6b38d4 60%, transparent);}
+.agency-stitch .bg-surface-container-low{background-color:#f2f3ff;}
+.agency-stitch .text-surface-container-low{color:#f2f3ff;}
+.agency-stitch .border-surface-container-low{border-color:#f2f3ff;}
+.agency-stitch .bg-surface-container-low\/20{background-color:color-mix(in srgb,#f2f3ff 20%, transparent);}
+.agency-stitch .text-surface-container-low\/20{color:color-mix(in srgb,#f2f3ff 20%, transparent);}
+.agency-stitch .border-surface-container-low\/20{border-color:color-mix(in srgb,#f2f3ff 20%, transparent);}
+.agency-stitch .bg-surface-container-low\/30{background-color:color-mix(in srgb,#f2f3ff 30%, transparent);}
+.agency-stitch .text-surface-container-low\/30{color:color-mix(in srgb,#f2f3ff 30%, transparent);}
+.agency-stitch .border-surface-container-low\/30{border-color:color-mix(in srgb,#f2f3ff 30%, transparent);}
+.agency-stitch .bg-surface-container-low\/40{background-color:color-mix(in srgb,#f2f3ff 40%, transparent);}
+.agency-stitch .text-surface-container-low\/40{color:color-mix(in srgb,#f2f3ff 40%, transparent);}
+.agency-stitch .border-surface-container-low\/40{border-color:color-mix(in srgb,#f2f3ff 40%, transparent);}
+.agency-stitch .bg-surface-container-low\/50{background-color:color-mix(in srgb,#f2f3ff 50%, transparent);}
+.agency-stitch .text-surface-container-low\/50{color:color-mix(in srgb,#f2f3ff 50%, transparent);}
+.agency-stitch .border-surface-container-low\/50{border-color:color-mix(in srgb,#f2f3ff 50%, transparent);}
+.agency-stitch .bg-surface-container-low\/60{background-color:color-mix(in srgb,#f2f3ff 60%, transparent);}
+.agency-stitch .text-surface-container-low\/60{color:color-mix(in srgb,#f2f3ff 60%, transparent);}
+.agency-stitch .border-surface-container-low\/60{border-color:color-mix(in srgb,#f2f3ff 60%, transparent);}
+.agency-stitch .bg-surface-container{background-color:#eaedff;}
+.agency-stitch .text-surface-container{color:#eaedff;}
+.agency-stitch .border-surface-container{border-color:#eaedff;}
+.agency-stitch .bg-surface-container\/20{background-color:color-mix(in srgb,#eaedff 20%, transparent);}
+.agency-stitch .text-surface-container\/20{color:color-mix(in srgb,#eaedff 20%, transparent);}
+.agency-stitch .border-surface-container\/20{border-color:color-mix(in srgb,#eaedff 20%, transparent);}
+.agency-stitch .bg-surface-container\/30{background-color:color-mix(in srgb,#eaedff 30%, transparent);}
+.agency-stitch .text-surface-container\/30{color:color-mix(in srgb,#eaedff 30%, transparent);}
+.agency-stitch .border-surface-container\/30{border-color:color-mix(in srgb,#eaedff 30%, transparent);}
+.agency-stitch .bg-surface-container\/40{background-color:color-mix(in srgb,#eaedff 40%, transparent);}
+.agency-stitch .text-surface-container\/40{color:color-mix(in srgb,#eaedff 40%, transparent);}
+.agency-stitch .border-surface-container\/40{border-color:color-mix(in srgb,#eaedff 40%, transparent);}
+.agency-stitch .bg-surface-container\/50{background-color:color-mix(in srgb,#eaedff 50%, transparent);}
+.agency-stitch .text-surface-container\/50{color:color-mix(in srgb,#eaedff 50%, transparent);}
+.agency-stitch .border-surface-container\/50{border-color:color-mix(in srgb,#eaedff 50%, transparent);}
+.agency-stitch .bg-surface-container\/60{background-color:color-mix(in srgb,#eaedff 60%, transparent);}
+.agency-stitch .text-surface-container\/60{color:color-mix(in srgb,#eaedff 60%, transparent);}
+.agency-stitch .border-surface-container\/60{border-color:color-mix(in srgb,#eaedff 60%, transparent);}
+.agency-stitch .bg-on-secondary-container{background-color:#00714d;}
+.agency-stitch .text-on-secondary-container{color:#00714d;}
+.agency-stitch .border-on-secondary-container{border-color:#00714d;}
+.agency-stitch .bg-on-secondary-container\/20{background-color:color-mix(in srgb,#00714d 20%, transparent);}
+.agency-stitch .text-on-secondary-container\/20{color:color-mix(in srgb,#00714d 20%, transparent);}
+.agency-stitch .border-on-secondary-container\/20{border-color:color-mix(in srgb,#00714d 20%, transparent);}
+.agency-stitch .bg-on-secondary-container\/30{background-color:color-mix(in srgb,#00714d 30%, transparent);}
+.agency-stitch .text-on-secondary-container\/30{color:color-mix(in srgb,#00714d 30%, transparent);}
+.agency-stitch .border-on-secondary-container\/30{border-color:color-mix(in srgb,#00714d 30%, transparent);}
+.agency-stitch .bg-on-secondary-container\/40{background-color:color-mix(in srgb,#00714d 40%, transparent);}
+.agency-stitch .text-on-secondary-container\/40{color:color-mix(in srgb,#00714d 40%, transparent);}
+.agency-stitch .border-on-secondary-container\/40{border-color:color-mix(in srgb,#00714d 40%, transparent);}
+.agency-stitch .bg-on-secondary-container\/50{background-color:color-mix(in srgb,#00714d 50%, transparent);}
+.agency-stitch .text-on-secondary-container\/50{color:color-mix(in srgb,#00714d 50%, transparent);}
+.agency-stitch .border-on-secondary-container\/50{border-color:color-mix(in srgb,#00714d 50%, transparent);}
+.agency-stitch .bg-on-secondary-container\/60{background-color:color-mix(in srgb,#00714d 60%, transparent);}
+.agency-stitch .text-on-secondary-container\/60{color:color-mix(in srgb,#00714d 60%, transparent);}
+.agency-stitch .border-on-secondary-container\/60{border-color:color-mix(in srgb,#00714d 60%, transparent);}
+.agency-stitch .bg-on-tertiary{background-color:#ffffff;}
+.agency-stitch .text-on-tertiary{color:#ffffff;}
+.agency-stitch .border-on-tertiary{border-color:#ffffff;}
+.agency-stitch .bg-on-tertiary\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .text-on-tertiary\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .border-on-tertiary\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .bg-on-tertiary\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .text-on-tertiary\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .border-on-tertiary\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .bg-on-tertiary\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .text-on-tertiary\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .border-on-tertiary\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .bg-on-tertiary\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .text-on-tertiary\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .border-on-tertiary\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .bg-on-tertiary\/60{background-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .text-on-tertiary\/60{color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .border-on-tertiary\/60{border-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .bg-surface-container-highest{background-color:#dae2fd;}
+.agency-stitch .text-surface-container-highest{color:#dae2fd;}
+.agency-stitch .border-surface-container-highest{border-color:#dae2fd;}
+.agency-stitch .bg-surface-container-highest\/20{background-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.agency-stitch .text-surface-container-highest\/20{color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.agency-stitch .border-surface-container-highest\/20{border-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.agency-stitch .bg-surface-container-highest\/30{background-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.agency-stitch .text-surface-container-highest\/30{color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.agency-stitch .border-surface-container-highest\/30{border-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.agency-stitch .bg-surface-container-highest\/40{background-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.agency-stitch .text-surface-container-highest\/40{color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.agency-stitch .border-surface-container-highest\/40{border-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.agency-stitch .bg-surface-container-highest\/50{background-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.agency-stitch .text-surface-container-highest\/50{color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.agency-stitch .border-surface-container-highest\/50{border-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.agency-stitch .bg-surface-container-highest\/60{background-color:color-mix(in srgb,#dae2fd 60%, transparent);}
+.agency-stitch .text-surface-container-highest\/60{color:color-mix(in srgb,#dae2fd 60%, transparent);}
+.agency-stitch .border-surface-container-highest\/60{border-color:color-mix(in srgb,#dae2fd 60%, transparent);}
+.agency-stitch .bg-on-tertiary-container{background-color:#fffbff;}
+.agency-stitch .text-on-tertiary-container{color:#fffbff;}
+.agency-stitch .border-on-tertiary-container{border-color:#fffbff;}
+.agency-stitch .bg-on-tertiary-container\/20{background-color:color-mix(in srgb,#fffbff 20%, transparent);}
+.agency-stitch .text-on-tertiary-container\/20{color:color-mix(in srgb,#fffbff 20%, transparent);}
+.agency-stitch .border-on-tertiary-container\/20{border-color:color-mix(in srgb,#fffbff 20%, transparent);}
+.agency-stitch .bg-on-tertiary-container\/30{background-color:color-mix(in srgb,#fffbff 30%, transparent);}
+.agency-stitch .text-on-tertiary-container\/30{color:color-mix(in srgb,#fffbff 30%, transparent);}
+.agency-stitch .border-on-tertiary-container\/30{border-color:color-mix(in srgb,#fffbff 30%, transparent);}
+.agency-stitch .bg-on-tertiary-container\/40{background-color:color-mix(in srgb,#fffbff 40%, transparent);}
+.agency-stitch .text-on-tertiary-container\/40{color:color-mix(in srgb,#fffbff 40%, transparent);}
+.agency-stitch .border-on-tertiary-container\/40{border-color:color-mix(in srgb,#fffbff 40%, transparent);}
+.agency-stitch .bg-on-tertiary-container\/50{background-color:color-mix(in srgb,#fffbff 50%, transparent);}
+.agency-stitch .text-on-tertiary-container\/50{color:color-mix(in srgb,#fffbff 50%, transparent);}
+.agency-stitch .border-on-tertiary-container\/50{border-color:color-mix(in srgb,#fffbff 50%, transparent);}
+.agency-stitch .bg-on-tertiary-container\/60{background-color:color-mix(in srgb,#fffbff 60%, transparent);}
+.agency-stitch .text-on-tertiary-container\/60{color:color-mix(in srgb,#fffbff 60%, transparent);}
+.agency-stitch .border-on-tertiary-container\/60{border-color:color-mix(in srgb,#fffbff 60%, transparent);}
+.agency-stitch .bg-surface-container-lowest{background-color:#ffffff;}
+.agency-stitch .text-surface-container-lowest{color:#ffffff;}
+.agency-stitch .border-surface-container-lowest{border-color:#ffffff;}
+.agency-stitch .bg-surface-container-lowest\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .text-surface-container-lowest\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .border-surface-container-lowest\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.agency-stitch .bg-surface-container-lowest\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .text-surface-container-lowest\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .border-surface-container-lowest\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.agency-stitch .bg-surface-container-lowest\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .text-surface-container-lowest\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .border-surface-container-lowest\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.agency-stitch .bg-surface-container-lowest\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .text-surface-container-lowest\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .border-surface-container-lowest\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.agency-stitch .bg-surface-container-lowest\/60{background-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .text-surface-container-lowest\/60{color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .border-surface-container-lowest\/60{border-color:color-mix(in srgb,#ffffff 60%, transparent);}
+.agency-stitch .bg-surface{background-color:#faf8ff;}
+.agency-stitch .text-surface{color:#faf8ff;}
+.agency-stitch .border-surface{border-color:#faf8ff;}
+.agency-stitch .bg-surface\/20{background-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .text-surface\/20{color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .border-surface\/20{border-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.agency-stitch .bg-surface\/30{background-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .text-surface\/30{color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .border-surface\/30{border-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.agency-stitch .bg-surface\/40{background-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .text-surface\/40{color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .border-surface\/40{border-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.agency-stitch .bg-surface\/50{background-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .text-surface\/50{color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .border-surface\/50{border-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.agency-stitch .bg-surface\/60{background-color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .text-surface\/60{color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .border-surface\/60{border-color:color-mix(in srgb,#faf8ff 60%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed-variant{background-color:#5516be;}
+.agency-stitch .text-on-tertiary-fixed-variant{color:#5516be;}
+.agency-stitch .border-on-tertiary-fixed-variant{border-color:#5516be;}
+.agency-stitch .bg-on-tertiary-fixed-variant\/20{background-color:color-mix(in srgb,#5516be 20%, transparent);}
+.agency-stitch .text-on-tertiary-fixed-variant\/20{color:color-mix(in srgb,#5516be 20%, transparent);}
+.agency-stitch .border-on-tertiary-fixed-variant\/20{border-color:color-mix(in srgb,#5516be 20%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed-variant\/30{background-color:color-mix(in srgb,#5516be 30%, transparent);}
+.agency-stitch .text-on-tertiary-fixed-variant\/30{color:color-mix(in srgb,#5516be 30%, transparent);}
+.agency-stitch .border-on-tertiary-fixed-variant\/30{border-color:color-mix(in srgb,#5516be 30%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed-variant\/40{background-color:color-mix(in srgb,#5516be 40%, transparent);}
+.agency-stitch .text-on-tertiary-fixed-variant\/40{color:color-mix(in srgb,#5516be 40%, transparent);}
+.agency-stitch .border-on-tertiary-fixed-variant\/40{border-color:color-mix(in srgb,#5516be 40%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed-variant\/50{background-color:color-mix(in srgb,#5516be 50%, transparent);}
+.agency-stitch .text-on-tertiary-fixed-variant\/50{color:color-mix(in srgb,#5516be 50%, transparent);}
+.agency-stitch .border-on-tertiary-fixed-variant\/50{border-color:color-mix(in srgb,#5516be 50%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed-variant\/60{background-color:color-mix(in srgb,#5516be 60%, transparent);}
+.agency-stitch .text-on-tertiary-fixed-variant\/60{color:color-mix(in srgb,#5516be 60%, transparent);}
+.agency-stitch .border-on-tertiary-fixed-variant\/60{border-color:color-mix(in srgb,#5516be 60%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed{background-color:#23005c;}
+.agency-stitch .text-on-tertiary-fixed{color:#23005c;}
+.agency-stitch .border-on-tertiary-fixed{border-color:#23005c;}
+.agency-stitch .bg-on-tertiary-fixed\/20{background-color:color-mix(in srgb,#23005c 20%, transparent);}
+.agency-stitch .text-on-tertiary-fixed\/20{color:color-mix(in srgb,#23005c 20%, transparent);}
+.agency-stitch .border-on-tertiary-fixed\/20{border-color:color-mix(in srgb,#23005c 20%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed\/30{background-color:color-mix(in srgb,#23005c 30%, transparent);}
+.agency-stitch .text-on-tertiary-fixed\/30{color:color-mix(in srgb,#23005c 30%, transparent);}
+.agency-stitch .border-on-tertiary-fixed\/30{border-color:color-mix(in srgb,#23005c 30%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed\/40{background-color:color-mix(in srgb,#23005c 40%, transparent);}
+.agency-stitch .text-on-tertiary-fixed\/40{color:color-mix(in srgb,#23005c 40%, transparent);}
+.agency-stitch .border-on-tertiary-fixed\/40{border-color:color-mix(in srgb,#23005c 40%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed\/50{background-color:color-mix(in srgb,#23005c 50%, transparent);}
+.agency-stitch .text-on-tertiary-fixed\/50{color:color-mix(in srgb,#23005c 50%, transparent);}
+.agency-stitch .border-on-tertiary-fixed\/50{border-color:color-mix(in srgb,#23005c 50%, transparent);}
+.agency-stitch .bg-on-tertiary-fixed\/60{background-color:color-mix(in srgb,#23005c 60%, transparent);}
+.agency-stitch .text-on-tertiary-fixed\/60{color:color-mix(in srgb,#23005c 60%, transparent);}
+.agency-stitch .border-on-tertiary-fixed\/60{border-color:color-mix(in srgb,#23005c 60%, transparent);}
+.agency-stitch .bg-tertiary-fixed{background-color:#e9ddff;}
+.agency-stitch .text-tertiary-fixed{color:#e9ddff;}
+.agency-stitch .border-tertiary-fixed{border-color:#e9ddff;}
+.agency-stitch .bg-tertiary-fixed\/20{background-color:color-mix(in srgb,#e9ddff 20%, transparent);}
+.agency-stitch .text-tertiary-fixed\/20{color:color-mix(in srgb,#e9ddff 20%, transparent);}
+.agency-stitch .border-tertiary-fixed\/20{border-color:color-mix(in srgb,#e9ddff 20%, transparent);}
+.agency-stitch .bg-tertiary-fixed\/30{background-color:color-mix(in srgb,#e9ddff 30%, transparent);}
+.agency-stitch .text-tertiary-fixed\/30{color:color-mix(in srgb,#e9ddff 30%, transparent);}
+.agency-stitch .border-tertiary-fixed\/30{border-color:color-mix(in srgb,#e9ddff 30%, transparent);}
+.agency-stitch .bg-tertiary-fixed\/40{background-color:color-mix(in srgb,#e9ddff 40%, transparent);}
+.agency-stitch .text-tertiary-fixed\/40{color:color-mix(in srgb,#e9ddff 40%, transparent);}
+.agency-stitch .border-tertiary-fixed\/40{border-color:color-mix(in srgb,#e9ddff 40%, transparent);}
+.agency-stitch .bg-tertiary-fixed\/50{background-color:color-mix(in srgb,#e9ddff 50%, transparent);}
+.agency-stitch .text-tertiary-fixed\/50{color:color-mix(in srgb,#e9ddff 50%, transparent);}
+.agency-stitch .border-tertiary-fixed\/50{border-color:color-mix(in srgb,#e9ddff 50%, transparent);}
+.agency-stitch .bg-tertiary-fixed\/60{background-color:color-mix(in srgb,#e9ddff 60%, transparent);}
+.agency-stitch .text-tertiary-fixed\/60{color:color-mix(in srgb,#e9ddff 60%, transparent);}
+.agency-stitch .border-tertiary-fixed\/60{border-color:color-mix(in srgb,#e9ddff 60%, transparent);}
+.agency-stitch .bg-surface-dim{background-color:#d2d9f4;}
+.agency-stitch .text-surface-dim{color:#d2d9f4;}
+.agency-stitch .border-surface-dim{border-color:#d2d9f4;}
+.agency-stitch .bg-surface-dim\/20{background-color:color-mix(in srgb,#d2d9f4 20%, transparent);}
+.agency-stitch .text-surface-dim\/20{color:color-mix(in srgb,#d2d9f4 20%, transparent);}
+.agency-stitch .border-surface-dim\/20{border-color:color-mix(in srgb,#d2d9f4 20%, transparent);}
+.agency-stitch .bg-surface-dim\/30{background-color:color-mix(in srgb,#d2d9f4 30%, transparent);}
+.agency-stitch .text-surface-dim\/30{color:color-mix(in srgb,#d2d9f4 30%, transparent);}
+.agency-stitch .border-surface-dim\/30{border-color:color-mix(in srgb,#d2d9f4 30%, transparent);}
+.agency-stitch .bg-surface-dim\/40{background-color:color-mix(in srgb,#d2d9f4 40%, transparent);}
+.agency-stitch .text-surface-dim\/40{color:color-mix(in srgb,#d2d9f4 40%, transparent);}
+.agency-stitch .border-surface-dim\/40{border-color:color-mix(in srgb,#d2d9f4 40%, transparent);}
+.agency-stitch .bg-surface-dim\/50{background-color:color-mix(in srgb,#d2d9f4 50%, transparent);}
+.agency-stitch .text-surface-dim\/50{color:color-mix(in srgb,#d2d9f4 50%, transparent);}
+.agency-stitch .border-surface-dim\/50{border-color:color-mix(in srgb,#d2d9f4 50%, transparent);}
+.agency-stitch .bg-surface-dim\/60{background-color:color-mix(in srgb,#d2d9f4 60%, transparent);}
+.agency-stitch .text-surface-dim\/60{color:color-mix(in srgb,#d2d9f4 60%, transparent);}
+.agency-stitch .border-surface-dim\/60{border-color:color-mix(in srgb,#d2d9f4 60%, transparent);}
+.agency-stitch .bg-surface-variant{background-color:#dae2fd;}
+.agency-stitch .text-surface-variant{color:#dae2fd;}
+.agency-stitch .border-surface-variant{border-color:#dae2fd;}
+.agency-stitch .bg-surface-variant\/20{background-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.agency-stitch .text-surface-variant\/20{color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.agency-stitch .border-surface-variant\/20{border-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.agency-stitch .bg-surface-variant\/30{background-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.agency-stitch .text-surface-variant\/30{color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.agency-stitch .border-surface-variant\/30{border-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.agency-stitch .bg-surface-variant\/40{background-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.agency-stitch .text-surface-variant\/40{color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.agency-stitch .border-surface-variant\/40{border-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.agency-stitch .bg-surface-variant\/50{background-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.agency-stitch .text-surface-variant\/50{color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.agency-stitch .border-surface-variant\/50{border-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.agency-stitch .bg-surface-variant\/60{background-color:color-mix(in srgb,#dae2fd 60%, transparent);}
+.agency-stitch .text-surface-variant\/60{color:color-mix(in srgb,#dae2fd 60%, transparent);}
+.agency-stitch .border-surface-variant\/60{border-color:color-mix(in srgb,#dae2fd 60%, transparent);}
+.agency-stitch .bg-surface-container-high{background-color:#e2e7ff;}
+.agency-stitch .text-surface-container-high{color:#e2e7ff;}
+.agency-stitch .border-surface-container-high{border-color:#e2e7ff;}
+.agency-stitch .bg-surface-container-high\/20{background-color:color-mix(in srgb,#e2e7ff 20%, transparent);}
+.agency-stitch .text-surface-container-high\/20{color:color-mix(in srgb,#e2e7ff 20%, transparent);}
+.agency-stitch .border-surface-container-high\/20{border-color:color-mix(in srgb,#e2e7ff 20%, transparent);}
+.agency-stitch .bg-surface-container-high\/30{background-color:color-mix(in srgb,#e2e7ff 30%, transparent);}
+.agency-stitch .text-surface-container-high\/30{color:color-mix(in srgb,#e2e7ff 30%, transparent);}
+.agency-stitch .border-surface-container-high\/30{border-color:color-mix(in srgb,#e2e7ff 30%, transparent);}
+.agency-stitch .bg-surface-container-high\/40{background-color:color-mix(in srgb,#e2e7ff 40%, transparent);}
+.agency-stitch .text-surface-container-high\/40{color:color-mix(in srgb,#e2e7ff 40%, transparent);}
+.agency-stitch .border-surface-container-high\/40{border-color:color-mix(in srgb,#e2e7ff 40%, transparent);}
+.agency-stitch .bg-surface-container-high\/50{background-color:color-mix(in srgb,#e2e7ff 50%, transparent);}
+.agency-stitch .text-surface-container-high\/50{color:color-mix(in srgb,#e2e7ff 50%, transparent);}
+.agency-stitch .border-surface-container-high\/50{border-color:color-mix(in srgb,#e2e7ff 50%, transparent);}
+.agency-stitch .bg-surface-container-high\/60{background-color:color-mix(in srgb,#e2e7ff 60%, transparent);}
+.agency-stitch .text-surface-container-high\/60{color:color-mix(in srgb,#e2e7ff 60%, transparent);}
+.agency-stitch .border-surface-container-high\/60{border-color:color-mix(in srgb,#e2e7ff 60%, transparent);}
+.agency-stitch .bg-primary-fixed{background-color:#e1e0ff;}
+.agency-stitch .text-primary-fixed{color:#e1e0ff;}
+.agency-stitch .border-primary-fixed{border-color:#e1e0ff;}
+.agency-stitch .bg-primary-fixed\/20{background-color:color-mix(in srgb,#e1e0ff 20%, transparent);}
+.agency-stitch .text-primary-fixed\/20{color:color-mix(in srgb,#e1e0ff 20%, transparent);}
+.agency-stitch .border-primary-fixed\/20{border-color:color-mix(in srgb,#e1e0ff 20%, transparent);}
+.agency-stitch .bg-primary-fixed\/30{background-color:color-mix(in srgb,#e1e0ff 30%, transparent);}
+.agency-stitch .text-primary-fixed\/30{color:color-mix(in srgb,#e1e0ff 30%, transparent);}
+.agency-stitch .border-primary-fixed\/30{border-color:color-mix(in srgb,#e1e0ff 30%, transparent);}
+.agency-stitch .bg-primary-fixed\/40{background-color:color-mix(in srgb,#e1e0ff 40%, transparent);}
+.agency-stitch .text-primary-fixed\/40{color:color-mix(in srgb,#e1e0ff 40%, transparent);}
+.agency-stitch .border-primary-fixed\/40{border-color:color-mix(in srgb,#e1e0ff 40%, transparent);}
+.agency-stitch .bg-primary-fixed\/50{background-color:color-mix(in srgb,#e1e0ff 50%, transparent);}
+.agency-stitch .text-primary-fixed\/50{color:color-mix(in srgb,#e1e0ff 50%, transparent);}
+.agency-stitch .border-primary-fixed\/50{border-color:color-mix(in srgb,#e1e0ff 50%, transparent);}
+.agency-stitch .bg-primary-fixed\/60{background-color:color-mix(in srgb,#e1e0ff 60%, transparent);}
+.agency-stitch .text-primary-fixed\/60{color:color-mix(in srgb,#e1e0ff 60%, transparent);}
+.agency-stitch .border-primary-fixed\/60{border-color:color-mix(in srgb,#e1e0ff 60%, transparent);}
+.agency-stitch .bg-inverse-on-surface{background-color:#eef0ff;}
+.agency-stitch .text-inverse-on-surface{color:#eef0ff;}
+.agency-stitch .border-inverse-on-surface{border-color:#eef0ff;}
+.agency-stitch .bg-inverse-on-surface\/20{background-color:color-mix(in srgb,#eef0ff 20%, transparent);}
+.agency-stitch .text-inverse-on-surface\/20{color:color-mix(in srgb,#eef0ff 20%, transparent);}
+.agency-stitch .border-inverse-on-surface\/20{border-color:color-mix(in srgb,#eef0ff 20%, transparent);}
+.agency-stitch .bg-inverse-on-surface\/30{background-color:color-mix(in srgb,#eef0ff 30%, transparent);}
+.agency-stitch .text-inverse-on-surface\/30{color:color-mix(in srgb,#eef0ff 30%, transparent);}
+.agency-stitch .border-inverse-on-surface\/30{border-color:color-mix(in srgb,#eef0ff 30%, transparent);}
+.agency-stitch .bg-inverse-on-surface\/40{background-color:color-mix(in srgb,#eef0ff 40%, transparent);}
+.agency-stitch .text-inverse-on-surface\/40{color:color-mix(in srgb,#eef0ff 40%, transparent);}
+.agency-stitch .border-inverse-on-surface\/40{border-color:color-mix(in srgb,#eef0ff 40%, transparent);}
+.agency-stitch .bg-inverse-on-surface\/50{background-color:color-mix(in srgb,#eef0ff 50%, transparent);}
+.agency-stitch .text-inverse-on-surface\/50{color:color-mix(in srgb,#eef0ff 50%, transparent);}
+.agency-stitch .border-inverse-on-surface\/50{border-color:color-mix(in srgb,#eef0ff 50%, transparent);}
+.agency-stitch .bg-inverse-on-surface\/60{background-color:color-mix(in srgb,#eef0ff 60%, transparent);}
+.agency-stitch .text-inverse-on-surface\/60{color:color-mix(in srgb,#eef0ff 60%, transparent);}
+.agency-stitch .border-inverse-on-surface\/60{border-color:color-mix(in srgb,#eef0ff 60%, transparent);}
+.agency-stitch .bg-error-container{background-color:#ffdad6;}
+.agency-stitch .text-error-container{color:#ffdad6;}
+.agency-stitch .border-error-container{border-color:#ffdad6;}
+.agency-stitch .bg-error-container\/20{background-color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.agency-stitch .text-error-container\/20{color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.agency-stitch .border-error-container\/20{border-color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.agency-stitch .bg-error-container\/30{background-color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.agency-stitch .text-error-container\/30{color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.agency-stitch .border-error-container\/30{border-color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.agency-stitch .bg-error-container\/40{background-color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.agency-stitch .text-error-container\/40{color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.agency-stitch .border-error-container\/40{border-color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.agency-stitch .bg-error-container\/50{background-color:color-mix(in srgb,#ffdad6 50%, transparent);}
+.agency-stitch .text-error-container\/50{color:color-mix(in srgb,#ffdad6 50%, transparent);}
+.agency-stitch .border-error-container\/50{border-color:color-mix(in srgb,#ffdad6 50%, transparent);}
+.agency-stitch .bg-error-container\/60{background-color:color-mix(in srgb,#ffdad6 60%, transparent);}
+.agency-stitch .text-error-container\/60{color:color-mix(in srgb,#ffdad6 60%, transparent);}
+.agency-stitch .border-error-container\/60{border-color:color-mix(in srgb,#ffdad6 60%, transparent);}
+.agency-stitch .bg-secondary-fixed{background-color:#6ffbbe;}
+.agency-stitch .text-secondary-fixed{color:#6ffbbe;}
+.agency-stitch .border-secondary-fixed{border-color:#6ffbbe;}
+.agency-stitch .bg-secondary-fixed\/20{background-color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.agency-stitch .text-secondary-fixed\/20{color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.agency-stitch .border-secondary-fixed\/20{border-color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.agency-stitch .bg-secondary-fixed\/30{background-color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.agency-stitch .text-secondary-fixed\/30{color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.agency-stitch .border-secondary-fixed\/30{border-color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.agency-stitch .bg-secondary-fixed\/40{background-color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.agency-stitch .text-secondary-fixed\/40{color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.agency-stitch .border-secondary-fixed\/40{border-color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.agency-stitch .bg-secondary-fixed\/50{background-color:color-mix(in srgb,#6ffbbe 50%, transparent);}
+.agency-stitch .text-secondary-fixed\/50{color:color-mix(in srgb,#6ffbbe 50%, transparent);}
+.agency-stitch .border-secondary-fixed\/50{border-color:color-mix(in srgb,#6ffbbe 50%, transparent);}
+.agency-stitch .bg-secondary-fixed\/60{background-color:color-mix(in srgb,#6ffbbe 60%, transparent);}
+.agency-stitch .text-secondary-fixed\/60{color:color-mix(in srgb,#6ffbbe 60%, transparent);}
+.agency-stitch .border-secondary-fixed\/60{border-color:color-mix(in srgb,#6ffbbe 60%, transparent);}
+.agency-stitch .p-space-sm{padding:0.5rem;}
+.agency-stitch .px-space-sm{padding-left:0.5rem;padding-right:0.5rem;}
+.agency-stitch .py-space-sm{padding-top:0.5rem;padding-bottom:0.5rem;}
+.agency-stitch .pt-space-sm{padding-top:0.5rem;}
+.agency-stitch .pb-space-sm{padding-bottom:0.5rem;}
+.agency-stitch .pl-space-sm{padding-left:0.5rem;}
+.agency-stitch .pr-space-sm{padding-right:0.5rem;}
+.agency-stitch .m-space-sm{margin:0.5rem;}
+.agency-stitch .mt-space-sm{margin-top:0.5rem;}
+.agency-stitch .mb-space-sm{margin-bottom:0.5rem;}
+.agency-stitch .ml-space-sm{margin-left:0.5rem;}
+.agency-stitch .mr-space-sm{margin-right:0.5rem;}
+.agency-stitch .gap-space-sm{gap:0.5rem;}
+.agency-stitch .space-y-space-sm>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-space-xs{padding:0.25rem;}
+.agency-stitch .px-space-xs{padding-left:0.25rem;padding-right:0.25rem;}
+.agency-stitch .py-space-xs{padding-top:0.25rem;padding-bottom:0.25rem;}
+.agency-stitch .pt-space-xs{padding-top:0.25rem;}
+.agency-stitch .pb-space-xs{padding-bottom:0.25rem;}
+.agency-stitch .pl-space-xs{padding-left:0.25rem;}
+.agency-stitch .pr-space-xs{padding-right:0.25rem;}
+.agency-stitch .m-space-xs{margin:0.25rem;}
+.agency-stitch .mt-space-xs{margin-top:0.25rem;}
+.agency-stitch .mb-space-xs{margin-bottom:0.25rem;}
+.agency-stitch .ml-space-xs{margin-left:0.25rem;}
+.agency-stitch .mr-space-xs{margin-right:0.25rem;}
+.agency-stitch .gap-space-xs{gap:0.25rem;}
+.agency-stitch .space-y-space-xs>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-space-md{padding:0.75rem;}
+.agency-stitch .px-space-md{padding-left:0.75rem;padding-right:0.75rem;}
+.agency-stitch .py-space-md{padding-top:0.75rem;padding-bottom:0.75rem;}
+.agency-stitch .pt-space-md{padding-top:0.75rem;}
+.agency-stitch .pb-space-md{padding-bottom:0.75rem;}
+.agency-stitch .pl-space-md{padding-left:0.75rem;}
+.agency-stitch .pr-space-md{padding-right:0.75rem;}
+.agency-stitch .m-space-md{margin:0.75rem;}
+.agency-stitch .mt-space-md{margin-top:0.75rem;}
+.agency-stitch .mb-space-md{margin-bottom:0.75rem;}
+.agency-stitch .ml-space-md{margin-left:0.75rem;}
+.agency-stitch .mr-space-md{margin-right:0.75rem;}
+.agency-stitch .gap-space-md{gap:0.75rem;}
+.agency-stitch .space-y-space-md>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-space-lg{padding:1.25rem;}
+.agency-stitch .px-space-lg{padding-left:1.25rem;padding-right:1.25rem;}
+.agency-stitch .py-space-lg{padding-top:1.25rem;padding-bottom:1.25rem;}
+.agency-stitch .pt-space-lg{padding-top:1.25rem;}
+.agency-stitch .pb-space-lg{padding-bottom:1.25rem;}
+.agency-stitch .pl-space-lg{padding-left:1.25rem;}
+.agency-stitch .pr-space-lg{padding-right:1.25rem;}
+.agency-stitch .m-space-lg{margin:1.25rem;}
+.agency-stitch .mt-space-lg{margin-top:1.25rem;}
+.agency-stitch .mb-space-lg{margin-bottom:1.25rem;}
+.agency-stitch .ml-space-lg{margin-left:1.25rem;}
+.agency-stitch .mr-space-lg{margin-right:1.25rem;}
+.agency-stitch .gap-space-lg{gap:1.25rem;}
+.agency-stitch .space-y-space-lg>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-space-xl{padding:1.75rem;}
+.agency-stitch .px-space-xl{padding-left:1.75rem;padding-right:1.75rem;}
+.agency-stitch .py-space-xl{padding-top:1.75rem;padding-bottom:1.75rem;}
+.agency-stitch .pt-space-xl{padding-top:1.75rem;}
+.agency-stitch .pb-space-xl{padding-bottom:1.75rem;}
+.agency-stitch .pl-space-xl{padding-left:1.75rem;}
+.agency-stitch .pr-space-xl{padding-right:1.75rem;}
+.agency-stitch .m-space-xl{margin:1.75rem;}
+.agency-stitch .mt-space-xl{margin-top:1.75rem;}
+.agency-stitch .mb-space-xl{margin-bottom:1.75rem;}
+.agency-stitch .ml-space-xl{margin-left:1.75rem;}
+.agency-stitch .mr-space-xl{margin-right:1.75rem;}
+.agency-stitch .gap-space-xl{gap:1.75rem;}
+.agency-stitch .space-y-space-xl>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(1.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.75rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-margin{padding:1.5rem;}
+.agency-stitch .px-margin{padding-left:1.5rem;padding-right:1.5rem;}
+.agency-stitch .py-margin{padding-top:1.5rem;padding-bottom:1.5rem;}
+.agency-stitch .pt-margin{padding-top:1.5rem;}
+.agency-stitch .pb-margin{padding-bottom:1.5rem;}
+.agency-stitch .pl-margin{padding-left:1.5rem;}
+.agency-stitch .pr-margin{padding-right:1.5rem;}
+.agency-stitch .m-margin{margin:1.5rem;}
+.agency-stitch .mt-margin{margin-top:1.5rem;}
+.agency-stitch .mb-margin{margin-bottom:1.5rem;}
+.agency-stitch .ml-margin{margin-left:1.5rem;}
+.agency-stitch .mr-margin{margin-right:1.5rem;}
+.agency-stitch .gap-margin{gap:1.5rem;}
+.agency-stitch .space-y-margin>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-margin-desktop{padding:2rem;}
+.agency-stitch .px-margin-desktop{padding-left:2rem;padding-right:2rem;}
+.agency-stitch .py-margin-desktop{padding-top:2rem;padding-bottom:2rem;}
+.agency-stitch .pt-margin-desktop{padding-top:2rem;}
+.agency-stitch .pb-margin-desktop{padding-bottom:2rem;}
+.agency-stitch .pl-margin-desktop{padding-left:2rem;}
+.agency-stitch .pr-margin-desktop{padding-right:2rem;}
+.agency-stitch .m-margin-desktop{margin:2rem;}
+.agency-stitch .mt-margin-desktop{margin-top:2rem;}
+.agency-stitch .mb-margin-desktop{margin-bottom:2rem;}
+.agency-stitch .ml-margin-desktop{margin-left:2rem;}
+.agency-stitch .mr-margin-desktop{margin-right:2rem;}
+.agency-stitch .gap-margin-desktop{gap:2rem;}
+.agency-stitch .space-y-margin-desktop>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(2rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(2rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-gutter{padding:1rem;}
+.agency-stitch .px-gutter{padding-left:1rem;padding-right:1rem;}
+.agency-stitch .py-gutter{padding-top:1rem;padding-bottom:1rem;}
+.agency-stitch .pt-gutter{padding-top:1rem;}
+.agency-stitch .pb-gutter{padding-bottom:1rem;}
+.agency-stitch .pl-gutter{padding-left:1rem;}
+.agency-stitch .pr-gutter{padding-right:1rem;}
+.agency-stitch .m-gutter{margin:1rem;}
+.agency-stitch .mt-gutter{margin-top:1rem;}
+.agency-stitch .mb-gutter{margin-bottom:1rem;}
+.agency-stitch .ml-gutter{margin-left:1rem;}
+.agency-stitch .mr-gutter{margin-right:1rem;}
+.agency-stitch .gap-gutter{gap:1rem;}
+.agency-stitch .space-y-gutter>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse));}
+.agency-stitch .p-gutter-lg{padding:1.5rem;}
+.agency-stitch .px-gutter-lg{padding-left:1.5rem;padding-right:1.5rem;}
+.agency-stitch .py-gutter-lg{padding-top:1.5rem;padding-bottom:1.5rem;}
+.agency-stitch .pt-gutter-lg{padding-top:1.5rem;}
+.agency-stitch .pb-gutter-lg{padding-bottom:1.5rem;}
+.agency-stitch .pl-gutter-lg{padding-left:1.5rem;}
+.agency-stitch .pr-gutter-lg{padding-right:1.5rem;}
+.agency-stitch .m-gutter-lg{margin:1.5rem;}
+.agency-stitch .mt-gutter-lg{margin-top:1.5rem;}
+.agency-stitch .mb-gutter-lg{margin-bottom:1.5rem;}
+.agency-stitch .ml-gutter-lg{margin-left:1.5rem;}
+.agency-stitch .mr-gutter-lg{margin-right:1.5rem;}
+.agency-stitch .gap-gutter-lg{gap:1.5rem;}
+.agency-stitch .space-y-gutter-lg>:not([hidden])~:not([hidden){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse));}
+.agency-stitch .font-label-micro{font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .text-label-micro{font-size:11px;line-height:14px;letter-spacing:0.06em;font-weight:600;}
+.agency-stitch .font-body-medium{font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .text-body-medium{font-size:14px;line-height:20px;letter-spacing:-0.01em;font-weight:500;}
+.agency-stitch .font-body-default{font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .text-body-default{font-size:14px;line-height:20px;letter-spacing:-0.01em;font-weight:400;}
+.agency-stitch .font-metric-tabular{font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .text-metric-tabular{font-size:14px;line-height:20px;letter-spacing:-0.01em;font-weight:600;}
+.agency-stitch .font-badge-label{font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .text-badge-label{font-size:12px;line-height:16px;letter-spacing:0.01em;font-weight:600;}
+.agency-stitch .font-display-lg{font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .text-display-lg{font-size:32px;line-height:38px;letter-spacing:-0.03em;font-weight:700;}
+.agency-stitch .font-headline-metric{font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .text-headline-metric{font-size:26px;line-height:32px;letter-spacing:-0.025em;font-weight:700;}
+.agency-stitch .font-body-sm{font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .text-body-sm{font-size:13px;line-height:18px;letter-spacing:0em;font-weight:400;}
+.agency-stitch .font-headline-title{font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .text-headline-title{font-size:20px;line-height:26px;letter-spacing:-0.015em;font-weight:600;}
+.agency-stitch .font-label-nav{font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .text-label-nav{font-size:13px;line-height:18px;letter-spacing:-0.005em;font-weight:500;}
+.agency-stitch .font-label-micro{font-size:11px;line-height:14px;letter-spacing:0.06em;font-weight:600;font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .font-body-medium{font-size:14px;line-height:20px;letter-spacing:-0.01em;font-weight:500;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .font-body-default{font-size:14px;line-height:20px;letter-spacing:-0.01em;font-weight:400;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .font-metric-tabular{font-size:14px;line-height:20px;letter-spacing:-0.01em;font-weight:600;font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .font-badge-label{font-size:12px;line-height:16px;letter-spacing:0.01em;font-weight:600;font-family:Inter,system-ui,sans-serif;}
+.agency-stitch .font-display-lg{font-size:32px;line-height:38px;letter-spacing:-0.03em;font-weight:700;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .font-headline-metric{font-size:26px;line-height:32px;letter-spacing:-0.025em;font-weight:700;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .font-body-sm{font-size:13px;line-height:18px;letter-spacing:0em;font-weight:400;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .font-headline-title{font-size:20px;line-height:26px;letter-spacing:-0.015em;font-weight:600;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .font-label-nav{font-size:13px;line-height:18px;letter-spacing:-0.005em;font-weight:500;font-family:Plus Jakarta Sans,system-ui,sans-serif;}
+.agency-stitch .space-y-space-sm > :not([hidden]) ~ :not([hidden]){margin-top:0.5rem;}
+.agency-stitch .space-y-space-xs > :not([hidden]) ~ :not([hidden]){margin-top:0.25rem;}
+.agency-stitch .space-y-space-md > :not([hidden]) ~ :not([hidden]){margin-top:0.75rem;}
+.agency-stitch .space-y-space-lg > :not([hidden]) ~ :not([hidden]){margin-top:1.25rem;}
+.agency-stitch .space-y-space-xl > :not([hidden]) ~ :not([hidden]){margin-top:1.75rem;}
+.agency-stitch .space-y-margin > :not([hidden]) ~ :not([hidden]){margin-top:1.5rem;}
+.agency-stitch .space-y-margin-desktop > :not([hidden]) ~ :not([hidden]){margin-top:2rem;}
+.agency-stitch .space-y-gutter > :not([hidden]) ~ :not([hidden]){margin-top:1rem;}
+.agency-stitch .space-y-gutter-lg > :not([hidden]) ~ :not([hidden]){margin-top:1.5rem;}
+
+.agency-stitch .shadow-sm{box-shadow:0 1px 2px 0 rgb(15 23 42 / 0.05);}
+.agency-stitch .rounded-xl{border-radius:0.75rem;}
+.agency-stitch .rounded-lg{border-radius:0.5rem;}
+.agency-stitch .rounded-full{border-radius:9999px;}
+.agency-stitch .rounded{border-radius:0.25rem;}
+.agency-stitch .flex{display:flex;}
+.agency-stitch .grid{display:grid;}
+.agency-stitch .hidden{display:none;}
+.agency-stitch .flex-col{flex-direction:column;}
+.agency-stitch .flex-wrap{flex-wrap:wrap;}
+.agency-stitch .flex-1{flex:1 1 0%;}
+.agency-stitch .shrink-0{flex-shrink:0;}
+.agency-stitch .items-center{align-items:center;}
+.agency-stitch .items-start{align-items:flex-start;}
+.agency-stitch .items-stretch{align-items:stretch;}
+.agency-stitch .justify-between{justify-content:space-between;}
+.agency-stitch .justify-center{justify-content:center;}
+.agency-stitch .self-start{align-self:flex-start;}
+.agency-stitch .self-auto{align-self:auto;}
+.agency-stitch .w-full{width:100%;}
+.agency-stitch .w-0\.5{width:0.125rem;}
+.agency-stitch .w-2{width:0.5rem;}
+.agency-stitch .w-7{width:1.75rem;}
+.agency-stitch .w-8{width:2rem;}
+.agency-stitch .w-9{width:2.25rem;}
+.agency-stitch .w-10{width:2.5rem;}
+.agency-stitch .w-12{width:3rem;}
+.agency-stitch .w-24{width:6rem;}
+.agency-stitch .h-1\.5{height:0.375rem;}
+.agency-stitch .h-2{height:0.5rem;}
+.agency-stitch .h-3{height:0.75rem;}
+.agency-stitch .h-7{height:1.75rem;}
+.agency-stitch .h-8{height:2rem;}
+.agency-stitch .h-9{height:2.25rem;}
+.agency-stitch .h-10{height:2.5rem;}
+.agency-stitch .h-12{height:3rem;}
+.agency-stitch .min-h-screen{min-height:100vh;}
+.agency-stitch .overflow-hidden{overflow:hidden;}
+.agency-stitch .relative{position:relative;}
+.agency-stitch .absolute{position:absolute;}
+.agency-stitch .left-3{left:0.75rem;}
+.agency-stitch .mt-0\.5{margin-top:0.125rem;}
+.agency-stitch .ml-auto{margin-left:auto;}
+.agency-stitch .max-w-3xl{max-width:48rem;}
+.agency-stitch .tracking-tight{letter-spacing:-0.025em;}
+.agency-stitch .tracking-wider{letter-spacing:0.05em;}
+.agency-stitch .uppercase{text-transform:uppercase;}
+.agency-stitch .lowercase{text-transform:lowercase;}
+.agency-stitch .font-bold{font-weight:700;}
+.agency-stitch .font-semibold{font-weight:600;}
+.agency-stitch .font-medium{font-weight:500;}
+.agency-stitch .font-normal{font-weight:400;}
+.agency-stitch .transition-colors{transition:color .15s,background-color .15s,border-color .15s;}
+.agency-stitch .transition-all{transition:all .15s;}
+.agency-stitch .duration-700{transition-duration:.7s;}
+.agency-stitch .outline-none{outline:none;}
+.agency-stitch .bg-transparent{background:transparent;}
+.agency-stitch .border-none{border:none;}
+.agency-stitch .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr));}
+@media (min-width:640px){
+  .agency-stitch .sm\:inline{display:inline;}
+  .agency-stitch .sm\:flex-row{flex-direction:row;}
+  .agency-stitch .sm\:items-center{align-items:center;}
+  .agency-stitch .sm\:self-auto{align-self:auto;}
+  .agency-stitch .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (min-width:768px){
+  .agency-stitch .md\:flex-row{flex-direction:row;}
+  .agency-stitch .md\:items-center{align-items:center;}
+  .agency-stitch .md\:self-auto{align-self:auto;}
+  .agency-stitch .md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .agency-stitch .md\:p-space-xl{padding:1.75rem;}
+}
+@media (min-width:1024px){
+  .agency-stitch .lg\:flex-row{flex-direction:row;}
+  .agency-stitch .lg\:items-center{align-items:center;}
+  .agency-stitch .lg\:grid-cols-12{grid-template-columns:repeat(12,minmax(0,1fr));}
+  .agency-stitch .lg\:col-span-4{grid-column:span 4 / span 4;}
+  .agency-stitch .lg\:col-span-7{grid-column:span 7 / span 7;}
+  .agency-stitch .lg\:col-span-8{grid-column:span 8 / span 8;}
+  .agency-stitch .lg\:col-span-5{grid-column:span 5 / span 5;}
+}
+.agency-stitch .group:hover .group-hover\:bg-primary{background-color:#4648d4;}
+.agency-stitch .group:hover .group-hover\:text-on-primary{color:#ffffff;}
+.agency-stitch .hover\:bg-surface-container:hover{background-color:#eaedff;}
+.agency-stitch .hover\:bg-surface-container-highest:hover{background-color:#dae2fd;}
+.agency-stitch .hover\:bg-primary-container:hover{background-color:#6063ee;}
+.agency-stitch .hover\:text-on-surface:hover{color:#131b2e;}
+.agency-stitch .hover\:shadow-md:hover{box-shadow:0 4px 6px -1px rgb(15 23 42 / 0.08);}
+.agency-stitch .focus\:ring-2:focus{box-shadow:0 0 0 2px color-mix(in srgb,#4648d4 35%, transparent);}
+.agency-stitch .focus\:ring-primary:focus{--tw-ring-color:#4648d4;}
+.agency-stitch .focus\:bg-surface-container-lowest:focus{background-color:#ffffff;}
+.agency-stitch .placeholder\:text-outline::placeholder{color:#767586;}
+.agency-stitch .animate-spin{animation:agency-spin 1s linear infinite;}
+@keyframes agency-spin{to{transform:rotate(360deg)}}
+.agency-stitch input[type="date"]{color:#131b2e;}
+
+/* Layout extras used by Stitch ports */
+.agency-stitch .items-baseline{align-items:baseline;}
+.agency-stitch .gap-0\.5{gap:0.125rem;}
+.agency-stitch .my-space-md{margin-top:1rem;margin-bottom:1rem;}
+.agency-stitch .mt-0\.5{margin-top:0.125rem;}
+.agency-stitch .mt-2{margin-top:0.5rem;}
+.agency-stitch .mr-1\.5{margin-right:0.375rem;}
+.agency-stitch .p-1{padding:0.25rem;}
+.agency-stitch .p-2{padding:0.5rem;}
+.agency-stitch .p-2\.5{padding:0.625rem;}
+.agency-stitch .p-3{padding:0.75rem;}
+.agency-stitch .px-1\.5{padding-left:0.375rem;padding-right:0.375rem;}
+.agency-stitch .px-2{padding-left:0.5rem;padding-right:0.5rem;}
+.agency-stitch .py-3{padding-top:0.75rem;padding-bottom:0.75rem;}
+.agency-stitch .py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem;}
+.agency-stitch .text-center{text-align:center;}
+.agency-stitch .text-left{text-align:left;}
+.agency-stitch .text-right{text-align:right;}
+.agency-stitch .text-xs{font-size:0.75rem;line-height:1rem;}
+.agency-stitch .h-full{height:100%;}
+.agency-stitch .w-0\.5{width:0.125rem;}
+.agency-stitch .bg-white{background-color:#ffffff;}
+.agency-stitch .overflow-x-auto{overflow-x:auto;}
+.agency-stitch .border-collapse{border-collapse:collapse;}
+.agency-stitch .divide-y > :not([hidden]) ~ :not([hidden]){border-top-width:1px;}
+.agency-stitch .divide-surface-container > :not([hidden]) ~ :not([hidden]){border-color:#e4e1f0;}
+.agency-stitch .rounded-l-lg{border-top-left-radius:0.5rem;border-bottom-left-radius:0.5rem;}
+.agency-stitch .rounded-r-lg{border-top-right-radius:0.5rem;border-bottom-right-radius:0.5rem;}
+.agency-stitch .justify-end{justify-content:flex-end;}
+.agency-stitch .inline-flex{display:inline-flex;}
+.agency-stitch .select-all{user-select:all;}
+.agency-stitch .leading-relaxed{line-height:1.625;}
+.agency-stitch .hover\:shadow-md:hover{box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1),0 2px 4px -2px rgb(0 0 0 / 0.1);}
+.agency-stitch .hover\:bg-primary-container:hover{background-color:#4648d4;}
+.agency-stitch .group:hover .group-hover\:bg-primary{background-color:#4648d4;}
+.agency-stitch .group:hover .group-hover\:text-on-primary{color:#ffffff;}
+@media (min-width:1024px){
+  .agency-stitch .lg\:col-span-4{grid-column:span 4 / span 4;}
+  .agency-stitch .lg\:flex-row{flex-direction:row;}
+  .agency-stitch .lg\:items-center{align-items:center;}
+}
+@media (min-width:768px){
+  .agency-stitch .md\:items-center{align-items:center;}
+}
+@media (min-width:640px){
+  .agency-stitch .sm\:flex-row{flex-direction:row;}
+  .agency-stitch .sm\:items-center{align-items:center;}
+  .agency-stitch .sm\:self-auto{align-self:auto;}
+  .agency-stitch .sm\:inline{display:inline;}
+}
+
+.agency-stitch .opacity-50{opacity:0.5;}
+.agency-stitch .pointer-events-none{pointer-events:none;}
+.agency-stitch .p-1\.5{padding:0.375rem;}
+.agency-stitch .w-44{width:11rem;}
+.agency-stitch .hover\:bg-surface-container:hover{background-color:#e4e1f0;}
+.agency-stitch .hover\:bg-surface-container-low\/50:hover{background-color:color-mix(in srgb,#ede9f7 50%, transparent);}
+.agency-stitch .hover\:text-on-surface:hover{color:#131b2e;}
