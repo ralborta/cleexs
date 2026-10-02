@@ -1,0 +1,929 @@
+/* Meta Conversion Manager · Stitch scoped (main content) */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
+.meta-stitch{font-family:Geist,system-ui,sans-serif;color:#131b2e;background:#faf8ff;}
+.meta-stitch .material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;vertical-align:middle;}
+.meta-stitch .font-label-code,.meta-stitch .font-mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+.meta-stitch .bg-on-tertiary{background-color:#ffffff;}
+.meta-stitch .text-on-tertiary{color:#ffffff;}
+.meta-stitch .border-on-tertiary{border-color:#ffffff;}
+.meta-stitch .bg-on-tertiary\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .text-on-tertiary\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .border-on-tertiary\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .bg-on-tertiary\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .text-on-tertiary\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .border-on-tertiary\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .bg-on-tertiary\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .text-on-tertiary\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .border-on-tertiary\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .bg-on-tertiary\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .text-on-tertiary\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .border-on-tertiary\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .bg-on-error{background-color:#ffffff;}
+.meta-stitch .text-on-error{color:#ffffff;}
+.meta-stitch .border-on-error{border-color:#ffffff;}
+.meta-stitch .bg-on-error\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .text-on-error\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .border-on-error\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .bg-on-error\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .text-on-error\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .border-on-error\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .bg-on-error\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .text-on-error\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .border-on-error\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .bg-on-error\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .text-on-error\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .border-on-error\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .bg-primary-fixed{background-color:#dbe1ff;}
+.meta-stitch .text-primary-fixed{color:#dbe1ff;}
+.meta-stitch .border-primary-fixed{border-color:#dbe1ff;}
+.meta-stitch .bg-primary-fixed\/20{background-color:color-mix(in srgb,#dbe1ff 20%, transparent);}
+.meta-stitch .text-primary-fixed\/20{color:color-mix(in srgb,#dbe1ff 20%, transparent);}
+.meta-stitch .border-primary-fixed\/20{border-color:color-mix(in srgb,#dbe1ff 20%, transparent);}
+.meta-stitch .bg-primary-fixed\/30{background-color:color-mix(in srgb,#dbe1ff 30%, transparent);}
+.meta-stitch .text-primary-fixed\/30{color:color-mix(in srgb,#dbe1ff 30%, transparent);}
+.meta-stitch .border-primary-fixed\/30{border-color:color-mix(in srgb,#dbe1ff 30%, transparent);}
+.meta-stitch .bg-primary-fixed\/40{background-color:color-mix(in srgb,#dbe1ff 40%, transparent);}
+.meta-stitch .text-primary-fixed\/40{color:color-mix(in srgb,#dbe1ff 40%, transparent);}
+.meta-stitch .border-primary-fixed\/40{border-color:color-mix(in srgb,#dbe1ff 40%, transparent);}
+.meta-stitch .bg-primary-fixed\/50{background-color:color-mix(in srgb,#dbe1ff 50%, transparent);}
+.meta-stitch .text-primary-fixed\/50{color:color-mix(in srgb,#dbe1ff 50%, transparent);}
+.meta-stitch .border-primary-fixed\/50{border-color:color-mix(in srgb,#dbe1ff 50%, transparent);}
+.meta-stitch .bg-surface-variant{background-color:#dae2fd;}
+.meta-stitch .text-surface-variant{color:#dae2fd;}
+.meta-stitch .border-surface-variant{border-color:#dae2fd;}
+.meta-stitch .bg-surface-variant\/20{background-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.meta-stitch .text-surface-variant\/20{color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.meta-stitch .border-surface-variant\/20{border-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.meta-stitch .bg-surface-variant\/30{background-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.meta-stitch .text-surface-variant\/30{color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.meta-stitch .border-surface-variant\/30{border-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.meta-stitch .bg-surface-variant\/40{background-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.meta-stitch .text-surface-variant\/40{color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.meta-stitch .border-surface-variant\/40{border-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.meta-stitch .bg-surface-variant\/50{background-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.meta-stitch .text-surface-variant\/50{color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.meta-stitch .border-surface-variant\/50{border-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.meta-stitch .bg-surface-container-highest{background-color:#dae2fd;}
+.meta-stitch .text-surface-container-highest{color:#dae2fd;}
+.meta-stitch .border-surface-container-highest{border-color:#dae2fd;}
+.meta-stitch .bg-surface-container-highest\/20{background-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.meta-stitch .text-surface-container-highest\/20{color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.meta-stitch .border-surface-container-highest\/20{border-color:color-mix(in srgb,#dae2fd 20%, transparent);}
+.meta-stitch .bg-surface-container-highest\/30{background-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.meta-stitch .text-surface-container-highest\/30{color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.meta-stitch .border-surface-container-highest\/30{border-color:color-mix(in srgb,#dae2fd 30%, transparent);}
+.meta-stitch .bg-surface-container-highest\/40{background-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.meta-stitch .text-surface-container-highest\/40{color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.meta-stitch .border-surface-container-highest\/40{border-color:color-mix(in srgb,#dae2fd 40%, transparent);}
+.meta-stitch .bg-surface-container-highest\/50{background-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.meta-stitch .text-surface-container-highest\/50{color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.meta-stitch .border-surface-container-highest\/50{border-color:color-mix(in srgb,#dae2fd 50%, transparent);}
+.meta-stitch .bg-primary-fixed-dim{background-color:#b4c5ff;}
+.meta-stitch .text-primary-fixed-dim{color:#b4c5ff;}
+.meta-stitch .border-primary-fixed-dim{border-color:#b4c5ff;}
+.meta-stitch .bg-primary-fixed-dim\/20{background-color:color-mix(in srgb,#b4c5ff 20%, transparent);}
+.meta-stitch .text-primary-fixed-dim\/20{color:color-mix(in srgb,#b4c5ff 20%, transparent);}
+.meta-stitch .border-primary-fixed-dim\/20{border-color:color-mix(in srgb,#b4c5ff 20%, transparent);}
+.meta-stitch .bg-primary-fixed-dim\/30{background-color:color-mix(in srgb,#b4c5ff 30%, transparent);}
+.meta-stitch .text-primary-fixed-dim\/30{color:color-mix(in srgb,#b4c5ff 30%, transparent);}
+.meta-stitch .border-primary-fixed-dim\/30{border-color:color-mix(in srgb,#b4c5ff 30%, transparent);}
+.meta-stitch .bg-primary-fixed-dim\/40{background-color:color-mix(in srgb,#b4c5ff 40%, transparent);}
+.meta-stitch .text-primary-fixed-dim\/40{color:color-mix(in srgb,#b4c5ff 40%, transparent);}
+.meta-stitch .border-primary-fixed-dim\/40{border-color:color-mix(in srgb,#b4c5ff 40%, transparent);}
+.meta-stitch .bg-primary-fixed-dim\/50{background-color:color-mix(in srgb,#b4c5ff 50%, transparent);}
+.meta-stitch .text-primary-fixed-dim\/50{color:color-mix(in srgb,#b4c5ff 50%, transparent);}
+.meta-stitch .border-primary-fixed-dim\/50{border-color:color-mix(in srgb,#b4c5ff 50%, transparent);}
+.meta-stitch .bg-on-background{background-color:#131b2e;}
+.meta-stitch .text-on-background{color:#131b2e;}
+.meta-stitch .border-on-background{border-color:#131b2e;}
+.meta-stitch .bg-on-background\/20{background-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.meta-stitch .text-on-background\/20{color:color-mix(in srgb,#131b2e 20%, transparent);}
+.meta-stitch .border-on-background\/20{border-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.meta-stitch .bg-on-background\/30{background-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.meta-stitch .text-on-background\/30{color:color-mix(in srgb,#131b2e 30%, transparent);}
+.meta-stitch .border-on-background\/30{border-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.meta-stitch .bg-on-background\/40{background-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.meta-stitch .text-on-background\/40{color:color-mix(in srgb,#131b2e 40%, transparent);}
+.meta-stitch .border-on-background\/40{border-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.meta-stitch .bg-on-background\/50{background-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.meta-stitch .text-on-background\/50{color:color-mix(in srgb,#131b2e 50%, transparent);}
+.meta-stitch .border-on-background\/50{border-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.meta-stitch .bg-surface-container-lowest{background-color:#ffffff;}
+.meta-stitch .text-surface-container-lowest{color:#ffffff;}
+.meta-stitch .border-surface-container-lowest{border-color:#ffffff;}
+.meta-stitch .bg-surface-container-lowest\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .text-surface-container-lowest\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .border-surface-container-lowest\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .bg-surface-container-lowest\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .text-surface-container-lowest\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .border-surface-container-lowest\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .bg-surface-container-lowest\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .text-surface-container-lowest\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .border-surface-container-lowest\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .bg-surface-container-lowest\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .text-surface-container-lowest\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .border-surface-container-lowest\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .bg-tertiary-fixed-dim{background-color:#4edea3;}
+.meta-stitch .text-tertiary-fixed-dim{color:#4edea3;}
+.meta-stitch .border-tertiary-fixed-dim{border-color:#4edea3;}
+.meta-stitch .bg-tertiary-fixed-dim\/20{background-color:color-mix(in srgb,#4edea3 20%, transparent);}
+.meta-stitch .text-tertiary-fixed-dim\/20{color:color-mix(in srgb,#4edea3 20%, transparent);}
+.meta-stitch .border-tertiary-fixed-dim\/20{border-color:color-mix(in srgb,#4edea3 20%, transparent);}
+.meta-stitch .bg-tertiary-fixed-dim\/30{background-color:color-mix(in srgb,#4edea3 30%, transparent);}
+.meta-stitch .text-tertiary-fixed-dim\/30{color:color-mix(in srgb,#4edea3 30%, transparent);}
+.meta-stitch .border-tertiary-fixed-dim\/30{border-color:color-mix(in srgb,#4edea3 30%, transparent);}
+.meta-stitch .bg-tertiary-fixed-dim\/40{background-color:color-mix(in srgb,#4edea3 40%, transparent);}
+.meta-stitch .text-tertiary-fixed-dim\/40{color:color-mix(in srgb,#4edea3 40%, transparent);}
+.meta-stitch .border-tertiary-fixed-dim\/40{border-color:color-mix(in srgb,#4edea3 40%, transparent);}
+.meta-stitch .bg-tertiary-fixed-dim\/50{background-color:color-mix(in srgb,#4edea3 50%, transparent);}
+.meta-stitch .text-tertiary-fixed-dim\/50{color:color-mix(in srgb,#4edea3 50%, transparent);}
+.meta-stitch .border-tertiary-fixed-dim\/50{border-color:color-mix(in srgb,#4edea3 50%, transparent);}
+.meta-stitch .bg-on-primary-fixed{background-color:#00174b;}
+.meta-stitch .text-on-primary-fixed{color:#00174b;}
+.meta-stitch .border-on-primary-fixed{border-color:#00174b;}
+.meta-stitch .bg-on-primary-fixed\/20{background-color:color-mix(in srgb,#00174b 20%, transparent);}
+.meta-stitch .text-on-primary-fixed\/20{color:color-mix(in srgb,#00174b 20%, transparent);}
+.meta-stitch .border-on-primary-fixed\/20{border-color:color-mix(in srgb,#00174b 20%, transparent);}
+.meta-stitch .bg-on-primary-fixed\/30{background-color:color-mix(in srgb,#00174b 30%, transparent);}
+.meta-stitch .text-on-primary-fixed\/30{color:color-mix(in srgb,#00174b 30%, transparent);}
+.meta-stitch .border-on-primary-fixed\/30{border-color:color-mix(in srgb,#00174b 30%, transparent);}
+.meta-stitch .bg-on-primary-fixed\/40{background-color:color-mix(in srgb,#00174b 40%, transparent);}
+.meta-stitch .text-on-primary-fixed\/40{color:color-mix(in srgb,#00174b 40%, transparent);}
+.meta-stitch .border-on-primary-fixed\/40{border-color:color-mix(in srgb,#00174b 40%, transparent);}
+.meta-stitch .bg-on-primary-fixed\/50{background-color:color-mix(in srgb,#00174b 50%, transparent);}
+.meta-stitch .text-on-primary-fixed\/50{color:color-mix(in srgb,#00174b 50%, transparent);}
+.meta-stitch .border-on-primary-fixed\/50{border-color:color-mix(in srgb,#00174b 50%, transparent);}
+.meta-stitch .bg-surface-container-low{background-color:#f2f3ff;}
+.meta-stitch .text-surface-container-low{color:#f2f3ff;}
+.meta-stitch .border-surface-container-low{border-color:#f2f3ff;}
+.meta-stitch .bg-surface-container-low\/20{background-color:color-mix(in srgb,#f2f3ff 20%, transparent);}
+.meta-stitch .text-surface-container-low\/20{color:color-mix(in srgb,#f2f3ff 20%, transparent);}
+.meta-stitch .border-surface-container-low\/20{border-color:color-mix(in srgb,#f2f3ff 20%, transparent);}
+.meta-stitch .bg-surface-container-low\/30{background-color:color-mix(in srgb,#f2f3ff 30%, transparent);}
+.meta-stitch .text-surface-container-low\/30{color:color-mix(in srgb,#f2f3ff 30%, transparent);}
+.meta-stitch .border-surface-container-low\/30{border-color:color-mix(in srgb,#f2f3ff 30%, transparent);}
+.meta-stitch .bg-surface-container-low\/40{background-color:color-mix(in srgb,#f2f3ff 40%, transparent);}
+.meta-stitch .text-surface-container-low\/40{color:color-mix(in srgb,#f2f3ff 40%, transparent);}
+.meta-stitch .border-surface-container-low\/40{border-color:color-mix(in srgb,#f2f3ff 40%, transparent);}
+.meta-stitch .bg-surface-container-low\/50{background-color:color-mix(in srgb,#f2f3ff 50%, transparent);}
+.meta-stitch .text-surface-container-low\/50{color:color-mix(in srgb,#f2f3ff 50%, transparent);}
+.meta-stitch .border-surface-container-low\/50{border-color:color-mix(in srgb,#f2f3ff 50%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed{background-color:#002113;}
+.meta-stitch .text-on-tertiary-fixed{color:#002113;}
+.meta-stitch .border-on-tertiary-fixed{border-color:#002113;}
+.meta-stitch .bg-on-tertiary-fixed\/20{background-color:color-mix(in srgb,#002113 20%, transparent);}
+.meta-stitch .text-on-tertiary-fixed\/20{color:color-mix(in srgb,#002113 20%, transparent);}
+.meta-stitch .border-on-tertiary-fixed\/20{border-color:color-mix(in srgb,#002113 20%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed\/30{background-color:color-mix(in srgb,#002113 30%, transparent);}
+.meta-stitch .text-on-tertiary-fixed\/30{color:color-mix(in srgb,#002113 30%, transparent);}
+.meta-stitch .border-on-tertiary-fixed\/30{border-color:color-mix(in srgb,#002113 30%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed\/40{background-color:color-mix(in srgb,#002113 40%, transparent);}
+.meta-stitch .text-on-tertiary-fixed\/40{color:color-mix(in srgb,#002113 40%, transparent);}
+.meta-stitch .border-on-tertiary-fixed\/40{border-color:color-mix(in srgb,#002113 40%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed\/50{background-color:color-mix(in srgb,#002113 50%, transparent);}
+.meta-stitch .text-on-tertiary-fixed\/50{color:color-mix(in srgb,#002113 50%, transparent);}
+.meta-stitch .border-on-tertiary-fixed\/50{border-color:color-mix(in srgb,#002113 50%, transparent);}
+.meta-stitch .bg-tertiary{background-color:#006242;}
+.meta-stitch .text-tertiary{color:#006242;}
+.meta-stitch .border-tertiary{border-color:#006242;}
+.meta-stitch .bg-tertiary\/20{background-color:color-mix(in srgb,#006242 20%, transparent);}
+.meta-stitch .text-tertiary\/20{color:color-mix(in srgb,#006242 20%, transparent);}
+.meta-stitch .border-tertiary\/20{border-color:color-mix(in srgb,#006242 20%, transparent);}
+.meta-stitch .bg-tertiary\/30{background-color:color-mix(in srgb,#006242 30%, transparent);}
+.meta-stitch .text-tertiary\/30{color:color-mix(in srgb,#006242 30%, transparent);}
+.meta-stitch .border-tertiary\/30{border-color:color-mix(in srgb,#006242 30%, transparent);}
+.meta-stitch .bg-tertiary\/40{background-color:color-mix(in srgb,#006242 40%, transparent);}
+.meta-stitch .text-tertiary\/40{color:color-mix(in srgb,#006242 40%, transparent);}
+.meta-stitch .border-tertiary\/40{border-color:color-mix(in srgb,#006242 40%, transparent);}
+.meta-stitch .bg-tertiary\/50{background-color:color-mix(in srgb,#006242 50%, transparent);}
+.meta-stitch .text-tertiary\/50{color:color-mix(in srgb,#006242 50%, transparent);}
+.meta-stitch .border-tertiary\/50{border-color:color-mix(in srgb,#006242 50%, transparent);}
+.meta-stitch .bg-secondary-container{background-color:#645efb;}
+.meta-stitch .text-secondary-container{color:#645efb;}
+.meta-stitch .border-secondary-container{border-color:#645efb;}
+.meta-stitch .bg-secondary-container\/20{background-color:color-mix(in srgb,#645efb 20%, transparent);}
+.meta-stitch .text-secondary-container\/20{color:color-mix(in srgb,#645efb 20%, transparent);}
+.meta-stitch .border-secondary-container\/20{border-color:color-mix(in srgb,#645efb 20%, transparent);}
+.meta-stitch .bg-secondary-container\/30{background-color:color-mix(in srgb,#645efb 30%, transparent);}
+.meta-stitch .text-secondary-container\/30{color:color-mix(in srgb,#645efb 30%, transparent);}
+.meta-stitch .border-secondary-container\/30{border-color:color-mix(in srgb,#645efb 30%, transparent);}
+.meta-stitch .bg-secondary-container\/40{background-color:color-mix(in srgb,#645efb 40%, transparent);}
+.meta-stitch .text-secondary-container\/40{color:color-mix(in srgb,#645efb 40%, transparent);}
+.meta-stitch .border-secondary-container\/40{border-color:color-mix(in srgb,#645efb 40%, transparent);}
+.meta-stitch .bg-secondary-container\/50{background-color:color-mix(in srgb,#645efb 50%, transparent);}
+.meta-stitch .text-secondary-container\/50{color:color-mix(in srgb,#645efb 50%, transparent);}
+.meta-stitch .border-secondary-container\/50{border-color:color-mix(in srgb,#645efb 50%, transparent);}
+.meta-stitch .bg-tertiary-container{background-color:#007d55;}
+.meta-stitch .text-tertiary-container{color:#007d55;}
+.meta-stitch .border-tertiary-container{border-color:#007d55;}
+.meta-stitch .bg-tertiary-container\/20{background-color:color-mix(in srgb,#007d55 20%, transparent);}
+.meta-stitch .text-tertiary-container\/20{color:color-mix(in srgb,#007d55 20%, transparent);}
+.meta-stitch .border-tertiary-container\/20{border-color:color-mix(in srgb,#007d55 20%, transparent);}
+.meta-stitch .bg-tertiary-container\/30{background-color:color-mix(in srgb,#007d55 30%, transparent);}
+.meta-stitch .text-tertiary-container\/30{color:color-mix(in srgb,#007d55 30%, transparent);}
+.meta-stitch .border-tertiary-container\/30{border-color:color-mix(in srgb,#007d55 30%, transparent);}
+.meta-stitch .bg-tertiary-container\/40{background-color:color-mix(in srgb,#007d55 40%, transparent);}
+.meta-stitch .text-tertiary-container\/40{color:color-mix(in srgb,#007d55 40%, transparent);}
+.meta-stitch .border-tertiary-container\/40{border-color:color-mix(in srgb,#007d55 40%, transparent);}
+.meta-stitch .bg-tertiary-container\/50{background-color:color-mix(in srgb,#007d55 50%, transparent);}
+.meta-stitch .text-tertiary-container\/50{color:color-mix(in srgb,#007d55 50%, transparent);}
+.meta-stitch .border-tertiary-container\/50{border-color:color-mix(in srgb,#007d55 50%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed-variant{background-color:#005236;}
+.meta-stitch .text-on-tertiary-fixed-variant{color:#005236;}
+.meta-stitch .border-on-tertiary-fixed-variant{border-color:#005236;}
+.meta-stitch .bg-on-tertiary-fixed-variant\/20{background-color:color-mix(in srgb,#005236 20%, transparent);}
+.meta-stitch .text-on-tertiary-fixed-variant\/20{color:color-mix(in srgb,#005236 20%, transparent);}
+.meta-stitch .border-on-tertiary-fixed-variant\/20{border-color:color-mix(in srgb,#005236 20%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed-variant\/30{background-color:color-mix(in srgb,#005236 30%, transparent);}
+.meta-stitch .text-on-tertiary-fixed-variant\/30{color:color-mix(in srgb,#005236 30%, transparent);}
+.meta-stitch .border-on-tertiary-fixed-variant\/30{border-color:color-mix(in srgb,#005236 30%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed-variant\/40{background-color:color-mix(in srgb,#005236 40%, transparent);}
+.meta-stitch .text-on-tertiary-fixed-variant\/40{color:color-mix(in srgb,#005236 40%, transparent);}
+.meta-stitch .border-on-tertiary-fixed-variant\/40{border-color:color-mix(in srgb,#005236 40%, transparent);}
+.meta-stitch .bg-on-tertiary-fixed-variant\/50{background-color:color-mix(in srgb,#005236 50%, transparent);}
+.meta-stitch .text-on-tertiary-fixed-variant\/50{color:color-mix(in srgb,#005236 50%, transparent);}
+.meta-stitch .border-on-tertiary-fixed-variant\/50{border-color:color-mix(in srgb,#005236 50%, transparent);}
+.meta-stitch .bg-on-surface{background-color:#131b2e;}
+.meta-stitch .text-on-surface{color:#131b2e;}
+.meta-stitch .border-on-surface{border-color:#131b2e;}
+.meta-stitch .bg-on-surface\/20{background-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.meta-stitch .text-on-surface\/20{color:color-mix(in srgb,#131b2e 20%, transparent);}
+.meta-stitch .border-on-surface\/20{border-color:color-mix(in srgb,#131b2e 20%, transparent);}
+.meta-stitch .bg-on-surface\/30{background-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.meta-stitch .text-on-surface\/30{color:color-mix(in srgb,#131b2e 30%, transparent);}
+.meta-stitch .border-on-surface\/30{border-color:color-mix(in srgb,#131b2e 30%, transparent);}
+.meta-stitch .bg-on-surface\/40{background-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.meta-stitch .text-on-surface\/40{color:color-mix(in srgb,#131b2e 40%, transparent);}
+.meta-stitch .border-on-surface\/40{border-color:color-mix(in srgb,#131b2e 40%, transparent);}
+.meta-stitch .bg-on-surface\/50{background-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.meta-stitch .text-on-surface\/50{color:color-mix(in srgb,#131b2e 50%, transparent);}
+.meta-stitch .border-on-surface\/50{border-color:color-mix(in srgb,#131b2e 50%, transparent);}
+.meta-stitch .bg-on-secondary{background-color:#ffffff;}
+.meta-stitch .text-on-secondary{color:#ffffff;}
+.meta-stitch .border-on-secondary{border-color:#ffffff;}
+.meta-stitch .bg-on-secondary\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .text-on-secondary\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .border-on-secondary\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .bg-on-secondary\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .text-on-secondary\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .border-on-secondary\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .bg-on-secondary\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .text-on-secondary\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .border-on-secondary\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .bg-on-secondary\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .text-on-secondary\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .border-on-secondary\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .bg-on-secondary-container{background-color:#fffbff;}
+.meta-stitch .text-on-secondary-container{color:#fffbff;}
+.meta-stitch .border-on-secondary-container{border-color:#fffbff;}
+.meta-stitch .bg-on-secondary-container\/20{background-color:color-mix(in srgb,#fffbff 20%, transparent);}
+.meta-stitch .text-on-secondary-container\/20{color:color-mix(in srgb,#fffbff 20%, transparent);}
+.meta-stitch .border-on-secondary-container\/20{border-color:color-mix(in srgb,#fffbff 20%, transparent);}
+.meta-stitch .bg-on-secondary-container\/30{background-color:color-mix(in srgb,#fffbff 30%, transparent);}
+.meta-stitch .text-on-secondary-container\/30{color:color-mix(in srgb,#fffbff 30%, transparent);}
+.meta-stitch .border-on-secondary-container\/30{border-color:color-mix(in srgb,#fffbff 30%, transparent);}
+.meta-stitch .bg-on-secondary-container\/40{background-color:color-mix(in srgb,#fffbff 40%, transparent);}
+.meta-stitch .text-on-secondary-container\/40{color:color-mix(in srgb,#fffbff 40%, transparent);}
+.meta-stitch .border-on-secondary-container\/40{border-color:color-mix(in srgb,#fffbff 40%, transparent);}
+.meta-stitch .bg-on-secondary-container\/50{background-color:color-mix(in srgb,#fffbff 50%, transparent);}
+.meta-stitch .text-on-secondary-container\/50{color:color-mix(in srgb,#fffbff 50%, transparent);}
+.meta-stitch .border-on-secondary-container\/50{border-color:color-mix(in srgb,#fffbff 50%, transparent);}
+.meta-stitch .bg-surface-dim{background-color:#d2d9f4;}
+.meta-stitch .text-surface-dim{color:#d2d9f4;}
+.meta-stitch .border-surface-dim{border-color:#d2d9f4;}
+.meta-stitch .bg-surface-dim\/20{background-color:color-mix(in srgb,#d2d9f4 20%, transparent);}
+.meta-stitch .text-surface-dim\/20{color:color-mix(in srgb,#d2d9f4 20%, transparent);}
+.meta-stitch .border-surface-dim\/20{border-color:color-mix(in srgb,#d2d9f4 20%, transparent);}
+.meta-stitch .bg-surface-dim\/30{background-color:color-mix(in srgb,#d2d9f4 30%, transparent);}
+.meta-stitch .text-surface-dim\/30{color:color-mix(in srgb,#d2d9f4 30%, transparent);}
+.meta-stitch .border-surface-dim\/30{border-color:color-mix(in srgb,#d2d9f4 30%, transparent);}
+.meta-stitch .bg-surface-dim\/40{background-color:color-mix(in srgb,#d2d9f4 40%, transparent);}
+.meta-stitch .text-surface-dim\/40{color:color-mix(in srgb,#d2d9f4 40%, transparent);}
+.meta-stitch .border-surface-dim\/40{border-color:color-mix(in srgb,#d2d9f4 40%, transparent);}
+.meta-stitch .bg-surface-dim\/50{background-color:color-mix(in srgb,#d2d9f4 50%, transparent);}
+.meta-stitch .text-surface-dim\/50{color:color-mix(in srgb,#d2d9f4 50%, transparent);}
+.meta-stitch .border-surface-dim\/50{border-color:color-mix(in srgb,#d2d9f4 50%, transparent);}
+.meta-stitch .bg-on-primary{background-color:#ffffff;}
+.meta-stitch .text-on-primary{color:#ffffff;}
+.meta-stitch .border-on-primary{border-color:#ffffff;}
+.meta-stitch .bg-on-primary\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .text-on-primary\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .border-on-primary\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .bg-on-primary\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .text-on-primary\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .border-on-primary\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .bg-on-primary\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .text-on-primary\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .border-on-primary\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .bg-on-primary\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .text-on-primary\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .border-on-primary\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .bg-tertiary-fixed{background-color:#6ffbbe;}
+.meta-stitch .text-tertiary-fixed{color:#6ffbbe;}
+.meta-stitch .border-tertiary-fixed{border-color:#6ffbbe;}
+.meta-stitch .bg-tertiary-fixed\/20{background-color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.meta-stitch .text-tertiary-fixed\/20{color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.meta-stitch .border-tertiary-fixed\/20{border-color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.meta-stitch .bg-tertiary-fixed\/30{background-color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.meta-stitch .text-tertiary-fixed\/30{color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.meta-stitch .border-tertiary-fixed\/30{border-color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.meta-stitch .bg-tertiary-fixed\/40{background-color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.meta-stitch .text-tertiary-fixed\/40{color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.meta-stitch .border-tertiary-fixed\/40{border-color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.meta-stitch .bg-tertiary-fixed\/50{background-color:color-mix(in srgb,#6ffbbe 50%, transparent);}
+.meta-stitch .text-tertiary-fixed\/50{color:color-mix(in srgb,#6ffbbe 50%, transparent);}
+.meta-stitch .border-tertiary-fixed\/50{border-color:color-mix(in srgb,#6ffbbe 50%, transparent);}
+.meta-stitch .bg-error{background-color:#ba1a1a;}
+.meta-stitch .text-error{color:#ba1a1a;}
+.meta-stitch .border-error{border-color:#ba1a1a;}
+.meta-stitch .bg-error\/20{background-color:color-mix(in srgb,#ba1a1a 20%, transparent);}
+.meta-stitch .text-error\/20{color:color-mix(in srgb,#ba1a1a 20%, transparent);}
+.meta-stitch .border-error\/20{border-color:color-mix(in srgb,#ba1a1a 20%, transparent);}
+.meta-stitch .bg-error\/30{background-color:color-mix(in srgb,#ba1a1a 30%, transparent);}
+.meta-stitch .text-error\/30{color:color-mix(in srgb,#ba1a1a 30%, transparent);}
+.meta-stitch .border-error\/30{border-color:color-mix(in srgb,#ba1a1a 30%, transparent);}
+.meta-stitch .bg-error\/40{background-color:color-mix(in srgb,#ba1a1a 40%, transparent);}
+.meta-stitch .text-error\/40{color:color-mix(in srgb,#ba1a1a 40%, transparent);}
+.meta-stitch .border-error\/40{border-color:color-mix(in srgb,#ba1a1a 40%, transparent);}
+.meta-stitch .bg-error\/50{background-color:color-mix(in srgb,#ba1a1a 50%, transparent);}
+.meta-stitch .text-error\/50{color:color-mix(in srgb,#ba1a1a 50%, transparent);}
+.meta-stitch .border-error\/50{border-color:color-mix(in srgb,#ba1a1a 50%, transparent);}
+.meta-stitch .bg-surface-tint{background-color:#0053db;}
+.meta-stitch .text-surface-tint{color:#0053db;}
+.meta-stitch .border-surface-tint{border-color:#0053db;}
+.meta-stitch .bg-surface-tint\/20{background-color:color-mix(in srgb,#0053db 20%, transparent);}
+.meta-stitch .text-surface-tint\/20{color:color-mix(in srgb,#0053db 20%, transparent);}
+.meta-stitch .border-surface-tint\/20{border-color:color-mix(in srgb,#0053db 20%, transparent);}
+.meta-stitch .bg-surface-tint\/30{background-color:color-mix(in srgb,#0053db 30%, transparent);}
+.meta-stitch .text-surface-tint\/30{color:color-mix(in srgb,#0053db 30%, transparent);}
+.meta-stitch .border-surface-tint\/30{border-color:color-mix(in srgb,#0053db 30%, transparent);}
+.meta-stitch .bg-surface-tint\/40{background-color:color-mix(in srgb,#0053db 40%, transparent);}
+.meta-stitch .text-surface-tint\/40{color:color-mix(in srgb,#0053db 40%, transparent);}
+.meta-stitch .border-surface-tint\/40{border-color:color-mix(in srgb,#0053db 40%, transparent);}
+.meta-stitch .bg-surface-tint\/50{background-color:color-mix(in srgb,#0053db 50%, transparent);}
+.meta-stitch .text-surface-tint\/50{color:color-mix(in srgb,#0053db 50%, transparent);}
+.meta-stitch .border-surface-tint\/50{border-color:color-mix(in srgb,#0053db 50%, transparent);}
+.meta-stitch .bg-secondary-fixed{background-color:#e2dfff;}
+.meta-stitch .text-secondary-fixed{color:#e2dfff;}
+.meta-stitch .border-secondary-fixed{border-color:#e2dfff;}
+.meta-stitch .bg-secondary-fixed\/20{background-color:color-mix(in srgb,#e2dfff 20%, transparent);}
+.meta-stitch .text-secondary-fixed\/20{color:color-mix(in srgb,#e2dfff 20%, transparent);}
+.meta-stitch .border-secondary-fixed\/20{border-color:color-mix(in srgb,#e2dfff 20%, transparent);}
+.meta-stitch .bg-secondary-fixed\/30{background-color:color-mix(in srgb,#e2dfff 30%, transparent);}
+.meta-stitch .text-secondary-fixed\/30{color:color-mix(in srgb,#e2dfff 30%, transparent);}
+.meta-stitch .border-secondary-fixed\/30{border-color:color-mix(in srgb,#e2dfff 30%, transparent);}
+.meta-stitch .bg-secondary-fixed\/40{background-color:color-mix(in srgb,#e2dfff 40%, transparent);}
+.meta-stitch .text-secondary-fixed\/40{color:color-mix(in srgb,#e2dfff 40%, transparent);}
+.meta-stitch .border-secondary-fixed\/40{border-color:color-mix(in srgb,#e2dfff 40%, transparent);}
+.meta-stitch .bg-secondary-fixed\/50{background-color:color-mix(in srgb,#e2dfff 50%, transparent);}
+.meta-stitch .text-secondary-fixed\/50{color:color-mix(in srgb,#e2dfff 50%, transparent);}
+.meta-stitch .border-secondary-fixed\/50{border-color:color-mix(in srgb,#e2dfff 50%, transparent);}
+.meta-stitch .bg-outline{background-color:#737686;}
+.meta-stitch .text-outline{color:#737686;}
+.meta-stitch .border-outline{border-color:#737686;}
+.meta-stitch .bg-outline\/20{background-color:color-mix(in srgb,#737686 20%, transparent);}
+.meta-stitch .text-outline\/20{color:color-mix(in srgb,#737686 20%, transparent);}
+.meta-stitch .border-outline\/20{border-color:color-mix(in srgb,#737686 20%, transparent);}
+.meta-stitch .bg-outline\/30{background-color:color-mix(in srgb,#737686 30%, transparent);}
+.meta-stitch .text-outline\/30{color:color-mix(in srgb,#737686 30%, transparent);}
+.meta-stitch .border-outline\/30{border-color:color-mix(in srgb,#737686 30%, transparent);}
+.meta-stitch .bg-outline\/40{background-color:color-mix(in srgb,#737686 40%, transparent);}
+.meta-stitch .text-outline\/40{color:color-mix(in srgb,#737686 40%, transparent);}
+.meta-stitch .border-outline\/40{border-color:color-mix(in srgb,#737686 40%, transparent);}
+.meta-stitch .bg-outline\/50{background-color:color-mix(in srgb,#737686 50%, transparent);}
+.meta-stitch .text-outline\/50{color:color-mix(in srgb,#737686 50%, transparent);}
+.meta-stitch .border-outline\/50{border-color:color-mix(in srgb,#737686 50%, transparent);}
+.meta-stitch .bg-on-secondary-fixed-variant{background-color:#3323cc;}
+.meta-stitch .text-on-secondary-fixed-variant{color:#3323cc;}
+.meta-stitch .border-on-secondary-fixed-variant{border-color:#3323cc;}
+.meta-stitch .bg-on-secondary-fixed-variant\/20{background-color:color-mix(in srgb,#3323cc 20%, transparent);}
+.meta-stitch .text-on-secondary-fixed-variant\/20{color:color-mix(in srgb,#3323cc 20%, transparent);}
+.meta-stitch .border-on-secondary-fixed-variant\/20{border-color:color-mix(in srgb,#3323cc 20%, transparent);}
+.meta-stitch .bg-on-secondary-fixed-variant\/30{background-color:color-mix(in srgb,#3323cc 30%, transparent);}
+.meta-stitch .text-on-secondary-fixed-variant\/30{color:color-mix(in srgb,#3323cc 30%, transparent);}
+.meta-stitch .border-on-secondary-fixed-variant\/30{border-color:color-mix(in srgb,#3323cc 30%, transparent);}
+.meta-stitch .bg-on-secondary-fixed-variant\/40{background-color:color-mix(in srgb,#3323cc 40%, transparent);}
+.meta-stitch .text-on-secondary-fixed-variant\/40{color:color-mix(in srgb,#3323cc 40%, transparent);}
+.meta-stitch .border-on-secondary-fixed-variant\/40{border-color:color-mix(in srgb,#3323cc 40%, transparent);}
+.meta-stitch .bg-on-secondary-fixed-variant\/50{background-color:color-mix(in srgb,#3323cc 50%, transparent);}
+.meta-stitch .text-on-secondary-fixed-variant\/50{color:color-mix(in srgb,#3323cc 50%, transparent);}
+.meta-stitch .border-on-secondary-fixed-variant\/50{border-color:color-mix(in srgb,#3323cc 50%, transparent);}
+.meta-stitch .bg-surface-bright{background-color:#faf8ff;}
+.meta-stitch .text-surface-bright{color:#faf8ff;}
+.meta-stitch .border-surface-bright{border-color:#faf8ff;}
+.meta-stitch .bg-surface-bright\/20{background-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .text-surface-bright\/20{color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .border-surface-bright\/20{border-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .bg-surface-bright\/30{background-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .text-surface-bright\/30{color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .border-surface-bright\/30{border-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .bg-surface-bright\/40{background-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .text-surface-bright\/40{color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .border-surface-bright\/40{border-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .bg-surface-bright\/50{background-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .text-surface-bright\/50{color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .border-surface-bright\/50{border-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .bg-on-tertiary-container{background-color:#bdffdb;}
+.meta-stitch .text-on-tertiary-container{color:#bdffdb;}
+.meta-stitch .border-on-tertiary-container{border-color:#bdffdb;}
+.meta-stitch .bg-on-tertiary-container\/20{background-color:color-mix(in srgb,#bdffdb 20%, transparent);}
+.meta-stitch .text-on-tertiary-container\/20{color:color-mix(in srgb,#bdffdb 20%, transparent);}
+.meta-stitch .border-on-tertiary-container\/20{border-color:color-mix(in srgb,#bdffdb 20%, transparent);}
+.meta-stitch .bg-on-tertiary-container\/30{background-color:color-mix(in srgb,#bdffdb 30%, transparent);}
+.meta-stitch .text-on-tertiary-container\/30{color:color-mix(in srgb,#bdffdb 30%, transparent);}
+.meta-stitch .border-on-tertiary-container\/30{border-color:color-mix(in srgb,#bdffdb 30%, transparent);}
+.meta-stitch .bg-on-tertiary-container\/40{background-color:color-mix(in srgb,#bdffdb 40%, transparent);}
+.meta-stitch .text-on-tertiary-container\/40{color:color-mix(in srgb,#bdffdb 40%, transparent);}
+.meta-stitch .border-on-tertiary-container\/40{border-color:color-mix(in srgb,#bdffdb 40%, transparent);}
+.meta-stitch .bg-on-tertiary-container\/50{background-color:color-mix(in srgb,#bdffdb 50%, transparent);}
+.meta-stitch .text-on-tertiary-container\/50{color:color-mix(in srgb,#bdffdb 50%, transparent);}
+.meta-stitch .border-on-tertiary-container\/50{border-color:color-mix(in srgb,#bdffdb 50%, transparent);}
+.meta-stitch .bg-on-secondary-fixed{background-color:#0f0069;}
+.meta-stitch .text-on-secondary-fixed{color:#0f0069;}
+.meta-stitch .border-on-secondary-fixed{border-color:#0f0069;}
+.meta-stitch .bg-on-secondary-fixed\/20{background-color:color-mix(in srgb,#0f0069 20%, transparent);}
+.meta-stitch .text-on-secondary-fixed\/20{color:color-mix(in srgb,#0f0069 20%, transparent);}
+.meta-stitch .border-on-secondary-fixed\/20{border-color:color-mix(in srgb,#0f0069 20%, transparent);}
+.meta-stitch .bg-on-secondary-fixed\/30{background-color:color-mix(in srgb,#0f0069 30%, transparent);}
+.meta-stitch .text-on-secondary-fixed\/30{color:color-mix(in srgb,#0f0069 30%, transparent);}
+.meta-stitch .border-on-secondary-fixed\/30{border-color:color-mix(in srgb,#0f0069 30%, transparent);}
+.meta-stitch .bg-on-secondary-fixed\/40{background-color:color-mix(in srgb,#0f0069 40%, transparent);}
+.meta-stitch .text-on-secondary-fixed\/40{color:color-mix(in srgb,#0f0069 40%, transparent);}
+.meta-stitch .border-on-secondary-fixed\/40{border-color:color-mix(in srgb,#0f0069 40%, transparent);}
+.meta-stitch .bg-on-secondary-fixed\/50{background-color:color-mix(in srgb,#0f0069 50%, transparent);}
+.meta-stitch .text-on-secondary-fixed\/50{color:color-mix(in srgb,#0f0069 50%, transparent);}
+.meta-stitch .border-on-secondary-fixed\/50{border-color:color-mix(in srgb,#0f0069 50%, transparent);}
+.meta-stitch .bg-error-container{background-color:#ffdad6;}
+.meta-stitch .text-error-container{color:#ffdad6;}
+.meta-stitch .border-error-container{border-color:#ffdad6;}
+.meta-stitch .bg-error-container\/20{background-color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.meta-stitch .text-error-container\/20{color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.meta-stitch .border-error-container\/20{border-color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.meta-stitch .bg-error-container\/30{background-color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.meta-stitch .text-error-container\/30{color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.meta-stitch .border-error-container\/30{border-color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.meta-stitch .bg-error-container\/40{background-color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.meta-stitch .text-error-container\/40{color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.meta-stitch .border-error-container\/40{border-color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.meta-stitch .bg-error-container\/50{background-color:color-mix(in srgb,#ffdad6 50%, transparent);}
+.meta-stitch .text-error-container\/50{color:color-mix(in srgb,#ffdad6 50%, transparent);}
+.meta-stitch .border-error-container\/50{border-color:color-mix(in srgb,#ffdad6 50%, transparent);}
+.meta-stitch .bg-on-primary-container{background-color:#eeefff;}
+.meta-stitch .text-on-primary-container{color:#eeefff;}
+.meta-stitch .border-on-primary-container{border-color:#eeefff;}
+.meta-stitch .bg-on-primary-container\/20{background-color:color-mix(in srgb,#eeefff 20%, transparent);}
+.meta-stitch .text-on-primary-container\/20{color:color-mix(in srgb,#eeefff 20%, transparent);}
+.meta-stitch .border-on-primary-container\/20{border-color:color-mix(in srgb,#eeefff 20%, transparent);}
+.meta-stitch .bg-on-primary-container\/30{background-color:color-mix(in srgb,#eeefff 30%, transparent);}
+.meta-stitch .text-on-primary-container\/30{color:color-mix(in srgb,#eeefff 30%, transparent);}
+.meta-stitch .border-on-primary-container\/30{border-color:color-mix(in srgb,#eeefff 30%, transparent);}
+.meta-stitch .bg-on-primary-container\/40{background-color:color-mix(in srgb,#eeefff 40%, transparent);}
+.meta-stitch .text-on-primary-container\/40{color:color-mix(in srgb,#eeefff 40%, transparent);}
+.meta-stitch .border-on-primary-container\/40{border-color:color-mix(in srgb,#eeefff 40%, transparent);}
+.meta-stitch .bg-on-primary-container\/50{background-color:color-mix(in srgb,#eeefff 50%, transparent);}
+.meta-stitch .text-on-primary-container\/50{color:color-mix(in srgb,#eeefff 50%, transparent);}
+.meta-stitch .border-on-primary-container\/50{border-color:color-mix(in srgb,#eeefff 50%, transparent);}
+.meta-stitch .bg-inverse-primary{background-color:#b4c5ff;}
+.meta-stitch .text-inverse-primary{color:#b4c5ff;}
+.meta-stitch .border-inverse-primary{border-color:#b4c5ff;}
+.meta-stitch .bg-inverse-primary\/20{background-color:color-mix(in srgb,#b4c5ff 20%, transparent);}
+.meta-stitch .text-inverse-primary\/20{color:color-mix(in srgb,#b4c5ff 20%, transparent);}
+.meta-stitch .border-inverse-primary\/20{border-color:color-mix(in srgb,#b4c5ff 20%, transparent);}
+.meta-stitch .bg-inverse-primary\/30{background-color:color-mix(in srgb,#b4c5ff 30%, transparent);}
+.meta-stitch .text-inverse-primary\/30{color:color-mix(in srgb,#b4c5ff 30%, transparent);}
+.meta-stitch .border-inverse-primary\/30{border-color:color-mix(in srgb,#b4c5ff 30%, transparent);}
+.meta-stitch .bg-inverse-primary\/40{background-color:color-mix(in srgb,#b4c5ff 40%, transparent);}
+.meta-stitch .text-inverse-primary\/40{color:color-mix(in srgb,#b4c5ff 40%, transparent);}
+.meta-stitch .border-inverse-primary\/40{border-color:color-mix(in srgb,#b4c5ff 40%, transparent);}
+.meta-stitch .bg-inverse-primary\/50{background-color:color-mix(in srgb,#b4c5ff 50%, transparent);}
+.meta-stitch .text-inverse-primary\/50{color:color-mix(in srgb,#b4c5ff 50%, transparent);}
+.meta-stitch .border-inverse-primary\/50{border-color:color-mix(in srgb,#b4c5ff 50%, transparent);}
+.meta-stitch .bg-secondary{background-color:#4b41e1;}
+.meta-stitch .text-secondary{color:#4b41e1;}
+.meta-stitch .border-secondary{border-color:#4b41e1;}
+.meta-stitch .bg-secondary\/20{background-color:color-mix(in srgb,#4b41e1 20%, transparent);}
+.meta-stitch .text-secondary\/20{color:color-mix(in srgb,#4b41e1 20%, transparent);}
+.meta-stitch .border-secondary\/20{border-color:color-mix(in srgb,#4b41e1 20%, transparent);}
+.meta-stitch .bg-secondary\/30{background-color:color-mix(in srgb,#4b41e1 30%, transparent);}
+.meta-stitch .text-secondary\/30{color:color-mix(in srgb,#4b41e1 30%, transparent);}
+.meta-stitch .border-secondary\/30{border-color:color-mix(in srgb,#4b41e1 30%, transparent);}
+.meta-stitch .bg-secondary\/40{background-color:color-mix(in srgb,#4b41e1 40%, transparent);}
+.meta-stitch .text-secondary\/40{color:color-mix(in srgb,#4b41e1 40%, transparent);}
+.meta-stitch .border-secondary\/40{border-color:color-mix(in srgb,#4b41e1 40%, transparent);}
+.meta-stitch .bg-secondary\/50{background-color:color-mix(in srgb,#4b41e1 50%, transparent);}
+.meta-stitch .text-secondary\/50{color:color-mix(in srgb,#4b41e1 50%, transparent);}
+.meta-stitch .border-secondary\/50{border-color:color-mix(in srgb,#4b41e1 50%, transparent);}
+.meta-stitch .bg-inverse-on-surface{background-color:#eef0ff;}
+.meta-stitch .text-inverse-on-surface{color:#eef0ff;}
+.meta-stitch .border-inverse-on-surface{border-color:#eef0ff;}
+.meta-stitch .bg-inverse-on-surface\/20{background-color:color-mix(in srgb,#eef0ff 20%, transparent);}
+.meta-stitch .text-inverse-on-surface\/20{color:color-mix(in srgb,#eef0ff 20%, transparent);}
+.meta-stitch .border-inverse-on-surface\/20{border-color:color-mix(in srgb,#eef0ff 20%, transparent);}
+.meta-stitch .bg-inverse-on-surface\/30{background-color:color-mix(in srgb,#eef0ff 30%, transparent);}
+.meta-stitch .text-inverse-on-surface\/30{color:color-mix(in srgb,#eef0ff 30%, transparent);}
+.meta-stitch .border-inverse-on-surface\/30{border-color:color-mix(in srgb,#eef0ff 30%, transparent);}
+.meta-stitch .bg-inverse-on-surface\/40{background-color:color-mix(in srgb,#eef0ff 40%, transparent);}
+.meta-stitch .text-inverse-on-surface\/40{color:color-mix(in srgb,#eef0ff 40%, transparent);}
+.meta-stitch .border-inverse-on-surface\/40{border-color:color-mix(in srgb,#eef0ff 40%, transparent);}
+.meta-stitch .bg-inverse-on-surface\/50{background-color:color-mix(in srgb,#eef0ff 50%, transparent);}
+.meta-stitch .text-inverse-on-surface\/50{color:color-mix(in srgb,#eef0ff 50%, transparent);}
+.meta-stitch .border-inverse-on-surface\/50{border-color:color-mix(in srgb,#eef0ff 50%, transparent);}
+.meta-stitch .bg-primary{background-color:#004ac6;}
+.meta-stitch .text-primary{color:#004ac6;}
+.meta-stitch .border-primary{border-color:#004ac6;}
+.meta-stitch .bg-primary\/20{background-color:color-mix(in srgb,#004ac6 20%, transparent);}
+.meta-stitch .text-primary\/20{color:color-mix(in srgb,#004ac6 20%, transparent);}
+.meta-stitch .border-primary\/20{border-color:color-mix(in srgb,#004ac6 20%, transparent);}
+.meta-stitch .bg-primary\/30{background-color:color-mix(in srgb,#004ac6 30%, transparent);}
+.meta-stitch .text-primary\/30{color:color-mix(in srgb,#004ac6 30%, transparent);}
+.meta-stitch .border-primary\/30{border-color:color-mix(in srgb,#004ac6 30%, transparent);}
+.meta-stitch .bg-primary\/40{background-color:color-mix(in srgb,#004ac6 40%, transparent);}
+.meta-stitch .text-primary\/40{color:color-mix(in srgb,#004ac6 40%, transparent);}
+.meta-stitch .border-primary\/40{border-color:color-mix(in srgb,#004ac6 40%, transparent);}
+.meta-stitch .bg-primary\/50{background-color:color-mix(in srgb,#004ac6 50%, transparent);}
+.meta-stitch .text-primary\/50{color:color-mix(in srgb,#004ac6 50%, transparent);}
+.meta-stitch .border-primary\/50{border-color:color-mix(in srgb,#004ac6 50%, transparent);}
+.meta-stitch .bg-secondary-fixed-dim{background-color:#c3c0ff;}
+.meta-stitch .text-secondary-fixed-dim{color:#c3c0ff;}
+.meta-stitch .border-secondary-fixed-dim{border-color:#c3c0ff;}
+.meta-stitch .bg-secondary-fixed-dim\/20{background-color:color-mix(in srgb,#c3c0ff 20%, transparent);}
+.meta-stitch .text-secondary-fixed-dim\/20{color:color-mix(in srgb,#c3c0ff 20%, transparent);}
+.meta-stitch .border-secondary-fixed-dim\/20{border-color:color-mix(in srgb,#c3c0ff 20%, transparent);}
+.meta-stitch .bg-secondary-fixed-dim\/30{background-color:color-mix(in srgb,#c3c0ff 30%, transparent);}
+.meta-stitch .text-secondary-fixed-dim\/30{color:color-mix(in srgb,#c3c0ff 30%, transparent);}
+.meta-stitch .border-secondary-fixed-dim\/30{border-color:color-mix(in srgb,#c3c0ff 30%, transparent);}
+.meta-stitch .bg-secondary-fixed-dim\/40{background-color:color-mix(in srgb,#c3c0ff 40%, transparent);}
+.meta-stitch .text-secondary-fixed-dim\/40{color:color-mix(in srgb,#c3c0ff 40%, transparent);}
+.meta-stitch .border-secondary-fixed-dim\/40{border-color:color-mix(in srgb,#c3c0ff 40%, transparent);}
+.meta-stitch .bg-secondary-fixed-dim\/50{background-color:color-mix(in srgb,#c3c0ff 50%, transparent);}
+.meta-stitch .text-secondary-fixed-dim\/50{color:color-mix(in srgb,#c3c0ff 50%, transparent);}
+.meta-stitch .border-secondary-fixed-dim\/50{border-color:color-mix(in srgb,#c3c0ff 50%, transparent);}
+.meta-stitch .bg-inverse-surface{background-color:#283044;}
+.meta-stitch .text-inverse-surface{color:#283044;}
+.meta-stitch .border-inverse-surface{border-color:#283044;}
+.meta-stitch .bg-inverse-surface\/20{background-color:color-mix(in srgb,#283044 20%, transparent);}
+.meta-stitch .text-inverse-surface\/20{color:color-mix(in srgb,#283044 20%, transparent);}
+.meta-stitch .border-inverse-surface\/20{border-color:color-mix(in srgb,#283044 20%, transparent);}
+.meta-stitch .bg-inverse-surface\/30{background-color:color-mix(in srgb,#283044 30%, transparent);}
+.meta-stitch .text-inverse-surface\/30{color:color-mix(in srgb,#283044 30%, transparent);}
+.meta-stitch .border-inverse-surface\/30{border-color:color-mix(in srgb,#283044 30%, transparent);}
+.meta-stitch .bg-inverse-surface\/40{background-color:color-mix(in srgb,#283044 40%, transparent);}
+.meta-stitch .text-inverse-surface\/40{color:color-mix(in srgb,#283044 40%, transparent);}
+.meta-stitch .border-inverse-surface\/40{border-color:color-mix(in srgb,#283044 40%, transparent);}
+.meta-stitch .bg-inverse-surface\/50{background-color:color-mix(in srgb,#283044 50%, transparent);}
+.meta-stitch .text-inverse-surface\/50{color:color-mix(in srgb,#283044 50%, transparent);}
+.meta-stitch .border-inverse-surface\/50{border-color:color-mix(in srgb,#283044 50%, transparent);}
+.meta-stitch .bg-on-error-container{background-color:#93000a;}
+.meta-stitch .text-on-error-container{color:#93000a;}
+.meta-stitch .border-on-error-container{border-color:#93000a;}
+.meta-stitch .bg-on-error-container\/20{background-color:color-mix(in srgb,#93000a 20%, transparent);}
+.meta-stitch .text-on-error-container\/20{color:color-mix(in srgb,#93000a 20%, transparent);}
+.meta-stitch .border-on-error-container\/20{border-color:color-mix(in srgb,#93000a 20%, transparent);}
+.meta-stitch .bg-on-error-container\/30{background-color:color-mix(in srgb,#93000a 30%, transparent);}
+.meta-stitch .text-on-error-container\/30{color:color-mix(in srgb,#93000a 30%, transparent);}
+.meta-stitch .border-on-error-container\/30{border-color:color-mix(in srgb,#93000a 30%, transparent);}
+.meta-stitch .bg-on-error-container\/40{background-color:color-mix(in srgb,#93000a 40%, transparent);}
+.meta-stitch .text-on-error-container\/40{color:color-mix(in srgb,#93000a 40%, transparent);}
+.meta-stitch .border-on-error-container\/40{border-color:color-mix(in srgb,#93000a 40%, transparent);}
+.meta-stitch .bg-on-error-container\/50{background-color:color-mix(in srgb,#93000a 50%, transparent);}
+.meta-stitch .text-on-error-container\/50{color:color-mix(in srgb,#93000a 50%, transparent);}
+.meta-stitch .border-on-error-container\/50{border-color:color-mix(in srgb,#93000a 50%, transparent);}
+.meta-stitch .bg-outline-variant{background-color:#c3c6d7;}
+.meta-stitch .text-outline-variant{color:#c3c6d7;}
+.meta-stitch .border-outline-variant{border-color:#c3c6d7;}
+.meta-stitch .bg-outline-variant\/20{background-color:color-mix(in srgb,#c3c6d7 20%, transparent);}
+.meta-stitch .text-outline-variant\/20{color:color-mix(in srgb,#c3c6d7 20%, transparent);}
+.meta-stitch .border-outline-variant\/20{border-color:color-mix(in srgb,#c3c6d7 20%, transparent);}
+.meta-stitch .bg-outline-variant\/30{background-color:color-mix(in srgb,#c3c6d7 30%, transparent);}
+.meta-stitch .text-outline-variant\/30{color:color-mix(in srgb,#c3c6d7 30%, transparent);}
+.meta-stitch .border-outline-variant\/30{border-color:color-mix(in srgb,#c3c6d7 30%, transparent);}
+.meta-stitch .bg-outline-variant\/40{background-color:color-mix(in srgb,#c3c6d7 40%, transparent);}
+.meta-stitch .text-outline-variant\/40{color:color-mix(in srgb,#c3c6d7 40%, transparent);}
+.meta-stitch .border-outline-variant\/40{border-color:color-mix(in srgb,#c3c6d7 40%, transparent);}
+.meta-stitch .bg-outline-variant\/50{background-color:color-mix(in srgb,#c3c6d7 50%, transparent);}
+.meta-stitch .text-outline-variant\/50{color:color-mix(in srgb,#c3c6d7 50%, transparent);}
+.meta-stitch .border-outline-variant\/50{border-color:color-mix(in srgb,#c3c6d7 50%, transparent);}
+.meta-stitch .bg-primary-container{background-color:#2563eb;}
+.meta-stitch .text-primary-container{color:#2563eb;}
+.meta-stitch .border-primary-container{border-color:#2563eb;}
+.meta-stitch .bg-primary-container\/20{background-color:color-mix(in srgb,#2563eb 20%, transparent);}
+.meta-stitch .text-primary-container\/20{color:color-mix(in srgb,#2563eb 20%, transparent);}
+.meta-stitch .border-primary-container\/20{border-color:color-mix(in srgb,#2563eb 20%, transparent);}
+.meta-stitch .bg-primary-container\/30{background-color:color-mix(in srgb,#2563eb 30%, transparent);}
+.meta-stitch .text-primary-container\/30{color:color-mix(in srgb,#2563eb 30%, transparent);}
+.meta-stitch .border-primary-container\/30{border-color:color-mix(in srgb,#2563eb 30%, transparent);}
+.meta-stitch .bg-primary-container\/40{background-color:color-mix(in srgb,#2563eb 40%, transparent);}
+.meta-stitch .text-primary-container\/40{color:color-mix(in srgb,#2563eb 40%, transparent);}
+.meta-stitch .border-primary-container\/40{border-color:color-mix(in srgb,#2563eb 40%, transparent);}
+.meta-stitch .bg-primary-container\/50{background-color:color-mix(in srgb,#2563eb 50%, transparent);}
+.meta-stitch .text-primary-container\/50{color:color-mix(in srgb,#2563eb 50%, transparent);}
+.meta-stitch .border-primary-container\/50{border-color:color-mix(in srgb,#2563eb 50%, transparent);}
+.meta-stitch .bg-surface{background-color:#faf8ff;}
+.meta-stitch .text-surface{color:#faf8ff;}
+.meta-stitch .border-surface{border-color:#faf8ff;}
+.meta-stitch .bg-surface\/20{background-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .text-surface\/20{color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .border-surface\/20{border-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .bg-surface\/30{background-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .text-surface\/30{color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .border-surface\/30{border-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .bg-surface\/40{background-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .text-surface\/40{color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .border-surface\/40{border-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .bg-surface\/50{background-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .text-surface\/50{color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .border-surface\/50{border-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .bg-background{background-color:#faf8ff;}
+.meta-stitch .text-background{color:#faf8ff;}
+.meta-stitch .border-background{border-color:#faf8ff;}
+.meta-stitch .bg-background\/20{background-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .text-background\/20{color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .border-background\/20{border-color:color-mix(in srgb,#faf8ff 20%, transparent);}
+.meta-stitch .bg-background\/30{background-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .text-background\/30{color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .border-background\/30{border-color:color-mix(in srgb,#faf8ff 30%, transparent);}
+.meta-stitch .bg-background\/40{background-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .text-background\/40{color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .border-background\/40{border-color:color-mix(in srgb,#faf8ff 40%, transparent);}
+.meta-stitch .bg-background\/50{background-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .text-background\/50{color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .border-background\/50{border-color:color-mix(in srgb,#faf8ff 50%, transparent);}
+.meta-stitch .bg-surface-container{background-color:#eaedff;}
+.meta-stitch .text-surface-container{color:#eaedff;}
+.meta-stitch .border-surface-container{border-color:#eaedff;}
+.meta-stitch .bg-surface-container\/20{background-color:color-mix(in srgb,#eaedff 20%, transparent);}
+.meta-stitch .text-surface-container\/20{color:color-mix(in srgb,#eaedff 20%, transparent);}
+.meta-stitch .border-surface-container\/20{border-color:color-mix(in srgb,#eaedff 20%, transparent);}
+.meta-stitch .bg-surface-container\/30{background-color:color-mix(in srgb,#eaedff 30%, transparent);}
+.meta-stitch .text-surface-container\/30{color:color-mix(in srgb,#eaedff 30%, transparent);}
+.meta-stitch .border-surface-container\/30{border-color:color-mix(in srgb,#eaedff 30%, transparent);}
+.meta-stitch .bg-surface-container\/40{background-color:color-mix(in srgb,#eaedff 40%, transparent);}
+.meta-stitch .text-surface-container\/40{color:color-mix(in srgb,#eaedff 40%, transparent);}
+.meta-stitch .border-surface-container\/40{border-color:color-mix(in srgb,#eaedff 40%, transparent);}
+.meta-stitch .bg-surface-container\/50{background-color:color-mix(in srgb,#eaedff 50%, transparent);}
+.meta-stitch .text-surface-container\/50{color:color-mix(in srgb,#eaedff 50%, transparent);}
+.meta-stitch .border-surface-container\/50{border-color:color-mix(in srgb,#eaedff 50%, transparent);}
+.meta-stitch .bg-surface-container-high{background-color:#e2e7ff;}
+.meta-stitch .text-surface-container-high{color:#e2e7ff;}
+.meta-stitch .border-surface-container-high{border-color:#e2e7ff;}
+.meta-stitch .bg-surface-container-high\/20{background-color:color-mix(in srgb,#e2e7ff 20%, transparent);}
+.meta-stitch .text-surface-container-high\/20{color:color-mix(in srgb,#e2e7ff 20%, transparent);}
+.meta-stitch .border-surface-container-high\/20{border-color:color-mix(in srgb,#e2e7ff 20%, transparent);}
+.meta-stitch .bg-surface-container-high\/30{background-color:color-mix(in srgb,#e2e7ff 30%, transparent);}
+.meta-stitch .text-surface-container-high\/30{color:color-mix(in srgb,#e2e7ff 30%, transparent);}
+.meta-stitch .border-surface-container-high\/30{border-color:color-mix(in srgb,#e2e7ff 30%, transparent);}
+.meta-stitch .bg-surface-container-high\/40{background-color:color-mix(in srgb,#e2e7ff 40%, transparent);}
+.meta-stitch .text-surface-container-high\/40{color:color-mix(in srgb,#e2e7ff 40%, transparent);}
+.meta-stitch .border-surface-container-high\/40{border-color:color-mix(in srgb,#e2e7ff 40%, transparent);}
+.meta-stitch .bg-surface-container-high\/50{background-color:color-mix(in srgb,#e2e7ff 50%, transparent);}
+.meta-stitch .text-surface-container-high\/50{color:color-mix(in srgb,#e2e7ff 50%, transparent);}
+.meta-stitch .border-surface-container-high\/50{border-color:color-mix(in srgb,#e2e7ff 50%, transparent);}
+.meta-stitch .bg-on-surface-variant{background-color:#434655;}
+.meta-stitch .text-on-surface-variant{color:#434655;}
+.meta-stitch .border-on-surface-variant{border-color:#434655;}
+.meta-stitch .bg-on-surface-variant\/20{background-color:color-mix(in srgb,#434655 20%, transparent);}
+.meta-stitch .text-on-surface-variant\/20{color:color-mix(in srgb,#434655 20%, transparent);}
+.meta-stitch .border-on-surface-variant\/20{border-color:color-mix(in srgb,#434655 20%, transparent);}
+.meta-stitch .bg-on-surface-variant\/30{background-color:color-mix(in srgb,#434655 30%, transparent);}
+.meta-stitch .text-on-surface-variant\/30{color:color-mix(in srgb,#434655 30%, transparent);}
+.meta-stitch .border-on-surface-variant\/30{border-color:color-mix(in srgb,#434655 30%, transparent);}
+.meta-stitch .bg-on-surface-variant\/40{background-color:color-mix(in srgb,#434655 40%, transparent);}
+.meta-stitch .text-on-surface-variant\/40{color:color-mix(in srgb,#434655 40%, transparent);}
+.meta-stitch .border-on-surface-variant\/40{border-color:color-mix(in srgb,#434655 40%, transparent);}
+.meta-stitch .bg-on-surface-variant\/50{background-color:color-mix(in srgb,#434655 50%, transparent);}
+.meta-stitch .text-on-surface-variant\/50{color:color-mix(in srgb,#434655 50%, transparent);}
+.meta-stitch .border-on-surface-variant\/50{border-color:color-mix(in srgb,#434655 50%, transparent);}
+.meta-stitch .bg-on-primary-fixed-variant{background-color:#003ea8;}
+.meta-stitch .text-on-primary-fixed-variant{color:#003ea8;}
+.meta-stitch .border-on-primary-fixed-variant{border-color:#003ea8;}
+.meta-stitch .bg-on-primary-fixed-variant\/20{background-color:color-mix(in srgb,#003ea8 20%, transparent);}
+.meta-stitch .text-on-primary-fixed-variant\/20{color:color-mix(in srgb,#003ea8 20%, transparent);}
+.meta-stitch .border-on-primary-fixed-variant\/20{border-color:color-mix(in srgb,#003ea8 20%, transparent);}
+.meta-stitch .bg-on-primary-fixed-variant\/30{background-color:color-mix(in srgb,#003ea8 30%, transparent);}
+.meta-stitch .text-on-primary-fixed-variant\/30{color:color-mix(in srgb,#003ea8 30%, transparent);}
+.meta-stitch .border-on-primary-fixed-variant\/30{border-color:color-mix(in srgb,#003ea8 30%, transparent);}
+.meta-stitch .bg-on-primary-fixed-variant\/40{background-color:color-mix(in srgb,#003ea8 40%, transparent);}
+.meta-stitch .text-on-primary-fixed-variant\/40{color:color-mix(in srgb,#003ea8 40%, transparent);}
+.meta-stitch .border-on-primary-fixed-variant\/40{border-color:color-mix(in srgb,#003ea8 40%, transparent);}
+.meta-stitch .bg-on-primary-fixed-variant\/50{background-color:color-mix(in srgb,#003ea8 50%, transparent);}
+.meta-stitch .text-on-primary-fixed-variant\/50{color:color-mix(in srgb,#003ea8 50%, transparent);}
+.meta-stitch .border-on-primary-fixed-variant\/50{border-color:color-mix(in srgb,#003ea8 50%, transparent);}
+.meta-stitch .bg-emerald-50{background-color:#ecfdf5;}
+.meta-stitch .text-emerald-50{color:#ecfdf5;}
+.meta-stitch .border-emerald-50{border-color:#ecfdf5;}
+.meta-stitch .bg-emerald-50\/20{background-color:color-mix(in srgb,#ecfdf5 20%, transparent);}
+.meta-stitch .text-emerald-50\/20{color:color-mix(in srgb,#ecfdf5 20%, transparent);}
+.meta-stitch .border-emerald-50\/20{border-color:color-mix(in srgb,#ecfdf5 20%, transparent);}
+.meta-stitch .bg-emerald-50\/30{background-color:color-mix(in srgb,#ecfdf5 30%, transparent);}
+.meta-stitch .text-emerald-50\/30{color:color-mix(in srgb,#ecfdf5 30%, transparent);}
+.meta-stitch .border-emerald-50\/30{border-color:color-mix(in srgb,#ecfdf5 30%, transparent);}
+.meta-stitch .bg-emerald-50\/40{background-color:color-mix(in srgb,#ecfdf5 40%, transparent);}
+.meta-stitch .text-emerald-50\/40{color:color-mix(in srgb,#ecfdf5 40%, transparent);}
+.meta-stitch .border-emerald-50\/40{border-color:color-mix(in srgb,#ecfdf5 40%, transparent);}
+.meta-stitch .bg-emerald-50\/50{background-color:color-mix(in srgb,#ecfdf5 50%, transparent);}
+.meta-stitch .text-emerald-50\/50{color:color-mix(in srgb,#ecfdf5 50%, transparent);}
+.meta-stitch .border-emerald-50\/50{border-color:color-mix(in srgb,#ecfdf5 50%, transparent);}
+.meta-stitch .bg-emerald-800{background-color:#065f46;}
+.meta-stitch .text-emerald-800{color:#065f46;}
+.meta-stitch .border-emerald-800{border-color:#065f46;}
+.meta-stitch .bg-emerald-800\/20{background-color:color-mix(in srgb,#065f46 20%, transparent);}
+.meta-stitch .text-emerald-800\/20{color:color-mix(in srgb,#065f46 20%, transparent);}
+.meta-stitch .border-emerald-800\/20{border-color:color-mix(in srgb,#065f46 20%, transparent);}
+.meta-stitch .bg-emerald-800\/30{background-color:color-mix(in srgb,#065f46 30%, transparent);}
+.meta-stitch .text-emerald-800\/30{color:color-mix(in srgb,#065f46 30%, transparent);}
+.meta-stitch .border-emerald-800\/30{border-color:color-mix(in srgb,#065f46 30%, transparent);}
+.meta-stitch .bg-emerald-800\/40{background-color:color-mix(in srgb,#065f46 40%, transparent);}
+.meta-stitch .text-emerald-800\/40{color:color-mix(in srgb,#065f46 40%, transparent);}
+.meta-stitch .border-emerald-800\/40{border-color:color-mix(in srgb,#065f46 40%, transparent);}
+.meta-stitch .bg-emerald-800\/50{background-color:color-mix(in srgb,#065f46 50%, transparent);}
+.meta-stitch .text-emerald-800\/50{color:color-mix(in srgb,#065f46 50%, transparent);}
+.meta-stitch .border-emerald-800\/50{border-color:color-mix(in srgb,#065f46 50%, transparent);}
+.meta-stitch .bg-white{background-color:#ffffff;}
+.meta-stitch .text-white{color:#ffffff;}
+.meta-stitch .border-white{border-color:#ffffff;}
+.meta-stitch .bg-white\/20{background-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .text-white\/20{color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .border-white\/20{border-color:color-mix(in srgb,#ffffff 20%, transparent);}
+.meta-stitch .bg-white\/30{background-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .text-white\/30{color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .border-white\/30{border-color:color-mix(in srgb,#ffffff 30%, transparent);}
+.meta-stitch .bg-white\/40{background-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .text-white\/40{color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .border-white\/40{border-color:color-mix(in srgb,#ffffff 40%, transparent);}
+.meta-stitch .bg-white\/50{background-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .text-white\/50{color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .border-white\/50{border-color:color-mix(in srgb,#ffffff 50%, transparent);}
+.meta-stitch .gap-space-xs{gap:0.5rem;}
+.meta-stitch .p-space-xs{padding:0.5rem;}
+.meta-stitch .px-space-xs{padding-left:0.5rem;padding-right:0.5rem;}
+.meta-stitch .py-space-xs{padding-top:0.5rem;padding-bottom:0.5rem;}
+.meta-stitch .pt-space-xs{padding-top:0.5rem;}
+.meta-stitch .pb-space-xs{padding-bottom:0.5rem;}
+.meta-stitch .mt-space-xs{margin-top:0.5rem;}
+.meta-stitch .mb-space-xs{margin-bottom:0.5rem;}
+.meta-stitch .space-y-space-xs>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse));}
+.meta-stitch .gap-space-sm{gap:0.75rem;}
+.meta-stitch .p-space-sm{padding:0.75rem;}
+.meta-stitch .px-space-sm{padding-left:0.75rem;padding-right:0.75rem;}
+.meta-stitch .py-space-sm{padding-top:0.75rem;padding-bottom:0.75rem;}
+.meta-stitch .pt-space-sm{padding-top:0.75rem;}
+.meta-stitch .pb-space-sm{padding-bottom:0.75rem;}
+.meta-stitch .mt-space-sm{margin-top:0.75rem;}
+.meta-stitch .mb-space-sm{margin-bottom:0.75rem;}
+.meta-stitch .space-y-space-sm>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse));}
+.meta-stitch .gap-space-md{gap:1rem;}
+.meta-stitch .p-space-md{padding:1rem;}
+.meta-stitch .px-space-md{padding-left:1rem;padding-right:1rem;}
+.meta-stitch .py-space-md{padding-top:1rem;padding-bottom:1rem;}
+.meta-stitch .pt-space-md{padding-top:1rem;}
+.meta-stitch .pb-space-md{padding-bottom:1rem;}
+.meta-stitch .mt-space-md{margin-top:1rem;}
+.meta-stitch .mb-space-md{margin-bottom:1rem;}
+.meta-stitch .space-y-space-md>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse));}
+.meta-stitch .gap-space-lg{gap:1.5rem;}
+.meta-stitch .p-space-lg{padding:1.5rem;}
+.meta-stitch .px-space-lg{padding-left:1.5rem;padding-right:1.5rem;}
+.meta-stitch .py-space-lg{padding-top:1.5rem;padding-bottom:1.5rem;}
+.meta-stitch .pt-space-lg{padding-top:1.5rem;}
+.meta-stitch .pb-space-lg{padding-bottom:1.5rem;}
+.meta-stitch .mt-space-lg{margin-top:1.5rem;}
+.meta-stitch .mb-space-lg{margin-bottom:1.5rem;}
+.meta-stitch .space-y-space-lg>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse));}
+.meta-stitch .gap-space-xl{gap:2rem;}
+.meta-stitch .p-space-xl{padding:2rem;}
+.meta-stitch .px-space-xl{padding-left:2rem;padding-right:2rem;}
+.meta-stitch .py-space-xl{padding-top:2rem;padding-bottom:2rem;}
+.meta-stitch .pt-space-xl{padding-top:2rem;}
+.meta-stitch .pb-space-xl{padding-bottom:2rem;}
+.meta-stitch .mt-space-xl{margin-top:2rem;}
+.meta-stitch .mb-space-xl{margin-bottom:2rem;}
+.meta-stitch .space-y-space-xl>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(2rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(2rem * var(--tw-space-y-reverse));}
+.meta-stitch .gap-space-2xs{gap:0.25rem;}
+.meta-stitch .p-space-2xs{padding:0.25rem;}
+.meta-stitch .px-space-2xs{padding-left:0.25rem;padding-right:0.25rem;}
+.meta-stitch .py-space-2xs{padding-top:0.25rem;padding-bottom:0.25rem;}
+.meta-stitch .pt-space-2xs{padding-top:0.25rem;}
+.meta-stitch .pb-space-2xs{padding-bottom:0.25rem;}
+.meta-stitch .mt-space-2xs{margin-top:0.25rem;}
+.meta-stitch .mb-space-2xs{margin-bottom:0.25rem;}
+.meta-stitch .space-y-space-2xs>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse));}
+.meta-stitch .gap-space-2xl{gap:3rem;}
+.meta-stitch .p-space-2xl{padding:3rem;}
+.meta-stitch .px-space-2xl{padding-left:3rem;padding-right:3rem;}
+.meta-stitch .py-space-2xl{padding-top:3rem;padding-bottom:3rem;}
+.meta-stitch .pt-space-2xl{padding-top:3rem;}
+.meta-stitch .pb-space-2xl{padding-bottom:3rem;}
+.meta-stitch .mt-space-2xl{margin-top:3rem;}
+.meta-stitch .mb-space-2xl{margin-bottom:3rem;}
+.meta-stitch .space-y-space-2xl>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(3rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(3rem * var(--tw-space-y-reverse));}
+.meta-stitch .font-body-lg{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-body-lg{font-size:16px;line-height:24px;font-weight:400;}
+.meta-stitch .font-headline-md{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-headline-md{font-size:20px;line-height:28px;font-weight:600;}
+.meta-stitch .font-headline-sm{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-headline-sm{font-size:16px;line-height:24px;font-weight:600;}
+.meta-stitch .font-label-md{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-label-md{font-size:12px;line-height:16px;font-weight:500;}
+.meta-stitch .font-body-sm{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-body-sm{font-size:13px;line-height:18px;font-weight:400;}
+.meta-stitch .font-headline-lg{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-headline-lg{font-size:28px;line-height:36px;font-weight:600;}
+.meta-stitch .font-label-sm{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-label-sm{font-size:11px;line-height:14px;font-weight:600;}
+.meta-stitch .font-display-lg{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-display-lg{font-size:36px;line-height:44px;font-weight:700;}
+.meta-stitch .font-body-md{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .text-body-md{font-size:14px;line-height:20px;font-weight:400;}
+.meta-stitch .font-label-code{font-family:Geist,system-ui,sans-serif;}
+.meta-stitch .font-label-code{font-family:"JetBrains Mono",ui-monospace,monospace;}
+.meta-stitch .text-label-code{font-size:12px;line-height:16px;font-weight:500;}
+
+.meta-stitch .rounded-xl{border-radius:0.75rem;}
+.meta-stitch .rounded-lg{border-radius:0.5rem;}
+.meta-stitch .rounded-full{border-radius:9999px;}
+.meta-stitch .shadow-sm{box-shadow:0 1px 2px rgba(19,27,46,.06),0 1px 8px rgba(19,27,46,.04);}
+.meta-stitch .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.meta-stitch .tracking-tight{letter-spacing:-0.015em;}
+.meta-stitch .tracking-wider{letter-spacing:0.04em;}
+.meta-stitch .uppercase{text-transform:uppercase;}
+.meta-stitch .font-bold{font-weight:700;}
+.meta-stitch .font-semibold{font-weight:600;}
+.meta-stitch .font-normal{font-weight:400;}
+.meta-stitch .animate-pulse{animation:meta-pulse 2s cubic-bezier(.4,0,.6,1) infinite;}
+@keyframes meta-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.meta-stitch .grid{display:grid;}
+.meta-stitch .flex{display:flex;}
+.meta-stitch .inline-flex{display:inline-flex;}
+.meta-stitch .flex-col{flex-direction:column;}
+.meta-stitch .flex-wrap{flex-wrap:wrap;}
+.meta-stitch .items-center{align-items:center;}
+.meta-stitch .items-start{align-items:flex-start;}
+.meta-stitch .items-baseline{align-items:baseline;}
+.meta-stitch .justify-between{justify-content:space-between;}
+.meta-stitch .justify-center{justify-content:center;}
+.meta-stitch .w-full{width:100%;}
+.meta-stitch .h-full{height:100%;}
+.meta-stitch .w-10{width:2.5rem;}
+.meta-stitch .h-10{height:2.5rem;}
+.meta-stitch .w-8{width:2rem;}
+.meta-stitch .h-8{height:2rem;}
+.meta-stitch .w-2{width:.5rem;}
+.meta-stitch .h-2{height:.5rem;}
+.meta-stitch .w-2\.5{width:.625rem;}
+.meta-stitch .h-2\.5{height:.625rem;}
+.meta-stitch .h-1\.5{height:.375rem;}
+.meta-stitch .h-6{height:1.5rem;}
+.meta-stitch .h-7{height:1.75rem;}
+.meta-stitch .w-24{width:6rem;}
+.meta-stitch .w-px{width:1px;}
+.meta-stitch .gap-1{gap:.25rem;}
+.meta-stitch .gap-1\.5{gap:.375rem;}
+.meta-stitch .gap-2{gap:.5rem;}
+.meta-stitch .gap-2\.5{gap:.625rem;}
+.meta-stitch .gap-3{gap:.75rem;}
+.meta-stitch .mt-0\.5{margin-top:.125rem;}
+.meta-stitch .mt-1{margin-top:.25rem;}
+.meta-stitch .mt-2{margin-top:.5rem;}
+.meta-stitch .mt-4{margin-top:1rem;}
+.meta-stitch .mb-3{margin-bottom:.75rem;}
+.meta-stitch .pt-1{padding-top:.25rem;}
+.meta-stitch .pt-3{padding-top:.75rem;}
+.meta-stitch .px-1{padding-left:.25rem;padding-right:.25rem;}
+.meta-stitch .px-1\.5{padding-left:.375rem;padding-right:.375rem;}
+.meta-stitch .px-2{padding-left:.5rem;padding-right:.5rem;}
+.meta-stitch .px-2\.5{padding-left:.625rem;padding-right:.625rem;}
+.meta-stitch .px-3{padding-left:.75rem;padding-right:.75rem;}
+.meta-stitch .px-3\.5{padding-left:.875rem;padding-right:.875rem;}
+.meta-stitch .px-4{padding-left:1rem;padding-right:1rem;}
+.meta-stitch .py-0\.5{padding-top:.125rem;padding-bottom:.125rem;}
+.meta-stitch .py-1{padding-top:.25rem;padding-bottom:.25rem;}
+.meta-stitch .py-1\.5{padding-top:.375rem;padding-bottom:.375rem;}
+.meta-stitch .py-2{padding-top:.5rem;padding-bottom:.5rem;}
+.meta-stitch .py-3{padding-top:.75rem;padding-bottom:.75rem;}
+.meta-stitch .py-3\.5{padding-top:.875rem;padding-bottom:.875rem;}
+.meta-stitch .p-2{padding:.5rem;}
+.meta-stitch .overflow-hidden{overflow:hidden;}
+.meta-stitch .overflow-x-auto{overflow-x:auto;}
+.meta-stitch .text-right{text-align:right;}
+.meta-stitch .text-left{text-align:left;}
+.meta-stitch .border-collapse{border-collapse:collapse;}
+.meta-stitch .self-start{align-self:flex-start;}
+.meta-stitch .transition-all{transition:all .2s ease;}
+.meta-stitch .transition-colors{transition:color .15s,background-color .15s;}
+.meta-stitch .hover\:bg-surface-container:hover{background-color:#eaedff;}
+.meta-stitch .hover\:bg-primary:hover{background-color:#004ac6;}
+.meta-stitch .hover\:bg-surface-container-low:hover{background-color:#f2f3ff;}
+.meta-stitch .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr));}
+@media (min-width:640px){.meta-stitch .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}.meta-stitch .sm\:flex-row{flex-direction:row;}.meta-stitch .sm\:items-center{align-items:center;}}
+@media (min-width:768px){.meta-stitch .md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}.meta-stitch .md\:grid-cols-5{grid-template-columns:repeat(5,minmax(0,1fr));}}
+@media (min-width:1024px){.meta-stitch .lg\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr));}.meta-stitch .lg\:flex-row{flex-direction:row;}.meta-stitch .lg\:items-center{align-items:center;}}
+@media (min-width:1280px){.meta-stitch .xl\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr));}.meta-stitch .xl\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}.meta-stitch .xl\:col-span-2{grid-column:span 2 / span 2;}.meta-stitch .xl\:flex-row{flex-direction:row;}.meta-stitch .xl\:items-center{align-items:center;}}
+.meta-stitch .text-\[13px\]{font-size:13px;}
+.meta-stitch .text-\[18px\]{font-size:18px;}
+.meta-stitch .text-\[22px\]{font-size:22px;}
+.meta-stitch .text-\[24px\]{font-size:24px;}
+.meta-stitch .mr-0\.5{margin-right:.125rem;}
+.meta-stitch button{cursor:pointer;border:0;background:transparent;font:inherit;color:inherit;}
+.meta-stitch table{width:100%;}
+

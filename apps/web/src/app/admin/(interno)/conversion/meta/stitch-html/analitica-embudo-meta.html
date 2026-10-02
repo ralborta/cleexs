@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-tertiary":"#ffffff","on-error":"#ffffff","primary-fixed":"#dbe1ff","surface-variant":"#dae2fd","surface-container-highest":"#dae2fd","primary-fixed-dim":"#b4c5ff","on-background":"#131b2e","surface-container-lowest":"#ffffff","tertiary-fixed-dim":"#4edea3","on-primary-fixed":"#00174b","surface-container-low":"#f2f3ff","on-tertiary-fixed":"#002113","tertiary":"#006242","secondary-container":"#645efb","tertiary-container":"#007d55","on-tertiary-fixed-variant":"#005236","on-surface":"#131b2e","on-secondary":"#ffffff","on-secondary-container":"#fffbff","surface-dim":"#d2d9f4","on-primary":"#ffffff","tertiary-fixed":"#6ffbbe","error":"#ba1a1a","surface-tint":"#0053db","secondary-fixed":"#e2dfff","outline":"#737686","on-secondary-fixed-variant":"#3323cc","surface-bright":"#faf8ff","on-tertiary-container":"#bdffdb","on-secondary-fixed":"#0f0069","error-container":"#ffdad6","on-primary-container":"#eeefff","inverse-primary":"#b4c5ff","secondary":"#4b41e1","inverse-on-surface":"#eef0ff","primary":"#004ac6","secondary-fixed-dim":"#c3c0ff","inverse-surface":"#283044","on-error-container":"#93000a","outline-variant":"#c3c6d7","primary-container":"#2563eb","surface":"#faf8ff","background":"#faf8ff","surface-container":"#eaedff","surface-container-high":"#e2e7ff","on-surface-variant":"#434655","on-primary-fixed-variant":"#003ea8"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-xl":"2rem","space-xs":"0.5rem","space-sm":"0.75rem","gutter":"1.5rem","space-2xs":"0.25rem","space-md":"1rem","margin":"2rem","space-2xl":"3rem","space-lg":"1.5rem","gutter-sm":"1rem","margin-mobile":"1rem"},fontFamily:{"body-lg":["Geist"],"headline-md":["Geist"],"headline-sm":["Geist"],"label-md":["Geist"],"body-sm":["Geist"],"headline-lg":["Geist"],"label-sm":["Geist"],"display-lg":["Geist"],"headline-lg-mobile":["Geist"],"body-md":["Geist"],"label-code":["JetBrains Mono"]},fontSize:{"body-lg":["16px",{lineHeight:"24px",fontWeight:"400"}],"headline-md":["20px",{lineHeight:"28px",letterSpacing:"-0.01em",fontWeight:"600"}],"headline-sm":["16px",{lineHeight:"24px",letterSpacing:"-0.005em",fontWeight:"600"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.01em",fontWeight:"500"}],"body-sm":["13px",{lineHeight:"18px",fontWeight:"400"}],"headline-lg":["28px",{lineHeight:"36px",letterSpacing:"-0.015em",fontWeight:"600"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.03em",fontWeight:"600"}],"display-lg":["36px",{lineHeight:"44px",letterSpacing:"-0.02em",fontWeight:"700"}],"headline-lg-mobile":["22px",{lineHeight:"30px",letterSpacing:"-0.01em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"20px",fontWeight:"400"}],"label-code":["12px",{lineHeight:"16px",fontWeight:"500"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-xs bg-surface-container-low"><img alt="Cleexs Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XKdZqQ7F10Y3NQXGY-6FzXi_akrEtNELNnNG0Jnif_S8xQw_bwlF5VCA3dlBvAvgV6wXglXFhph5NRqKYEjI8LpDsM1oBewGQ-2AvO7eGwUxrALZeUYSnBaoRaPn8eNqXgvQPJwYqN0A5uyg7NiJL47ngTMbTDa2Y4bJSkyez1IEvAz78oLIW_IaDhBviGL5kq7tGt_SoTrSCKfSNSQz11qbT3-pwS4BIc8QgEZfvd7JRlGP7vz6CsjK9H"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Cleexs</span><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">CAPI Engine</span></div></div><div class="px-space-md py-space-xs"><div class="p-space-xs rounded-xl bg-surface-container flex items-center justify-between"><div class="flex items-center gap-space-xs overflow-hidden"><span class="material-symbols-outlined text-primary text-[18px]">domain</span><div class="truncate"><p class="font-label-sm text-label-sm text-on-surface truncate">Main Store</p><p class="font-label-sm text-label-sm text-on-surface-variant truncate">Client Workspace</p></div></div><span class="material-symbols-outlined text-on-surface-variant text-[16px]">unfold_more</span></div></div><nav class="flex flex-col gap-space-2xs px-space-xs mt-space-xs" data-active-classes="bg-primary-container text-on-primary font-headline-sm rounded-xl shadow-[0_1px_3px_0_rgba(15,23,42,0.04)]"><span class="px-space-xs py-space-2xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Telemetry &amp; Feeds</span><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="overview-dashboard" href="#"><span class="material-symbols-outlined text-[20px]">grid_view</span><span class="font-body-md text-body-md">Overview / Dashboard</span></a><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="conversions-meta-capi" href="#"><span class="material-symbols-outlined text-[20px]">hub</span><span class="font-body-md text-body-md">Conversions &amp; Pixels</span></a><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="tiktok-pixel-events" href="#"><span class="material-symbols-outlined text-[20px]">track_changes</span><span class="font-body-md text-body-md">TikTok Pixel &amp; Events</span></a><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="google-enhanced-conversions" href="#"><span class="material-symbols-outlined text-[20px]">ads_click</span><span class="font-body-md text-body-md">Google Tag &amp; Enhanced</span></a><span class="px-space-xs pt-space-sm pb-space-2xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Diagnostics &amp; Dev</span><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="event-stream-logs" href="#"><span class="material-symbols-outlined text-[20px]">stream</span><span class="font-body-md text-body-md">Event Stream &amp; Logs</span></a><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="webhooks-api-keys" href="#"><span class="material-symbols-outlined text-[20px]">key</span><span class="font-body-md text-body-md">Webhooks &amp; API Keys</span></a><a class="flex items-center gap-space-xs px-space-xs py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="admin-team-settings" href="#"><span class="material-symbols-outlined text-[20px]">settings</span><span class="font-body-md text-body-md">Admin &amp; Team Settings</span></a></nav></div><div class="p-space-xs m-space-xs bg-surface rounded-xl shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex flex-col gap-space-2xs"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-on-surface-variant">Throughput Rate</span><span class="font-label-code text-label-code text-tertiary font-semibold">1,420 eps</span></div><div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden"><div class="bg-tertiary h-full w-4/5 rounded-full"></div></div><div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm"><span>Server Latency</span><span class="font-label-code text-label-code text-on-surface">14ms avg</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-2xs bg-surface-container-low px-space-xs py-1 rounded-full"><span class="h-2 w-2 rounded-full bg-tertiary animate-pulse"></span><span class="font-label-md text-label-md text-tertiary font-semibold">Production</span><span class="material-symbols-outlined text-on-surface-variant text-[16px]">expand_more</span></div><div class="hidden xl:flex items-center gap-space-2xs bg-surface-container px-space-xs py-1 rounded-lg"><span class="material-symbols-outlined text-tertiary text-[16px]">check_circle</span><span class="font-label-sm text-label-sm text-on-surface-variant">CAPI Server Online - <strong class="text-tertiary font-label-code text-label-code">99.98%</strong></span></div><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-space-xs text-on-surface-variant text-[18px]">search</span><input class="w-72 lg:w-96 pl-9 pr-space-xs py-1.5 rounded-xl bg-surface-container-low text-on-surface placeholder:text-outline font-body-sm text-body-sm focus:outline-none focus:bg-surface-container transition-all" placeholder="Search event IDs, payloads, SHA-256 hashes..." type="text"/></div></div><div class="flex items-center gap-space-sm"><button class="relative p-space-2xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary"></span></button><div class="h-6 w-px bg-surface-container-highest"></div><div class="flex items-center gap-space-xs"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="hidden md:flex flex-col"><span class="font-label-md text-label-md text-on-surface leading-tight">Security Ops</span><span class="font-label-sm text-label-sm text-primary uppercase font-bold tracking-wider">Admin</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-surface w-full px-space-lg"><div class="flex flex-col w-full pb-space-2xl space-y-space-lg">
+<!-- PAGE HEADER & FILTER TOOLBAR -->
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-space-md pt-space-xs">
+<div class="flex flex-col gap-space-2xs">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Resultados Meta</h1>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800">
+<span class="h-2 w-2 rounded-full bg-tertiary-container animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold uppercase tracking-wider">En vivo / Sincronizado</span>
+</div>
+<span class="px-2 py-0.5 rounded-lg bg-surface-container text-on-surface-variant font-label-code text-label-code">
+          Pixel ID: 88192304194
+        </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+        Tráfico y conversión de publicidad Meta: landing <code class="font-label-code text-primary bg-primary-fixed/40 px-1 py-0.5 rounded">/meta</code> + campañas Meta/IG. Comparado contra el total Cleexs.
+      </p>
+</div>
+<!-- Date Range & Action Buttons -->
+<div class="flex items-center gap-space-xs flex-wrap">
+<!-- Segmented Time Pills -->
+<div class="flex items-center bg-surface-container-low p-1 rounded-xl shadow-sm">
+<button class="px-3 py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" type="button">7d</button>
+<button class="px-3 py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" type="button">15d</button>
+<button class="px-3.5 py-1.5 rounded-lg bg-surface-container-lowest font-headline-sm text-label-md text-primary shadow-sm" type="button">30 días</button>
+<button class="px-3 py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" type="button">90d</button>
+</div>
+<!-- Date Range Picker Badge -->
+<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-lowest shadow-sm text-on-surface">
+<span class="material-symbols-outlined text-primary text-[18px]">calendar_today</span>
+<span class="font-label-code text-label-code text-on-surface">2026-09-02 → 2026-10-01</span>
+</div>
+<!-- Action: Filter Campaigns -->
+<button class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-lowest hover:bg-surface-container transition-all shadow-sm text-on-surface font-label-md text-label-md" type="button">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">tune</span>
+<span>Filtrar Campañas</span>
+</button>
+<!-- Action: Export Report -->
+<button class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-container hover:bg-primary transition-all text-on-primary font-headline-sm text-body-sm shadow-sm" type="button">
+<span class="material-symbols-outlined text-on-primary text-[18px]">file_download</span>
+<span>Exportar Reporte</span>
+</button>
+</div>
+</div>
+<!-- KPI SUMMARY METRICS (4 CARDS) -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
+<!-- KPI 1: Visitas Meta -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Visitas Meta</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-display-lg text-display-lg text-on-surface font-bold tracking-tight">339</span>
+<span class="inline-flex items-center text-tertiary font-label-sm text-label-sm font-semibold bg-emerald-50 px-1.5 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-[13px] mr-0.5">arrow_upward</span>+12.4%
+            </span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">visibility</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center justify-between">
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">
+<strong class="text-on-surface font-semibold">390</strong> pageviews · /meta + ads
+        </p>
+<!-- Mini sparkline -->
+<svg class="w-16 h-5 text-tertiary" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 64 20">
+<polyline points="0,16 12,12 24,14 36,8 48,10 64,3"></polyline>
+</svg>
+</div>
+</div>
+<!-- KPI 2: % del Total Cleexs -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">% del total Cleexs</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-display-lg text-display-lg text-primary font-bold tracking-tight">57.4%</span>
+<span class="font-label-code text-label-code text-on-surface-variant">cuota líder</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">pie_chart</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>339 de 591 visitas totales</span>
+<span class="font-label-code font-semibold text-primary">57.4%</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 57.4%;"></div>
+</div>
+</div>
+</div>
+<!-- KPI 3: Compras Meta -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Compras Meta</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-display-lg text-display-lg text-on-surface font-bold tracking-tight">0</span>
+<span class="inline-flex items-center text-outline font-label-sm text-label-sm bg-surface-container px-2 py-0.5 rounded-full">
+              0% conv.
+            </span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">shopping_cart_checkout</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span>0% de visitas Meta</span>
+<span class="font-label-code text-label-code text-outline">CAC: —</span>
+</div>
+</div>
+<!-- KPI 4: Ingresos Atribuidos (ROAS) -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Ingresos Atribuidos</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-display-lg text-display-lg text-on-surface font-bold tracking-tight">$0.00</span>
+<span class="font-label-code text-label-code text-outline bg-surface-container px-1.5 py-0.5 rounded">ROAS 0.0x</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-on-secondary transition-colors">
+<span class="material-symbols-outlined text-[22px]">payments</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span>Gasto Ads est.: <strong class="text-on-surface font-label-code">$145.20 USD</strong></span>
+<span class="font-label-sm text-label-sm text-error bg-error-container/30 px-1.5 py-0.5 rounded">Sin retorno</span>
+</div>
+</div>
+</div>
+<!-- MAIN SECTION: EMBUDO META (VISUAL FUNNEL) -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-lg">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-xs">
+<div>
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[24px]">filter_alt</span>
+<h2 class="font-headline-md text-headline-md text-on-surface tracking-tight">Embudo Meta</h2>
+<span class="font-label-code text-label-code px-2 py-0.5 bg-primary-fixed/40 text-primary font-semibold rounded-md">6 Etapas</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+          Flujo de conversión secuencial: Visitantes → URL enviada → Dejaron email → Compartieron → Unlock clicks → Compraron.
+        </p>
+</div>
+<!-- Quick Funnel Stats -->
+<div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Top-of-Funnel</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">339 <span class="font-label-sm font-normal text-on-surface-variant">users</span></span>
+</div>
+<div class="h-6 w-px bg-surface-container-highest"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Tasa Conv. Final</span>
+<span class="font-headline-sm text-headline-sm text-error font-semibold">0.00%</span>
+</div>
+<div class="h-6 w-px bg-surface-container-highest"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Paso con mayor fuga</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Visitas → URL (94.1% drop)</span>
+</div>
+</div>
+</div>
+<!-- MODERN CONNECTED FUNNEL CARDS -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+<!-- Stage 1: Visitas -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low transition-all relative overflow-hidden group hover:bg-surface-container">
+<div class="flex items-center justify-between mb-3">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">group</span>
+</div>
+<span class="font-label-code text-label-code font-bold text-primary">Paso 1</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Visitas</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">339</span>
+</div>
+</div>
+<div class="mt-4 pt-3 flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Tasa etapa</span>
+<span class="font-semibold text-primary font-label-code">100% base</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full w-full rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-outline">Drop-off: 0%</span>
+</div>
+</div>
+<!-- Stage 2: URL enviada -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low transition-all relative overflow-hidden group hover:bg-surface-container">
+<div class="flex items-center justify-between mb-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">link</span>
+</div>
+<span class="font-label-code text-label-code font-bold text-on-surface-variant">Paso 2</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">URL enviada</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">20</span>
+</div>
+</div>
+<div class="mt-4 pt-3 flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Tasa etapa</span>
+<span class="font-semibold text-primary font-label-code">5.9%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 5.9%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-error bg-error-container/20 px-1 py-0.5 rounded self-start">-94.1% abandono</span>
+</div>
+</div>
+<!-- Stage 3: Dejaron email -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low transition-all relative overflow-hidden group hover:bg-surface-container">
+<div class="flex items-center justify-between mb-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+</div>
+<span class="font-label-code text-label-code font-bold text-on-surface-variant">Paso 3</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Dejaron email</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">12</span>
+</div>
+</div>
+<div class="mt-4 pt-3 flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Tasa etapa</span>
+<span class="font-semibold text-primary font-label-code">3.5%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 3.5%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-outline">60% de Paso 2</span>
+</div>
+</div>
+<!-- Stage 4: Compartieron -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low transition-all relative overflow-hidden group hover:bg-surface-container">
+<div class="flex items-center justify-between mb-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">share</span>
+</div>
+<span class="font-label-code text-label-code font-bold text-on-surface-variant">Paso 4</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Compartieron</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">1</span>
+</div>
+</div>
+<div class="mt-4 pt-3 flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Tasa etapa</span>
+<span class="font-semibold text-primary font-label-code">0.3%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full rounded-full" style="width: 1%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-error bg-error-container/20 px-1 py-0.5 rounded self-start">-91.6% vs email</span>
+</div>
+</div>
+<!-- Stage 5: Unlock clicks -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low transition-all relative overflow-hidden group hover:bg-surface-container">
+<div class="flex items-center justify-between mb-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">lock_open</span>
+</div>
+<span class="font-label-code text-label-code font-bold text-on-surface-variant">Paso 5</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Unlock clicks</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">19</span>
+</div>
+</div>
+<div class="mt-4 pt-3 flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Tasa etapa</span>
+<span class="font-semibold text-tertiary font-label-code">5.6%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-tertiary-container h-full rounded-full" style="width: 5.6%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary bg-emerald-50 px-1 py-0.5 rounded self-start font-medium">Re-engagement</span>
+</div>
+</div>
+<!-- Stage 6: Compraron -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low transition-all relative overflow-hidden group hover:bg-surface-container">
+<div class="flex items-center justify-between mb-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container text-outline flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">credit_card</span>
+</div>
+<span class="font-label-code text-label-code font-bold text-on-surface-variant">Paso 6</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Compraron</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">0</span>
+</div>
+</div>
+<div class="mt-4 pt-3 flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Tasa etapa</span>
+<span class="font-semibold text-outline font-label-code">0.0%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-outline h-full rounded-full" style="width: 0%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-outline">0 conversiones</span>
+</div>
+</div>
+</div>
+<!-- HORIZONTAL COMPARATIVE PROGRESS BAR OF THE FUNNEL -->
+<div class="p-space-md bg-surface-container-low rounded-xl flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+          Flujo de conversión consolidado (% sobre visitantes de entrada)
+        </span>
+<span class="font-label-code text-label-code text-on-surface-variant">Base 339 = 100%</span>
+</div>
+<div class="relative w-full h-7 bg-surface-container rounded-lg overflow-hidden flex">
+<div class="h-full bg-primary flex items-center justify-center text-on-primary font-label-sm text-label-sm font-semibold transition-all" style="width: 100%;" title="Visitas: 339 (100%)">
+          Visitas 339 (100%)
+        </div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+<span>URL: <strong>20</strong> (5.9%)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<span>Email: <strong>12</strong> (3.5%)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary-container"></span>
+<span>Share: <strong>1</strong> (0.3%)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
+<span>Unlock: <strong>19</strong> (5.6%)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-outline"></span>
+<span>Compras: <strong>0</strong> (0.0%)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- SECTION: COMPARATIVA 'META VS TOTAL CLEEXS' + ORIGINAL REFERENCE POPUP -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-space-lg items-start">
+<!-- Table: Meta vs Total Cleexs (2 cols on XL) -->
+<div class="xl:col-span-2 p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs">
+<div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">compare_arrows</span>
+<h3 class="font-headline-md text-headline-md text-on-surface tracking-tight">Meta vs Total Cleexs</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+            Desglose de cuota y participación de la pauta publicitaria Meta frente al tráfico global del workspace.
+          </p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-colors" title="Descargar CSV">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-colors" title="Filtrar por UTM">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Modern Telemetry Table -->
+<div class="overflow-x-auto rounded-xl bg-surface-container-lowest">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="py-3 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Etapa</th>
+<th class="py-3 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Meta</th>
+<th class="py-3 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Total Cleexs</th>
+<th class="py-3 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">% Participación Meta</th>
+<th class="py-3 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Status / Benchmark</th>
+</tr>
+</thead>
+<tbody class="divide-y-0">
+<!-- Row 1: Visitas -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-[18px]">visibility</span>
+<span class="font-headline-sm text-body-md text-on-surface">Visitas</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code font-bold text-on-surface">339</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code text-on-surface-variant">591</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 57.4%;"></div>
+</div>
+<span class="font-label-code text-label-code font-bold text-primary">57.4%</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-tertiary font-semibold">
+                  Canal Mayoritario
+                </span>
+</td>
+</tr>
+<!-- Row 2: URL enviada -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-[18px]">link</span>
+<span class="font-headline-sm text-body-md text-on-surface">URL enviada</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code font-bold text-on-surface">20</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code text-on-surface-variant">63</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 31.7%;"></div>
+</div>
+<span class="font-label-code text-label-code font-semibold text-on-surface">31.7%</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Estable</span>
+</td>
+</tr>
+<!-- Row 3: Email -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">mail</span>
+<span class="font-headline-sm text-body-md text-on-surface">Email</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code font-bold text-on-surface">12</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code text-on-surface-variant">41</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 29.3%;"></div>
+</div>
+<span class="font-label-code text-label-code font-semibold text-on-surface">29.3%</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Lead Capture</span>
+</td>
+</tr>
+<!-- Row 4: Share -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-secondary-container text-[18px]">share</span>
+<span class="font-headline-sm text-body-md text-on-surface">Share</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code font-bold text-on-surface">1</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code text-on-surface-variant">7</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full rounded-full" style="width: 14.3%;"></div>
+</div>
+<span class="font-label-code text-label-code font-semibold text-on-surface">14.3%</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<span class="font-label-sm text-label-sm text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Baja viralidad</span>
+</td>
+</tr>
+<!-- Row 5: Unlock -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-tertiary text-[18px]">lock_open</span>
+<span class="font-headline-sm text-body-md text-on-surface">Unlock</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code font-bold text-on-surface">19</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code text-on-surface-variant">66</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-tertiary-container h-full rounded-full" style="width: 28.8%;"></div>
+</div>
+<span class="font-label-code text-label-code font-semibold text-on-surface">28.8%</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Engagement Alto</span>
+</td>
+</tr>
+<!-- Row 6: Compra -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-outline text-[18px]">shopping_bag</span>
+<span class="font-headline-sm text-body-md text-on-surface">Compra</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code font-bold text-on-surface">0</td>
+<td class="py-3.5 px-4 text-right font-label-code text-label-code text-on-surface-variant">0</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-outline h-full rounded-full" style="width: 0%;"></div>
+</div>
+<span class="font-label-code text-label-code text-outline">—</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<span class="font-label-sm text-label-sm text-outline">Sin registros</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Diagnostic & Source Data Panel (Right column) -->
+<div class="flex flex-col gap-space-md">
+<!-- Source Reference Audit Card -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">verified</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Captura de Origen</span>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary bg-emerald-50 px-2 py-0.5 rounded-full font-medium">Validado</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+          Datos sincronizados directamente desde el reporte de analítica de campaña consolidado.
+        </p>
+<!-- Image of original state reference -->
+<div class="relative rounded-xl overflow-hidden shadow-sm group">
+<img alt="Captura analítica original" class="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBP2crXSB9Kexty57I5qO8Wod_SCgFnr-PDkj8CqRJStWkIhhJHiC_2K0U_DCiZpZriG96HiL5BK2weFsln-mo3xInYmqh6RqU32aMs-MzrQ-k4JS6H1cDPk2qT9DM6e04sr0UKX5R27P2LhzIrpKa-9rPn607vD_hc_5DhJ_rVIU4qpG-DWhJumLDLoLlfagr7azBk7D2XbTJhq1b-CbdEjVIPKcz2Bp9K3ZRRXZ4vaCY3QYpjJNmYu69ypR3LUX9ceL0"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-background/70 via-transparent to-transparent flex items-end p-3">
+<span class="font-label-sm text-label-sm text-surface-bright flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+              Registro original Oct 2026
+            </span>
+</div>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-low flex flex-col gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<div class="flex justify-between">
+<span>Visitas Meta totales:</span>
+<strong class="text-on-surface font-label-code">339 (57.4%)</strong>
+</div>
+<div class="flex justify-between">
+<span>Conversión a Email:</span>
+<strong class="text-on-surface font-label-code">3.5% (12 leads)</strong>
+</div>
+<div class="flex justify-between">
+<span>Compras registradas:</span>
+<strong class="text-on-surface font-label-code">0</strong>
+</div>
+</div>
+</div>
+<!-- Quick Action Recommendation Card -->
+<div class="p-space-lg rounded-xl bg-primary-container text-on-primary shadow-sm flex flex-col justify-between gap-space-sm">
+<div class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-[24px]">lightbulb</span>
+<div>
+<h4 class="font-headline-sm text-headline-sm font-semibold text-on-primary">Recomendación CAPI</h4>
+<p class="font-body-sm text-body-sm text-on-primary-container mt-1">
+              El 94.1% de usuarios drop-off ocurre entre <em>Visitas</em> y <em>URL enviada</em>. Configura el evento de micro-conversión <code>ViewContent_Extended</code> en CAPI para calificar al público antes de la recarga.
+            </p>
+</div>
+</div>
+<button class="mt-2 w-full py-2 px-3 rounded-lg bg-surface-bright text-primary font-headline-sm text-body-sm hover:bg-surface-container transition-colors shadow-sm text-center" type="button">
+          Optimizar Evento de Landing
+        </button>
+</div>
+</div>
+</div>
+</div></main></div></body></html>
