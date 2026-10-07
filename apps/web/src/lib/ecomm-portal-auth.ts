@@ -39,7 +39,7 @@ function sessionSecret(): string {
 
 export function verifyEcommPortalCredentials(usernameInput: string, passwordInput: string): boolean {
   const username = usernameInput.trim();
-  const password = passwordInput;
+  const password = passwordInput.trim();
   if (!username || !password) return false;
 
   const userOk = username.toLowerCase() === expectedUsername().toLowerCase();
