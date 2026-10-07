@@ -1,0 +1,40 @@
+Design the flagship executive dashboard for 'Cleexs · Medición de Visibilidad LLM (Piloto Empliados)' answering Dante's key operational and business questions in a single, high-fidelity command center:
+
+Header / Context banner inside the page:
+- Business understanding pill summary: "Cleexs Intelligence: Empliados · Soluciones: Software de liquidación de sueldos, compliance laboral y gestión de nómina para PyMEs · Audiencia: RRHH & Finanzas · Mercado: Argentina / LatAm (Cono Sur) · Set de Prompts: EMPLIADOS_v1 (18 prompts activos)".
+- Quick filters bar: Segmento (Todos, Nómina PyME, Liquidación Sueldos, Compliance AR), Modelo LLM (Todos: GPT-4o, Claude 3.5, Perplexity, Gemini 1.5 Pro), Período (Última corrida vs 7d previas).
+
+Zone 1: Top Executive KPI Cards (Grid of 4 high-impact metrics):
+1. Cleexs Score (PRIA - Precision Relevance & Intent Authority): '74.2 / 100' with '+6.8 pts vs corrida anterior' badge (trend up), sparkline visual showing progress over last 5 runs, subtext 'Fórmula fija: Presencia ponderada por ranking y coherencia contextual'.
+2. Top 3 % Visibilidad: '61.1%' (+8.4% WoW), radial or progress indicator, with subtext 'Citado entre los primeros 3 resultados recomendados en LLMs'.
+3. Competidores Detectados: '14 marcas activas' (+2 nuevos competidores detectados en última corrida), subtext 'Líderes de mención: Fudo, Bejerman, Rex+ y Nubox'.
+4. Cobertura de Dolor / Intención: '88.9%' (16/18 prompts cubiertos con mención favorable), subtext '2 prompts en zona crítica de oportunidad'.
+
+Zone 2: Core Analytical Split (2 Columns: 7 cols vs 5 cols or balanced grid):
+- Left / Main: "Visibilidad de Marca vs Competidores Clave (Ranking de Menciones Ponderadas)"
+  Interactive comparison view showing Empliados (61.1% SOV ponderado, Score 74.2) vs Bejerman (58.4%), Nubox (42.0%), Rex+ (36.5%), Zetech (21.2%).
+  Include comparison bars with breakdown by LLM model (ChatGPT, Perplexity, Claude).
+  Clear indicator showing where Empliados gana (Liquidación de nómina PyME) vs donde lidera la competencia (Compliance corporativo multicountry).
+- Right: "Centro de Alertas & Detección de Cambios (Última Corrida)"
+  Card feed with status badges:
+  - Alert 1 (Alerta Competidor Nuevo): '⚠️ Nueva aparición: Workana Payroll detectado por primera vez en 3 prompts de Perplexity'.
+  - Alert 2 (Oportunidad / Caída): '🔻 Caída de ranking en "mejor software sueldos argentina cct": Bajó de Top 2 a Top 5 en ChatGPT-4o'.
+  - Alert 3 (Victoria / Subida): '🟢 Ganancia de citación: Empliados recomendado como opción #1 en Claude 3.5 para "liquidación sueldos pymes uocra/comercio"'.
+
+Zone 3: Prompts Activos & Rendimiento Detallado (Version EMPLIADOS_v1):
+- Section header with 'Set de Prompts Activo: EMPLIADOS_v1' badge, 'Versionado el 12 Mar 2025', buttons 'Editar Set', 'Exportar CSV', 'Correr Análisis'.
+- Rich interactive data table with rows representing controlled prompts:
+  Columns:
+  1. Prompt / Intención Medida (e.g. "cuál es el software más fácil para liquidar sueldos pyme en argentina", "alternativas modernas a bejerman para sueldos", "cómo automatizar recibos de sueldo digitales f931", "comparativa software nómina pyme argentina 2025").
+  2. Categoría / Dolor (Liquidación, Migración Bejerman, Compliance AFIP, Automatización).
+  3. Mención Empliados (Badge: 'Top 1 Recomedado', 'Top 2', 'Top 3', 'No citado').
+  4. Modelos que citan (Icons/pills for GPT-4o, Claude, Perplexity, Gemini).
+  5. Top Competidor Citado (e.g. "Bejerman", "Nubox", "Ninguno").
+  6. Sentimiento / Tono ('Favorable', 'Neutral', 'Comparativo').
+  7. Acción recomendada ('Reforzar backlinks técnicos', 'Optimizar FAQs de CCT', 'Dominado').
+
+Bottom Disclaimer Card:
+- Distinctive legal & methodology callout box:
+  "ℹ️ Disclaimer Metodológico Cleexs: Cleexs audita, indexa y mide resultados empíricos objetivos y variaciones posicionales en motores de IA generativa (LLMs). No garantiza uplift comercial directo ni conversiones transaccionales fuera de los modelos analizados."
+
+Polished dark theme with deep container backgrounds, cyan glow lines, high legibility, clean badges and typography in Spanish as requested.

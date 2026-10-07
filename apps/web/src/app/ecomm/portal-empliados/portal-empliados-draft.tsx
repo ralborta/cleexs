@@ -34,7 +34,7 @@ import { agencyCls } from '@/lib/agency-portal-theme';
 import { AgencyDashboardView } from './agency-dashboard-view';
 import { AgencyFunnelView } from './agency-funnel-view';
 import { AgencyReferidosView } from './agency-referidos-view';
-import { AgencySovView } from './agency-sov-view';
+import { AgencyLlmVisibilityView } from './agency-llm-visibility-view';
 import { AgencyContenidoView } from './agency-contenido-view';
 import { AgencyHubLlmView } from './agency-hub-llm-view';
 import { AgencyAuditoriaView } from './agency-auditoria-view';
@@ -107,7 +107,7 @@ const NAV: NavSection[] = [
   {
     title: 'Visibilidad IA',
     links: [
-      { id: 'sov', label: 'AI Share of Voice', icon: Sparkles },
+      { id: 'sov', label: 'Visibilidad LLM', icon: Sparkles },
       { id: 'oportunidades', label: 'Oportunidades', icon: Search },
       { id: 'contenido', label: 'Contenido', icon: FileText },
       { id: 'outside-links', label: 'Outside links', icon: ExternalLink },
@@ -399,7 +399,7 @@ function FunnelView() {
 }
 
 function SovView() {
-  return <AgencySovView />;
+  return <AgencyLlmVisibilityView />;
 }
 
 function OportunidadesView() {

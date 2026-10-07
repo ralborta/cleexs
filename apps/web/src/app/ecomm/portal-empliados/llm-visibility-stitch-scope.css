@@ -1,0 +1,1185 @@
+/* Cleexs LLM Visibility · Stitch Cognitive Velocity (DARK) */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
+.llm-vis{font-family:"Plus Jakarta Sans",system-ui,sans-serif;color:#dfe2f1;background:#070a11;min-height:100%;}
+.llm-vis .material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;vertical-align:middle;}
+.llm-vis .font-mono,.llm-vis .font-label-code,.llm-vis .font-label-mono-sm{font-family:"JetBrains Mono",ui-monospace,monospace;}
+.llm-vis .bg-background{background-color:#0f131d;}
+.llm-vis .text-background{color:#0f131d;}
+.llm-vis .border-background{border-color:#0f131d;}
+.llm-vis .bg-background\/8{background-color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .text-background\/8{color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .border-background\/8{border-color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .bg-background\/12{background-color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .text-background\/12{color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .border-background\/12{border-color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .bg-background\/15{background-color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .text-background\/15{color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .border-background\/15{border-color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .bg-background\/20{background-color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .text-background\/20{color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .border-background\/20{border-color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .bg-background\/30{background-color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .text-background\/30{color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .border-background\/30{border-color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .bg-background\/40{background-color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .text-background\/40{color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .border-background\/40{border-color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .bg-surface{background-color:#0f131d;}
+.llm-vis .text-surface{color:#0f131d;}
+.llm-vis .border-surface{border-color:#0f131d;}
+.llm-vis .bg-surface\/8{background-color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .text-surface\/8{color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .border-surface\/8{border-color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .bg-surface\/12{background-color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .text-surface\/12{color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .border-surface\/12{border-color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .bg-surface\/15{background-color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .text-surface\/15{color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .border-surface\/15{border-color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .bg-surface\/20{background-color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .text-surface\/20{color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .border-surface\/20{border-color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .bg-surface\/30{background-color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .text-surface\/30{color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .border-surface\/30{border-color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .bg-surface\/40{background-color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .text-surface\/40{color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .border-surface\/40{border-color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .bg-surface-dim{background-color:#0f131d;}
+.llm-vis .text-surface-dim{color:#0f131d;}
+.llm-vis .border-surface-dim{border-color:#0f131d;}
+.llm-vis .bg-surface-dim\/8{background-color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .text-surface-dim\/8{color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .border-surface-dim\/8{border-color:color-mix(in srgb,#0f131d 8%, transparent);}
+.llm-vis .bg-surface-dim\/12{background-color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .text-surface-dim\/12{color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .border-surface-dim\/12{border-color:color-mix(in srgb,#0f131d 12%, transparent);}
+.llm-vis .bg-surface-dim\/15{background-color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .text-surface-dim\/15{color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .border-surface-dim\/15{border-color:color-mix(in srgb,#0f131d 15%, transparent);}
+.llm-vis .bg-surface-dim\/20{background-color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .text-surface-dim\/20{color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .border-surface-dim\/20{border-color:color-mix(in srgb,#0f131d 20%, transparent);}
+.llm-vis .bg-surface-dim\/30{background-color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .text-surface-dim\/30{color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .border-surface-dim\/30{border-color:color-mix(in srgb,#0f131d 30%, transparent);}
+.llm-vis .bg-surface-dim\/40{background-color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .text-surface-dim\/40{color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .border-surface-dim\/40{border-color:color-mix(in srgb,#0f131d 40%, transparent);}
+.llm-vis .bg-surface-bright{background-color:#353944;}
+.llm-vis .text-surface-bright{color:#353944;}
+.llm-vis .border-surface-bright{border-color:#353944;}
+.llm-vis .bg-surface-bright\/8{background-color:color-mix(in srgb,#353944 8%, transparent);}
+.llm-vis .text-surface-bright\/8{color:color-mix(in srgb,#353944 8%, transparent);}
+.llm-vis .border-surface-bright\/8{border-color:color-mix(in srgb,#353944 8%, transparent);}
+.llm-vis .bg-surface-bright\/12{background-color:color-mix(in srgb,#353944 12%, transparent);}
+.llm-vis .text-surface-bright\/12{color:color-mix(in srgb,#353944 12%, transparent);}
+.llm-vis .border-surface-bright\/12{border-color:color-mix(in srgb,#353944 12%, transparent);}
+.llm-vis .bg-surface-bright\/15{background-color:color-mix(in srgb,#353944 15%, transparent);}
+.llm-vis .text-surface-bright\/15{color:color-mix(in srgb,#353944 15%, transparent);}
+.llm-vis .border-surface-bright\/15{border-color:color-mix(in srgb,#353944 15%, transparent);}
+.llm-vis .bg-surface-bright\/20{background-color:color-mix(in srgb,#353944 20%, transparent);}
+.llm-vis .text-surface-bright\/20{color:color-mix(in srgb,#353944 20%, transparent);}
+.llm-vis .border-surface-bright\/20{border-color:color-mix(in srgb,#353944 20%, transparent);}
+.llm-vis .bg-surface-bright\/30{background-color:color-mix(in srgb,#353944 30%, transparent);}
+.llm-vis .text-surface-bright\/30{color:color-mix(in srgb,#353944 30%, transparent);}
+.llm-vis .border-surface-bright\/30{border-color:color-mix(in srgb,#353944 30%, transparent);}
+.llm-vis .bg-surface-bright\/40{background-color:color-mix(in srgb,#353944 40%, transparent);}
+.llm-vis .text-surface-bright\/40{color:color-mix(in srgb,#353944 40%, transparent);}
+.llm-vis .border-surface-bright\/40{border-color:color-mix(in srgb,#353944 40%, transparent);}
+.llm-vis .bg-surface-container-lowest{background-color:#0a0e18;}
+.llm-vis .text-surface-container-lowest{color:#0a0e18;}
+.llm-vis .border-surface-container-lowest{border-color:#0a0e18;}
+.llm-vis .bg-surface-container-lowest\/8{background-color:color-mix(in srgb,#0a0e18 8%, transparent);}
+.llm-vis .text-surface-container-lowest\/8{color:color-mix(in srgb,#0a0e18 8%, transparent);}
+.llm-vis .border-surface-container-lowest\/8{border-color:color-mix(in srgb,#0a0e18 8%, transparent);}
+.llm-vis .bg-surface-container-lowest\/12{background-color:color-mix(in srgb,#0a0e18 12%, transparent);}
+.llm-vis .text-surface-container-lowest\/12{color:color-mix(in srgb,#0a0e18 12%, transparent);}
+.llm-vis .border-surface-container-lowest\/12{border-color:color-mix(in srgb,#0a0e18 12%, transparent);}
+.llm-vis .bg-surface-container-lowest\/15{background-color:color-mix(in srgb,#0a0e18 15%, transparent);}
+.llm-vis .text-surface-container-lowest\/15{color:color-mix(in srgb,#0a0e18 15%, transparent);}
+.llm-vis .border-surface-container-lowest\/15{border-color:color-mix(in srgb,#0a0e18 15%, transparent);}
+.llm-vis .bg-surface-container-lowest\/20{background-color:color-mix(in srgb,#0a0e18 20%, transparent);}
+.llm-vis .text-surface-container-lowest\/20{color:color-mix(in srgb,#0a0e18 20%, transparent);}
+.llm-vis .border-surface-container-lowest\/20{border-color:color-mix(in srgb,#0a0e18 20%, transparent);}
+.llm-vis .bg-surface-container-lowest\/30{background-color:color-mix(in srgb,#0a0e18 30%, transparent);}
+.llm-vis .text-surface-container-lowest\/30{color:color-mix(in srgb,#0a0e18 30%, transparent);}
+.llm-vis .border-surface-container-lowest\/30{border-color:color-mix(in srgb,#0a0e18 30%, transparent);}
+.llm-vis .bg-surface-container-lowest\/40{background-color:color-mix(in srgb,#0a0e18 40%, transparent);}
+.llm-vis .text-surface-container-lowest\/40{color:color-mix(in srgb,#0a0e18 40%, transparent);}
+.llm-vis .border-surface-container-lowest\/40{border-color:color-mix(in srgb,#0a0e18 40%, transparent);}
+.llm-vis .bg-surface-container-low{background-color:#171b26;}
+.llm-vis .text-surface-container-low{color:#171b26;}
+.llm-vis .border-surface-container-low{border-color:#171b26;}
+.llm-vis .bg-surface-container-low\/8{background-color:color-mix(in srgb,#171b26 8%, transparent);}
+.llm-vis .text-surface-container-low\/8{color:color-mix(in srgb,#171b26 8%, transparent);}
+.llm-vis .border-surface-container-low\/8{border-color:color-mix(in srgb,#171b26 8%, transparent);}
+.llm-vis .bg-surface-container-low\/12{background-color:color-mix(in srgb,#171b26 12%, transparent);}
+.llm-vis .text-surface-container-low\/12{color:color-mix(in srgb,#171b26 12%, transparent);}
+.llm-vis .border-surface-container-low\/12{border-color:color-mix(in srgb,#171b26 12%, transparent);}
+.llm-vis .bg-surface-container-low\/15{background-color:color-mix(in srgb,#171b26 15%, transparent);}
+.llm-vis .text-surface-container-low\/15{color:color-mix(in srgb,#171b26 15%, transparent);}
+.llm-vis .border-surface-container-low\/15{border-color:color-mix(in srgb,#171b26 15%, transparent);}
+.llm-vis .bg-surface-container-low\/20{background-color:color-mix(in srgb,#171b26 20%, transparent);}
+.llm-vis .text-surface-container-low\/20{color:color-mix(in srgb,#171b26 20%, transparent);}
+.llm-vis .border-surface-container-low\/20{border-color:color-mix(in srgb,#171b26 20%, transparent);}
+.llm-vis .bg-surface-container-low\/30{background-color:color-mix(in srgb,#171b26 30%, transparent);}
+.llm-vis .text-surface-container-low\/30{color:color-mix(in srgb,#171b26 30%, transparent);}
+.llm-vis .border-surface-container-low\/30{border-color:color-mix(in srgb,#171b26 30%, transparent);}
+.llm-vis .bg-surface-container-low\/40{background-color:color-mix(in srgb,#171b26 40%, transparent);}
+.llm-vis .text-surface-container-low\/40{color:color-mix(in srgb,#171b26 40%, transparent);}
+.llm-vis .border-surface-container-low\/40{border-color:color-mix(in srgb,#171b26 40%, transparent);}
+.llm-vis .bg-surface-container{background-color:#1c1f2a;}
+.llm-vis .text-surface-container{color:#1c1f2a;}
+.llm-vis .border-surface-container{border-color:#1c1f2a;}
+.llm-vis .bg-surface-container\/8{background-color:color-mix(in srgb,#1c1f2a 8%, transparent);}
+.llm-vis .text-surface-container\/8{color:color-mix(in srgb,#1c1f2a 8%, transparent);}
+.llm-vis .border-surface-container\/8{border-color:color-mix(in srgb,#1c1f2a 8%, transparent);}
+.llm-vis .bg-surface-container\/12{background-color:color-mix(in srgb,#1c1f2a 12%, transparent);}
+.llm-vis .text-surface-container\/12{color:color-mix(in srgb,#1c1f2a 12%, transparent);}
+.llm-vis .border-surface-container\/12{border-color:color-mix(in srgb,#1c1f2a 12%, transparent);}
+.llm-vis .bg-surface-container\/15{background-color:color-mix(in srgb,#1c1f2a 15%, transparent);}
+.llm-vis .text-surface-container\/15{color:color-mix(in srgb,#1c1f2a 15%, transparent);}
+.llm-vis .border-surface-container\/15{border-color:color-mix(in srgb,#1c1f2a 15%, transparent);}
+.llm-vis .bg-surface-container\/20{background-color:color-mix(in srgb,#1c1f2a 20%, transparent);}
+.llm-vis .text-surface-container\/20{color:color-mix(in srgb,#1c1f2a 20%, transparent);}
+.llm-vis .border-surface-container\/20{border-color:color-mix(in srgb,#1c1f2a 20%, transparent);}
+.llm-vis .bg-surface-container\/30{background-color:color-mix(in srgb,#1c1f2a 30%, transparent);}
+.llm-vis .text-surface-container\/30{color:color-mix(in srgb,#1c1f2a 30%, transparent);}
+.llm-vis .border-surface-container\/30{border-color:color-mix(in srgb,#1c1f2a 30%, transparent);}
+.llm-vis .bg-surface-container\/40{background-color:color-mix(in srgb,#1c1f2a 40%, transparent);}
+.llm-vis .text-surface-container\/40{color:color-mix(in srgb,#1c1f2a 40%, transparent);}
+.llm-vis .border-surface-container\/40{border-color:color-mix(in srgb,#1c1f2a 40%, transparent);}
+.llm-vis .bg-surface-container-high{background-color:#262a35;}
+.llm-vis .text-surface-container-high{color:#262a35;}
+.llm-vis .border-surface-container-high{border-color:#262a35;}
+.llm-vis .bg-surface-container-high\/8{background-color:color-mix(in srgb,#262a35 8%, transparent);}
+.llm-vis .text-surface-container-high\/8{color:color-mix(in srgb,#262a35 8%, transparent);}
+.llm-vis .border-surface-container-high\/8{border-color:color-mix(in srgb,#262a35 8%, transparent);}
+.llm-vis .bg-surface-container-high\/12{background-color:color-mix(in srgb,#262a35 12%, transparent);}
+.llm-vis .text-surface-container-high\/12{color:color-mix(in srgb,#262a35 12%, transparent);}
+.llm-vis .border-surface-container-high\/12{border-color:color-mix(in srgb,#262a35 12%, transparent);}
+.llm-vis .bg-surface-container-high\/15{background-color:color-mix(in srgb,#262a35 15%, transparent);}
+.llm-vis .text-surface-container-high\/15{color:color-mix(in srgb,#262a35 15%, transparent);}
+.llm-vis .border-surface-container-high\/15{border-color:color-mix(in srgb,#262a35 15%, transparent);}
+.llm-vis .bg-surface-container-high\/20{background-color:color-mix(in srgb,#262a35 20%, transparent);}
+.llm-vis .text-surface-container-high\/20{color:color-mix(in srgb,#262a35 20%, transparent);}
+.llm-vis .border-surface-container-high\/20{border-color:color-mix(in srgb,#262a35 20%, transparent);}
+.llm-vis .bg-surface-container-high\/30{background-color:color-mix(in srgb,#262a35 30%, transparent);}
+.llm-vis .text-surface-container-high\/30{color:color-mix(in srgb,#262a35 30%, transparent);}
+.llm-vis .border-surface-container-high\/30{border-color:color-mix(in srgb,#262a35 30%, transparent);}
+.llm-vis .bg-surface-container-high\/40{background-color:color-mix(in srgb,#262a35 40%, transparent);}
+.llm-vis .text-surface-container-high\/40{color:color-mix(in srgb,#262a35 40%, transparent);}
+.llm-vis .border-surface-container-high\/40{border-color:color-mix(in srgb,#262a35 40%, transparent);}
+.llm-vis .bg-surface-container-highest{background-color:#313540;}
+.llm-vis .text-surface-container-highest{color:#313540;}
+.llm-vis .border-surface-container-highest{border-color:#313540;}
+.llm-vis .bg-surface-container-highest\/8{background-color:color-mix(in srgb,#313540 8%, transparent);}
+.llm-vis .text-surface-container-highest\/8{color:color-mix(in srgb,#313540 8%, transparent);}
+.llm-vis .border-surface-container-highest\/8{border-color:color-mix(in srgb,#313540 8%, transparent);}
+.llm-vis .bg-surface-container-highest\/12{background-color:color-mix(in srgb,#313540 12%, transparent);}
+.llm-vis .text-surface-container-highest\/12{color:color-mix(in srgb,#313540 12%, transparent);}
+.llm-vis .border-surface-container-highest\/12{border-color:color-mix(in srgb,#313540 12%, transparent);}
+.llm-vis .bg-surface-container-highest\/15{background-color:color-mix(in srgb,#313540 15%, transparent);}
+.llm-vis .text-surface-container-highest\/15{color:color-mix(in srgb,#313540 15%, transparent);}
+.llm-vis .border-surface-container-highest\/15{border-color:color-mix(in srgb,#313540 15%, transparent);}
+.llm-vis .bg-surface-container-highest\/20{background-color:color-mix(in srgb,#313540 20%, transparent);}
+.llm-vis .text-surface-container-highest\/20{color:color-mix(in srgb,#313540 20%, transparent);}
+.llm-vis .border-surface-container-highest\/20{border-color:color-mix(in srgb,#313540 20%, transparent);}
+.llm-vis .bg-surface-container-highest\/30{background-color:color-mix(in srgb,#313540 30%, transparent);}
+.llm-vis .text-surface-container-highest\/30{color:color-mix(in srgb,#313540 30%, transparent);}
+.llm-vis .border-surface-container-highest\/30{border-color:color-mix(in srgb,#313540 30%, transparent);}
+.llm-vis .bg-surface-container-highest\/40{background-color:color-mix(in srgb,#313540 40%, transparent);}
+.llm-vis .text-surface-container-highest\/40{color:color-mix(in srgb,#313540 40%, transparent);}
+.llm-vis .border-surface-container-highest\/40{border-color:color-mix(in srgb,#313540 40%, transparent);}
+.llm-vis .bg-surface-variant{background-color:#313540;}
+.llm-vis .text-surface-variant{color:#313540;}
+.llm-vis .border-surface-variant{border-color:#313540;}
+.llm-vis .bg-surface-variant\/8{background-color:color-mix(in srgb,#313540 8%, transparent);}
+.llm-vis .text-surface-variant\/8{color:color-mix(in srgb,#313540 8%, transparent);}
+.llm-vis .border-surface-variant\/8{border-color:color-mix(in srgb,#313540 8%, transparent);}
+.llm-vis .bg-surface-variant\/12{background-color:color-mix(in srgb,#313540 12%, transparent);}
+.llm-vis .text-surface-variant\/12{color:color-mix(in srgb,#313540 12%, transparent);}
+.llm-vis .border-surface-variant\/12{border-color:color-mix(in srgb,#313540 12%, transparent);}
+.llm-vis .bg-surface-variant\/15{background-color:color-mix(in srgb,#313540 15%, transparent);}
+.llm-vis .text-surface-variant\/15{color:color-mix(in srgb,#313540 15%, transparent);}
+.llm-vis .border-surface-variant\/15{border-color:color-mix(in srgb,#313540 15%, transparent);}
+.llm-vis .bg-surface-variant\/20{background-color:color-mix(in srgb,#313540 20%, transparent);}
+.llm-vis .text-surface-variant\/20{color:color-mix(in srgb,#313540 20%, transparent);}
+.llm-vis .border-surface-variant\/20{border-color:color-mix(in srgb,#313540 20%, transparent);}
+.llm-vis .bg-surface-variant\/30{background-color:color-mix(in srgb,#313540 30%, transparent);}
+.llm-vis .text-surface-variant\/30{color:color-mix(in srgb,#313540 30%, transparent);}
+.llm-vis .border-surface-variant\/30{border-color:color-mix(in srgb,#313540 30%, transparent);}
+.llm-vis .bg-surface-variant\/40{background-color:color-mix(in srgb,#313540 40%, transparent);}
+.llm-vis .text-surface-variant\/40{color:color-mix(in srgb,#313540 40%, transparent);}
+.llm-vis .border-surface-variant\/40{border-color:color-mix(in srgb,#313540 40%, transparent);}
+.llm-vis .bg-on-surface{background-color:#dfe2f1;}
+.llm-vis .text-on-surface{color:#dfe2f1;}
+.llm-vis .border-on-surface{border-color:#dfe2f1;}
+.llm-vis .bg-on-surface\/8{background-color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .text-on-surface\/8{color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .border-on-surface\/8{border-color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .bg-on-surface\/12{background-color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .text-on-surface\/12{color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .border-on-surface\/12{border-color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .bg-on-surface\/15{background-color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .text-on-surface\/15{color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .border-on-surface\/15{border-color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .bg-on-surface\/20{background-color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .text-on-surface\/20{color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .border-on-surface\/20{border-color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .bg-on-surface\/30{background-color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .text-on-surface\/30{color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .border-on-surface\/30{border-color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .bg-on-surface\/40{background-color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .text-on-surface\/40{color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .border-on-surface\/40{border-color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .bg-on-surface-variant{background-color:#b9cacb;}
+.llm-vis .text-on-surface-variant{color:#b9cacb;}
+.llm-vis .border-on-surface-variant{border-color:#b9cacb;}
+.llm-vis .bg-on-surface-variant\/8{background-color:color-mix(in srgb,#b9cacb 8%, transparent);}
+.llm-vis .text-on-surface-variant\/8{color:color-mix(in srgb,#b9cacb 8%, transparent);}
+.llm-vis .border-on-surface-variant\/8{border-color:color-mix(in srgb,#b9cacb 8%, transparent);}
+.llm-vis .bg-on-surface-variant\/12{background-color:color-mix(in srgb,#b9cacb 12%, transparent);}
+.llm-vis .text-on-surface-variant\/12{color:color-mix(in srgb,#b9cacb 12%, transparent);}
+.llm-vis .border-on-surface-variant\/12{border-color:color-mix(in srgb,#b9cacb 12%, transparent);}
+.llm-vis .bg-on-surface-variant\/15{background-color:color-mix(in srgb,#b9cacb 15%, transparent);}
+.llm-vis .text-on-surface-variant\/15{color:color-mix(in srgb,#b9cacb 15%, transparent);}
+.llm-vis .border-on-surface-variant\/15{border-color:color-mix(in srgb,#b9cacb 15%, transparent);}
+.llm-vis .bg-on-surface-variant\/20{background-color:color-mix(in srgb,#b9cacb 20%, transparent);}
+.llm-vis .text-on-surface-variant\/20{color:color-mix(in srgb,#b9cacb 20%, transparent);}
+.llm-vis .border-on-surface-variant\/20{border-color:color-mix(in srgb,#b9cacb 20%, transparent);}
+.llm-vis .bg-on-surface-variant\/30{background-color:color-mix(in srgb,#b9cacb 30%, transparent);}
+.llm-vis .text-on-surface-variant\/30{color:color-mix(in srgb,#b9cacb 30%, transparent);}
+.llm-vis .border-on-surface-variant\/30{border-color:color-mix(in srgb,#b9cacb 30%, transparent);}
+.llm-vis .bg-on-surface-variant\/40{background-color:color-mix(in srgb,#b9cacb 40%, transparent);}
+.llm-vis .text-on-surface-variant\/40{color:color-mix(in srgb,#b9cacb 40%, transparent);}
+.llm-vis .border-on-surface-variant\/40{border-color:color-mix(in srgb,#b9cacb 40%, transparent);}
+.llm-vis .bg-on-background{background-color:#dfe2f1;}
+.llm-vis .text-on-background{color:#dfe2f1;}
+.llm-vis .border-on-background{border-color:#dfe2f1;}
+.llm-vis .bg-on-background\/8{background-color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .text-on-background\/8{color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .border-on-background\/8{border-color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .bg-on-background\/12{background-color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .text-on-background\/12{color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .border-on-background\/12{border-color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .bg-on-background\/15{background-color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .text-on-background\/15{color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .border-on-background\/15{border-color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .bg-on-background\/20{background-color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .text-on-background\/20{color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .border-on-background\/20{border-color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .bg-on-background\/30{background-color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .text-on-background\/30{color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .border-on-background\/30{border-color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .bg-on-background\/40{background-color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .text-on-background\/40{color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .border-on-background\/40{border-color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .bg-outline{background-color:#849495;}
+.llm-vis .text-outline{color:#849495;}
+.llm-vis .border-outline{border-color:#849495;}
+.llm-vis .bg-outline\/8{background-color:color-mix(in srgb,#849495 8%, transparent);}
+.llm-vis .text-outline\/8{color:color-mix(in srgb,#849495 8%, transparent);}
+.llm-vis .border-outline\/8{border-color:color-mix(in srgb,#849495 8%, transparent);}
+.llm-vis .bg-outline\/12{background-color:color-mix(in srgb,#849495 12%, transparent);}
+.llm-vis .text-outline\/12{color:color-mix(in srgb,#849495 12%, transparent);}
+.llm-vis .border-outline\/12{border-color:color-mix(in srgb,#849495 12%, transparent);}
+.llm-vis .bg-outline\/15{background-color:color-mix(in srgb,#849495 15%, transparent);}
+.llm-vis .text-outline\/15{color:color-mix(in srgb,#849495 15%, transparent);}
+.llm-vis .border-outline\/15{border-color:color-mix(in srgb,#849495 15%, transparent);}
+.llm-vis .bg-outline\/20{background-color:color-mix(in srgb,#849495 20%, transparent);}
+.llm-vis .text-outline\/20{color:color-mix(in srgb,#849495 20%, transparent);}
+.llm-vis .border-outline\/20{border-color:color-mix(in srgb,#849495 20%, transparent);}
+.llm-vis .bg-outline\/30{background-color:color-mix(in srgb,#849495 30%, transparent);}
+.llm-vis .text-outline\/30{color:color-mix(in srgb,#849495 30%, transparent);}
+.llm-vis .border-outline\/30{border-color:color-mix(in srgb,#849495 30%, transparent);}
+.llm-vis .bg-outline\/40{background-color:color-mix(in srgb,#849495 40%, transparent);}
+.llm-vis .text-outline\/40{color:color-mix(in srgb,#849495 40%, transparent);}
+.llm-vis .border-outline\/40{border-color:color-mix(in srgb,#849495 40%, transparent);}
+.llm-vis .bg-outline-variant{background-color:#3a494b;}
+.llm-vis .text-outline-variant{color:#3a494b;}
+.llm-vis .border-outline-variant{border-color:#3a494b;}
+.llm-vis .bg-outline-variant\/8{background-color:color-mix(in srgb,#3a494b 8%, transparent);}
+.llm-vis .text-outline-variant\/8{color:color-mix(in srgb,#3a494b 8%, transparent);}
+.llm-vis .border-outline-variant\/8{border-color:color-mix(in srgb,#3a494b 8%, transparent);}
+.llm-vis .bg-outline-variant\/12{background-color:color-mix(in srgb,#3a494b 12%, transparent);}
+.llm-vis .text-outline-variant\/12{color:color-mix(in srgb,#3a494b 12%, transparent);}
+.llm-vis .border-outline-variant\/12{border-color:color-mix(in srgb,#3a494b 12%, transparent);}
+.llm-vis .bg-outline-variant\/15{background-color:color-mix(in srgb,#3a494b 15%, transparent);}
+.llm-vis .text-outline-variant\/15{color:color-mix(in srgb,#3a494b 15%, transparent);}
+.llm-vis .border-outline-variant\/15{border-color:color-mix(in srgb,#3a494b 15%, transparent);}
+.llm-vis .bg-outline-variant\/20{background-color:color-mix(in srgb,#3a494b 20%, transparent);}
+.llm-vis .text-outline-variant\/20{color:color-mix(in srgb,#3a494b 20%, transparent);}
+.llm-vis .border-outline-variant\/20{border-color:color-mix(in srgb,#3a494b 20%, transparent);}
+.llm-vis .bg-outline-variant\/30{background-color:color-mix(in srgb,#3a494b 30%, transparent);}
+.llm-vis .text-outline-variant\/30{color:color-mix(in srgb,#3a494b 30%, transparent);}
+.llm-vis .border-outline-variant\/30{border-color:color-mix(in srgb,#3a494b 30%, transparent);}
+.llm-vis .bg-outline-variant\/40{background-color:color-mix(in srgb,#3a494b 40%, transparent);}
+.llm-vis .text-outline-variant\/40{color:color-mix(in srgb,#3a494b 40%, transparent);}
+.llm-vis .border-outline-variant\/40{border-color:color-mix(in srgb,#3a494b 40%, transparent);}
+.llm-vis .bg-surface-tint{background-color:#00dce6;}
+.llm-vis .text-surface-tint{color:#00dce6;}
+.llm-vis .border-surface-tint{border-color:#00dce6;}
+.llm-vis .bg-surface-tint\/8{background-color:color-mix(in srgb,#00dce6 8%, transparent);}
+.llm-vis .text-surface-tint\/8{color:color-mix(in srgb,#00dce6 8%, transparent);}
+.llm-vis .border-surface-tint\/8{border-color:color-mix(in srgb,#00dce6 8%, transparent);}
+.llm-vis .bg-surface-tint\/12{background-color:color-mix(in srgb,#00dce6 12%, transparent);}
+.llm-vis .text-surface-tint\/12{color:color-mix(in srgb,#00dce6 12%, transparent);}
+.llm-vis .border-surface-tint\/12{border-color:color-mix(in srgb,#00dce6 12%, transparent);}
+.llm-vis .bg-surface-tint\/15{background-color:color-mix(in srgb,#00dce6 15%, transparent);}
+.llm-vis .text-surface-tint\/15{color:color-mix(in srgb,#00dce6 15%, transparent);}
+.llm-vis .border-surface-tint\/15{border-color:color-mix(in srgb,#00dce6 15%, transparent);}
+.llm-vis .bg-surface-tint\/20{background-color:color-mix(in srgb,#00dce6 20%, transparent);}
+.llm-vis .text-surface-tint\/20{color:color-mix(in srgb,#00dce6 20%, transparent);}
+.llm-vis .border-surface-tint\/20{border-color:color-mix(in srgb,#00dce6 20%, transparent);}
+.llm-vis .bg-surface-tint\/30{background-color:color-mix(in srgb,#00dce6 30%, transparent);}
+.llm-vis .text-surface-tint\/30{color:color-mix(in srgb,#00dce6 30%, transparent);}
+.llm-vis .border-surface-tint\/30{border-color:color-mix(in srgb,#00dce6 30%, transparent);}
+.llm-vis .bg-surface-tint\/40{background-color:color-mix(in srgb,#00dce6 40%, transparent);}
+.llm-vis .text-surface-tint\/40{color:color-mix(in srgb,#00dce6 40%, transparent);}
+.llm-vis .border-surface-tint\/40{border-color:color-mix(in srgb,#00dce6 40%, transparent);}
+.llm-vis .bg-primary{background-color:#e0fdff;}
+.llm-vis .text-primary{color:#e0fdff;}
+.llm-vis .border-primary{border-color:#e0fdff;}
+.llm-vis .bg-primary\/8{background-color:color-mix(in srgb,#e0fdff 8%, transparent);}
+.llm-vis .text-primary\/8{color:color-mix(in srgb,#e0fdff 8%, transparent);}
+.llm-vis .border-primary\/8{border-color:color-mix(in srgb,#e0fdff 8%, transparent);}
+.llm-vis .bg-primary\/12{background-color:color-mix(in srgb,#e0fdff 12%, transparent);}
+.llm-vis .text-primary\/12{color:color-mix(in srgb,#e0fdff 12%, transparent);}
+.llm-vis .border-primary\/12{border-color:color-mix(in srgb,#e0fdff 12%, transparent);}
+.llm-vis .bg-primary\/15{background-color:color-mix(in srgb,#e0fdff 15%, transparent);}
+.llm-vis .text-primary\/15{color:color-mix(in srgb,#e0fdff 15%, transparent);}
+.llm-vis .border-primary\/15{border-color:color-mix(in srgb,#e0fdff 15%, transparent);}
+.llm-vis .bg-primary\/20{background-color:color-mix(in srgb,#e0fdff 20%, transparent);}
+.llm-vis .text-primary\/20{color:color-mix(in srgb,#e0fdff 20%, transparent);}
+.llm-vis .border-primary\/20{border-color:color-mix(in srgb,#e0fdff 20%, transparent);}
+.llm-vis .bg-primary\/30{background-color:color-mix(in srgb,#e0fdff 30%, transparent);}
+.llm-vis .text-primary\/30{color:color-mix(in srgb,#e0fdff 30%, transparent);}
+.llm-vis .border-primary\/30{border-color:color-mix(in srgb,#e0fdff 30%, transparent);}
+.llm-vis .bg-primary\/40{background-color:color-mix(in srgb,#e0fdff 40%, transparent);}
+.llm-vis .text-primary\/40{color:color-mix(in srgb,#e0fdff 40%, transparent);}
+.llm-vis .border-primary\/40{border-color:color-mix(in srgb,#e0fdff 40%, transparent);}
+.llm-vis .bg-on-primary{background-color:#00373a;}
+.llm-vis .text-on-primary{color:#00373a;}
+.llm-vis .border-on-primary{border-color:#00373a;}
+.llm-vis .bg-on-primary\/8{background-color:color-mix(in srgb,#00373a 8%, transparent);}
+.llm-vis .text-on-primary\/8{color:color-mix(in srgb,#00373a 8%, transparent);}
+.llm-vis .border-on-primary\/8{border-color:color-mix(in srgb,#00373a 8%, transparent);}
+.llm-vis .bg-on-primary\/12{background-color:color-mix(in srgb,#00373a 12%, transparent);}
+.llm-vis .text-on-primary\/12{color:color-mix(in srgb,#00373a 12%, transparent);}
+.llm-vis .border-on-primary\/12{border-color:color-mix(in srgb,#00373a 12%, transparent);}
+.llm-vis .bg-on-primary\/15{background-color:color-mix(in srgb,#00373a 15%, transparent);}
+.llm-vis .text-on-primary\/15{color:color-mix(in srgb,#00373a 15%, transparent);}
+.llm-vis .border-on-primary\/15{border-color:color-mix(in srgb,#00373a 15%, transparent);}
+.llm-vis .bg-on-primary\/20{background-color:color-mix(in srgb,#00373a 20%, transparent);}
+.llm-vis .text-on-primary\/20{color:color-mix(in srgb,#00373a 20%, transparent);}
+.llm-vis .border-on-primary\/20{border-color:color-mix(in srgb,#00373a 20%, transparent);}
+.llm-vis .bg-on-primary\/30{background-color:color-mix(in srgb,#00373a 30%, transparent);}
+.llm-vis .text-on-primary\/30{color:color-mix(in srgb,#00373a 30%, transparent);}
+.llm-vis .border-on-primary\/30{border-color:color-mix(in srgb,#00373a 30%, transparent);}
+.llm-vis .bg-on-primary\/40{background-color:color-mix(in srgb,#00373a 40%, transparent);}
+.llm-vis .text-on-primary\/40{color:color-mix(in srgb,#00373a 40%, transparent);}
+.llm-vis .border-on-primary\/40{border-color:color-mix(in srgb,#00373a 40%, transparent);}
+.llm-vis .bg-primary-container{background-color:#00f2fe;}
+.llm-vis .text-primary-container{color:#00f2fe;}
+.llm-vis .border-primary-container{border-color:#00f2fe;}
+.llm-vis .bg-primary-container\/8{background-color:color-mix(in srgb,#00f2fe 8%, transparent);}
+.llm-vis .text-primary-container\/8{color:color-mix(in srgb,#00f2fe 8%, transparent);}
+.llm-vis .border-primary-container\/8{border-color:color-mix(in srgb,#00f2fe 8%, transparent);}
+.llm-vis .bg-primary-container\/12{background-color:color-mix(in srgb,#00f2fe 12%, transparent);}
+.llm-vis .text-primary-container\/12{color:color-mix(in srgb,#00f2fe 12%, transparent);}
+.llm-vis .border-primary-container\/12{border-color:color-mix(in srgb,#00f2fe 12%, transparent);}
+.llm-vis .bg-primary-container\/15{background-color:color-mix(in srgb,#00f2fe 15%, transparent);}
+.llm-vis .text-primary-container\/15{color:color-mix(in srgb,#00f2fe 15%, transparent);}
+.llm-vis .border-primary-container\/15{border-color:color-mix(in srgb,#00f2fe 15%, transparent);}
+.llm-vis .bg-primary-container\/20{background-color:color-mix(in srgb,#00f2fe 20%, transparent);}
+.llm-vis .text-primary-container\/20{color:color-mix(in srgb,#00f2fe 20%, transparent);}
+.llm-vis .border-primary-container\/20{border-color:color-mix(in srgb,#00f2fe 20%, transparent);}
+.llm-vis .bg-primary-container\/30{background-color:color-mix(in srgb,#00f2fe 30%, transparent);}
+.llm-vis .text-primary-container\/30{color:color-mix(in srgb,#00f2fe 30%, transparent);}
+.llm-vis .border-primary-container\/30{border-color:color-mix(in srgb,#00f2fe 30%, transparent);}
+.llm-vis .bg-primary-container\/40{background-color:color-mix(in srgb,#00f2fe 40%, transparent);}
+.llm-vis .text-primary-container\/40{color:color-mix(in srgb,#00f2fe 40%, transparent);}
+.llm-vis .border-primary-container\/40{border-color:color-mix(in srgb,#00f2fe 40%, transparent);}
+.llm-vis .bg-on-primary-container{background-color:#006a70;}
+.llm-vis .text-on-primary-container{color:#006a70;}
+.llm-vis .border-on-primary-container{border-color:#006a70;}
+.llm-vis .bg-on-primary-container\/8{background-color:color-mix(in srgb,#006a70 8%, transparent);}
+.llm-vis .text-on-primary-container\/8{color:color-mix(in srgb,#006a70 8%, transparent);}
+.llm-vis .border-on-primary-container\/8{border-color:color-mix(in srgb,#006a70 8%, transparent);}
+.llm-vis .bg-on-primary-container\/12{background-color:color-mix(in srgb,#006a70 12%, transparent);}
+.llm-vis .text-on-primary-container\/12{color:color-mix(in srgb,#006a70 12%, transparent);}
+.llm-vis .border-on-primary-container\/12{border-color:color-mix(in srgb,#006a70 12%, transparent);}
+.llm-vis .bg-on-primary-container\/15{background-color:color-mix(in srgb,#006a70 15%, transparent);}
+.llm-vis .text-on-primary-container\/15{color:color-mix(in srgb,#006a70 15%, transparent);}
+.llm-vis .border-on-primary-container\/15{border-color:color-mix(in srgb,#006a70 15%, transparent);}
+.llm-vis .bg-on-primary-container\/20{background-color:color-mix(in srgb,#006a70 20%, transparent);}
+.llm-vis .text-on-primary-container\/20{color:color-mix(in srgb,#006a70 20%, transparent);}
+.llm-vis .border-on-primary-container\/20{border-color:color-mix(in srgb,#006a70 20%, transparent);}
+.llm-vis .bg-on-primary-container\/30{background-color:color-mix(in srgb,#006a70 30%, transparent);}
+.llm-vis .text-on-primary-container\/30{color:color-mix(in srgb,#006a70 30%, transparent);}
+.llm-vis .border-on-primary-container\/30{border-color:color-mix(in srgb,#006a70 30%, transparent);}
+.llm-vis .bg-on-primary-container\/40{background-color:color-mix(in srgb,#006a70 40%, transparent);}
+.llm-vis .text-on-primary-container\/40{color:color-mix(in srgb,#006a70 40%, transparent);}
+.llm-vis .border-on-primary-container\/40{border-color:color-mix(in srgb,#006a70 40%, transparent);}
+.llm-vis .bg-primary-fixed{background-color:#6ff6ff;}
+.llm-vis .text-primary-fixed{color:#6ff6ff;}
+.llm-vis .border-primary-fixed{border-color:#6ff6ff;}
+.llm-vis .bg-primary-fixed\/8{background-color:color-mix(in srgb,#6ff6ff 8%, transparent);}
+.llm-vis .text-primary-fixed\/8{color:color-mix(in srgb,#6ff6ff 8%, transparent);}
+.llm-vis .border-primary-fixed\/8{border-color:color-mix(in srgb,#6ff6ff 8%, transparent);}
+.llm-vis .bg-primary-fixed\/12{background-color:color-mix(in srgb,#6ff6ff 12%, transparent);}
+.llm-vis .text-primary-fixed\/12{color:color-mix(in srgb,#6ff6ff 12%, transparent);}
+.llm-vis .border-primary-fixed\/12{border-color:color-mix(in srgb,#6ff6ff 12%, transparent);}
+.llm-vis .bg-primary-fixed\/15{background-color:color-mix(in srgb,#6ff6ff 15%, transparent);}
+.llm-vis .text-primary-fixed\/15{color:color-mix(in srgb,#6ff6ff 15%, transparent);}
+.llm-vis .border-primary-fixed\/15{border-color:color-mix(in srgb,#6ff6ff 15%, transparent);}
+.llm-vis .bg-primary-fixed\/20{background-color:color-mix(in srgb,#6ff6ff 20%, transparent);}
+.llm-vis .text-primary-fixed\/20{color:color-mix(in srgb,#6ff6ff 20%, transparent);}
+.llm-vis .border-primary-fixed\/20{border-color:color-mix(in srgb,#6ff6ff 20%, transparent);}
+.llm-vis .bg-primary-fixed\/30{background-color:color-mix(in srgb,#6ff6ff 30%, transparent);}
+.llm-vis .text-primary-fixed\/30{color:color-mix(in srgb,#6ff6ff 30%, transparent);}
+.llm-vis .border-primary-fixed\/30{border-color:color-mix(in srgb,#6ff6ff 30%, transparent);}
+.llm-vis .bg-primary-fixed\/40{background-color:color-mix(in srgb,#6ff6ff 40%, transparent);}
+.llm-vis .text-primary-fixed\/40{color:color-mix(in srgb,#6ff6ff 40%, transparent);}
+.llm-vis .border-primary-fixed\/40{border-color:color-mix(in srgb,#6ff6ff 40%, transparent);}
+.llm-vis .bg-primary-fixed-dim{background-color:#00dce6;}
+.llm-vis .text-primary-fixed-dim{color:#00dce6;}
+.llm-vis .border-primary-fixed-dim{border-color:#00dce6;}
+.llm-vis .bg-primary-fixed-dim\/8{background-color:color-mix(in srgb,#00dce6 8%, transparent);}
+.llm-vis .text-primary-fixed-dim\/8{color:color-mix(in srgb,#00dce6 8%, transparent);}
+.llm-vis .border-primary-fixed-dim\/8{border-color:color-mix(in srgb,#00dce6 8%, transparent);}
+.llm-vis .bg-primary-fixed-dim\/12{background-color:color-mix(in srgb,#00dce6 12%, transparent);}
+.llm-vis .text-primary-fixed-dim\/12{color:color-mix(in srgb,#00dce6 12%, transparent);}
+.llm-vis .border-primary-fixed-dim\/12{border-color:color-mix(in srgb,#00dce6 12%, transparent);}
+.llm-vis .bg-primary-fixed-dim\/15{background-color:color-mix(in srgb,#00dce6 15%, transparent);}
+.llm-vis .text-primary-fixed-dim\/15{color:color-mix(in srgb,#00dce6 15%, transparent);}
+.llm-vis .border-primary-fixed-dim\/15{border-color:color-mix(in srgb,#00dce6 15%, transparent);}
+.llm-vis .bg-primary-fixed-dim\/20{background-color:color-mix(in srgb,#00dce6 20%, transparent);}
+.llm-vis .text-primary-fixed-dim\/20{color:color-mix(in srgb,#00dce6 20%, transparent);}
+.llm-vis .border-primary-fixed-dim\/20{border-color:color-mix(in srgb,#00dce6 20%, transparent);}
+.llm-vis .bg-primary-fixed-dim\/30{background-color:color-mix(in srgb,#00dce6 30%, transparent);}
+.llm-vis .text-primary-fixed-dim\/30{color:color-mix(in srgb,#00dce6 30%, transparent);}
+.llm-vis .border-primary-fixed-dim\/30{border-color:color-mix(in srgb,#00dce6 30%, transparent);}
+.llm-vis .bg-primary-fixed-dim\/40{background-color:color-mix(in srgb,#00dce6 40%, transparent);}
+.llm-vis .text-primary-fixed-dim\/40{color:color-mix(in srgb,#00dce6 40%, transparent);}
+.llm-vis .border-primary-fixed-dim\/40{border-color:color-mix(in srgb,#00dce6 40%, transparent);}
+.llm-vis .bg-inverse-primary{background-color:#00696f;}
+.llm-vis .text-inverse-primary{color:#00696f;}
+.llm-vis .border-inverse-primary{border-color:#00696f;}
+.llm-vis .bg-inverse-primary\/8{background-color:color-mix(in srgb,#00696f 8%, transparent);}
+.llm-vis .text-inverse-primary\/8{color:color-mix(in srgb,#00696f 8%, transparent);}
+.llm-vis .border-inverse-primary\/8{border-color:color-mix(in srgb,#00696f 8%, transparent);}
+.llm-vis .bg-inverse-primary\/12{background-color:color-mix(in srgb,#00696f 12%, transparent);}
+.llm-vis .text-inverse-primary\/12{color:color-mix(in srgb,#00696f 12%, transparent);}
+.llm-vis .border-inverse-primary\/12{border-color:color-mix(in srgb,#00696f 12%, transparent);}
+.llm-vis .bg-inverse-primary\/15{background-color:color-mix(in srgb,#00696f 15%, transparent);}
+.llm-vis .text-inverse-primary\/15{color:color-mix(in srgb,#00696f 15%, transparent);}
+.llm-vis .border-inverse-primary\/15{border-color:color-mix(in srgb,#00696f 15%, transparent);}
+.llm-vis .bg-inverse-primary\/20{background-color:color-mix(in srgb,#00696f 20%, transparent);}
+.llm-vis .text-inverse-primary\/20{color:color-mix(in srgb,#00696f 20%, transparent);}
+.llm-vis .border-inverse-primary\/20{border-color:color-mix(in srgb,#00696f 20%, transparent);}
+.llm-vis .bg-inverse-primary\/30{background-color:color-mix(in srgb,#00696f 30%, transparent);}
+.llm-vis .text-inverse-primary\/30{color:color-mix(in srgb,#00696f 30%, transparent);}
+.llm-vis .border-inverse-primary\/30{border-color:color-mix(in srgb,#00696f 30%, transparent);}
+.llm-vis .bg-inverse-primary\/40{background-color:color-mix(in srgb,#00696f 40%, transparent);}
+.llm-vis .text-inverse-primary\/40{color:color-mix(in srgb,#00696f 40%, transparent);}
+.llm-vis .border-inverse-primary\/40{border-color:color-mix(in srgb,#00696f 40%, transparent);}
+.llm-vis .bg-secondary{background-color:#d0bcff;}
+.llm-vis .text-secondary{color:#d0bcff;}
+.llm-vis .border-secondary{border-color:#d0bcff;}
+.llm-vis .bg-secondary\/8{background-color:color-mix(in srgb,#d0bcff 8%, transparent);}
+.llm-vis .text-secondary\/8{color:color-mix(in srgb,#d0bcff 8%, transparent);}
+.llm-vis .border-secondary\/8{border-color:color-mix(in srgb,#d0bcff 8%, transparent);}
+.llm-vis .bg-secondary\/12{background-color:color-mix(in srgb,#d0bcff 12%, transparent);}
+.llm-vis .text-secondary\/12{color:color-mix(in srgb,#d0bcff 12%, transparent);}
+.llm-vis .border-secondary\/12{border-color:color-mix(in srgb,#d0bcff 12%, transparent);}
+.llm-vis .bg-secondary\/15{background-color:color-mix(in srgb,#d0bcff 15%, transparent);}
+.llm-vis .text-secondary\/15{color:color-mix(in srgb,#d0bcff 15%, transparent);}
+.llm-vis .border-secondary\/15{border-color:color-mix(in srgb,#d0bcff 15%, transparent);}
+.llm-vis .bg-secondary\/20{background-color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.llm-vis .text-secondary\/20{color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.llm-vis .border-secondary\/20{border-color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.llm-vis .bg-secondary\/30{background-color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.llm-vis .text-secondary\/30{color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.llm-vis .border-secondary\/30{border-color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.llm-vis .bg-secondary\/40{background-color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.llm-vis .text-secondary\/40{color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.llm-vis .border-secondary\/40{border-color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.llm-vis .bg-on-secondary{background-color:#3c0091;}
+.llm-vis .text-on-secondary{color:#3c0091;}
+.llm-vis .border-on-secondary{border-color:#3c0091;}
+.llm-vis .bg-on-secondary\/8{background-color:color-mix(in srgb,#3c0091 8%, transparent);}
+.llm-vis .text-on-secondary\/8{color:color-mix(in srgb,#3c0091 8%, transparent);}
+.llm-vis .border-on-secondary\/8{border-color:color-mix(in srgb,#3c0091 8%, transparent);}
+.llm-vis .bg-on-secondary\/12{background-color:color-mix(in srgb,#3c0091 12%, transparent);}
+.llm-vis .text-on-secondary\/12{color:color-mix(in srgb,#3c0091 12%, transparent);}
+.llm-vis .border-on-secondary\/12{border-color:color-mix(in srgb,#3c0091 12%, transparent);}
+.llm-vis .bg-on-secondary\/15{background-color:color-mix(in srgb,#3c0091 15%, transparent);}
+.llm-vis .text-on-secondary\/15{color:color-mix(in srgb,#3c0091 15%, transparent);}
+.llm-vis .border-on-secondary\/15{border-color:color-mix(in srgb,#3c0091 15%, transparent);}
+.llm-vis .bg-on-secondary\/20{background-color:color-mix(in srgb,#3c0091 20%, transparent);}
+.llm-vis .text-on-secondary\/20{color:color-mix(in srgb,#3c0091 20%, transparent);}
+.llm-vis .border-on-secondary\/20{border-color:color-mix(in srgb,#3c0091 20%, transparent);}
+.llm-vis .bg-on-secondary\/30{background-color:color-mix(in srgb,#3c0091 30%, transparent);}
+.llm-vis .text-on-secondary\/30{color:color-mix(in srgb,#3c0091 30%, transparent);}
+.llm-vis .border-on-secondary\/30{border-color:color-mix(in srgb,#3c0091 30%, transparent);}
+.llm-vis .bg-on-secondary\/40{background-color:color-mix(in srgb,#3c0091 40%, transparent);}
+.llm-vis .text-on-secondary\/40{color:color-mix(in srgb,#3c0091 40%, transparent);}
+.llm-vis .border-on-secondary\/40{border-color:color-mix(in srgb,#3c0091 40%, transparent);}
+.llm-vis .bg-secondary-container{background-color:#571bc1;}
+.llm-vis .text-secondary-container{color:#571bc1;}
+.llm-vis .border-secondary-container{border-color:#571bc1;}
+.llm-vis .bg-secondary-container\/8{background-color:color-mix(in srgb,#571bc1 8%, transparent);}
+.llm-vis .text-secondary-container\/8{color:color-mix(in srgb,#571bc1 8%, transparent);}
+.llm-vis .border-secondary-container\/8{border-color:color-mix(in srgb,#571bc1 8%, transparent);}
+.llm-vis .bg-secondary-container\/12{background-color:color-mix(in srgb,#571bc1 12%, transparent);}
+.llm-vis .text-secondary-container\/12{color:color-mix(in srgb,#571bc1 12%, transparent);}
+.llm-vis .border-secondary-container\/12{border-color:color-mix(in srgb,#571bc1 12%, transparent);}
+.llm-vis .bg-secondary-container\/15{background-color:color-mix(in srgb,#571bc1 15%, transparent);}
+.llm-vis .text-secondary-container\/15{color:color-mix(in srgb,#571bc1 15%, transparent);}
+.llm-vis .border-secondary-container\/15{border-color:color-mix(in srgb,#571bc1 15%, transparent);}
+.llm-vis .bg-secondary-container\/20{background-color:color-mix(in srgb,#571bc1 20%, transparent);}
+.llm-vis .text-secondary-container\/20{color:color-mix(in srgb,#571bc1 20%, transparent);}
+.llm-vis .border-secondary-container\/20{border-color:color-mix(in srgb,#571bc1 20%, transparent);}
+.llm-vis .bg-secondary-container\/30{background-color:color-mix(in srgb,#571bc1 30%, transparent);}
+.llm-vis .text-secondary-container\/30{color:color-mix(in srgb,#571bc1 30%, transparent);}
+.llm-vis .border-secondary-container\/30{border-color:color-mix(in srgb,#571bc1 30%, transparent);}
+.llm-vis .bg-secondary-container\/40{background-color:color-mix(in srgb,#571bc1 40%, transparent);}
+.llm-vis .text-secondary-container\/40{color:color-mix(in srgb,#571bc1 40%, transparent);}
+.llm-vis .border-secondary-container\/40{border-color:color-mix(in srgb,#571bc1 40%, transparent);}
+.llm-vis .bg-on-secondary-container{background-color:#c4abff;}
+.llm-vis .text-on-secondary-container{color:#c4abff;}
+.llm-vis .border-on-secondary-container{border-color:#c4abff;}
+.llm-vis .bg-on-secondary-container\/8{background-color:color-mix(in srgb,#c4abff 8%, transparent);}
+.llm-vis .text-on-secondary-container\/8{color:color-mix(in srgb,#c4abff 8%, transparent);}
+.llm-vis .border-on-secondary-container\/8{border-color:color-mix(in srgb,#c4abff 8%, transparent);}
+.llm-vis .bg-on-secondary-container\/12{background-color:color-mix(in srgb,#c4abff 12%, transparent);}
+.llm-vis .text-on-secondary-container\/12{color:color-mix(in srgb,#c4abff 12%, transparent);}
+.llm-vis .border-on-secondary-container\/12{border-color:color-mix(in srgb,#c4abff 12%, transparent);}
+.llm-vis .bg-on-secondary-container\/15{background-color:color-mix(in srgb,#c4abff 15%, transparent);}
+.llm-vis .text-on-secondary-container\/15{color:color-mix(in srgb,#c4abff 15%, transparent);}
+.llm-vis .border-on-secondary-container\/15{border-color:color-mix(in srgb,#c4abff 15%, transparent);}
+.llm-vis .bg-on-secondary-container\/20{background-color:color-mix(in srgb,#c4abff 20%, transparent);}
+.llm-vis .text-on-secondary-container\/20{color:color-mix(in srgb,#c4abff 20%, transparent);}
+.llm-vis .border-on-secondary-container\/20{border-color:color-mix(in srgb,#c4abff 20%, transparent);}
+.llm-vis .bg-on-secondary-container\/30{background-color:color-mix(in srgb,#c4abff 30%, transparent);}
+.llm-vis .text-on-secondary-container\/30{color:color-mix(in srgb,#c4abff 30%, transparent);}
+.llm-vis .border-on-secondary-container\/30{border-color:color-mix(in srgb,#c4abff 30%, transparent);}
+.llm-vis .bg-on-secondary-container\/40{background-color:color-mix(in srgb,#c4abff 40%, transparent);}
+.llm-vis .text-on-secondary-container\/40{color:color-mix(in srgb,#c4abff 40%, transparent);}
+.llm-vis .border-on-secondary-container\/40{border-color:color-mix(in srgb,#c4abff 40%, transparent);}
+.llm-vis .bg-secondary-fixed{background-color:#e9ddff;}
+.llm-vis .text-secondary-fixed{color:#e9ddff;}
+.llm-vis .border-secondary-fixed{border-color:#e9ddff;}
+.llm-vis .bg-secondary-fixed\/8{background-color:color-mix(in srgb,#e9ddff 8%, transparent);}
+.llm-vis .text-secondary-fixed\/8{color:color-mix(in srgb,#e9ddff 8%, transparent);}
+.llm-vis .border-secondary-fixed\/8{border-color:color-mix(in srgb,#e9ddff 8%, transparent);}
+.llm-vis .bg-secondary-fixed\/12{background-color:color-mix(in srgb,#e9ddff 12%, transparent);}
+.llm-vis .text-secondary-fixed\/12{color:color-mix(in srgb,#e9ddff 12%, transparent);}
+.llm-vis .border-secondary-fixed\/12{border-color:color-mix(in srgb,#e9ddff 12%, transparent);}
+.llm-vis .bg-secondary-fixed\/15{background-color:color-mix(in srgb,#e9ddff 15%, transparent);}
+.llm-vis .text-secondary-fixed\/15{color:color-mix(in srgb,#e9ddff 15%, transparent);}
+.llm-vis .border-secondary-fixed\/15{border-color:color-mix(in srgb,#e9ddff 15%, transparent);}
+.llm-vis .bg-secondary-fixed\/20{background-color:color-mix(in srgb,#e9ddff 20%, transparent);}
+.llm-vis .text-secondary-fixed\/20{color:color-mix(in srgb,#e9ddff 20%, transparent);}
+.llm-vis .border-secondary-fixed\/20{border-color:color-mix(in srgb,#e9ddff 20%, transparent);}
+.llm-vis .bg-secondary-fixed\/30{background-color:color-mix(in srgb,#e9ddff 30%, transparent);}
+.llm-vis .text-secondary-fixed\/30{color:color-mix(in srgb,#e9ddff 30%, transparent);}
+.llm-vis .border-secondary-fixed\/30{border-color:color-mix(in srgb,#e9ddff 30%, transparent);}
+.llm-vis .bg-secondary-fixed\/40{background-color:color-mix(in srgb,#e9ddff 40%, transparent);}
+.llm-vis .text-secondary-fixed\/40{color:color-mix(in srgb,#e9ddff 40%, transparent);}
+.llm-vis .border-secondary-fixed\/40{border-color:color-mix(in srgb,#e9ddff 40%, transparent);}
+.llm-vis .bg-secondary-fixed-dim{background-color:#d0bcff;}
+.llm-vis .text-secondary-fixed-dim{color:#d0bcff;}
+.llm-vis .border-secondary-fixed-dim{border-color:#d0bcff;}
+.llm-vis .bg-secondary-fixed-dim\/8{background-color:color-mix(in srgb,#d0bcff 8%, transparent);}
+.llm-vis .text-secondary-fixed-dim\/8{color:color-mix(in srgb,#d0bcff 8%, transparent);}
+.llm-vis .border-secondary-fixed-dim\/8{border-color:color-mix(in srgb,#d0bcff 8%, transparent);}
+.llm-vis .bg-secondary-fixed-dim\/12{background-color:color-mix(in srgb,#d0bcff 12%, transparent);}
+.llm-vis .text-secondary-fixed-dim\/12{color:color-mix(in srgb,#d0bcff 12%, transparent);}
+.llm-vis .border-secondary-fixed-dim\/12{border-color:color-mix(in srgb,#d0bcff 12%, transparent);}
+.llm-vis .bg-secondary-fixed-dim\/15{background-color:color-mix(in srgb,#d0bcff 15%, transparent);}
+.llm-vis .text-secondary-fixed-dim\/15{color:color-mix(in srgb,#d0bcff 15%, transparent);}
+.llm-vis .border-secondary-fixed-dim\/15{border-color:color-mix(in srgb,#d0bcff 15%, transparent);}
+.llm-vis .bg-secondary-fixed-dim\/20{background-color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.llm-vis .text-secondary-fixed-dim\/20{color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.llm-vis .border-secondary-fixed-dim\/20{border-color:color-mix(in srgb,#d0bcff 20%, transparent);}
+.llm-vis .bg-secondary-fixed-dim\/30{background-color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.llm-vis .text-secondary-fixed-dim\/30{color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.llm-vis .border-secondary-fixed-dim\/30{border-color:color-mix(in srgb,#d0bcff 30%, transparent);}
+.llm-vis .bg-secondary-fixed-dim\/40{background-color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.llm-vis .text-secondary-fixed-dim\/40{color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.llm-vis .border-secondary-fixed-dim\/40{border-color:color-mix(in srgb,#d0bcff 40%, transparent);}
+.llm-vis .bg-tertiary{background-color:#e1ffec;}
+.llm-vis .text-tertiary{color:#e1ffec;}
+.llm-vis .border-tertiary{border-color:#e1ffec;}
+.llm-vis .bg-tertiary\/8{background-color:color-mix(in srgb,#e1ffec 8%, transparent);}
+.llm-vis .text-tertiary\/8{color:color-mix(in srgb,#e1ffec 8%, transparent);}
+.llm-vis .border-tertiary\/8{border-color:color-mix(in srgb,#e1ffec 8%, transparent);}
+.llm-vis .bg-tertiary\/12{background-color:color-mix(in srgb,#e1ffec 12%, transparent);}
+.llm-vis .text-tertiary\/12{color:color-mix(in srgb,#e1ffec 12%, transparent);}
+.llm-vis .border-tertiary\/12{border-color:color-mix(in srgb,#e1ffec 12%, transparent);}
+.llm-vis .bg-tertiary\/15{background-color:color-mix(in srgb,#e1ffec 15%, transparent);}
+.llm-vis .text-tertiary\/15{color:color-mix(in srgb,#e1ffec 15%, transparent);}
+.llm-vis .border-tertiary\/15{border-color:color-mix(in srgb,#e1ffec 15%, transparent);}
+.llm-vis .bg-tertiary\/20{background-color:color-mix(in srgb,#e1ffec 20%, transparent);}
+.llm-vis .text-tertiary\/20{color:color-mix(in srgb,#e1ffec 20%, transparent);}
+.llm-vis .border-tertiary\/20{border-color:color-mix(in srgb,#e1ffec 20%, transparent);}
+.llm-vis .bg-tertiary\/30{background-color:color-mix(in srgb,#e1ffec 30%, transparent);}
+.llm-vis .text-tertiary\/30{color:color-mix(in srgb,#e1ffec 30%, transparent);}
+.llm-vis .border-tertiary\/30{border-color:color-mix(in srgb,#e1ffec 30%, transparent);}
+.llm-vis .bg-tertiary\/40{background-color:color-mix(in srgb,#e1ffec 40%, transparent);}
+.llm-vis .text-tertiary\/40{color:color-mix(in srgb,#e1ffec 40%, transparent);}
+.llm-vis .border-tertiary\/40{border-color:color-mix(in srgb,#e1ffec 40%, transparent);}
+.llm-vis .bg-on-tertiary{background-color:#003824;}
+.llm-vis .text-on-tertiary{color:#003824;}
+.llm-vis .border-on-tertiary{border-color:#003824;}
+.llm-vis .bg-on-tertiary\/8{background-color:color-mix(in srgb,#003824 8%, transparent);}
+.llm-vis .text-on-tertiary\/8{color:color-mix(in srgb,#003824 8%, transparent);}
+.llm-vis .border-on-tertiary\/8{border-color:color-mix(in srgb,#003824 8%, transparent);}
+.llm-vis .bg-on-tertiary\/12{background-color:color-mix(in srgb,#003824 12%, transparent);}
+.llm-vis .text-on-tertiary\/12{color:color-mix(in srgb,#003824 12%, transparent);}
+.llm-vis .border-on-tertiary\/12{border-color:color-mix(in srgb,#003824 12%, transparent);}
+.llm-vis .bg-on-tertiary\/15{background-color:color-mix(in srgb,#003824 15%, transparent);}
+.llm-vis .text-on-tertiary\/15{color:color-mix(in srgb,#003824 15%, transparent);}
+.llm-vis .border-on-tertiary\/15{border-color:color-mix(in srgb,#003824 15%, transparent);}
+.llm-vis .bg-on-tertiary\/20{background-color:color-mix(in srgb,#003824 20%, transparent);}
+.llm-vis .text-on-tertiary\/20{color:color-mix(in srgb,#003824 20%, transparent);}
+.llm-vis .border-on-tertiary\/20{border-color:color-mix(in srgb,#003824 20%, transparent);}
+.llm-vis .bg-on-tertiary\/30{background-color:color-mix(in srgb,#003824 30%, transparent);}
+.llm-vis .text-on-tertiary\/30{color:color-mix(in srgb,#003824 30%, transparent);}
+.llm-vis .border-on-tertiary\/30{border-color:color-mix(in srgb,#003824 30%, transparent);}
+.llm-vis .bg-on-tertiary\/40{background-color:color-mix(in srgb,#003824 40%, transparent);}
+.llm-vis .text-on-tertiary\/40{color:color-mix(in srgb,#003824 40%, transparent);}
+.llm-vis .border-on-tertiary\/40{border-color:color-mix(in srgb,#003824 40%, transparent);}
+.llm-vis .bg-tertiary-container{background-color:#67f4b7;}
+.llm-vis .text-tertiary-container{color:#67f4b7;}
+.llm-vis .border-tertiary-container{border-color:#67f4b7;}
+.llm-vis .bg-tertiary-container\/8{background-color:color-mix(in srgb,#67f4b7 8%, transparent);}
+.llm-vis .text-tertiary-container\/8{color:color-mix(in srgb,#67f4b7 8%, transparent);}
+.llm-vis .border-tertiary-container\/8{border-color:color-mix(in srgb,#67f4b7 8%, transparent);}
+.llm-vis .bg-tertiary-container\/12{background-color:color-mix(in srgb,#67f4b7 12%, transparent);}
+.llm-vis .text-tertiary-container\/12{color:color-mix(in srgb,#67f4b7 12%, transparent);}
+.llm-vis .border-tertiary-container\/12{border-color:color-mix(in srgb,#67f4b7 12%, transparent);}
+.llm-vis .bg-tertiary-container\/15{background-color:color-mix(in srgb,#67f4b7 15%, transparent);}
+.llm-vis .text-tertiary-container\/15{color:color-mix(in srgb,#67f4b7 15%, transparent);}
+.llm-vis .border-tertiary-container\/15{border-color:color-mix(in srgb,#67f4b7 15%, transparent);}
+.llm-vis .bg-tertiary-container\/20{background-color:color-mix(in srgb,#67f4b7 20%, transparent);}
+.llm-vis .text-tertiary-container\/20{color:color-mix(in srgb,#67f4b7 20%, transparent);}
+.llm-vis .border-tertiary-container\/20{border-color:color-mix(in srgb,#67f4b7 20%, transparent);}
+.llm-vis .bg-tertiary-container\/30{background-color:color-mix(in srgb,#67f4b7 30%, transparent);}
+.llm-vis .text-tertiary-container\/30{color:color-mix(in srgb,#67f4b7 30%, transparent);}
+.llm-vis .border-tertiary-container\/30{border-color:color-mix(in srgb,#67f4b7 30%, transparent);}
+.llm-vis .bg-tertiary-container\/40{background-color:color-mix(in srgb,#67f4b7 40%, transparent);}
+.llm-vis .text-tertiary-container\/40{color:color-mix(in srgb,#67f4b7 40%, transparent);}
+.llm-vis .border-tertiary-container\/40{border-color:color-mix(in srgb,#67f4b7 40%, transparent);}
+.llm-vis .bg-on-tertiary-container{background-color:#006e4b;}
+.llm-vis .text-on-tertiary-container{color:#006e4b;}
+.llm-vis .border-on-tertiary-container{border-color:#006e4b;}
+.llm-vis .bg-on-tertiary-container\/8{background-color:color-mix(in srgb,#006e4b 8%, transparent);}
+.llm-vis .text-on-tertiary-container\/8{color:color-mix(in srgb,#006e4b 8%, transparent);}
+.llm-vis .border-on-tertiary-container\/8{border-color:color-mix(in srgb,#006e4b 8%, transparent);}
+.llm-vis .bg-on-tertiary-container\/12{background-color:color-mix(in srgb,#006e4b 12%, transparent);}
+.llm-vis .text-on-tertiary-container\/12{color:color-mix(in srgb,#006e4b 12%, transparent);}
+.llm-vis .border-on-tertiary-container\/12{border-color:color-mix(in srgb,#006e4b 12%, transparent);}
+.llm-vis .bg-on-tertiary-container\/15{background-color:color-mix(in srgb,#006e4b 15%, transparent);}
+.llm-vis .text-on-tertiary-container\/15{color:color-mix(in srgb,#006e4b 15%, transparent);}
+.llm-vis .border-on-tertiary-container\/15{border-color:color-mix(in srgb,#006e4b 15%, transparent);}
+.llm-vis .bg-on-tertiary-container\/20{background-color:color-mix(in srgb,#006e4b 20%, transparent);}
+.llm-vis .text-on-tertiary-container\/20{color:color-mix(in srgb,#006e4b 20%, transparent);}
+.llm-vis .border-on-tertiary-container\/20{border-color:color-mix(in srgb,#006e4b 20%, transparent);}
+.llm-vis .bg-on-tertiary-container\/30{background-color:color-mix(in srgb,#006e4b 30%, transparent);}
+.llm-vis .text-on-tertiary-container\/30{color:color-mix(in srgb,#006e4b 30%, transparent);}
+.llm-vis .border-on-tertiary-container\/30{border-color:color-mix(in srgb,#006e4b 30%, transparent);}
+.llm-vis .bg-on-tertiary-container\/40{background-color:color-mix(in srgb,#006e4b 40%, transparent);}
+.llm-vis .text-on-tertiary-container\/40{color:color-mix(in srgb,#006e4b 40%, transparent);}
+.llm-vis .border-on-tertiary-container\/40{border-color:color-mix(in srgb,#006e4b 40%, transparent);}
+.llm-vis .bg-tertiary-fixed{background-color:#6ffbbe;}
+.llm-vis .text-tertiary-fixed{color:#6ffbbe;}
+.llm-vis .border-tertiary-fixed{border-color:#6ffbbe;}
+.llm-vis .bg-tertiary-fixed\/8{background-color:color-mix(in srgb,#6ffbbe 8%, transparent);}
+.llm-vis .text-tertiary-fixed\/8{color:color-mix(in srgb,#6ffbbe 8%, transparent);}
+.llm-vis .border-tertiary-fixed\/8{border-color:color-mix(in srgb,#6ffbbe 8%, transparent);}
+.llm-vis .bg-tertiary-fixed\/12{background-color:color-mix(in srgb,#6ffbbe 12%, transparent);}
+.llm-vis .text-tertiary-fixed\/12{color:color-mix(in srgb,#6ffbbe 12%, transparent);}
+.llm-vis .border-tertiary-fixed\/12{border-color:color-mix(in srgb,#6ffbbe 12%, transparent);}
+.llm-vis .bg-tertiary-fixed\/15{background-color:color-mix(in srgb,#6ffbbe 15%, transparent);}
+.llm-vis .text-tertiary-fixed\/15{color:color-mix(in srgb,#6ffbbe 15%, transparent);}
+.llm-vis .border-tertiary-fixed\/15{border-color:color-mix(in srgb,#6ffbbe 15%, transparent);}
+.llm-vis .bg-tertiary-fixed\/20{background-color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.llm-vis .text-tertiary-fixed\/20{color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.llm-vis .border-tertiary-fixed\/20{border-color:color-mix(in srgb,#6ffbbe 20%, transparent);}
+.llm-vis .bg-tertiary-fixed\/30{background-color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.llm-vis .text-tertiary-fixed\/30{color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.llm-vis .border-tertiary-fixed\/30{border-color:color-mix(in srgb,#6ffbbe 30%, transparent);}
+.llm-vis .bg-tertiary-fixed\/40{background-color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.llm-vis .text-tertiary-fixed\/40{color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.llm-vis .border-tertiary-fixed\/40{border-color:color-mix(in srgb,#6ffbbe 40%, transparent);}
+.llm-vis .bg-tertiary-fixed-dim{background-color:#4edea3;}
+.llm-vis .text-tertiary-fixed-dim{color:#4edea3;}
+.llm-vis .border-tertiary-fixed-dim{border-color:#4edea3;}
+.llm-vis .bg-tertiary-fixed-dim\/8{background-color:color-mix(in srgb,#4edea3 8%, transparent);}
+.llm-vis .text-tertiary-fixed-dim\/8{color:color-mix(in srgb,#4edea3 8%, transparent);}
+.llm-vis .border-tertiary-fixed-dim\/8{border-color:color-mix(in srgb,#4edea3 8%, transparent);}
+.llm-vis .bg-tertiary-fixed-dim\/12{background-color:color-mix(in srgb,#4edea3 12%, transparent);}
+.llm-vis .text-tertiary-fixed-dim\/12{color:color-mix(in srgb,#4edea3 12%, transparent);}
+.llm-vis .border-tertiary-fixed-dim\/12{border-color:color-mix(in srgb,#4edea3 12%, transparent);}
+.llm-vis .bg-tertiary-fixed-dim\/15{background-color:color-mix(in srgb,#4edea3 15%, transparent);}
+.llm-vis .text-tertiary-fixed-dim\/15{color:color-mix(in srgb,#4edea3 15%, transparent);}
+.llm-vis .border-tertiary-fixed-dim\/15{border-color:color-mix(in srgb,#4edea3 15%, transparent);}
+.llm-vis .bg-tertiary-fixed-dim\/20{background-color:color-mix(in srgb,#4edea3 20%, transparent);}
+.llm-vis .text-tertiary-fixed-dim\/20{color:color-mix(in srgb,#4edea3 20%, transparent);}
+.llm-vis .border-tertiary-fixed-dim\/20{border-color:color-mix(in srgb,#4edea3 20%, transparent);}
+.llm-vis .bg-tertiary-fixed-dim\/30{background-color:color-mix(in srgb,#4edea3 30%, transparent);}
+.llm-vis .text-tertiary-fixed-dim\/30{color:color-mix(in srgb,#4edea3 30%, transparent);}
+.llm-vis .border-tertiary-fixed-dim\/30{border-color:color-mix(in srgb,#4edea3 30%, transparent);}
+.llm-vis .bg-tertiary-fixed-dim\/40{background-color:color-mix(in srgb,#4edea3 40%, transparent);}
+.llm-vis .text-tertiary-fixed-dim\/40{color:color-mix(in srgb,#4edea3 40%, transparent);}
+.llm-vis .border-tertiary-fixed-dim\/40{border-color:color-mix(in srgb,#4edea3 40%, transparent);}
+.llm-vis .bg-error{background-color:#ffb4ab;}
+.llm-vis .text-error{color:#ffb4ab;}
+.llm-vis .border-error{border-color:#ffb4ab;}
+.llm-vis .bg-error\/8{background-color:color-mix(in srgb,#ffb4ab 8%, transparent);}
+.llm-vis .text-error\/8{color:color-mix(in srgb,#ffb4ab 8%, transparent);}
+.llm-vis .border-error\/8{border-color:color-mix(in srgb,#ffb4ab 8%, transparent);}
+.llm-vis .bg-error\/12{background-color:color-mix(in srgb,#ffb4ab 12%, transparent);}
+.llm-vis .text-error\/12{color:color-mix(in srgb,#ffb4ab 12%, transparent);}
+.llm-vis .border-error\/12{border-color:color-mix(in srgb,#ffb4ab 12%, transparent);}
+.llm-vis .bg-error\/15{background-color:color-mix(in srgb,#ffb4ab 15%, transparent);}
+.llm-vis .text-error\/15{color:color-mix(in srgb,#ffb4ab 15%, transparent);}
+.llm-vis .border-error\/15{border-color:color-mix(in srgb,#ffb4ab 15%, transparent);}
+.llm-vis .bg-error\/20{background-color:color-mix(in srgb,#ffb4ab 20%, transparent);}
+.llm-vis .text-error\/20{color:color-mix(in srgb,#ffb4ab 20%, transparent);}
+.llm-vis .border-error\/20{border-color:color-mix(in srgb,#ffb4ab 20%, transparent);}
+.llm-vis .bg-error\/30{background-color:color-mix(in srgb,#ffb4ab 30%, transparent);}
+.llm-vis .text-error\/30{color:color-mix(in srgb,#ffb4ab 30%, transparent);}
+.llm-vis .border-error\/30{border-color:color-mix(in srgb,#ffb4ab 30%, transparent);}
+.llm-vis .bg-error\/40{background-color:color-mix(in srgb,#ffb4ab 40%, transparent);}
+.llm-vis .text-error\/40{color:color-mix(in srgb,#ffb4ab 40%, transparent);}
+.llm-vis .border-error\/40{border-color:color-mix(in srgb,#ffb4ab 40%, transparent);}
+.llm-vis .bg-on-error{background-color:#690005;}
+.llm-vis .text-on-error{color:#690005;}
+.llm-vis .border-on-error{border-color:#690005;}
+.llm-vis .bg-on-error\/8{background-color:color-mix(in srgb,#690005 8%, transparent);}
+.llm-vis .text-on-error\/8{color:color-mix(in srgb,#690005 8%, transparent);}
+.llm-vis .border-on-error\/8{border-color:color-mix(in srgb,#690005 8%, transparent);}
+.llm-vis .bg-on-error\/12{background-color:color-mix(in srgb,#690005 12%, transparent);}
+.llm-vis .text-on-error\/12{color:color-mix(in srgb,#690005 12%, transparent);}
+.llm-vis .border-on-error\/12{border-color:color-mix(in srgb,#690005 12%, transparent);}
+.llm-vis .bg-on-error\/15{background-color:color-mix(in srgb,#690005 15%, transparent);}
+.llm-vis .text-on-error\/15{color:color-mix(in srgb,#690005 15%, transparent);}
+.llm-vis .border-on-error\/15{border-color:color-mix(in srgb,#690005 15%, transparent);}
+.llm-vis .bg-on-error\/20{background-color:color-mix(in srgb,#690005 20%, transparent);}
+.llm-vis .text-on-error\/20{color:color-mix(in srgb,#690005 20%, transparent);}
+.llm-vis .border-on-error\/20{border-color:color-mix(in srgb,#690005 20%, transparent);}
+.llm-vis .bg-on-error\/30{background-color:color-mix(in srgb,#690005 30%, transparent);}
+.llm-vis .text-on-error\/30{color:color-mix(in srgb,#690005 30%, transparent);}
+.llm-vis .border-on-error\/30{border-color:color-mix(in srgb,#690005 30%, transparent);}
+.llm-vis .bg-on-error\/40{background-color:color-mix(in srgb,#690005 40%, transparent);}
+.llm-vis .text-on-error\/40{color:color-mix(in srgb,#690005 40%, transparent);}
+.llm-vis .border-on-error\/40{border-color:color-mix(in srgb,#690005 40%, transparent);}
+.llm-vis .bg-error-container{background-color:#93000a;}
+.llm-vis .text-error-container{color:#93000a;}
+.llm-vis .border-error-container{border-color:#93000a;}
+.llm-vis .bg-error-container\/8{background-color:color-mix(in srgb,#93000a 8%, transparent);}
+.llm-vis .text-error-container\/8{color:color-mix(in srgb,#93000a 8%, transparent);}
+.llm-vis .border-error-container\/8{border-color:color-mix(in srgb,#93000a 8%, transparent);}
+.llm-vis .bg-error-container\/12{background-color:color-mix(in srgb,#93000a 12%, transparent);}
+.llm-vis .text-error-container\/12{color:color-mix(in srgb,#93000a 12%, transparent);}
+.llm-vis .border-error-container\/12{border-color:color-mix(in srgb,#93000a 12%, transparent);}
+.llm-vis .bg-error-container\/15{background-color:color-mix(in srgb,#93000a 15%, transparent);}
+.llm-vis .text-error-container\/15{color:color-mix(in srgb,#93000a 15%, transparent);}
+.llm-vis .border-error-container\/15{border-color:color-mix(in srgb,#93000a 15%, transparent);}
+.llm-vis .bg-error-container\/20{background-color:color-mix(in srgb,#93000a 20%, transparent);}
+.llm-vis .text-error-container\/20{color:color-mix(in srgb,#93000a 20%, transparent);}
+.llm-vis .border-error-container\/20{border-color:color-mix(in srgb,#93000a 20%, transparent);}
+.llm-vis .bg-error-container\/30{background-color:color-mix(in srgb,#93000a 30%, transparent);}
+.llm-vis .text-error-container\/30{color:color-mix(in srgb,#93000a 30%, transparent);}
+.llm-vis .border-error-container\/30{border-color:color-mix(in srgb,#93000a 30%, transparent);}
+.llm-vis .bg-error-container\/40{background-color:color-mix(in srgb,#93000a 40%, transparent);}
+.llm-vis .text-error-container\/40{color:color-mix(in srgb,#93000a 40%, transparent);}
+.llm-vis .border-error-container\/40{border-color:color-mix(in srgb,#93000a 40%, transparent);}
+.llm-vis .bg-on-error-container{background-color:#ffdad6;}
+.llm-vis .text-on-error-container{color:#ffdad6;}
+.llm-vis .border-on-error-container{border-color:#ffdad6;}
+.llm-vis .bg-on-error-container\/8{background-color:color-mix(in srgb,#ffdad6 8%, transparent);}
+.llm-vis .text-on-error-container\/8{color:color-mix(in srgb,#ffdad6 8%, transparent);}
+.llm-vis .border-on-error-container\/8{border-color:color-mix(in srgb,#ffdad6 8%, transparent);}
+.llm-vis .bg-on-error-container\/12{background-color:color-mix(in srgb,#ffdad6 12%, transparent);}
+.llm-vis .text-on-error-container\/12{color:color-mix(in srgb,#ffdad6 12%, transparent);}
+.llm-vis .border-on-error-container\/12{border-color:color-mix(in srgb,#ffdad6 12%, transparent);}
+.llm-vis .bg-on-error-container\/15{background-color:color-mix(in srgb,#ffdad6 15%, transparent);}
+.llm-vis .text-on-error-container\/15{color:color-mix(in srgb,#ffdad6 15%, transparent);}
+.llm-vis .border-on-error-container\/15{border-color:color-mix(in srgb,#ffdad6 15%, transparent);}
+.llm-vis .bg-on-error-container\/20{background-color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.llm-vis .text-on-error-container\/20{color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.llm-vis .border-on-error-container\/20{border-color:color-mix(in srgb,#ffdad6 20%, transparent);}
+.llm-vis .bg-on-error-container\/30{background-color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.llm-vis .text-on-error-container\/30{color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.llm-vis .border-on-error-container\/30{border-color:color-mix(in srgb,#ffdad6 30%, transparent);}
+.llm-vis .bg-on-error-container\/40{background-color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.llm-vis .text-on-error-container\/40{color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.llm-vis .border-on-error-container\/40{border-color:color-mix(in srgb,#ffdad6 40%, transparent);}
+.llm-vis .bg-inverse-surface{background-color:#dfe2f1;}
+.llm-vis .text-inverse-surface{color:#dfe2f1;}
+.llm-vis .border-inverse-surface{border-color:#dfe2f1;}
+.llm-vis .bg-inverse-surface\/8{background-color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .text-inverse-surface\/8{color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .border-inverse-surface\/8{border-color:color-mix(in srgb,#dfe2f1 8%, transparent);}
+.llm-vis .bg-inverse-surface\/12{background-color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .text-inverse-surface\/12{color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .border-inverse-surface\/12{border-color:color-mix(in srgb,#dfe2f1 12%, transparent);}
+.llm-vis .bg-inverse-surface\/15{background-color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .text-inverse-surface\/15{color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .border-inverse-surface\/15{border-color:color-mix(in srgb,#dfe2f1 15%, transparent);}
+.llm-vis .bg-inverse-surface\/20{background-color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .text-inverse-surface\/20{color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .border-inverse-surface\/20{border-color:color-mix(in srgb,#dfe2f1 20%, transparent);}
+.llm-vis .bg-inverse-surface\/30{background-color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .text-inverse-surface\/30{color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .border-inverse-surface\/30{border-color:color-mix(in srgb,#dfe2f1 30%, transparent);}
+.llm-vis .bg-inverse-surface\/40{background-color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .text-inverse-surface\/40{color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .border-inverse-surface\/40{border-color:color-mix(in srgb,#dfe2f1 40%, transparent);}
+.llm-vis .bg-inverse-on-surface{background-color:#2c303b;}
+.llm-vis .text-inverse-on-surface{color:#2c303b;}
+.llm-vis .border-inverse-on-surface{border-color:#2c303b;}
+.llm-vis .bg-inverse-on-surface\/8{background-color:color-mix(in srgb,#2c303b 8%, transparent);}
+.llm-vis .text-inverse-on-surface\/8{color:color-mix(in srgb,#2c303b 8%, transparent);}
+.llm-vis .border-inverse-on-surface\/8{border-color:color-mix(in srgb,#2c303b 8%, transparent);}
+.llm-vis .bg-inverse-on-surface\/12{background-color:color-mix(in srgb,#2c303b 12%, transparent);}
+.llm-vis .text-inverse-on-surface\/12{color:color-mix(in srgb,#2c303b 12%, transparent);}
+.llm-vis .border-inverse-on-surface\/12{border-color:color-mix(in srgb,#2c303b 12%, transparent);}
+.llm-vis .bg-inverse-on-surface\/15{background-color:color-mix(in srgb,#2c303b 15%, transparent);}
+.llm-vis .text-inverse-on-surface\/15{color:color-mix(in srgb,#2c303b 15%, transparent);}
+.llm-vis .border-inverse-on-surface\/15{border-color:color-mix(in srgb,#2c303b 15%, transparent);}
+.llm-vis .bg-inverse-on-surface\/20{background-color:color-mix(in srgb,#2c303b 20%, transparent);}
+.llm-vis .text-inverse-on-surface\/20{color:color-mix(in srgb,#2c303b 20%, transparent);}
+.llm-vis .border-inverse-on-surface\/20{border-color:color-mix(in srgb,#2c303b 20%, transparent);}
+.llm-vis .bg-inverse-on-surface\/30{background-color:color-mix(in srgb,#2c303b 30%, transparent);}
+.llm-vis .text-inverse-on-surface\/30{color:color-mix(in srgb,#2c303b 30%, transparent);}
+.llm-vis .border-inverse-on-surface\/30{border-color:color-mix(in srgb,#2c303b 30%, transparent);}
+.llm-vis .bg-inverse-on-surface\/40{background-color:color-mix(in srgb,#2c303b 40%, transparent);}
+.llm-vis .text-inverse-on-surface\/40{color:color-mix(in srgb,#2c303b 40%, transparent);}
+.llm-vis .border-inverse-on-surface\/40{border-color:color-mix(in srgb,#2c303b 40%, transparent);}
+.llm-vis .bg-frost{background-color:#f9fafb;}
+.llm-vis .text-frost{color:#f9fafb;}
+.llm-vis .border-frost{border-color:#f9fafb;}
+.llm-vis .bg-frost\/8{background-color:color-mix(in srgb,#f9fafb 8%, transparent);}
+.llm-vis .text-frost\/8{color:color-mix(in srgb,#f9fafb 8%, transparent);}
+.llm-vis .border-frost\/8{border-color:color-mix(in srgb,#f9fafb 8%, transparent);}
+.llm-vis .bg-frost\/12{background-color:color-mix(in srgb,#f9fafb 12%, transparent);}
+.llm-vis .text-frost\/12{color:color-mix(in srgb,#f9fafb 12%, transparent);}
+.llm-vis .border-frost\/12{border-color:color-mix(in srgb,#f9fafb 12%, transparent);}
+.llm-vis .bg-frost\/15{background-color:color-mix(in srgb,#f9fafb 15%, transparent);}
+.llm-vis .text-frost\/15{color:color-mix(in srgb,#f9fafb 15%, transparent);}
+.llm-vis .border-frost\/15{border-color:color-mix(in srgb,#f9fafb 15%, transparent);}
+.llm-vis .bg-frost\/20{background-color:color-mix(in srgb,#f9fafb 20%, transparent);}
+.llm-vis .text-frost\/20{color:color-mix(in srgb,#f9fafb 20%, transparent);}
+.llm-vis .border-frost\/20{border-color:color-mix(in srgb,#f9fafb 20%, transparent);}
+.llm-vis .bg-frost\/30{background-color:color-mix(in srgb,#f9fafb 30%, transparent);}
+.llm-vis .text-frost\/30{color:color-mix(in srgb,#f9fafb 30%, transparent);}
+.llm-vis .border-frost\/30{border-color:color-mix(in srgb,#f9fafb 30%, transparent);}
+.llm-vis .bg-frost\/40{background-color:color-mix(in srgb,#f9fafb 40%, transparent);}
+.llm-vis .text-frost\/40{color:color-mix(in srgb,#f9fafb 40%, transparent);}
+.llm-vis .border-frost\/40{border-color:color-mix(in srgb,#f9fafb 40%, transparent);}
+.llm-vis .bg-muted{background-color:#9ca3af;}
+.llm-vis .text-muted{color:#9ca3af;}
+.llm-vis .border-muted{border-color:#9ca3af;}
+.llm-vis .bg-muted\/8{background-color:color-mix(in srgb,#9ca3af 8%, transparent);}
+.llm-vis .text-muted\/8{color:color-mix(in srgb,#9ca3af 8%, transparent);}
+.llm-vis .border-muted\/8{border-color:color-mix(in srgb,#9ca3af 8%, transparent);}
+.llm-vis .bg-muted\/12{background-color:color-mix(in srgb,#9ca3af 12%, transparent);}
+.llm-vis .text-muted\/12{color:color-mix(in srgb,#9ca3af 12%, transparent);}
+.llm-vis .border-muted\/12{border-color:color-mix(in srgb,#9ca3af 12%, transparent);}
+.llm-vis .bg-muted\/15{background-color:color-mix(in srgb,#9ca3af 15%, transparent);}
+.llm-vis .text-muted\/15{color:color-mix(in srgb,#9ca3af 15%, transparent);}
+.llm-vis .border-muted\/15{border-color:color-mix(in srgb,#9ca3af 15%, transparent);}
+.llm-vis .bg-muted\/20{background-color:color-mix(in srgb,#9ca3af 20%, transparent);}
+.llm-vis .text-muted\/20{color:color-mix(in srgb,#9ca3af 20%, transparent);}
+.llm-vis .border-muted\/20{border-color:color-mix(in srgb,#9ca3af 20%, transparent);}
+.llm-vis .bg-muted\/30{background-color:color-mix(in srgb,#9ca3af 30%, transparent);}
+.llm-vis .text-muted\/30{color:color-mix(in srgb,#9ca3af 30%, transparent);}
+.llm-vis .border-muted\/30{border-color:color-mix(in srgb,#9ca3af 30%, transparent);}
+.llm-vis .bg-muted\/40{background-color:color-mix(in srgb,#9ca3af 40%, transparent);}
+.llm-vis .text-muted\/40{color:color-mix(in srgb,#9ca3af 40%, transparent);}
+.llm-vis .border-muted\/40{border-color:color-mix(in srgb,#9ca3af 40%, transparent);}
+.llm-vis .bg-dim{background-color:#6b7280;}
+.llm-vis .text-dim{color:#6b7280;}
+.llm-vis .border-dim{border-color:#6b7280;}
+.llm-vis .bg-dim\/8{background-color:color-mix(in srgb,#6b7280 8%, transparent);}
+.llm-vis .text-dim\/8{color:color-mix(in srgb,#6b7280 8%, transparent);}
+.llm-vis .border-dim\/8{border-color:color-mix(in srgb,#6b7280 8%, transparent);}
+.llm-vis .bg-dim\/12{background-color:color-mix(in srgb,#6b7280 12%, transparent);}
+.llm-vis .text-dim\/12{color:color-mix(in srgb,#6b7280 12%, transparent);}
+.llm-vis .border-dim\/12{border-color:color-mix(in srgb,#6b7280 12%, transparent);}
+.llm-vis .bg-dim\/15{background-color:color-mix(in srgb,#6b7280 15%, transparent);}
+.llm-vis .text-dim\/15{color:color-mix(in srgb,#6b7280 15%, transparent);}
+.llm-vis .border-dim\/15{border-color:color-mix(in srgb,#6b7280 15%, transparent);}
+.llm-vis .bg-dim\/20{background-color:color-mix(in srgb,#6b7280 20%, transparent);}
+.llm-vis .text-dim\/20{color:color-mix(in srgb,#6b7280 20%, transparent);}
+.llm-vis .border-dim\/20{border-color:color-mix(in srgb,#6b7280 20%, transparent);}
+.llm-vis .bg-dim\/30{background-color:color-mix(in srgb,#6b7280 30%, transparent);}
+.llm-vis .text-dim\/30{color:color-mix(in srgb,#6b7280 30%, transparent);}
+.llm-vis .border-dim\/30{border-color:color-mix(in srgb,#6b7280 30%, transparent);}
+.llm-vis .bg-dim\/40{background-color:color-mix(in srgb,#6b7280 40%, transparent);}
+.llm-vis .text-dim\/40{color:color-mix(in srgb,#6b7280 40%, transparent);}
+.llm-vis .border-dim\/40{border-color:color-mix(in srgb,#6b7280 40%, transparent);}
+.llm-vis .bg-cyan{background-color:#00f2fe;}
+.llm-vis .text-cyan{color:#00f2fe;}
+.llm-vis .border-cyan{border-color:#00f2fe;}
+.llm-vis .bg-cyan\/8{background-color:color-mix(in srgb,#00f2fe 8%, transparent);}
+.llm-vis .text-cyan\/8{color:color-mix(in srgb,#00f2fe 8%, transparent);}
+.llm-vis .border-cyan\/8{border-color:color-mix(in srgb,#00f2fe 8%, transparent);}
+.llm-vis .bg-cyan\/12{background-color:color-mix(in srgb,#00f2fe 12%, transparent);}
+.llm-vis .text-cyan\/12{color:color-mix(in srgb,#00f2fe 12%, transparent);}
+.llm-vis .border-cyan\/12{border-color:color-mix(in srgb,#00f2fe 12%, transparent);}
+.llm-vis .bg-cyan\/15{background-color:color-mix(in srgb,#00f2fe 15%, transparent);}
+.llm-vis .text-cyan\/15{color:color-mix(in srgb,#00f2fe 15%, transparent);}
+.llm-vis .border-cyan\/15{border-color:color-mix(in srgb,#00f2fe 15%, transparent);}
+.llm-vis .bg-cyan\/20{background-color:color-mix(in srgb,#00f2fe 20%, transparent);}
+.llm-vis .text-cyan\/20{color:color-mix(in srgb,#00f2fe 20%, transparent);}
+.llm-vis .border-cyan\/20{border-color:color-mix(in srgb,#00f2fe 20%, transparent);}
+.llm-vis .bg-cyan\/30{background-color:color-mix(in srgb,#00f2fe 30%, transparent);}
+.llm-vis .text-cyan\/30{color:color-mix(in srgb,#00f2fe 30%, transparent);}
+.llm-vis .border-cyan\/30{border-color:color-mix(in srgb,#00f2fe 30%, transparent);}
+.llm-vis .bg-cyan\/40{background-color:color-mix(in srgb,#00f2fe 40%, transparent);}
+.llm-vis .text-cyan\/40{color:color-mix(in srgb,#00f2fe 40%, transparent);}
+.llm-vis .border-cyan\/40{border-color:color-mix(in srgb,#00f2fe 40%, transparent);}
+.llm-vis .bg-violet{background-color:#8b5cf6;}
+.llm-vis .text-violet{color:#8b5cf6;}
+.llm-vis .border-violet{border-color:#8b5cf6;}
+.llm-vis .bg-violet\/8{background-color:color-mix(in srgb,#8b5cf6 8%, transparent);}
+.llm-vis .text-violet\/8{color:color-mix(in srgb,#8b5cf6 8%, transparent);}
+.llm-vis .border-violet\/8{border-color:color-mix(in srgb,#8b5cf6 8%, transparent);}
+.llm-vis .bg-violet\/12{background-color:color-mix(in srgb,#8b5cf6 12%, transparent);}
+.llm-vis .text-violet\/12{color:color-mix(in srgb,#8b5cf6 12%, transparent);}
+.llm-vis .border-violet\/12{border-color:color-mix(in srgb,#8b5cf6 12%, transparent);}
+.llm-vis .bg-violet\/15{background-color:color-mix(in srgb,#8b5cf6 15%, transparent);}
+.llm-vis .text-violet\/15{color:color-mix(in srgb,#8b5cf6 15%, transparent);}
+.llm-vis .border-violet\/15{border-color:color-mix(in srgb,#8b5cf6 15%, transparent);}
+.llm-vis .bg-violet\/20{background-color:color-mix(in srgb,#8b5cf6 20%, transparent);}
+.llm-vis .text-violet\/20{color:color-mix(in srgb,#8b5cf6 20%, transparent);}
+.llm-vis .border-violet\/20{border-color:color-mix(in srgb,#8b5cf6 20%, transparent);}
+.llm-vis .bg-violet\/30{background-color:color-mix(in srgb,#8b5cf6 30%, transparent);}
+.llm-vis .text-violet\/30{color:color-mix(in srgb,#8b5cf6 30%, transparent);}
+.llm-vis .border-violet\/30{border-color:color-mix(in srgb,#8b5cf6 30%, transparent);}
+.llm-vis .bg-violet\/40{background-color:color-mix(in srgb,#8b5cf6 40%, transparent);}
+.llm-vis .text-violet\/40{color:color-mix(in srgb,#8b5cf6 40%, transparent);}
+.llm-vis .border-violet\/40{border-color:color-mix(in srgb,#8b5cf6 40%, transparent);}
+.llm-vis .bg-emerald{background-color:#10b981;}
+.llm-vis .text-emerald{color:#10b981;}
+.llm-vis .border-emerald{border-color:#10b981;}
+.llm-vis .bg-emerald\/8{background-color:color-mix(in srgb,#10b981 8%, transparent);}
+.llm-vis .text-emerald\/8{color:color-mix(in srgb,#10b981 8%, transparent);}
+.llm-vis .border-emerald\/8{border-color:color-mix(in srgb,#10b981 8%, transparent);}
+.llm-vis .bg-emerald\/12{background-color:color-mix(in srgb,#10b981 12%, transparent);}
+.llm-vis .text-emerald\/12{color:color-mix(in srgb,#10b981 12%, transparent);}
+.llm-vis .border-emerald\/12{border-color:color-mix(in srgb,#10b981 12%, transparent);}
+.llm-vis .bg-emerald\/15{background-color:color-mix(in srgb,#10b981 15%, transparent);}
+.llm-vis .text-emerald\/15{color:color-mix(in srgb,#10b981 15%, transparent);}
+.llm-vis .border-emerald\/15{border-color:color-mix(in srgb,#10b981 15%, transparent);}
+.llm-vis .bg-emerald\/20{background-color:color-mix(in srgb,#10b981 20%, transparent);}
+.llm-vis .text-emerald\/20{color:color-mix(in srgb,#10b981 20%, transparent);}
+.llm-vis .border-emerald\/20{border-color:color-mix(in srgb,#10b981 20%, transparent);}
+.llm-vis .bg-emerald\/30{background-color:color-mix(in srgb,#10b981 30%, transparent);}
+.llm-vis .text-emerald\/30{color:color-mix(in srgb,#10b981 30%, transparent);}
+.llm-vis .border-emerald\/30{border-color:color-mix(in srgb,#10b981 30%, transparent);}
+.llm-vis .bg-emerald\/40{background-color:color-mix(in srgb,#10b981 40%, transparent);}
+.llm-vis .text-emerald\/40{color:color-mix(in srgb,#10b981 40%, transparent);}
+.llm-vis .border-emerald\/40{border-color:color-mix(in srgb,#10b981 40%, transparent);}
+.llm-vis .bg-amber{background-color:#fbbf24;}
+.llm-vis .text-amber{color:#fbbf24;}
+.llm-vis .border-amber{border-color:#fbbf24;}
+.llm-vis .bg-amber\/8{background-color:color-mix(in srgb,#fbbf24 8%, transparent);}
+.llm-vis .text-amber\/8{color:color-mix(in srgb,#fbbf24 8%, transparent);}
+.llm-vis .border-amber\/8{border-color:color-mix(in srgb,#fbbf24 8%, transparent);}
+.llm-vis .bg-amber\/12{background-color:color-mix(in srgb,#fbbf24 12%, transparent);}
+.llm-vis .text-amber\/12{color:color-mix(in srgb,#fbbf24 12%, transparent);}
+.llm-vis .border-amber\/12{border-color:color-mix(in srgb,#fbbf24 12%, transparent);}
+.llm-vis .bg-amber\/15{background-color:color-mix(in srgb,#fbbf24 15%, transparent);}
+.llm-vis .text-amber\/15{color:color-mix(in srgb,#fbbf24 15%, transparent);}
+.llm-vis .border-amber\/15{border-color:color-mix(in srgb,#fbbf24 15%, transparent);}
+.llm-vis .bg-amber\/20{background-color:color-mix(in srgb,#fbbf24 20%, transparent);}
+.llm-vis .text-amber\/20{color:color-mix(in srgb,#fbbf24 20%, transparent);}
+.llm-vis .border-amber\/20{border-color:color-mix(in srgb,#fbbf24 20%, transparent);}
+.llm-vis .bg-amber\/30{background-color:color-mix(in srgb,#fbbf24 30%, transparent);}
+.llm-vis .text-amber\/30{color:color-mix(in srgb,#fbbf24 30%, transparent);}
+.llm-vis .border-amber\/30{border-color:color-mix(in srgb,#fbbf24 30%, transparent);}
+.llm-vis .bg-amber\/40{background-color:color-mix(in srgb,#fbbf24 40%, transparent);}
+.llm-vis .text-amber\/40{color:color-mix(in srgb,#fbbf24 40%, transparent);}
+.llm-vis .border-amber\/40{border-color:color-mix(in srgb,#fbbf24 40%, transparent);}
+.llm-vis .bg-rose{background-color:#fb7185;}
+.llm-vis .text-rose{color:#fb7185;}
+.llm-vis .border-rose{border-color:#fb7185;}
+.llm-vis .bg-rose\/8{background-color:color-mix(in srgb,#fb7185 8%, transparent);}
+.llm-vis .text-rose\/8{color:color-mix(in srgb,#fb7185 8%, transparent);}
+.llm-vis .border-rose\/8{border-color:color-mix(in srgb,#fb7185 8%, transparent);}
+.llm-vis .bg-rose\/12{background-color:color-mix(in srgb,#fb7185 12%, transparent);}
+.llm-vis .text-rose\/12{color:color-mix(in srgb,#fb7185 12%, transparent);}
+.llm-vis .border-rose\/12{border-color:color-mix(in srgb,#fb7185 12%, transparent);}
+.llm-vis .bg-rose\/15{background-color:color-mix(in srgb,#fb7185 15%, transparent);}
+.llm-vis .text-rose\/15{color:color-mix(in srgb,#fb7185 15%, transparent);}
+.llm-vis .border-rose\/15{border-color:color-mix(in srgb,#fb7185 15%, transparent);}
+.llm-vis .bg-rose\/20{background-color:color-mix(in srgb,#fb7185 20%, transparent);}
+.llm-vis .text-rose\/20{color:color-mix(in srgb,#fb7185 20%, transparent);}
+.llm-vis .border-rose\/20{border-color:color-mix(in srgb,#fb7185 20%, transparent);}
+.llm-vis .bg-rose\/30{background-color:color-mix(in srgb,#fb7185 30%, transparent);}
+.llm-vis .text-rose\/30{color:color-mix(in srgb,#fb7185 30%, transparent);}
+.llm-vis .border-rose\/30{border-color:color-mix(in srgb,#fb7185 30%, transparent);}
+.llm-vis .bg-rose\/40{background-color:color-mix(in srgb,#fb7185 40%, transparent);}
+.llm-vis .text-rose\/40{color:color-mix(in srgb,#fb7185 40%, transparent);}
+.llm-vis .border-rose\/40{border-color:color-mix(in srgb,#fb7185 40%, transparent);}
+.llm-vis .gap-space-xs{gap:0.25rem;}
+.llm-vis .p-space-xs{padding:0.25rem;}
+.llm-vis .px-space-xs{padding-left:0.25rem;padding-right:0.25rem;}
+.llm-vis .py-space-xs{padding-top:0.25rem;padding-bottom:0.25rem;}
+.llm-vis .pt-space-xs{padding-top:0.25rem;}
+.llm-vis .pb-space-xs{padding-bottom:0.25rem;}
+.llm-vis .mt-space-xs{margin-top:0.25rem;}
+.llm-vis .mb-space-xs{margin-bottom:0.25rem;}
+.llm-vis .gap-space-sm{gap:0.5rem;}
+.llm-vis .p-space-sm{padding:0.5rem;}
+.llm-vis .px-space-sm{padding-left:0.5rem;padding-right:0.5rem;}
+.llm-vis .py-space-sm{padding-top:0.5rem;padding-bottom:0.5rem;}
+.llm-vis .pt-space-sm{padding-top:0.5rem;}
+.llm-vis .pb-space-sm{padding-bottom:0.5rem;}
+.llm-vis .mt-space-sm{margin-top:0.5rem;}
+.llm-vis .mb-space-sm{margin-bottom:0.5rem;}
+.llm-vis .gap-space-md{gap:0.75rem;}
+.llm-vis .p-space-md{padding:0.75rem;}
+.llm-vis .px-space-md{padding-left:0.75rem;padding-right:0.75rem;}
+.llm-vis .py-space-md{padding-top:0.75rem;padding-bottom:0.75rem;}
+.llm-vis .pt-space-md{padding-top:0.75rem;}
+.llm-vis .pb-space-md{padding-bottom:0.75rem;}
+.llm-vis .mt-space-md{margin-top:0.75rem;}
+.llm-vis .mb-space-md{margin-bottom:0.75rem;}
+.llm-vis .gap-space-lg{gap:1.25rem;}
+.llm-vis .p-space-lg{padding:1.25rem;}
+.llm-vis .px-space-lg{padding-left:1.25rem;padding-right:1.25rem;}
+.llm-vis .py-space-lg{padding-top:1.25rem;padding-bottom:1.25rem;}
+.llm-vis .pt-space-lg{padding-top:1.25rem;}
+.llm-vis .pb-space-lg{padding-bottom:1.25rem;}
+.llm-vis .mt-space-lg{margin-top:1.25rem;}
+.llm-vis .mb-space-lg{margin-bottom:1.25rem;}
+.llm-vis .gap-space-xl{gap:2rem;}
+.llm-vis .p-space-xl{padding:2rem;}
+.llm-vis .px-space-xl{padding-left:2rem;padding-right:2rem;}
+.llm-vis .py-space-xl{padding-top:2rem;padding-bottom:2rem;}
+.llm-vis .pt-space-xl{padding-top:2rem;}
+.llm-vis .pb-space-xl{padding-bottom:2rem;}
+.llm-vis .mt-space-xl{margin-top:2rem;}
+.llm-vis .mb-space-xl{margin-bottom:2rem;}
+.llm-vis .font-headline-xl{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-headline-xl{font-size:36px;line-height:44px;font-weight:700;}
+.llm-vis .font-headline-lg{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-headline-lg{font-size:24px;line-height:32px;font-weight:600;}
+.llm-vis .font-headline-md{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-headline-md{font-size:18px;line-height:24px;font-weight:600;}
+.llm-vis .font-body-lg{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-body-lg{font-size:16px;line-height:24px;font-weight:400;}
+.llm-vis .font-body-md{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-body-md{font-size:14px;line-height:20px;font-weight:400;}
+.llm-vis .font-body-sm{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-body-sm{font-size:12px;line-height:16px;font-weight:400;}
+.llm-vis .font-label-code{font-family:"JetBrains Mono",ui-monospace,monospace;}
+.llm-vis .text-label-code{font-size:12px;line-height:16px;font-weight:500;}
+.llm-vis .font-label-mono-sm{font-family:"JetBrains Mono",ui-monospace,monospace;}
+.llm-vis .text-label-mono-sm{font-size:11px;line-height:14px;font-weight:400;}
+.llm-vis .font-metric-display{font-family:"Plus Jakarta Sans",system-ui,sans-serif;}
+.llm-vis .text-metric-display{font-size:32px;line-height:36px;font-weight:700;}
+
+.llm-vis .glass{background:rgba(17,24,39,.65);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+.llm-vis .glass-hover:hover{background:rgba(31,41,55,.75);border-color:rgba(0,242,254,.3);}
+.llm-vis .rounded-xl{border-radius:.75rem;}
+.llm-vis .rounded-lg{border-radius:.5rem;}
+.llm-vis .rounded-full{border-radius:9999px;}
+.llm-vis .tracking-tight{letter-spacing:-.02em;}
+.llm-vis .tracking-wider{letter-spacing:.04em;}
+.llm-vis .uppercase{text-transform:uppercase;}
+.llm-vis .font-bold{font-weight:700;}
+.llm-vis .font-semibold{font-weight:600;}
+.llm-vis .tabular-nums{font-variant-numeric:tabular-nums;}
+.llm-vis .flex{display:flex;}
+.llm-vis .inline-flex{display:inline-flex;}
+.llm-vis .grid{display:grid;}
+.llm-vis .flex-col{flex-direction:column;}
+.llm-vis .flex-wrap{flex-wrap:wrap;}
+.llm-vis .items-center{align-items:center;}
+.llm-vis .items-start{align-items:flex-start;}
+.llm-vis .justify-between{justify-content:space-between;}
+.llm-vis .justify-center{justify-content:center;}
+.llm-vis .w-full{width:100%;}
+.llm-vis .h-full{height:100%;}
+.llm-vis .min-w-0{min-width:0;}
+.llm-vis .overflow-hidden{overflow:hidden;}
+.llm-vis .overflow-x-auto{overflow-x:auto;}
+.llm-vis .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.llm-vis .gap-1{gap:.25rem;}
+.llm-vis .gap-1\.5{gap:.375rem;}
+.llm-vis .gap-2{gap:.5rem;}
+.llm-vis .gap-3{gap:.75rem;}
+.llm-vis .gap-4{gap:1rem;}
+.llm-vis .h-1\.5{height:.375rem;}
+.llm-vis .h-2{height:.5rem;}
+.llm-vis .h-2\.5{height:.625rem;}
+.llm-vis .w-2{width:.5rem;}
+.llm-vis .w-2\.5{width:.625rem;}
+.llm-vis .h-8{height:2rem;}
+.llm-vis .w-8{width:2rem;}
+.llm-vis .h-9{height:2.25rem;}
+.llm-vis .px-2{padding-left:.5rem;padding-right:.5rem;}
+.llm-vis .px-2\.5{padding-left:.625rem;padding-right:.625rem;}
+.llm-vis .px-3{padding-left:.75rem;padding-right:.75rem;}
+.llm-vis .px-4{padding-left:1rem;padding-right:1rem;}
+.llm-vis .py-0\.5{padding-top:.125rem;padding-bottom:.125rem;}
+.llm-vis .py-1{padding-top:.25rem;padding-bottom:.25rem;}
+.llm-vis .py-1\.5{padding-top:.375rem;padding-bottom:.375rem;}
+.llm-vis .py-2{padding-top:.5rem;padding-bottom:.5rem;}
+.llm-vis .py-3{padding-top:.75rem;padding-bottom:.75rem;}
+.llm-vis .p-3{padding:.75rem;}
+.llm-vis .p-4{padding:1rem;}
+.llm-vis .mt-0\.5{margin-top:.125rem;}
+.llm-vis .mt-1{margin-top:.25rem;}
+.llm-vis .mt-2{margin-top:.5rem;}
+.llm-vis .mt-3{margin-top:.75rem;}
+.llm-vis .mb-1{margin-bottom:.25rem;}
+.llm-vis .mb-2{margin-bottom:.5rem;}
+.llm-vis .mb-3{margin-bottom:.75rem;}
+.llm-vis .text-right{text-align:right;}
+.llm-vis .text-left{text-align:left;}
+.llm-vis .border-collapse{border-collapse:collapse;}
+.llm-vis .glow-cyan{box-shadow:0 0 16px rgba(0,242,254,.25);}
+.llm-vis .btn-primary{background:#00f2fe;color:#070a11;font-weight:600;border-radius:.5rem;}
+.llm-vis .btn-primary:hover{box-shadow:0 0 16px rgba(0,242,254,.35);}
+.llm-vis .btn-ghost{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);color:#f9fafb;border-radius:.5rem;}
+.llm-vis .btn-ghost:hover{border-color:rgba(0,242,254,.4);background:rgba(255,255,255,.07);}
+.llm-vis .pill-model{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#c4b5fd;border-radius:9999px;font-family:"JetBrains Mono",monospace;font-size:11px;padding:2px 8px;}
+.llm-vis .pill-ok{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#34d399;border-radius:9999px;font-size:11px;padding:2px 8px;font-weight:600;}
+.llm-vis .pill-bad{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:#fb7185;border-radius:9999px;font-size:11px;padding:2px 8px;font-weight:600;}
+.llm-vis .pill-warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fbbf24;border-radius:9999px;font-size:11px;padding:2px 8px;font-weight:600;}
+.llm-vis .pill-teal{background:rgba(0,242,254,.12);border:1px solid rgba(0,242,254,.3);color:#00f2fe;border-radius:9999px;font-size:11px;padding:2px 8px;font-weight:600;}
+.llm-vis button{cursor:pointer;border:0;background:transparent;font:inherit;color:inherit;}
+.llm-vis table{width:100%;}
+.llm-vis .grid-kpi{grid-template-columns:repeat(1,minmax(0,1fr));gap:1rem;}
+.llm-vis .grid-main{grid-template-columns:1fr;gap:1.25rem;}
+.llm-vis .row-hover:hover{background:linear-gradient(90deg,rgba(0,242,254,.04),transparent);}
+@media (min-width:768px){.llm-vis .grid-kpi{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (min-width:1280px){
+  .llm-vis .grid-kpi{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .llm-vis .grid-main{grid-template-columns:1.4fr .9fr;}
+}
+.llm-vis .spark{height:28px;width:100%;}
+.llm-vis .bar-track{background:rgba(255,255,255,.06);border-radius:9999px;overflow:hidden;height:6px;}
+.llm-vis .bar-fill{height:100%;border-radius:9999px;background:#00f2fe;}
+.llm-vis .text-\[11px\]{font-size:11px;}
+.llm-vis .text-\[18px\]{font-size:18px;}
+.llm-vis .text-\[20px\]{font-size:20px;}
+.llm-vis .text-\[22px\]{font-size:22px;}
+.llm-vis .space-y-3>:not([hidden])~:not([hidden]){margin-top:.75rem;}
+.llm-vis .space-y-4>:not([hidden])~:not([hidden]){margin-top:1rem;}
+.llm-vis .space-y-5>:not([hidden])~:not([hidden]){margin-top:1.25rem;}
+
