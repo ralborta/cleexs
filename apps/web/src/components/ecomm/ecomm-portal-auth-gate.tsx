@@ -7,9 +7,15 @@ const PORTAL_TITLE = 'Admin Ecomm';
 
 type Props = {
   children: ReactNode;
+  title?: string;
+  subtitle?: string;
 };
 
-export function EcommPortalAuthGate({ children }: Props) {
+export function EcommPortalAuthGate({
+  children,
+  title = PORTAL_TITLE,
+  subtitle = 'Portal Empliados · acceso demo',
+}: Props) {
   const [booting, setBooting] = useState(true);
   const [authed, setAuthed] = useState(false);
   const [username, setUsername] = useState('Demo');
@@ -81,8 +87,8 @@ export function EcommPortalAuthGate({ children }: Props) {
             <img src="/CleexsLogo.png" alt="Cleexs" className="h-12 w-auto object-contain" />
             <Lock className="mt-3 h-5 w-5 text-slate-400" aria-hidden />
           </div>
-          <h1 className="mt-4 text-center text-lg font-semibold text-slate-900">{PORTAL_TITLE}</h1>
-          <p className="mt-1 text-center text-xs text-slate-500">Portal Empliados · acceso demo</p>
+          <h1 className="mt-4 text-center text-lg font-semibold text-slate-900">{title}</h1>
+          <p className="mt-1 text-center text-xs text-slate-500">{subtitle}</p>
           {error ? (
             <p className="mt-4 rounded-md bg-red-50 p-2 text-center text-sm text-red-700">{error}</p>
           ) : null}
