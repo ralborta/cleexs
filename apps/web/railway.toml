@@ -1,10 +1,10 @@
 # Config Railway solo para @cleexs/web (sin Prisma ni healthcheck de API).
+# Usa el Dockerfile de la raíz del monorepo (mismo que EasyPanel preview).
 
 [build]
-builder = "RAILPACK"
-buildCommand = "mkdir -p apps/web/.next/cache && NEXT_TELEMETRY_DISABLED=1 npm run build --workspace=@cleexs/web && mkdir -p apps/web/.next/standalone/apps/web/.next && cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static && cp -R apps/web/public apps/web/.next/standalone/apps/web/public"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-preDeployCommand = "/bin/true"
-# next bin no queda en PATH del runtime railpack; usar server standalone
-startCommand = "node apps/web/.next/standalone/apps/web/server.js"
+# El CMD del Dockerfile ya arranca: node apps/web/server.js (standalone)
+startCommand = "node apps/web/server.js"
