@@ -2,6 +2,7 @@
 
 [build]
 builder = "RAILPACK"
+buildCommand = "mkdir -p apps/web/.next/cache && NEXT_TELEMETRY_DISABLED=1 npm run build --workspace=@cleexs/web"
 
 [deploy]
 preDeployCommand = "/bin/true"
