@@ -21,7 +21,6 @@ import { AdminAuthExpiredCard, looksLikeAdminAuthError } from '@/components/admi
 import { DiagnosticReportLink, SponsorBreakdownTable } from '@/components/admin/report-ui';
 import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
 import { agencyCls } from '@/lib/agency-portal-theme';
-import { internalReportsApi } from '@/lib/api';
 import {
   addDaysToDayString,
   argentinaDayEndUtc,
@@ -209,11 +208,28 @@ async function countPendingMpInRange(fromDay: string, toDay: string): Promise<nu
     return t >= fromMs && t <= toMs;
   };
 
-  const first = await internalReportsApi.payments({ status: 'pending', pageSize: 100, page: 1 });
-  let items = [...first.items];
-  for (let page = 2; page <= first.pagination.totalPages; page += 1) {
-    const next = await internalReportsApi.payments({ status: 'pending', pageSize: 100, page });
-    items = items.concat(next.items);
+  // Via BFF same-origin: el browser no puede pegarle a la API directa (CORS).
+  const firstRes = await adminUiFetch(
+    `/api/admin-ui/payments?status=pending&pageSize=100&page=1`,
+  );
+  const firstJson = (await firstRes.json().catch(() => ({}))) as {
+    error?: string;
+    items?: Array<{ createdAt: string }>;
+    pagination?: { totalPages?: number };
+  };
+  if (!firstRes.ok) throw new Error(firstJson.error || 'Error al cargar pagos pendientes');
+
+  let items = [...(firstJson.items ?? [])];
+  const totalPages = firstJson.pagination?.totalPages ?? 1;
+  for (let page = 2; page <= totalPages; page += 1) {
+    const nextRes = await adminUiFetch(
+      `/api/admin-ui/payments?status=pending&pageSize=100&page=${page}`,
+    );
+    const nextJson = (await nextRes.json().catch(() => ({}))) as {
+      items?: Array<{ createdAt: string }>;
+    };
+    if (!nextRes.ok) break;
+    items = items.concat(nextJson.items ?? []);
   }
   return items.filter((p) => inRange(p.createdAt)).length;
 }
@@ -243,9 +259,10 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 async function defaultLoadMetrics(args: ConversionLoadArgs): Promise<Metrics> {
   const qs = `?from=${encodeURIComponent(args.from)}&to=${encodeURIComponent(args.to)}&landing=${encodeURIComponent(args.landing)}`;
+  // pending MP es accesorio: si falla, las métricas principales igual se muestran
   const [res, pendingMp] = await Promise.all([
     adminUiFetch(`/api/admin-ui/conversion${qs}`),
-    countPendingMpInRange(args.from, args.to),
+    countPendingMpInRange(args.from, args.to).catch(() => 0),
   ]);
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((json as { error?: string }).error || 'Error al cargar métricas');

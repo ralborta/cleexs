@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { FileText, RefreshCw, Search } from 'lucide-react';
-import { internalReportsApi, type AdminPaymentsReport } from '@/lib/api';
+import { adminUiFetch } from '@/lib/admin-ui-client-fetch';
+import type { AdminPaymentsReport } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,11 +85,21 @@ export default function AdminFacturasPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    internalReportsApi
-      .payments({ status: statusFilter, search, page, pageSize })
-      .then((result) => {
+    const qs = new URLSearchParams({
+      status: statusFilter,
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (search.trim()) qs.set('search', search.trim());
+
+    adminUiFetch(`/api/admin-ui/payments?${qs.toString()}`)
+      .then(async (res) => {
+        const json = (await res.json().catch(() => ({}))) as AdminPaymentsReport & {
+          error?: string;
+        };
         if (cancelled) return;
-        setData(result);
+        if (!res.ok) throw new Error(json.error || 'Error cargando facturas');
+        setData(json);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
