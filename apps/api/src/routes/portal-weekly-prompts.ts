@@ -7,14 +7,14 @@ import { resolvePortalUserFromRequest } from '../lib/portal-user';
 import { syncShadowPromptForSaved } from '../lib/portal-weekly-prompt-sync';
 import { persistSavedPromptExecutionSnapshot } from '../lib/portal-saved-prompt-history';
 import { checkEntitlement, consumeEntitlement } from '../lib/entitlements';
-import { canCreateRun } from '../lib/tenant';
 import {
   analyzePortalCustomPromptResponse,
   buildPortalBrandFreeformContextBlock,
   executeOpenAIRankingPrompt,
 } from '../lib/run-executor';
 
-const MAX_SLOT = 4;
+/** Slots 0..39 → hasta 40 prompts guardados (Agency / portal). */
+const MAX_SLOT = 39;
 
 function buildSavedPromptTitle(promptText: string, fallbackSlot?: number): string {
   const normalized = promptText
@@ -178,11 +178,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       });
       if (!brand) return reply.code(404).send({ error: 'Marca no encontrada.' });
 
-      const canCreate = await canCreateRun(tenantId);
-      if (!canCreate.allowed) {
-        return reply.code(403).send({ error: canCreate.reason || 'No podés ejecutar una consulta ahora.' });
-      }
-
+      // Consulta puntual: no crea Run. Solo chequea entitlement de análisis (no cupo de corridas).
       const genCheck = await checkEntitlement(prisma, {
         actor: { tenantId, userId },
         action: EntitlementAction.score_generate,
@@ -266,10 +262,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(404).send({ error: 'Prompt guardado no encontrado.' });
       }
 
-      const canCreate = await canCreateRun(tenantId);
-      if (!canCreate.allowed) {
-        return reply.code(403).send({ error: canCreate.reason || 'No podés ejecutar una consulta ahora.' });
-      }
+      // Ejecución de prompt guardado: no crea Run. No aplica cupo de corridas mensuales.
 
       const genCheck = await checkEntitlement(prisma, {
         actor: { tenantId, userId },
@@ -361,7 +354,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const slot = Number(request.params.slot);
       if (!Number.isInteger(slot) || slot < 0 || slot > MAX_SLOT) {
-        return reply.code(400).send({ error: 'slot debe ser un entero entre 0 y 4.' });
+        return reply.code(400).send({ error: `slot debe ser un entero entre 0 y ${MAX_SLOT}.` });
       }
 
       const brand = await prisma.brand.findFirst({
@@ -553,7 +546,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const slot = Number(request.params.slot);
       if (!Number.isInteger(slot) || slot < 0 || slot > MAX_SLOT) {
-        return reply.code(400).send({ error: 'slot debe ser un entero entre 0 y 4.' });
+        return reply.code(400).send({ error: `slot debe ser un entero entre 0 y ${MAX_SLOT}.` });
       }
 
       const brand = await prisma.brand.findFirst({

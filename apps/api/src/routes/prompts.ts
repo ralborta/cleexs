@@ -136,6 +136,49 @@ const promptRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.code(201).send(prompt);
   });
 
+  // PATCH /prompts/:id — editar texto/nombre/activo (Agency / admin)
+  const patchPromptSchema = z.object({
+    name: z.string().min(1).max(200).optional().nullable(),
+    promptText: z.string().min(1).optional(),
+    active: z.boolean().optional(),
+    categoryId: z.string().uuid().optional().nullable(),
+  });
+
+  fastify.patch<{ Params: { id: string }; Body: z.infer<typeof patchPromptSchema> }>(
+    '/prompts/:id',
+    async (request, reply) => {
+      const data = patchPromptSchema.parse(request.body ?? {});
+      const existing = await prisma.prompt.findUnique({ where: { id: request.params.id } });
+      if (!existing) return reply.code(404).send({ error: 'Prompt no encontrado' });
+
+      const prompt = await prisma.prompt.update({
+        where: { id: request.params.id },
+        data: {
+          ...(data.name !== undefined ? { name: data.name } : {}),
+          ...(data.promptText !== undefined ? { promptText: data.promptText.trim() } : {}),
+          ...(data.active !== undefined ? { active: data.active } : {}),
+          ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
+        },
+        include: { category: true },
+      });
+
+      return prompt;
+    }
+  );
+
+  // DELETE /prompts/:id — soft-delete (active=false) para no romper historial de corridas
+  fastify.delete<{ Params: { id: string } }>('/prompts/:id', async (request, reply) => {
+    const existing = await prisma.prompt.findUnique({ where: { id: request.params.id } });
+    if (!existing) return reply.code(404).send({ error: 'Prompt no encontrado' });
+
+    const prompt = await prisma.prompt.update({
+      where: { id: request.params.id },
+      data: { active: false },
+    });
+
+    return { ok: true, id: prompt.id, active: prompt.active };
+  });
+
   // GET /prompt-categories?tenantId=...
   fastify.get<{ Querystring: { tenantId: string } }>('/prompt-categories', async (request) => {
     const categories = await prisma.promptCategory.findMany({
