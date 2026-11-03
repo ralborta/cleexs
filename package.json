@@ -21,7 +21,7 @@
     "db:portal-user-brand": "tsx prisma/portal-user-for-brand.ts",
     "db:set-portal-password": "tsx prisma/set-portal-password.ts",
     "portal:env": "tsx prisma/print-portal-env.ts",
-    "deploy:api": "prisma migrate deploy && node apps/api/dist/index.js"
+    "deploy:api": "npx prisma migrate deploy && node apps/api/dist/index.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

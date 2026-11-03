@@ -5,6 +5,7 @@ builder = "RAILPACK"
 
 [deploy]
 preDeployCommand = "/bin/true"
-startCommand = "npm run deploy:api"
+# npx prisma: en runtime Railpack a veces no deja `prisma` en PATH
+startCommand = "npx prisma migrate deploy && node apps/api/dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
