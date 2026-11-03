@@ -5,7 +5,8 @@ builder = "RAILPACK"
 
 [deploy]
 preDeployCommand = "/bin/true"
-# prisma va en dependencies (no solo dev) para que exista en runtime de Railpack
-startCommand = "./node_modules/.bin/prisma migrate deploy && node apps/api/dist/index.js"
+# Migrates se corren aparte: el start anterior (prisma) tumba el deploy en Railpack.
+# Prioridad: levantar API con CORS/CORP nuevos.
+startCommand = "node apps/api/dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
