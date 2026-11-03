@@ -76,6 +76,10 @@ async function bootstrap() {
     o === 'http://www.cleexs.com' ||
     o.endsWith('.cleexs.com');
 
+  /** Front Cleexs en Railway (cleexsweb-*.up.railway.app) */
+  const isRailwayCleexsWebOrigin = (o: string) =>
+    /^https:\/\/cleexsweb[a-z0-9-]*\.up\.railway\.app$/i.test(o);
+
   const isLocalDevOrigin = (o: string) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
 
   log('4/7 Registrando CORS...');
@@ -88,6 +92,7 @@ async function bootstrap() {
       if (allowedOrigins.includes(origin)) return cb(null, true);
       if (isVercelOrigin(origin)) return cb(null, true);
       if (isCleexsOrigin(origin)) return cb(null, true);
+      if (isRailwayCleexsWebOrigin(origin)) return cb(null, true);
       if (isNivel41Origin(origin)) return cb(null, true);
       if (isLocalDevOrigin(origin)) return cb(null, true);
       if (origin === RAILWAY_HEALTHCHECK || origin === 'http://healthcheck.railway.app')
@@ -96,7 +101,10 @@ async function bootstrap() {
     },
   });
   log('5/7 CORS OK, registrando Helmet y rutas...');
-  await server.register(helmet);
+  // cross-origin: el front (Vercel/Railway) lee JSON de esta API vía fetch cross-origin.
+  await server.register(helmet, {
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  });
 
   await server.register(fastifyRawBody, {
     field: 'rawBody',
