@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, ScanSearch } from 'lucide-react';
@@ -7,7 +8,7 @@ import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { AgenticAuditReport, type AgenticAuditResult } from '@/components/agentic-audit/audit-report';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 type PublicAudit = {
   slug: string;

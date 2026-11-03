@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ComponentType } from 'react';
@@ -24,7 +25,7 @@ import { PortalSignOutButton } from '@/components/portal/portal-sign-out';
 import { PortalLegalLink } from '@/components/portal/portal-legal-link';
 
 const TOKEN_KEY = 'cleexs_portal_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 export type PortalPremiumSidebarUsage = {
   planKey?: string;

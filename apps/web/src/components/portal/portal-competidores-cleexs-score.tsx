@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -32,7 +33,7 @@ import { PortalCrecimientoTierNav } from '@/components/portal/portal-crecimiento
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 type UsageResponse = {
   planKey?: string;

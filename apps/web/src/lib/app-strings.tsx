@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 /**
  * Mini-CMS de textos editables: helper `t(key, default)` para que el admin
  * pueda sobrescribir textos desde /admin/textos sin tocar código.
@@ -36,7 +37,7 @@ const AppStringsContext = createContext<AppStringsContextValue>({
   t: (_key, defaultValue) => defaultValue,
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 export function AppStringsProvider({
   children,

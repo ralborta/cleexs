@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useCallback } from 'react';
@@ -39,7 +40,7 @@ import { PortalResponsiveShell } from '@/components/portal/portal-responsive-she
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 type WeeklySlotApi = {
   slot: number;

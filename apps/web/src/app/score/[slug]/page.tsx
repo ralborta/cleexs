@@ -1,9 +1,10 @@
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ScoreShareClient } from './score-share-client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 function siteBase(): string {
   const u = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');

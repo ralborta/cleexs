@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -18,7 +19,7 @@ import { PortalPremiumSidebarNav } from '@/components/portal/portal-premium-side
 import { PortalResponsiveShell } from '@/components/portal/portal-responsive-shell';
 import { PORTAL_SESSION_TOKEN_KEY } from '@/components/portal/portal-sign-out';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 const CHART_COLORS = ['#7c3aed', '#6366f1', '#a78bfa', '#c4b5fd', '#8b5cf6'];
 
 type UsageResponse = {

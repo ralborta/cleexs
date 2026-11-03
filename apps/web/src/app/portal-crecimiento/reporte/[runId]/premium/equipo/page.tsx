@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -19,7 +20,7 @@ import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 import { useTrapBrowserBack } from '@/lib/public-funnel-exit';
 
 const TOKEN_KEY = 'cleexs_portal_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 const PLAN_LIMIT = 10;
 const EXTRA_USER_PRICE = 3;
 

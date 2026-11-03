@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -22,7 +23,7 @@ import { PortalResponsiveShell } from '@/components/portal/portal-responsive-she
 import { PlanPaymentModal } from '@/components/planes/plan-payment-modal';
 
 const TOKEN_KEY = 'cleexs_portal_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 const AEO_TOOLKIT_URL = 'https://cleexs-api-ef97.vercel.app/';
 
 type UsageResponse = {

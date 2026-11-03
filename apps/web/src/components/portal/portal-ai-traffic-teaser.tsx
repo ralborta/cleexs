@@ -1,11 +1,12 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ChevronRight, LineChart, Loader2, Plug } from 'lucide-react';
 
 const TOKEN_KEY = 'cleexs_portal_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 type GoogleStatus = {
   planKey: string;

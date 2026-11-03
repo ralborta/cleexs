@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, Sparkles } from 'lucide-react';
@@ -7,7 +8,7 @@ import { CleexsMark } from '@/components/brand/cleexs-mark';
 import { AeoReport, type AeoContentResult } from '@/components/aeo-audit/aeo-report';
 import { CLEEXS_MARKETING_URL } from '@/lib/site';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 type PublicAeo = {
   slug: string;

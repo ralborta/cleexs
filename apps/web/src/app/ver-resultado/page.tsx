@@ -111,21 +111,21 @@ function VerResultadoContent() {
   }
 
   if (error || !diagnostic || !model || !premiumData) {
-    return (
+  return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f8fb] px-6">
         <div className="max-w-md text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
           <p className="mt-4 text-sm text-slate-600">{error || 'Diagnóstico no encontrado.'}</p>
-          <Link href="/diagnostico/crear">
+<Link href="/diagnostico/crear">
             <Button className="mt-4">Hacer un nuevo diagnóstico</Button>
-          </Link>
+                </Link>
         </div>
       </main>
     );
   }
 
   if (diagnostic.status !== 'completed' || !diagnostic.runResult) {
-    return (
+  return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f8fb] px-6">
         <p className="text-sm text-slate-600">El diagnóstico aún no está listo.</p>
       </main>
@@ -144,7 +144,7 @@ function VerResultadoContent() {
     ? appendQueryToPath(`/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`, scoreTrackingQuery)
     : `/ver-resultado?diagnosticId=${encodeURIComponent(diagnostic.id)}`;
 
-  return (
+      return (
     <DiagnosticoGratuitoV2
       diagnostic={diagnostic}
       model={model}
@@ -168,7 +168,7 @@ export default function VerResultadoPage() {
       fallback={
         <main className="flex min-h-screen items-center justify-center bg-[#f7f8fb]">
           <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
-        </main>
+      </main>
       }
     >
       <VerResultadoContent />

@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -38,7 +39,7 @@ type PanelResponse = {
   compareRows: PanelRow[];
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 const PORTAL_TITLE =
   process.env.NEXT_PUBLIC_PORTAL_TITLE?.trim() || 'Panel de cuenta · análisis y reportes ampliados';
 const PORTAL_LOGIN_SUBTITLE =

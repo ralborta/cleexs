@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,7 +32,7 @@ import { RunCountryModal, type RunCountrySelection } from '@/components/country/
 import { findCountryByName, DEFAULT_COUNTRY_ISO } from '@/lib/countries';
 
 const TOKEN_KEY = 'cleexs_portal_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = resolveApiBaseUrl();
 
 type PortalRunDetail = {
   id: string;
