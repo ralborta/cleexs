@@ -5,8 +5,7 @@ builder = "RAILPACK"
 
 [deploy]
 preDeployCommand = "/bin/true"
-# Build deja dist en apps/api/dist (cwd del start = apps/api).
-# Migrates se corren aparte.
-startCommand = "node dist/index.js"
+# CWD del servicio es la raíz del monorepo (/app), no apps/api.
+startCommand = "cd apps/api && node dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
