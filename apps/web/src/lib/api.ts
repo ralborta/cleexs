@@ -1,21 +1,36 @@
 import { resolveApiBaseUrl } from '@/lib/api-base-url';
 
 const API_URL = resolveApiBaseUrl();
+const INTERNAL_REPORTS_PREFIX = '/api/reports/internal/';
+
+/**
+ * En el browser, /api/reports/internal/* no puede ir directo a la API (CORS).
+ * Lo reescribimos al BFF same-origin /api/admin-ui/reports/* con cookie.
+ */
+function resolveClientRequest(endpoint: string): { url: string; credentials: RequestCredentials } {
+  if (typeof window !== 'undefined' && endpoint.startsWith(INTERNAL_REPORTS_PREFIX)) {
+    const rest = endpoint.slice(INTERNAL_REPORTS_PREFIX.length);
+    return { url: `/api/admin-ui/reports/${rest}`, credentials: 'include' };
+  }
+  return { url: `${API_URL}${endpoint}`, credentials: 'same-origin' };
+}
 
 export async function api<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = globalThis.setTimeout(() => controller.abort(), 20000);
+  const { url, credentials } = resolveClientRequest(endpoint);
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    response = await fetch(url, {
+      ...options,
+      credentials,
       signal: options?.signal ?? controller.signal,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('La API tardó demasiado en responder. Refrescá o probá de nuevo.');

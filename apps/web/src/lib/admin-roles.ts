@@ -40,6 +40,7 @@ export function defaultAdminHomeForRole(role: AdminRole): string {
 export const MARKETING_ADMIN_API_PREFIXES = [
   '/api/admin-ui/conversion',
   '/api/admin-ui/funnel',
+  '/api/admin-ui/reports',
   '/api/admin-ui/agentic-audits',
   '/api/admin-ui/aeo-audits',
   '/api/admin-ui/promo',
