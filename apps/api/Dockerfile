@@ -12,7 +12,7 @@ RUN npm ci --workspace=@cleexs/api --include-workspace-root
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.json ./
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
 COPY prisma ./prisma
