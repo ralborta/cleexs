@@ -1,7 +1,10 @@
-# Railway / Docker: solo @cleexs/api (Fastify)
+# Railway: solo @cleexs/api (Fastify). No usar el Dockerfile de la raíz (ese es el web).
 FROM node:20-bookworm-slim AS base
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 FROM base AS deps
 COPY package.json package-lock.json ./
@@ -16,8 +19,9 @@ COPY package.json package-lock.json tsconfig.json ./
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
 COPY prisma ./prisma
-RUN npm run build --workspace=@cleexs/shared \
-  && npm run build --workspace=@cleexs/api
+# Pasos separados para ver errores en logs de Railway
+RUN npm run build --workspace=@cleexs/shared
+RUN npm run build --workspace=@cleexs/api
 
 FROM base AS runner
 ENV NODE_ENV=production
