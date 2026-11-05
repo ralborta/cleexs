@@ -1,11 +1,12 @@
 # Config Railway para @cleexs/api
-# Importante: el Dockerfile de la raíz es del WEB; este servicio debe usar apps/api/Dockerfile.
+# NO usar Dockerfile: el de la raíz es del web y rompe este servicio.
 
 [build]
-dockerfilePath = "apps/api/Dockerfile"
+builder = "RAILPACK"
+buildCommand = "npm install && npm run build --workspace=@cleexs/shared && npm run build --workspace=@cleexs/api"
 
 [deploy]
 preDeployCommand = "/bin/true"
-startCommand = "node apps/api/dist/index.js"
+startCommand = "cd apps/api && node dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
