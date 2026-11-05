@@ -19,6 +19,8 @@ COPY package.json package-lock.json tsconfig.json ./
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
 COPY prisma ./prisma
+# npm hoists some deps under apps/api/node_modules; COPY apps/api wipes them
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 # Pasos separados para ver errores en logs de Railway
 RUN npm run build --workspace=@cleexs/shared
 RUN npm run build --workspace=@cleexs/api
