@@ -76,7 +76,7 @@ export async function loadPromptsForRunExecution(
     }
 
     throw new Error(
-      'Corrida weekly_portal: no hay prompt guardado seleccionado. Elegí una de las 5 opciones en el portal premium (Prompts) o enviá weeklyPortalSavedPromptId al crear el run.'
+      'Corrida weekly_portal: no hay prompt guardado seleccionado. Elegí un prompt guardado en el portal (Prompts) o enviá weeklyPortalSavedPromptId al crear el run.'
     );
   }
 
