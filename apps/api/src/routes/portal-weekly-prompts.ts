@@ -13,8 +13,14 @@ import {
   buildPortalBrandFreeformContextBlock,
   executeOpenAIRankingPrompt,
 } from '../lib/run-executor';
+import {
+  isValidPortalWeeklyPromptSlot,
+  PORTAL_WEEKLY_PROMPT_MAX_SLOT,
+  PORTAL_WEEKLY_PROMPT_SLOT_COUNT,
+  portalWeeklyPromptSlotRangeError,
+} from '../lib/portal-weekly-prompts-slots';
 
-const MAX_SLOT = 4;
+const MAX_SLOT = PORTAL_WEEKLY_PROMPT_MAX_SLOT;
 
 function buildSavedPromptTitle(promptText: string, fallbackSlot?: number): string {
   const normalized = promptText
@@ -360,8 +366,8 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       if (!portalUser) return reply.code(401).send({ error: 'Autenticación requerida.' });
 
       const slot = Number(request.params.slot);
-      if (!Number.isInteger(slot) || slot < 0 || slot > MAX_SLOT) {
-        return reply.code(400).send({ error: 'slot debe ser un entero entre 0 y 4.' });
+      if (!isValidPortalWeeklyPromptSlot(slot)) {
+        return reply.code(400).send({ error: portalWeeklyPromptSlotRangeError() });
       }
 
       const brand = await prisma.brand.findFirst({
@@ -422,6 +428,7 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
         id: saved.id,
         title: buildSavedPromptTitle(saved.promptText, saved.slot),
         promptText: saved.promptText,
+        maxSlots: PORTAL_WEEKLY_PROMPT_SLOT_COUNT,
       });
     }
   );
@@ -552,8 +559,8 @@ const portalWeeklyPromptsRoutes: FastifyPluginAsync = async (fastify) => {
       if (!portalUser) return reply.code(401).send({ error: 'Autenticación requerida.' });
 
       const slot = Number(request.params.slot);
-      if (!Number.isInteger(slot) || slot < 0 || slot > MAX_SLOT) {
-        return reply.code(400).send({ error: 'slot debe ser un entero entre 0 y 4.' });
+      if (!isValidPortalWeeklyPromptSlot(slot)) {
+        return reply.code(400).send({ error: portalWeeklyPromptSlotRangeError() });
       }
 
       const brand = await prisma.brand.findFirst({

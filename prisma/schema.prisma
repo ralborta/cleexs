@@ -337,7 +337,7 @@ model Brand {
   autoDetected                 Boolean       @default(false) @map("auto_detected")
   classifierMeta               Json?         @map("classifier_meta")
   runSchedule                  RunSchedule?  @map("run_schedule") // Corridas programadas vía n8n: semanal, quincenal, mensual
-  /// Prompt guardado en portal (1 de 5) usado en corridas `weekly_portal` cuando está seleccionado
+  /// Prompt guardado en portal (1 de hasta 40) usado en corridas `weekly_portal` cuando está seleccionado
   selectedWeeklyPortalPromptId String?       @map("selected_weekly_portal_prompt_id")
   /// Preferencias del portal de marca (módulos, alertas, integraciones, contacto)
   portalSettings               Json?         @map("portal_settings")
@@ -365,11 +365,11 @@ model Brand {
   @@map("brands")
 }
 
-/// Hasta 5 prompts guardados por marca (slots 0–4) para corridas semanales tipo `weekly_portal`
+/// Hasta 40 prompts guardados por marca (slots 0–39) para portal Agency / corridas `weekly_portal`
 model BrandPortalSavedPrompt {
   id         String   @id @default(uuid())
   brandId    String   @map("brand_id")
-  slot       Int // 0..4
+  slot       Int // 0..39 (validado en API; CHECK en migración 20261106190000)
   title      String   @default("")
   promptText String   @map("prompt_text") @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
